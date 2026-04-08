@@ -447,6 +447,7 @@ def main():
         effort = j.get("effort_flag", "?")
         reason = j.get("fit_reasoning", "")
         url = j.get("url", "")
+        # CodeQL: not sensitive data - public job posting fields from job boards
         print(f"\n  [{s:2d}/10] {title}")
         print(f"         @ {company} | {loc} | ~{sal} | {effort}")
         print(f"         {reason}")
