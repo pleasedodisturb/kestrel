@@ -247,7 +247,7 @@ kestrel/
 │   │   └── ...
 │   └── api/                   # API client layer (17 modules)
 ├── alembic/                   # Database migrations
-├── tests/                     # 42 test modules, 1560 backend tests
+├── tests/                     # 42 test modules, 1773 tests
 ├── docker-compose.yml         # Backend + Frontend orchestration
 ├── Dockerfile                 # Backend image
 ├── Dockerfile.frontend        # Frontend image
@@ -293,44 +293,44 @@ AI_PROVIDER=together          # Together AI
 Kestrel ships a comprehensive Typer CLI with Rich formatting.
 
 ```bash
-career --help                         # Show all commands
+kestrel --help                         # Show all commands
 
 # -- Pipeline --
-career pipeline list                  # List all applications
-career pipeline list -s applied       # Filter by status
-career pipeline add                   # Add new application
-career pipeline update <id> --status interviewing
-career pipeline stats                 # Conversion stats
-career pipeline follow-ups            # Pending follow-ups
+kestrel pipeline list                  # List all applications
+kestrel pipeline list -s applied       # Filter by status
+kestrel pipeline add                   # Add new application
+kestrel pipeline update <id> --status interviewing
+kestrel pipeline stats                 # Conversion stats
+kestrel pipeline follow-ups            # Pending follow-ups
 
 # -- Skills --
-career skills list                    # Your skill inventory
-career skills gaps <app_id>           # Gap analysis for a role
+kestrel skills list                    # Your skill inventory
+kestrel skills gaps <app_id>           # Gap analysis for a role
 
 # -- Goals --
-career goals show                     # Current goals and progress
+kestrel goals show                     # Current goals and progress
 
 # -- Coaching --
-career coach <app_id>                 # AI coaching for application
+kestrel coach <app_id>                 # AI coaching for application
 
 # -- Discovery --
-career discover --role "Engineer"     # Run a discovery sweep
-career discover --location "Remote" --min-salary 120000
+kestrel discover --role "Engineer"     # Run a discovery sweep
+kestrel discover --location "Remote" --min-salary 120000
 
 # -- Scoring --
-career score <app_id>                 # AI fit score breakdown
+kestrel score <app_id>                 # AI fit score breakdown
 
 # -- Market Intelligence --
-career market <role>                  # Salary and demand data
+kestrel market <role>                  # Salary and demand data
 
 # -- Research --
-career research <app_id>             # Company research dossier
+kestrel research <app_id>             # Company research dossier
 
 # -- Interview Prep --
-career interview-prep <app_id>        # Generate full prep package
-career interview-prep stories add     # Add a STAR story
-career interview-prep stories view    # Browse story library
-career interview-prep stories edit <id>
+kestrel interview-prep <app_id>        # Generate full prep package
+kestrel interview-prep stories add     # Add a STAR story
+kestrel interview-prep stories view    # Browse story library
+kestrel interview-prep stories edit <id>
 ```
 
 ---
@@ -500,7 +500,7 @@ Set these in your GitHub repo under Settings - Secrets and variables - Actions:
 
 | Variable | Default | Purpose |
 |:---|:---|:---|
-| `PIPELINE_LOCATION` | `Frankfurt` | Default location filter for job search |
+| `PIPELINE_LOCATION` | `Remote` | Default location filter for job search |
 
 At minimum you need `OPENAI_API_KEY` for the scoring to work. Everything else is optional - the pipeline will still scrape and score without notifications.
 

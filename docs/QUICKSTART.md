@@ -34,7 +34,7 @@ https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe
 ### After downloading
 
 - **Mac:** Open the .dmg file. Drag Docker to your Applications folder. Open Docker Desktop from Applications. If macOS says it can't open it because it's from an unidentified developer, go to System Settings > Privacy & Security and click "Open Anyway."
-- **Windows:** Run the installer. Follow the prompts. It may ask you to enable WSL2 - say yes. Restart your computer if it asks.
+- **Windows:** Run the installer. Follow the prompts. It may ask you to enable WSL2 - say yes (WSL2 helps Docker run on Windows). Restart your computer if it asks.
 
 Docker will take a minute or two to start up the first time. You'll see a whale icon in your menu bar (Mac) or system tray (Windows). Wait for it to stop animating - that means it's ready.
 
@@ -268,8 +268,8 @@ In Demo Mode, scores are simulated and not based on your actual profile. They mi
 1. Check that your key starts with `sk-or-` (for OpenRouter)
 2. Make sure there are no extra spaces before or after the key in the settings file
 3. Restart Kestrel: `docker compose restart`
-4. Open http://localhost:8100/api/ai/health in your browser - it should say "openrouter", not "mock"
-5. If it still says "mock", double-check that AI_PROVIDER=openrouter is set (no spaces around the =)
+4. Open http://localhost:8100/api/ai/health in your browser - it should say "openrouter", not "demo"
+5. If it still says "demo", double-check that AI_PROVIDER=openrouter is set (no spaces around the =)
 
 ### "I don't understand the scores"
 
