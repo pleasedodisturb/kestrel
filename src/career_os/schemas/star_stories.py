@@ -96,9 +96,7 @@ class RecommendedStoriesResponse(BaseModel):
     role: str
     recommended_stories: list[RecommendedStory]
     total_requirements: int
-    covered_skills: list[str] = Field(
-        description="Skills covered by at least one story"
-    )
+    covered_skills: list[str] = Field(description="Skills covered by at least one story")
 
 
 # ---------------------------------------------------------------------------

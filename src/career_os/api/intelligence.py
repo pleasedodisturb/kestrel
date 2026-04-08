@@ -74,9 +74,7 @@ async def interview_format_endpoint(
 async def salary_benchmark_endpoint(
     role: str = Query(..., min_length=1, description="Role type to benchmark"),
     profile_id: int = Query(..., description="Profile ID"),
-    location: str | None = Query(
-        default=None, description="Optional location filter"
-    ),
+    location: str | None = Query(default=None, description="Optional location filter"),
     company_stage: str | None = Query(
         default=None,
         description="Optional company stage filter (e.g., 'startup', 'growth', 'public')",

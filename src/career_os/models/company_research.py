@@ -50,7 +50,4 @@ class CompanyResearchReportModel(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<CompanyResearchReportModel(id={self.id}, "
-            f"company_name='{self.company_name}')>"
-        )
+        return f"<CompanyResearchReportModel(id={self.id}, company_name='{self.company_name}')>"

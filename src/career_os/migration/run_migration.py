@@ -72,9 +72,7 @@ def run_full_migration(
 
         logger.info("=" * 60)
         logger.info("Migration complete!")
-        logger.info(
-            "  Profile: %s (id=%d)", profile.name, profile.id
-        )
+        logger.info("  Profile: %s (id=%d)", profile.name, profile.id)
         logger.info(
             "  CSV: %d imported, %d skipped",
             csv_stats["imported"],

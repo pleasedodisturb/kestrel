@@ -4,10 +4,10 @@
 Creates a temporary YAML variant per role with a tailored summary,
 renders it, and copies the PDF to the application folder.
 """
+
 import copy
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import yaml
@@ -259,7 +259,7 @@ def main():
         if render_variant(role_key, role_config, base_data):
             successes += 1
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"Done: {successes}/{len(ROLES)} CVs generated successfully")
 
 

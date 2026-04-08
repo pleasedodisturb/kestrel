@@ -377,21 +377,31 @@ class TestOpenRouterStructuredParsing:
         """Score JSON is parsed into ScoreResult."""
         from career_os.ai.openrouter_provider import _try_parse_structured
 
-        content = json.dumps({
-            "fit_score": 7.5,
-            "reasoning": "x" * 100,
-            "estimated_salary": "120k EUR",
-            "effort_flag": "medium",
-            "prep_level": "moderate",
-            "prep_notes": "Study X.",
-            "readiness_score": 72.0,
-            "career_alignment": 8.0,
-            "score_breakdown": [
-                {"factor": "Technical Skills", "contribution": 2.0, "description": "Strong match"},
-                {"factor": "Culture Fit", "contribution": 1.5, "description": "Good alignment"},
-                {"factor": "Location", "contribution": -0.5, "description": "Remote preference"},
-            ],
-        })
+        content = json.dumps(
+            {
+                "fit_score": 7.5,
+                "reasoning": "x" * 100,
+                "estimated_salary": "120k EUR",
+                "effort_flag": "medium",
+                "prep_level": "moderate",
+                "prep_notes": "Study X.",
+                "readiness_score": 72.0,
+                "career_alignment": 8.0,
+                "score_breakdown": [
+                    {
+                        "factor": "Technical Skills",
+                        "contribution": 2.0,
+                        "description": "Strong match",
+                    },
+                    {"factor": "Culture Fit", "contribution": 1.5, "description": "Good alignment"},
+                    {
+                        "factor": "Location",
+                        "contribution": -0.5,
+                        "description": "Remote preference",
+                    },
+                ],
+            }
+        )
         result = _try_parse_structured(content, AIFeature.score)
         assert isinstance(result, ScoreResult)
         assert result.fit_score == 7.5
@@ -400,19 +410,21 @@ class TestOpenRouterStructuredParsing:
         """Gap analysis JSON is parsed into GapAnalysisResult."""
         from career_os.ai.openrouter_provider import _try_parse_structured
 
-        content = json.dumps({
-            "gaps": [
-                {
-                    "skill_name": "Python",
-                    "required_level": "advanced",
-                    "current_level": "intermediate",
-                    "severity": "critical",
-                    "distance": 1,
-                }
-            ],
-            "readiness_score": 65.0,
-            "summary": "Some gaps identified.",
-        })
+        content = json.dumps(
+            {
+                "gaps": [
+                    {
+                        "skill_name": "Python",
+                        "required_level": "advanced",
+                        "current_level": "intermediate",
+                        "severity": "critical",
+                        "distance": 1,
+                    }
+                ],
+                "readiness_score": 65.0,
+                "summary": "Some gaps identified.",
+            }
+        )
         result = _try_parse_structured(content, AIFeature.gap_analysis)
         assert isinstance(result, GapAnalysisResult)
         assert len(result.gaps) == 1
@@ -422,12 +434,20 @@ class TestOpenRouterStructuredParsing:
         """Coaching JSON is parsed into CoachingResult."""
         from career_os.ai.openrouter_provider import _try_parse_structured
 
-        content = json.dumps({
-            "suggestions": [
-                {"action": "Do X", "hours": 10, "weeks": 2, "difficulty": "medium", "priority": 1}
-            ],
-            "focus_area": "Infrastructure",
-        })
+        content = json.dumps(
+            {
+                "suggestions": [
+                    {
+                        "action": "Do X",
+                        "hours": 10,
+                        "weeks": 2,
+                        "difficulty": "medium",
+                        "priority": 1,
+                    }
+                ],
+                "focus_area": "Infrastructure",
+            }
+        )
         result = _try_parse_structured(content, AIFeature.coaching)
         assert isinstance(result, CoachingResult)
         assert len(result.suggestions) == 1
@@ -437,11 +457,13 @@ class TestOpenRouterStructuredParsing:
         """Goal recalibration JSON is parsed into GoalRecalibrationResult."""
         from career_os.ai.openrouter_provider import _try_parse_structured
 
-        content = json.dumps({
-            "recalibration_notes": "Market suggests adjustments.",
-            "suggested_adjustments": [{"goal": "G1", "adjustment": "A1", "reason": "R1"}],
-            "market_reality": "Demand is high.",
-        })
+        content = json.dumps(
+            {
+                "recalibration_notes": "Market suggests adjustments.",
+                "suggested_adjustments": [{"goal": "G1", "adjustment": "A1", "reason": "R1"}],
+                "market_reality": "Demand is high.",
+            }
+        )
         result = _try_parse_structured(content, AIFeature.goal_recalibration)
         assert isinstance(result, GoalRecalibrationResult)
         assert result.recalibration_notes
@@ -450,15 +472,17 @@ class TestOpenRouterStructuredParsing:
         """Interview prep JSON is parsed into InterviewPrepResult."""
         from career_os.ai.openrouter_provider import _try_parse_structured
 
-        content = json.dumps({
-            "topics": [{"topic": "AI", "relevance": "high", "difficulty": "medium"}],
-            "questions": [
-                {"question": f"Q{i}?", "category": "behavioral", "difficulty": "medium"}
-                for i in range(5)
-            ],
-            "checklist": [{"item": "Review blog", "time_minutes": 30, "priority": "high"}],
-            "total_prep_hours": 3.5,
-        })
+        content = json.dumps(
+            {
+                "topics": [{"topic": "AI", "relevance": "high", "difficulty": "medium"}],
+                "questions": [
+                    {"question": f"Q{i}?", "category": "behavioral", "difficulty": "medium"}
+                    for i in range(5)
+                ],
+                "checklist": [{"item": "Review blog", "time_minutes": 30, "priority": "high"}],
+                "total_prep_hours": 3.5,
+            }
+        )
         result = _try_parse_structured(content, AIFeature.interview_prep)
         assert isinstance(result, InterviewPrepResult)
         assert len(result.questions) == 5
@@ -467,15 +491,17 @@ class TestOpenRouterStructuredParsing:
         """Company research JSON is parsed into CompanyResearchResult."""
         from career_os.ai.openrouter_provider import _try_parse_structured
 
-        content = json.dumps({
-            "tech_stack": {"backend": ["Python"]},
-            "funding": {"stage": "Series B"},
-            "glassdoor": {"overall_rating": 4.0},
-            "values_alignment": 7.0,
-            "ats_platform": "Greenhouse",
-            "hiring_patterns": {"active_postings": 20},
-            "industry_segment": "SaaS",
-        })
+        content = json.dumps(
+            {
+                "tech_stack": {"backend": ["Python"]},
+                "funding": {"stage": "Series B"},
+                "glassdoor": {"overall_rating": 4.0},
+                "values_alignment": 7.0,
+                "ats_platform": "Greenhouse",
+                "hiring_patterns": {"active_postings": 20},
+                "industry_segment": "SaaS",
+            }
+        )
         result = _try_parse_structured(content, AIFeature.company_research)
         assert isinstance(result, CompanyResearchResult)
         assert result.ats_platform == "Greenhouse"
@@ -484,19 +510,21 @@ class TestOpenRouterStructuredParsing:
         """Learning recommendations JSON is parsed into LearningRecommendationsResult."""
         from career_os.ai.openrouter_provider import _try_parse_structured
 
-        content = json.dumps({
-            "recommendations": [
-                {
-                    "title": "Course A",
-                    "url": "https://example.com",
-                    "hours": 10,
-                    "provider": "Udemy",
-                    "difficulty": "intermediate",
-                    "type": "paid",
-                }
-            ],
-            "total_hours": 10.0,
-        })
+        content = json.dumps(
+            {
+                "recommendations": [
+                    {
+                        "title": "Course A",
+                        "url": "https://example.com",
+                        "hours": 10,
+                        "provider": "Udemy",
+                        "difficulty": "intermediate",
+                        "type": "paid",
+                    }
+                ],
+                "total_hours": 10.0,
+            }
+        )
         result = _try_parse_structured(content, AIFeature.learning_recommendations)
         assert isinstance(result, LearningRecommendationsResult)
         assert len(result.recommendations) == 1
@@ -514,12 +542,20 @@ class TestOpenRouterStructuredParsing:
 
         content = (
             "```json\n"
-            + json.dumps({
-                "suggestions": [
-                    {"action": "Do X", "hours": 5, "weeks": 1, "difficulty": "low", "priority": 1}
-                ],
-                "focus_area": "Skills",
-            })
+            + json.dumps(
+                {
+                    "suggestions": [
+                        {
+                            "action": "Do X",
+                            "hours": 5,
+                            "weeks": 1,
+                            "difficulty": "low",
+                            "priority": 1,
+                        }
+                    ],
+                    "focus_area": "Skills",
+                }
+            )
             + "\n```"
         )
         result = _try_parse_structured(content, AIFeature.coaching)

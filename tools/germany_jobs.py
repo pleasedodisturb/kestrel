@@ -31,8 +31,7 @@ import argparse
 import json
 import sys
 from datetime import datetime
-from pathlib import Path
-from urllib.parse import urlencode, quote_plus
+from urllib.parse import quote_plus, urlencode
 
 try:
     import httpx
@@ -97,20 +96,39 @@ PRESETS: dict[str, list[str]] = {
 
 # Scoring signals
 SCORE_SIGNALS = [
-    "ai", "ki", "product", "program", "technical", "innovation",
-    "platform", "builder", "digital",
+    "ai",
+    "ki",
+    "product",
+    "program",
+    "technical",
+    "innovation",
+    "platform",
+    "builder",
+    "digital",
 ]
 
 
 # Signals suggesting German-only work environment
 GERMAN_ONLY_SIGNALS = [
-    "muttersprache", "deutsch c1", "deutsch c2", "deutschkenntnisse", "deutschsprachig",
-    "sehr gute deutschkenntnisse", "fließend deutsch", "nur deutsch",
-    "sprachkenntnisse deutsch", "verhandlungssicheres deutsch",
+    "muttersprache",
+    "deutsch c1",
+    "deutsch c2",
+    "deutschkenntnisse",
+    "deutschsprachig",
+    "sehr gute deutschkenntnisse",
+    "fließend deutsch",
+    "nur deutsch",
+    "sprachkenntnisse deutsch",
+    "verhandlungssicheres deutsch",
 ]
 GERMAN_ONLY_TITLE_PATTERNS = [
-    "sachbearbeiter", "kaufmann", "kauffrau", "verwaltung",
-    "vertriebsmitarbeiter", "kundenberater", "arbeitsvermittler",
+    "sachbearbeiter",
+    "kaufmann",
+    "kauffrau",
+    "verwaltung",
+    "vertriebsmitarbeiter",
+    "kundenberater",
+    "arbeitsvermittler",
 ]
 
 
@@ -129,11 +147,13 @@ def is_likely_german_only(job: dict) -> bool:
 
 def score_job(job: dict) -> int:
     """Score job 1-5 based on keyword signals in title, company, tags."""
-    text = " ".join([
-        job.get("title", ""),
-        job.get("company", ""),
-        " ".join(job.get("tags", [])),
-    ]).lower()
+    text = " ".join(
+        [
+            job.get("title", ""),
+            job.get("company", ""),
+            " ".join(job.get("tags", [])),
+        ]
+    ).lower()
     hits = sum(1 for sig in SCORE_SIGNALS if sig in text)
     # Map hits to 1-5 stars
     if hits == 0:
@@ -204,16 +224,18 @@ def fetch_arbeitsagentur(
         else:
             job_url = ""
 
-        result.append({
-            "source": "arbeitsagentur",
-            "title": beruf or f"Stelle {refnr}",
-            "company": arbeitgeber,
-            "location": f"{ort}, {land}".strip(", ") if ort or land else "Deutschland",
-            "url": job_url,
-            "refnr": refnr,
-            "posted": j.get("aktuelleVeroeffentlichungsdatum", ""),
-            "tags": [],
-        })
+        result.append(
+            {
+                "source": "arbeitsagentur",
+                "title": beruf or f"Stelle {refnr}",
+                "company": arbeitgeber,
+                "location": f"{ort}, {land}".strip(", ") if ort or land else "Deutschland",
+                "url": job_url,
+                "refnr": refnr,
+                "posted": j.get("aktuelleVeroeffentlichungsdatum", ""),
+                "tags": [],
+            }
+        )
     return result
 
 
@@ -248,16 +270,20 @@ def fetch_arbeitnow(
             continue
         if kw_lower and not any(k in (title + " " + company).lower() for k in kw_lower):
             continue
-        result.append({
-            "source": "arbeitnow",
-            "title": title,
-            "company": company,
-            "location": loc,
-            "url": j.get("url", ""),
-            "remote": j.get("remote", False),
-            "tags": j.get("tags", []),
-            "posted": datetime.fromtimestamp(j.get("created_at", 0)).strftime("%Y-%m-%d") if j.get("created_at") else "",
-        })
+        result.append(
+            {
+                "source": "arbeitnow",
+                "title": title,
+                "company": company,
+                "location": loc,
+                "url": j.get("url", ""),
+                "remote": j.get("remote", False),
+                "tags": j.get("tags", []),
+                "posted": datetime.fromtimestamp(j.get("created_at", 0)).strftime("%Y-%m-%d")
+                if j.get("created_at")
+                else "",
+            }
+        )
         if len(result) >= limit:
             break
 
@@ -316,28 +342,29 @@ def main() -> None:
     parser.add_argument(
         "--keywords",
         default="",
-        help="Search keywords, comma-separated for multi-search (e.g. 'TPM,Product Manager')"
+        help="Search keywords, comma-separated for multi-search (e.g. 'TPM,Product Manager')",
     )
     parser.add_argument(
         "--preset",
         choices=["tpm", "pm", "ai", "builder", "devrel", "leadership", "all"],
-        help="Keyword preset: tpm, pm, ai, builder, devrel, leadership, or all"
+        help="Keyword preset: tpm, pm, ai, builder, devrel, leadership, or all",
     )
     parser.add_argument("--location", default="Frankfurt", help="Location (default: Frankfurt)")
-    parser.add_argument("--limit", type=int, default=25, help="Max results per keyword per source (default: 25)")
+    parser.add_argument(
+        "--limit", type=int, default=25, help="Max results per keyword per source (default: 25)"
+    )
     parser.add_argument("--remote", action="store_true", help="Filter remote/telework only")
     parser.add_argument("--output", choices=["csv", "json"], default="csv", help="Output format")
-    parser.add_argument("--english-only", action="store_true", help="Filter out likely German-language-only jobs")
     parser.add_argument(
-        "--sources",
-        nargs="+",
-        default=["arbeitsagentur", "arbeitnow"],
-        help="Source APIs to query"
+        "--english-only", action="store_true", help="Filter out likely German-language-only jobs"
+    )
+    parser.add_argument(
+        "--sources", nargs="+", default=["arbeitsagentur", "arbeitnow"], help="Source APIs to query"
     )
     parser.add_argument(
         "--score",
         action="store_true",
-        help="Print a rough fit score (1-5 stars) based on keyword signals"
+        help="Print a rough fit score (1-5 stars) based on keyword signals",
     )
     args = parser.parse_args()
 
@@ -367,7 +394,7 @@ def main() -> None:
 
     if not all_jobs:
         print("No jobs found.", file=sys.stderr)
-        print(f"Found 0 jobs total (0 from Arbeitsagentur, 0 from Arbeitnow)", file=sys.stderr)
+        print("Found 0 jobs total (0 from Arbeitsagentur, 0 from Arbeitnow)", file=sys.stderr)
         return
 
     # Score all jobs
@@ -390,14 +417,18 @@ def main() -> None:
 
     # Summary line (always printed to stdout so it's visible)
     total = len(all_jobs)
-    summary = f"Found {total} jobs total ({aa_total} from Arbeitsagentur, {an_total} from Arbeitnow)"
+    summary = (
+        f"Found {total} jobs total ({aa_total} from Arbeitsagentur, {an_total} from Arbeitnow)"
+    )
     if args.score:
         # Also print score breakdown
         score_dist = {}
         for j in all_jobs:
             s = j.get("score", 1)
             score_dist[s] = score_dist.get(s, 0) + 1
-        score_str = " | ".join(f"{stars(s)}:{count}" for s, count in sorted(score_dist.items(), reverse=True))
+        score_str = " | ".join(
+            f"{stars(s)}:{count}" for s, count in sorted(score_dist.items(), reverse=True)
+        )
         summary += f"  [{score_str}]"
     print(summary, file=sys.stderr)
 

@@ -56,9 +56,7 @@ def _find_matching_application(
 
     if role_pattern:
         # Try matching with role pattern
-        results = query.filter(
-            func.lower(Application.role).contains(role_pattern.lower())
-        ).all()
+        results = query.filter(func.lower(Application.role).contains(role_pattern.lower())).all()
         if results:
             return results[0]
 
@@ -137,9 +135,7 @@ def link_packages(
         company_pattern, role_pattern = mapping
 
         # Find matching application
-        application = _find_matching_application(
-            db, company_pattern, role_pattern, profile_id
-        )
+        application = _find_matching_application(db, company_pattern, role_pattern, profile_id)
 
         if application is None:
             warnings_list.append(

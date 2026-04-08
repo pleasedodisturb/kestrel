@@ -3,7 +3,6 @@
 import json
 from datetime import UTC, datetime
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from career_os.models.contacts import Contact, ContactApplication, ContactInteraction
@@ -15,7 +14,6 @@ from career_os.schemas.contacts import (
     InteractionCreate,
 )
 from career_os.services.activity import log_activity
-
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -43,9 +41,7 @@ class DuplicateLinkError(Exception):
 # ---------------------------------------------------------------------------
 
 
-def _get_active_contact(
-    db: Session, contact_id: int, *, profile_id: int | None = None
-) -> Contact:
+def _get_active_contact(db: Session, contact_id: int, *, profile_id: int | None = None) -> Contact:
     """Fetch a non-archived contact or raise."""
     filters = [Contact.id == contact_id, Contact.archived_at.is_(None)]
     if profile_id is not None:
@@ -107,9 +103,7 @@ def create_contact(db: Session, payload: ContactCreate) -> Contact:
     return contact
 
 
-def get_contact(
-    db: Session, contact_id: int, *, profile_id: int | None = None
-) -> Contact:
+def get_contact(db: Session, contact_id: int, *, profile_id: int | None = None) -> Contact:
     """Get a single non-archived contact."""
     return _get_active_contact(db, contact_id, profile_id=profile_id)
 
@@ -194,9 +188,7 @@ def update_contact(
     return contact
 
 
-def archive_contact(
-    db: Session, contact_id: int, *, profile_id: int | None = None
-) -> Contact:
+def archive_contact(db: Session, contact_id: int, *, profile_id: int | None = None) -> Contact:
     """Soft-delete a contact."""
     contact = _get_active_contact(db, contact_id, profile_id=profile_id)
     contact.archived_at = datetime.now(UTC)
@@ -300,9 +292,7 @@ def link_contact_to_application(
         app_filters.append(Application.profile_id == profile_id)
     app_obj = db.query(Application).filter(*app_filters).first()
     if app_obj is None:
-        raise ApplicationNotFoundError(
-            f"Application {payload.application_id} not found"
-        )
+        raise ApplicationNotFoundError(f"Application {payload.application_id} not found")
 
     # Check for duplicate
     existing = (
@@ -394,14 +384,11 @@ def get_contacts_for_application(
 
     results = query.all()
     return [
-        {"contact": contact, "role": link.role, "notes": link.notes}
-        for contact, link in results
+        {"contact": contact, "role": link.role, "notes": link.notes} for contact, link in results
     ]
 
 
-def get_contacts_by_company(
-    db: Session, company: str, *, profile_id: int
-) -> list[Contact]:
+def get_contacts_by_company(db: Session, company: str, *, profile_id: int) -> list[Contact]:
     """Get all contacts at a specific company."""
     return (
         db.query(Contact)

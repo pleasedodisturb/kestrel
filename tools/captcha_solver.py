@@ -53,18 +53,21 @@ async def solve_hcaptcha(page, timeout: int = 120) -> str | None:
 
     page_url = page.url
     print(f"    [captcha] hCaptcha detected (sitekey: {sitekey[:12]}...)")
-    print(f"    [captcha] Sending to Anti-Captcha API...")
+    print("    [captcha] Sending to Anti-Captcha API...")
 
     # Create task
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(f"{API_URL}/createTask", json={
-            "clientKey": ANTICAPTCHA_KEY,
-            "task": {
-                "type": "HCaptchaTaskProxyless",
-                "websiteURL": page_url,
-                "websiteKey": sitekey,
-            }
-        })
+        resp = await client.post(
+            f"{API_URL}/createTask",
+            json={
+                "clientKey": ANTICAPTCHA_KEY,
+                "task": {
+                    "type": "HCaptchaTaskProxyless",
+                    "websiteURL": page_url,
+                    "websiteKey": sitekey,
+                },
+            },
+        )
         result = resp.json()
 
         if result.get("errorId", 0) != 0:
@@ -78,10 +81,13 @@ async def solve_hcaptcha(page, timeout: int = 120) -> str | None:
         start = time.time()
         while time.time() - start < timeout:
             await asyncio.sleep(5)
-            resp = await client.post(f"{API_URL}/getTaskResult", json={
-                "clientKey": ANTICAPTCHA_KEY,
-                "taskId": task_id,
-            })
+            resp = await client.post(
+                f"{API_URL}/getTaskResult",
+                json={
+                    "clientKey": ANTICAPTCHA_KEY,
+                    "taskId": task_id,
+                },
+            )
             result = resp.json()
 
             if result.get("errorId", 0) != 0:
@@ -112,7 +118,8 @@ async def inject_captcha_token(page, token: str) -> bool:
     Returns:
         True if injection succeeded
     """
-    success = await page.evaluate("""(token) => {
+    success = await page.evaluate(
+        """(token) => {
         // Method 1: Set hidden textareas (standard hCaptcha response fields)
         const textareas = document.querySelectorAll(
             'textarea[name="h-captcha-response"], textarea[name="g-recaptcha-response"]'
@@ -187,12 +194,14 @@ async def inject_captcha_token(page, token: str) -> bool:
         } catch (e) {}
 
         return found;
-    }""", token)
+    }""",
+        token,
+    )
 
     if success:
-        print(f"    [captcha] Token injected into page")
+        print("    [captcha] Token injected into page")
     else:
-        print(f"    [captcha] Failed to inject token - no response textarea found")
+        print("    [captcha] Failed to inject token - no response textarea found")
 
     return success
 

@@ -14,9 +14,7 @@ class ProfileCreate(BaseModel):
     email: str | None = Field(default=None, description="Email address")
     location: str | None = Field(default=None, description="Location")
     job_family: str | None = Field(default=None, description="Target job family")
-    dream_companies: list[str] | None = Field(
-        default=None, description="List of dream companies"
-    )
+    dream_companies: list[str] | None = Field(default=None, description="List of dream companies")
 
 
 class ProfileUpdate(BaseModel):
@@ -26,9 +24,7 @@ class ProfileUpdate(BaseModel):
     email: str | None = Field(default=None, description="Email address")
     location: str | None = Field(default=None, description="Location")
     job_family: str | None = Field(default=None, description="Target job family")
-    dream_companies: list[str] | None = Field(
-        default=None, description="List of dream companies"
-    )
+    dream_companies: list[str] | None = Field(default=None, description="List of dream companies")
 
 
 class ProfileResponse(BaseModel):

@@ -33,7 +33,6 @@ import logging
 import os
 import sys
 from datetime import datetime
-from io import StringIO
 from pathlib import Path
 
 # Ensure project root is on path
@@ -44,6 +43,7 @@ logger = logging.getLogger("daily_pipeline")
 
 
 # --- Config ---
+
 
 class PipelineConfig:
     def __init__(self):
@@ -65,14 +65,16 @@ class PipelineConfig:
 
 # --- Step 1: Scrape ---
 
+
 def step_scrape(config: PipelineConfig) -> list[dict]:
     """Run the resilient scraper across all configured sources."""
     logger.info("=" * 60)
     logger.info("STEP 1: SCRAPE")
     logger.info("=" * 60)
 
-    from scrape_resilient import scrape_all_sources, ScrapedJob
     from dataclasses import asdict
+
+    from scrape_resilient import scrape_all_sources
 
     jobs = scrape_all_sources(
         mode=config.mode,
@@ -92,6 +94,7 @@ def step_scrape(config: PipelineConfig) -> list[dict]:
 
 
 # --- Step 2: Score ---
+
 
 def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
     """Score each job against the profile using OpenAI."""
@@ -133,9 +136,7 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
         description = job.get("description", "")
 
         # --- Pre-filter: skip obviously irrelevant jobs before AI scoring ---
-        should_skip, filter_reason, score_cap = pre_filter_job(
-            title, company, location, remote
-        )
+        should_skip, filter_reason, score_cap = pre_filter_job(title, company, location, remote)
 
         if should_skip:
             job["fit_score"] = 0
@@ -182,7 +183,9 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
 
             # Apply score cap from pre-filter (e.g. US-only location)
             if score_cap is not None and ai_score > score_cap:
-                result["reasoning"] = f"Capped from {ai_score} to {score_cap}: {result.get('reasoning', '')}"
+                result["reasoning"] = (
+                    f"Capped from {ai_score} to {score_cap}: {result.get('reasoning', '')}"
+                )
                 ai_score = score_cap
 
             job["fit_score"] = ai_score
@@ -221,14 +224,37 @@ def _fallback_score(jobs: list[dict]) -> list[dict]:
     from job_scorer import pre_filter_job
 
     positive_signals = [
-        "ai", "ml", "machine learning", "product manager", "program manager",
-        "technical program", "innovation", "platform", "builder", "remote",
-        "startup", "founding", "devrel", "developer relations", "developer advocate",
+        "ai",
+        "ml",
+        "machine learning",
+        "product manager",
+        "program manager",
+        "technical program",
+        "innovation",
+        "platform",
+        "builder",
+        "remote",
+        "startup",
+        "founding",
+        "devrel",
+        "developer relations",
+        "developer advocate",
     ]
     negative_signals = [
-        "pmbok", "pmo", "coordinator", "administrator", "sachbearbeiter",
-        "accountant", "sales rep", "nurse", "driver", "warehouse",
-        "customer support", "hr specialist", "recruiter", "legal",
+        "pmbok",
+        "pmo",
+        "coordinator",
+        "administrator",
+        "sachbearbeiter",
+        "accountant",
+        "sales rep",
+        "nurse",
+        "driver",
+        "warehouse",
+        "customer support",
+        "hr specialist",
+        "recruiter",
+        "legal",
     ]
 
     config = PipelineConfig()
@@ -239,9 +265,7 @@ def _fallback_score(jobs: list[dict]) -> list[dict]:
         remote = bool(job.get("remote", False))
 
         # Apply pre-filter first
-        should_skip, filter_reason, score_cap = pre_filter_job(
-            title, company, location, remote
-        )
+        should_skip, filter_reason, score_cap = pre_filter_job(title, company, location, remote)
         if should_skip:
             job["fit_score"] = 0
             job["fit_reasoning"] = f"Pre-filtered: {filter_reason}"
@@ -274,6 +298,7 @@ def _fallback_score(jobs: list[dict]) -> list[dict]:
 
 # --- Step 3: Deduplicate against tracking ---
 
+
 def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
     """Remove jobs that are already tracked in CareerOS DB."""
     logger.info("=" * 60)
@@ -300,7 +325,7 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
         # Fallback to CSV
         if config.csv_path.exists():
             try:
-                with open(config.csv_path, "r") as f:
+                with open(config.csv_path) as f:
                     reader = csv.DictReader(f)
                     for row in reader:
                         company = row.get("company", "").lower().strip()
@@ -326,10 +351,11 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
 
 # --- Step 4: Filter by score ---
 
+
 def step_filter(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
     """Filter jobs by minimum score threshold."""
     logger.info("=" * 60)
-    logger.info("STEP 4: FILTER (min_score={})".format(config.min_score))
+    logger.info(f"STEP 4: FILTER (min_score={config.min_score})")
     logger.info("=" * 60)
 
     filtered = [j for j in jobs if j.get("fit_score", 0) >= config.min_score]
@@ -340,6 +366,7 @@ def step_filter(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
 
 
 # --- Step 5: Generate digest ---
+
 
 def step_generate_digest(
     config: PipelineConfig,
@@ -365,24 +392,28 @@ def step_generate_digest(
         s = j.get("fit_score", 0)
         score_dist[s] = score_dist.get(s, 0) + 1
 
-    lines.extend([
-        "## Stats",
-        "",
-        f"- **Total scraped:** {len(all_scraped)}",
-        f"- **After dedup + scoring:** {len(scored)}",
-        f"- **Score >= {config.min_score} (new):** {len(filtered)}",
-        f"- **Score distribution:** {' | '.join(f'{s}/10: {c}' for s, c in sorted(score_dist.items(), reverse=True))}",
-        "",
-    ])
+    lines.extend(
+        [
+            "## Stats",
+            "",
+            f"- **Total scraped:** {len(all_scraped)}",
+            f"- **After dedup + scoring:** {len(scored)}",
+            f"- **Score >= {config.min_score} (new):** {len(filtered)}",
+            f"- **Score distribution:** {' | '.join(f'{s}/10: {c}' for s, c in sorted(score_dist.items(), reverse=True))}",
+            "",
+        ]
+    )
 
     # Main results table
     if filtered:
-        lines.extend([
-            "## New Roles Found",
-            "",
-            "| Score | Company | Role | Location | Salary | Effort | Source | URL |",
-            "|-------|---------|------|----------|--------|--------|--------|-----|",
-        ])
+        lines.extend(
+            [
+                "## New Roles Found",
+                "",
+                "| Score | Company | Role | Location | Salary | Effort | Source | URL |",
+                "|-------|---------|------|----------|--------|--------|--------|-----|",
+            ]
+        )
         for j in filtered:
             score = j.get("fit_score", "?")
             company = j.get("company", "?")[:30]
@@ -393,52 +424,66 @@ def step_generate_digest(
             source = j.get("source", "?")
             url = j.get("url", "")
             url_display = f"[Link]({url})" if url else "—"
-            lines.append(f"| {score}/10 | {company} | {title} | {loc} | {salary} | {effort} | {source} | {url_display} |")
+            lines.append(
+                f"| {score}/10 | {company} | {title} | {loc} | {salary} | {effort} | {source} | {url_display} |"
+            )
 
         lines.append("")
 
         # Top 5 quick adds
         top5 = filtered[:5]
-        lines.extend([
-            "## Quick adds (top 5 for /job-intake)",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Quick adds (top 5 for /job-intake)",
+                "",
+            ]
+        )
         for j in top5:
             url = j.get("url", "N/A")
-            lines.append(f"- [{j.get('fit_score', '?')}/10] {j.get('company', '?')} — {j.get('title', '?')}: {url}")
+            lines.append(
+                f"- [{j.get('fit_score', '?')}/10] {j.get('company', '?')} — {j.get('title', '?')}: {url}"
+            )
         lines.append("")
 
         # Reasoning details
-        lines.extend([
-            "## Scoring Details",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Scoring Details",
+                "",
+            ]
+        )
         for j in filtered[:15]:
-            lines.append(f"**[{j.get('fit_score', '?')}/10] {j.get('company', '?')} — {j.get('title', '?')}**")
+            lines.append(
+                f"**[{j.get('fit_score', '?')}/10] {j.get('company', '?')} — {j.get('title', '?')}**"
+            )
             lines.append(f"  - {j.get('fit_reasoning', 'No reasoning')}")
             if j.get("prep_notes"):
                 lines.append(f"  - Prep ({j.get('prep_level', '?')}/5): {j.get('prep_notes', '')}")
             lines.append("")
     else:
-        lines.extend([
-            "## No new roles found above threshold",
-            "",
-            "Try lowering `PIPELINE_MIN_SCORE` or expanding search keywords.",
-            "",
-        ])
+        lines.extend(
+            [
+                "## No new roles found above threshold",
+                "",
+                "Try lowering `PIPELINE_MIN_SCORE` or expanding search keywords.",
+                "",
+            ]
+        )
 
     # Review Queue - wildcards, edge cases, ambiguous fits
     review_jobs = [j for j in scored if j.get("review_flag")]
     if review_jobs:
-        lines.extend([
-            "## Review Queue (wildcards + edge cases)",
-            "",
-            "These roles scored low but were flagged for manual review - unusual angles, "
-            "exceptional companies, or potential wildcard career moves.",
-            "",
-            "| Score | Company | Role | Review Reason |",
-            "|-------|---------|------|---------------|",
-        ])
+        lines.extend(
+            [
+                "## Review Queue (wildcards + edge cases)",
+                "",
+                "These roles scored low but were flagged for manual review - unusual angles, "
+                "exceptional companies, or potential wildcard career moves.",
+                "",
+                "| Score | Company | Role | Review Reason |",
+                "|-------|---------|------|---------------|",
+            ]
+        )
         for j in review_jobs:
             score = j.get("fit_score", "?")
             company = j.get("company", "?")[:30]
@@ -448,10 +493,12 @@ def step_generate_digest(
             lines.append(f"| {score}/10 | {company} | {title} | {reason} |")
         lines.append("")
 
-    lines.extend([
-        "---",
-        f"*Generated by daily_pipeline.py at {config.timestamp}*",
-    ])
+    lines.extend(
+        [
+            "---",
+            f"*Generated by daily_pipeline.py at {config.timestamp}*",
+        ]
+    )
 
     digest = "\n".join(lines)
 
@@ -471,6 +518,7 @@ def step_generate_digest(
 
 
 # --- Main pipeline ---
+
 
 def run_pipeline() -> int:
     """Execute the full daily pipeline. Returns exit code."""
@@ -515,14 +563,18 @@ def run_pipeline() -> int:
     # Print summary to stdout
     print("\n" + "=" * 60)
     print(f"DAILY PIPELINE COMPLETE — {config.date}")
-    print(f"Scraped: {len(all_scraped)} | Scored: {len(scored)} | New: {len(new_jobs)} | Above threshold: {len(filtered)}")
+    print(
+        f"Scraped: {len(all_scraped)} | Scored: {len(scored)} | New: {len(new_jobs)} | Above threshold: {len(filtered)}"
+    )
     print(f"Digest: {config.digest_path}")
     print("=" * 60)
 
     if filtered:
-        print(f"\nTop matches:")
+        print("\nTop matches:")
         for j in filtered[:5]:
-            print(f"  [{j.get('fit_score', '?')}/10] {j.get('company', '?')} — {j.get('title', '?')}")
+            print(
+                f"  [{j.get('fit_score', '?')}/10] {j.get('company', '?')} — {j.get('title', '?')}"
+            )
 
     return exit_code
 

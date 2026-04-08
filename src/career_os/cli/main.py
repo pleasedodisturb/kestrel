@@ -137,9 +137,7 @@ def pipeline_list(
 
         if not applications:
             if status:
-                console.print(
-                    f"[yellow]No matching applications with status '{status}'.[/yellow]"
-                )
+                console.print(f"[yellow]No matching applications with status '{status}'.[/yellow]")
             else:
                 console.print("[yellow]No applications in the pipeline yet.[/yellow]")
             return
@@ -262,8 +260,7 @@ def pipeline_update(
             except ValueError:
                 valid = ", ".join(s.value for s in ApplicationStatus)
                 console.print(
-                    f"[red]Error:[/red] Invalid status '{status}'. "
-                    f"Valid statuses: {valid}"
+                    f"[red]Error:[/red] Invalid status '{status}'. Valid statuses: {valid}"
                 )
                 raise typer.Exit(code=1) from None
 
@@ -363,11 +360,7 @@ def pipeline_stats() -> None:
         top_companies = sorted(company_counts.items(), key=lambda x: x[1], reverse=True)[:5]
 
         # Date range
-        dates = [
-            a.created_at
-            for a in applications
-            if a.created_at is not None
-        ]
+        dates = [a.created_at for a in applications if a.created_at is not None]
         if dates:
             earliest = min(dates)
             latest = max(dates)
@@ -482,11 +475,16 @@ def pipeline_follow_ups() -> None:
 @skills_app.command("list")
 def skills_list(
     category: str | None = typer.Option(
-        None, "--category", "-c",
+        None,
+        "--category",
+        "-c",
         help="Filter by category (technical/domain/soft/tools)",
     ),
     source: str | None = typer.Option(
-        None, "--source", "-s", help="Filter by evidence source",
+        None,
+        "--source",
+        "-s",
+        help="Filter by evidence source",
     ),
 ) -> None:
     """List all skills in the inventory."""
@@ -505,10 +503,7 @@ def skills_list(
 
         if not skills:
             if category or source:
-                console.print(
-                    "[yellow]No matching skills found with "
-                    "the given filters.[/yellow]"
-                )
+                console.print("[yellow]No matching skills found with the given filters.[/yellow]")
             else:
                 console.print(
                     "[yellow]No skills in the inventory yet. "
@@ -546,15 +541,19 @@ def skills_list(
 @skills_app.command("gaps")
 def skills_gaps(
     application: int | None = typer.Option(
-        None, "--application", "-a",
+        None,
+        "--application",
+        "-a",
         help="Application ID for per-job gap report",
     ),
     aggregate: bool = typer.Option(
-        False, "--aggregate",
+        False,
+        "--aggregate",
         help="Show cross-application gap summary",
     ),
     severity: str | None = typer.Option(
-        None, "--severity",
+        None,
+        "--severity",
         help="Filter gaps by severity (critical/nice-to-have/bonus)",
     ),
 ) -> None:
@@ -578,8 +577,12 @@ def skills_gaps(
             _show_aggregate_gaps(db, profile.id, aggregate_gaps)
         else:
             _show_application_gaps(
-                db, profile.id, application, severity,
-                analyze_gaps, ApplicationNotFoundError,
+                db,
+                profile.id,
+                application,
+                severity,
+                analyze_gaps,
+                ApplicationNotFoundError,
                 MissingRequirementsError,
             )
     finally:
@@ -618,8 +621,7 @@ def _show_application_gaps(
         score_style = "red"
     console.print(f"Readiness Score: [{score_style}]{score:.1f}%[/{score_style}]")
     console.print(
-        f"Total requirements: {result['total_requirements']}, "
-        f"Gaps: {result['gaps_count']}\n"
+        f"Total requirements: {result['total_requirements']}, Gaps: {result['gaps_count']}\n"
     )
 
     gaps = result["gaps"]
@@ -733,8 +735,7 @@ def goals_list(ctx: typer.Context) -> None:
 
         if not goals:
             console.print(
-                "[yellow]No career goals defined yet. "
-                "Create goals via the web UI or API.[/yellow]"
+                "[yellow]No career goals defined yet. Create goals via the web UI or API.[/yellow]"
             )
             return
 
@@ -899,10 +900,7 @@ def coach() -> None:
         console.print(table)
         top_count = len(top_suggestions)
         total_count = result["total"]
-        console.print(
-            f"\n[dim]Showing top {top_count} "
-            f"of {total_count} suggestion(s)[/dim]"
-        )
+        console.print(f"\n[dim]Showing top {top_count} of {total_count} suggestion(s)[/dim]")
     finally:
         db.close()
 
@@ -961,7 +959,7 @@ def _run_score_async(
 _URL_RE = re.compile(
     r"^https?://"  # scheme
     r"[^\s/$.?#]"  # at least one non-special char
-    r"[^\s]*$",    # rest
+    r"[^\s]*$",  # rest
     re.IGNORECASE,
 )
 
@@ -979,19 +977,26 @@ def _is_valid_url(url: str) -> bool:
 @app.command("discover")
 def discover(
     keywords: str | None = typer.Option(
-        None, "--keywords", "-k",
+        None,
+        "--keywords",
+        "-k",
         help="Search keywords (comma-separated)",
     ),
     location: str | None = typer.Option(
-        None, "--location", "-l",
+        None,
+        "--location",
+        "-l",
         help="Location to search",
     ),
     schedule: str | None = typer.Option(
-        None, "--schedule",
+        None,
+        "--schedule",
         help="Configure scheduled runs (e.g. 'weekly')",
     ),
     output: str = typer.Option(
-        "table", "--output", "-o",
+        "table",
+        "--output",
+        "-o",
         help="Output format: table or json",
     ),
 ) -> None:
@@ -1139,8 +1144,7 @@ def _handle_schedule(
 
     if schedule.lower() not in ("weekly", "daily"):
         console.print(
-            f"[red]Error:[/red] Unsupported schedule '{schedule}'. "
-            f"Use 'weekly' or 'daily'."
+            f"[red]Error:[/red] Unsupported schedule '{schedule}'. Use 'weekly' or 'daily'."
         )
         raise typer.Exit(code=1)
 
@@ -1232,7 +1236,9 @@ def _fetch_url_content(url: str) -> str | None:
 def score(
     url: str = typer.Argument(..., help="Job posting URL to score"),
     output: str = typer.Option(
-        "table", "--output", "-o",
+        "table",
+        "--output",
+        "-o",
         help="Output format: table or json",
     ),
 ) -> None:
@@ -1240,8 +1246,7 @@ def score(
     # Validate URL
     if not url or not _is_valid_url(url):
         console.print(
-            f"[red]Error:[/red] Invalid URL '{url}'. "
-            f"Provide a valid http:// or https:// URL."
+            f"[red]Error:[/red] Invalid URL '{url}'. Provide a valid http:// or https:// URL."
         )
         raise typer.Exit(code=1)
 
@@ -1260,9 +1265,7 @@ def score(
         if fetched_content and len(fetched_content.strip()) > 50:
             job_description = fetched_content
             if output != "json":
-                console.print(
-                    f"[dim]Fetched {len(fetched_content)} chars of content.[/dim]"
-                )
+                console.print(f"[dim]Fetched {len(fetched_content)} chars of content.[/dim]")
         else:
             # Fallback: use URL as minimal description
             job_description = (
@@ -1338,26 +1341,25 @@ def _score_output_table(scored) -> None:
                     desc = getattr(factor, "description", "")
                 sign = "+" if contrib >= 0 else ""
                 color = "green" if contrib >= 0 else "red"
-                breakdown_lines += (
-                    f"  [{color}]{sign}{contrib:.1f}[/{color}] "
-                    f"{name}: {desc}\n"
-                )
+                breakdown_lines += f"  [{color}]{sign}{contrib:.1f}[/{color}] {name}: {desc}\n"
 
     console.print()
-    console.print(Panel(
-        f"[bold]Fit Score:[/bold]        [{fit_style}]{fit:.1f} / 10[/{fit_style}]\n"
-        f"[bold]Readiness:[/bold]        [{ready_style}]{readiness:.1f}%[/{ready_style}]\n"
-        f"[bold]Career Alignment:[/bold] {scored.career_alignment:.1f} / 10\n"
-        f"{breakdown_lines}\n"
-        f"[bold]Estimated Salary:[/bold] {scored.estimated_salary or '—'}\n"
-        f"[bold]Effort Level:[/bold]     {scored.effort_flag}\n"
-        f"[bold]Prep Level:[/bold]       {scored.prep_level}\n"
-        f"\n"
-        f"[bold]Reasoning:[/bold]\n{scored.reasoning}\n"
-        f"\n"
-        f"[bold]Prep Notes:[/bold]\n{scored.prep_notes or '—'}",
-        title="[bold]Score Breakdown[/bold]",
-    ))
+    console.print(
+        Panel(
+            f"[bold]Fit Score:[/bold]        [{fit_style}]{fit:.1f} / 10[/{fit_style}]\n"
+            f"[bold]Readiness:[/bold]        [{ready_style}]{readiness:.1f}%[/{ready_style}]\n"
+            f"[bold]Career Alignment:[/bold] {scored.career_alignment:.1f} / 10\n"
+            f"{breakdown_lines}\n"
+            f"[bold]Estimated Salary:[/bold] {scored.estimated_salary or '—'}\n"
+            f"[bold]Effort Level:[/bold]     {scored.effort_flag}\n"
+            f"[bold]Prep Level:[/bold]       {scored.prep_level}\n"
+            f"\n"
+            f"[bold]Reasoning:[/bold]\n{scored.reasoning}\n"
+            f"\n"
+            f"[bold]Prep Notes:[/bold]\n{scored.prep_notes or '—'}",
+            title="[bold]Score Breakdown[/bold]",
+        )
+    )
 
 
 def _score_output_json(scored) -> None:
@@ -1394,7 +1396,9 @@ def _score_output_json(scored) -> None:
 @app.command("market")
 def market(
     output: str = typer.Option(
-        "table", "--output", "-o",
+        "table",
+        "--output",
+        "-o",
         help="Output format: table or json",
     ),
 ) -> None:
@@ -1473,9 +1477,7 @@ def _market_output_table(salary_data, skill_data, hiring_data, positioning_data)
         table.add_column("Trend")
 
         for s in skill_data["skills"][:10]:  # Top 10
-            trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(
-                s["trend_direction"], "—"
-            )
+            trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(s["trend_direction"], "—")
             table.add_row(
                 s["skill_name"],
                 str(s["mention_count"]),
@@ -1598,9 +1600,7 @@ def _run_interview_prep_async(
 @app.command("research")
 def research(
     company: str = typer.Argument(..., help="Company name to research"),
-    url: str | None = typer.Option(
-        None, "--url", "-u", help="Company website URL for enrichment"
-    ),
+    url: str | None = typer.Option(None, "--url", "-u", help="Company website URL for enrichment"),
 ) -> None:
     """Run full company research and output a structured report."""
     db = _get_session()
@@ -1754,14 +1754,11 @@ def interview_prep_generate(
             .first()
         )
         if app_obj is None:
-            console.print(
-                f"[red]Error:[/red] Application {application_id} not found."
-            )
+            console.print(f"[red]Error:[/red] Application {application_id} not found.")
             raise typer.Exit(code=1)
 
         console.print(
-            f"[dim]Generating interview prep for "
-            f"{app_obj.company} — {app_obj.role}...[/dim]"
+            f"[dim]Generating interview prep for {app_obj.company} — {app_obj.role}...[/dim]"
         )
 
         try:
@@ -1783,9 +1780,7 @@ def interview_prep_generate(
 def _render_interview_prep(prep) -> None:
     """Render an InterviewPrepResponse as Rich output."""
 
-    console.print(
-        f"\n[bold]🎤 Interview Prep: {prep.company} — {prep.role}[/bold]\n"
-    )
+    console.print(f"\n[bold]🎤 Interview Prep: {prep.company} — {prep.role}[/bold]\n")
 
     # Progress summary
     progress = prep.progress_percentage
@@ -1805,9 +1800,7 @@ def _render_interview_prep(prep) -> None:
 
     # Research prompt
     if prep.research_prompt:
-        console.print(
-            f"\n[yellow]⚠ {prep.research_prompt}[/yellow]"
-        )
+        console.print(f"\n[yellow]⚠ {prep.research_prompt}[/yellow]")
 
     console.print()
 
@@ -1893,8 +1886,7 @@ def _render_interview_prep(prep) -> None:
 
         total_mins = prep.total_prep_minutes
         console.print(
-            f"\n[dim]Total estimated prep time: "
-            f"{total_mins // 60}h {total_mins % 60}m[/dim]"
+            f"\n[dim]Total estimated prep time: {total_mins // 60}h {total_mins % 60}m[/dim]"
         )
 
     console.print()
@@ -1935,9 +1927,7 @@ def stories_list_default(ctx: typer.Context) -> None:
         # Build a mapping of story → usage count (how many applications match)
         # by checking skill tags overlap with job requirements
         all_requirements = (
-            db.query(JobRequirement)
-            .filter(JobRequirement.profile_id == profile.id)
-            .all()
+            db.query(JobRequirement).filter(JobRequirement.profile_id == profile.id).all()
         )
         # Group requirements by application_id for counting
         app_requirements: dict[int, set[str]] = {}
@@ -1969,9 +1959,7 @@ def stories_list_default(ctx: typer.Context) -> None:
                 created = created.replace(tzinfo=UTC)
             date_str = created.strftime("%Y-%m-%d") if created else "—"
 
-            table.add_row(
-                str(story.id), story.title, tags_str, str(usage_count), date_str
-            )
+            table.add_row(str(story.id), story.title, tags_str, str(usage_count), date_str)
 
         console.print(table)
         console.print(f"\n[dim]Total: {len(stories)} story(ies)[/dim]")
@@ -1982,15 +1970,11 @@ def stories_list_default(ctx: typer.Context) -> None:
 @stories_app.command("add")
 def stories_add(
     title: str = typer.Option(..., "--title", "-t", help="Story title"),
-    situation: str = typer.Option(
-        ..., "--situation", "-s", help="STAR: Situation"
-    ),
+    situation: str = typer.Option(..., "--situation", "-s", help="STAR: Situation"),
     task: str = typer.Option(..., "--task", help="STAR: Task"),
     action: str = typer.Option(..., "--action", "-a", help="STAR: Action"),
     result: str = typer.Option(..., "--result", "-r", help="STAR: Result"),
-    tags: str = typer.Option(
-        "", "--tags", help="Comma-separated skill tags"
-    ),
+    tags: str = typer.Option("", "--tags", help="Comma-separated skill tags"),
 ) -> None:
     """Add a new STAR story."""
     from career_os.models.star_stories import StarStory
@@ -1999,11 +1983,7 @@ def stories_add(
     try:
         profile = _get_default_profile(db)
 
-        skill_tags = (
-            ",".join(t.strip() for t in tags.split(",") if t.strip())
-            if tags
-            else ""
-        )
+        skill_tags = ",".join(t.strip() for t in tags.split(",") if t.strip()) if tags else ""
 
         story = StarStory(
             profile_id=profile.id,
@@ -2018,10 +1998,7 @@ def stories_add(
         db.commit()
         db.refresh(story)
 
-        console.print(
-            f"[green]✓[/green] Created STAR story [bold]#{story.id}[/bold]: "
-            f"{title}"
-        )
+        console.print(f"[green]✓[/green] Created STAR story [bold]#{story.id}[/bold]: {title}")
         if skill_tags:
             console.print(f"  Skills: {skill_tags}")
     finally:
@@ -2048,9 +2025,7 @@ def stories_view(
             .first()
         )
         if story is None:
-            console.print(
-                f"[red]Error:[/red] STAR story {story_id} not found."
-            )
+            console.print(f"[red]Error:[/red] STAR story {story_id} not found.")
             raise typer.Exit(code=1)
 
         tags = story.get_skill_tags_list()
@@ -2071,30 +2046,18 @@ def stories_view(
 @stories_app.command("edit")
 def stories_edit(
     story_id: int = typer.Argument(..., help="Story ID to edit"),
-    title: str | None = typer.Option(
-        None, "--title", "-t", help="New title"
-    ),
-    situation: str | None = typer.Option(
-        None, "--situation", "-s", help="New situation"
-    ),
+    title: str | None = typer.Option(None, "--title", "-t", help="New title"),
+    situation: str | None = typer.Option(None, "--situation", "-s", help="New situation"),
     task: str | None = typer.Option(None, "--task", help="New task"),
-    action: str | None = typer.Option(
-        None, "--action", "-a", help="New action"
-    ),
-    result: str | None = typer.Option(
-        None, "--result", "-r", help="New result"
-    ),
-    tags: str | None = typer.Option(
-        None, "--tags", help="New comma-separated skill tags"
-    ),
+    action: str | None = typer.Option(None, "--action", "-a", help="New action"),
+    result: str | None = typer.Option(None, "--result", "-r", help="New result"),
+    tags: str | None = typer.Option(None, "--tags", help="New comma-separated skill tags"),
 ) -> None:
     """Edit an existing STAR story."""
     from career_os.models.star_stories import StarStory
 
     # Check at least one field provided
-    if all(
-        v is None for v in [title, situation, task, action, result, tags]
-    ):
+    if all(v is None for v in [title, situation, task, action, result, tags]):
         console.print(
             "[red]Error:[/red] Provide at least one field to update "
             "(--title, --situation, --task, --action, --result, --tags)."
@@ -2114,9 +2077,7 @@ def stories_edit(
             .first()
         )
         if story is None:
-            console.print(
-                f"[red]Error:[/red] STAR story {story_id} not found."
-            )
+            console.print(f"[red]Error:[/red] STAR story {story_id} not found.")
             raise typer.Exit(code=1)
 
         changed = []
@@ -2136,17 +2097,14 @@ def stories_edit(
             story.result = result
             changed.append("result")
         if tags is not None:
-            story.skill_tags = ",".join(
-                t.strip() for t in tags.split(",") if t.strip()
-            )
+            story.skill_tags = ",".join(t.strip() for t in tags.split(",") if t.strip())
             changed.append("tags")
 
         db.commit()
         db.refresh(story)
 
         console.print(
-            f"[green]✓[/green] Updated STAR story [bold]#{story.id}[/bold] "
-            f"({', '.join(changed)})"
+            f"[green]✓[/green] Updated STAR story [bold]#{story.id}[/bold] ({', '.join(changed)})"
         )
     finally:
         db.close()

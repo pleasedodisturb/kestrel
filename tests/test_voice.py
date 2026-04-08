@@ -31,9 +31,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -109,9 +107,7 @@ def application(test_db: Session, profile: Profile) -> Application:
 class TestVoiceInput:
     """Text from any STT tool accepted in voice discussion interface."""
 
-    def test_create_session_and_send_message(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_create_session_and_send_message(self, client: TestClient, profile: Profile):
         """Create a session and send a text message → get response."""
         # Create session
         resp = client.post(
@@ -141,9 +137,7 @@ class TestVoiceInput:
         assert data["assistant_message"]["role"] == "assistant"
         assert len(data["assistant_message"]["content"]) > 0
 
-    def test_session_transcript_flow(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_session_transcript_flow(self, client: TestClient, profile: Profile):
         """Multiple messages form a conversation transcript."""
         # Create session
         resp = client.post(
@@ -187,9 +181,7 @@ class TestVoiceInput:
         data = resp.json()
         assert data["total"] == 2
 
-    def test_list_sessions_filter_by_mode(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_list_sessions_filter_by_mode(self, client: TestClient, profile: Profile):
         """Can filter sessions by mode."""
         for mode in ["coaching", "coaching", "job_evaluation"]:
             client.post(
@@ -309,9 +301,7 @@ class TestVoiceCoverLetter:
         assert "Cover Letter" in title
         assert "Stripe" in title
 
-    def test_cover_letter_requires_application_id(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_cover_letter_requires_application_id(self, client: TestClient, profile: Profile):
         """Cover letter mode without application_id returns 422."""
         resp = client.post(
             "/api/voice/sessions",
@@ -333,9 +323,7 @@ class TestVoiceCoverLetter:
 class TestVoiceCoaching:
     """Coaching session runs with relevant questions and feedback."""
 
-    def test_coaching_welcome_message(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_coaching_welcome_message(self, client: TestClient, profile: Profile):
         """Coaching session starts with helpful welcome."""
         resp = client.post(
             "/api/voice/sessions",
@@ -345,9 +333,7 @@ class TestVoiceCoaching:
         welcome = resp.json()["messages"][0]["content"]
         assert "coaching" in welcome.lower() or "focus" in welcome.lower()
 
-    def test_coaching_with_interview_focus(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_coaching_with_interview_focus(self, client: TestClient, profile: Profile):
         """Coaching responds with interview-relevant questions."""
         resp = client.post(
             "/api/voice/sessions",
@@ -368,9 +354,7 @@ class TestVoiceCoaching:
         assert len(content) > 50
         assert "interview" in content.lower() or "question" in content.lower()
 
-    def test_coaching_with_skills_focus(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_coaching_with_skills_focus(self, client: TestClient, profile: Profile):
         """Coaching responds with skills development advice."""
         resp = client.post(
             "/api/voice/sessions",
@@ -389,9 +373,7 @@ class TestVoiceCoaching:
         content = resp.json()["assistant_message"]["content"]
         assert len(content) > 50
 
-    def test_coaching_multi_turn(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_coaching_multi_turn(self, client: TestClient, profile: Profile):
         """Multiple coaching turns maintain conversational flow."""
         resp = client.post(
             "/api/voice/sessions",
@@ -512,9 +494,7 @@ class TestVoiceJobEvaluation:
 class TestVoiceValidation:
     """Validation and error handling tests."""
 
-    def test_invalid_mode_returns_422(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_invalid_mode_returns_422(self, client: TestClient, profile: Profile):
         """Invalid session mode returns 422."""
         resp = client.post(
             "/api/voice/sessions",
@@ -530,9 +510,7 @@ class TestVoiceValidation:
         )
         assert resp.status_code == 404
 
-    def test_nonexistent_application_returns_404(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_nonexistent_application_returns_404(self, client: TestClient, profile: Profile):
         """Non-existent application returns 404."""
         resp = client.post(
             "/api/voice/sessions",
@@ -544,9 +522,7 @@ class TestVoiceValidation:
         )
         assert resp.status_code == 404
 
-    def test_nonexistent_session_returns_404(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_nonexistent_session_returns_404(self, client: TestClient, profile: Profile):
         """Non-existent session returns 404."""
         resp = client.get(
             "/api/voice/sessions/9999",
@@ -554,9 +530,7 @@ class TestVoiceValidation:
         )
         assert resp.status_code == 404
 
-    def test_send_to_nonexistent_session_returns_404(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_send_to_nonexistent_session_returns_404(self, client: TestClient, profile: Profile):
         """Sending to non-existent session returns 404."""
         resp = client.post(
             "/api/voice/sessions/9999/messages",

@@ -15,10 +15,8 @@ from career_os.schemas.contacts import (
     InteractionCreate,
 )
 from career_os.services.contacts import (
-    ApplicationNotFoundError,
     ContactNotFoundError,
     DuplicateLinkError,
-    ProfileNotFoundError,
     archive_contact,
     create_contact,
     create_interaction,
@@ -32,7 +30,6 @@ from career_os.services.contacts import (
     update_contact,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -40,9 +37,7 @@ from career_os.services.contacts import (
 
 @pytest.fixture(autouse=True)
 def db():
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def _pragma(dbapi_conn, connection_record):
@@ -67,9 +62,7 @@ def db():
 
 @pytest.fixture
 def sample_app(db: Session) -> Application:
-    app_obj = Application(
-        profile_id=1, company="Mistral", role="Sr TPM", status="applied"
-    )
+    app_obj = Application(profile_id=1, company="Mistral", role="Sr TPM", status="applied")
     db.add(app_obj)
     db.commit()
     db.refresh(app_obj)
@@ -114,9 +107,7 @@ def test_create_contact_all_fields(db: Session):
 
 
 def test_create_contact_minimal(db: Session):
-    contact = create_contact(
-        db, ContactCreate(profile_id=1, name="Minimal Contact")
-    )
+    contact = create_contact(db, ContactCreate(profile_id=1, name="Minimal Contact"))
     assert contact.id is not None
     assert contact.name == "Minimal Contact"
     assert contact.relationship_type == "other"
@@ -144,12 +135,8 @@ def test_list_contacts_profile_scoped(db: Session):
 
 
 def test_list_contacts_filter_company(db: Session):
-    create_contact(
-        db, ContactCreate(profile_id=1, name="A", company="Mistral AI")
-    )
-    create_contact(
-        db, ContactCreate(profile_id=1, name="B", company="Linear")
-    )
+    create_contact(db, ContactCreate(profile_id=1, name="A", company="Mistral AI"))
+    create_contact(db, ContactCreate(profile_id=1, name="B", company="Linear"))
 
     contacts, total = list_contacts(db, profile_id=1, company="mistral")
     assert total == 1
@@ -182,12 +169,8 @@ def test_list_contacts_filter_relationship_type(db: Session):
 
 
 def test_list_contacts_filter_warmth(db: Session):
-    create_contact(
-        db, ContactCreate(profile_id=1, name="Hot", warmth="hot")
-    )
-    create_contact(
-        db, ContactCreate(profile_id=1, name="Cold", warmth="cold")
-    )
+    create_contact(db, ContactCreate(profile_id=1, name="Hot", warmth="hot"))
+    create_contact(db, ContactCreate(profile_id=1, name="Cold", warmth="cold"))
 
     contacts, total = list_contacts(db, profile_id=1, warmth="hot")
     assert total == 1
@@ -211,9 +194,7 @@ def test_list_contacts_needs_follow_up(db: Session):
         db,
         ContactCreate(profile_id=1, name="Future", next_follow_up=future),
     )
-    create_contact(
-        db, ContactCreate(profile_id=1, name="No FU")
-    )
+    create_contact(db, ContactCreate(profile_id=1, name="No FU"))
 
     contacts, total = list_contacts(db, profile_id=1, needs_follow_up=True)
     assert total == 1
@@ -232,13 +213,9 @@ def test_list_contacts_search(db: Session):
     )
     create_contact(
         db,
-        ContactCreate(
-            profile_id=1, name="Bob", notes="Met alice at event"
-        ),
+        ContactCreate(profile_id=1, name="Bob", notes="Met alice at event"),
     )
-    create_contact(
-        db, ContactCreate(profile_id=1, name="Charlie")
-    )
+    create_contact(db, ContactCreate(profile_id=1, name="Charlie"))
 
     contacts, total = list_contacts(db, profile_id=1, search="alice")
     assert total == 2  # matches name "Alice" and notes "alice"
@@ -250,13 +227,9 @@ def test_list_contacts_search(db: Session):
 
 
 def test_update_contact(db: Session):
-    contact = create_contact(
-        db, ContactCreate(profile_id=1, name="Jane", warmth="cold")
-    )
+    contact = create_contact(db, ContactCreate(profile_id=1, name="Jane", warmth="cold"))
 
-    updated = update_contact(
-        db, contact.id, ContactUpdate(warmth="hot", company="NewCo")
-    )
+    updated = update_contact(db, contact.id, ContactUpdate(warmth="hot", company="NewCo"))
     assert updated.warmth == "hot"
     assert updated.company == "NewCo"
     assert updated.name == "Jane"  # unchanged
@@ -270,9 +243,7 @@ def test_update_contact(db: Session):
 def test_update_contact_referral_status(db: Session):
     contact = create_contact(db, ContactCreate(profile_id=1, name="Jane"))
 
-    updated = update_contact(
-        db, contact.id, ContactUpdate(referral_status="cv_sent")
-    )
+    updated = update_contact(db, contact.id, ContactUpdate(referral_status="cv_sent"))
     assert updated.referral_status == "cv_sent"
 
     with pytest.raises(Exception):  # Pydantic validation
@@ -307,9 +278,7 @@ def test_create_interaction_updates_last_contacted(db: Session):
     interaction = create_interaction(
         db,
         contact.id,
-        InteractionCreate(
-            interaction_type="email", direction="outbound", notes="Sent CV"
-        ),
+        InteractionCreate(interaction_type="email", direction="outbound", notes="Sent CV"),
     )
     db.refresh(contact)
 
@@ -332,16 +301,12 @@ def test_list_interactions_ordered(db: Session):
     create_interaction(
         db,
         contact.id,
-        InteractionCreate(
-            interaction_type="email", direction="outbound", occurred_at=t1
-        ),
+        InteractionCreate(interaction_type="email", direction="outbound", occurred_at=t1),
     )
     create_interaction(
         db,
         contact.id,
-        InteractionCreate(
-            interaction_type="call", direction="inbound", occurred_at=t2
-        ),
+        InteractionCreate(interaction_type="call", direction="inbound", occurred_at=t2),
     )
 
     interactions = list_interactions(db, contact.id)
@@ -355,16 +320,12 @@ def test_list_interactions_ordered(db: Session):
 
 
 def test_link_contact_to_application(db: Session, sample_app: Application):
-    contact = create_contact(
-        db, ContactCreate(profile_id=1, name="Jane", company="Mistral")
-    )
+    contact = create_contact(db, ContactCreate(profile_id=1, name="Jane", company="Mistral"))
 
     link = link_contact_to_application(
         db,
         contact.id,
-        ContactApplicationCreate(
-            application_id=sample_app.id, role="referrer"
-        ),
+        ContactApplicationCreate(application_id=sample_app.id, role="referrer"),
     )
     assert link.contact_id == contact.id
     assert link.application_id == sample_app.id
@@ -382,18 +343,14 @@ def test_link_contact_duplicate(db: Session, sample_app: Application):
     link_contact_to_application(
         db,
         contact.id,
-        ContactApplicationCreate(
-            application_id=sample_app.id, role="referrer"
-        ),
+        ContactApplicationCreate(application_id=sample_app.id, role="referrer"),
     )
 
     with pytest.raises(DuplicateLinkError):
         link_contact_to_application(
             db,
             contact.id,
-            ContactApplicationCreate(
-                application_id=sample_app.id, role="insider"
-            ),
+            ContactApplicationCreate(application_id=sample_app.id, role="insider"),
         )
 
 
@@ -408,9 +365,7 @@ def test_unlink_contact(db: Session, sample_app: Application):
     link_contact_to_application(
         db,
         contact.id,
-        ContactApplicationCreate(
-            application_id=sample_app.id, role="referrer"
-        ),
+        ContactApplicationCreate(application_id=sample_app.id, role="referrer"),
     )
 
     unlink_contact_from_application(db, contact.id, sample_app.id)
@@ -426,15 +381,9 @@ def test_unlink_contact(db: Session, sample_app: Application):
 
 
 def test_contacts_by_company(db: Session):
-    create_contact(
-        db, ContactCreate(profile_id=1, name="A", company="Mistral AI")
-    )
-    create_contact(
-        db, ContactCreate(profile_id=1, name="B", company="Mistral AI")
-    )
-    create_contact(
-        db, ContactCreate(profile_id=1, name="C", company="Linear")
-    )
+    create_contact(db, ContactCreate(profile_id=1, name="A", company="Mistral AI"))
+    create_contact(db, ContactCreate(profile_id=1, name="B", company="Mistral AI"))
+    create_contact(db, ContactCreate(profile_id=1, name="C", company="Linear"))
 
     results = get_contacts_by_company(db, "Mistral", profile_id=1)
     assert len(results) == 2
@@ -452,16 +401,12 @@ def test_contacts_for_application(db: Session, sample_app: Application):
     link_contact_to_application(
         db,
         c1.id,
-        ContactApplicationCreate(
-            application_id=sample_app.id, role="referrer"
-        ),
+        ContactApplicationCreate(application_id=sample_app.id, role="referrer"),
     )
     link_contact_to_application(
         db,
         c2.id,
-        ContactApplicationCreate(
-            application_id=sample_app.id, role="insider"
-        ),
+        ContactApplicationCreate(application_id=sample_app.id, role="insider"),
     )
 
     results = get_contacts_for_application(db, sample_app.id)

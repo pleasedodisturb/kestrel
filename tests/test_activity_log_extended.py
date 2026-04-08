@@ -7,15 +7,13 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.database import Base
-from career_os.models.models import ActivityLog, Profile
+from career_os.models.models import Profile
 from career_os.services.activity import log_activity
 
 
 @pytest.fixture(autouse=True)
 def db():
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def _pragma(dbapi_conn, connection_record):

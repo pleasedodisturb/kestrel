@@ -64,9 +64,7 @@ class VoiceMessage(Base):
     session_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("voice_sessions.id"), nullable=False, index=True
     )
-    role: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # user | assistant
+    role: Mapped[str] = mapped_column(String(20), nullable=False)  # user | assistant
     content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False

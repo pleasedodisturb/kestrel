@@ -40,9 +40,7 @@ class TimeSessionCreate(BaseModel):
 class TimeSessionStop(BaseModel):
     """Request body for stopping a tracked session."""
 
-    notes: str | None = Field(
-        default=None, description="Optional notes to add when stopping"
-    )
+    notes: str | None = Field(default=None, description="Optional notes to add when stopping")
 
 
 class TimeSessionUpdate(BaseModel):

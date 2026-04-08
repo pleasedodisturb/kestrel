@@ -178,9 +178,7 @@ async def export_ical(
     return Response(
         content=ical_data,
         media_type="text/calendar",
-        headers={
-            "Content-Disposition": f'attachment; filename="event-{event_id}.ics"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="event-{event_id}.ics"'},
     )
 
 
@@ -204,9 +202,7 @@ async def export_all_ical(
     return Response(
         content=ical_data,
         media_type="text/calendar",
-        headers={
-            "Content-Disposition": 'attachment; filename="career-os-events.ics"'
-        },
+        headers={"Content-Disposition": 'attachment; filename="career-os-events.ics"'},
     )
 
 

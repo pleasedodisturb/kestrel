@@ -23,12 +23,8 @@ from pydantic import BaseModel, Field
 class CompanyResearchRequest(BaseModel):
     """Request body for POST /api/research/company."""
 
-    company_name: str = Field(
-        ..., min_length=1, description="Company name to research"
-    )
-    profile_id: int = Field(
-        ..., description="Profile ID for values alignment scoring"
-    )
+    company_name: str = Field(..., min_length=1, description="Company name to research")
+    profile_id: int = Field(..., description="Profile ID for values alignment scoring")
     company_url: str | None = Field(
         default=None, description="Optional company website URL for enrichment"
     )
@@ -47,18 +43,14 @@ class TechStackReport(BaseModel):
     infrastructure: list[str] = Field(
         default_factory=list, description="Infrastructure/DevOps technologies"
     )
-    analytics: list[str] = Field(
-        default_factory=list, description="Analytics/data technologies"
-    )
+    analytics: list[str] = Field(default_factory=list, description="Analytics/data technologies")
 
 
 class FundingReport(BaseModel):
     """Funding data (VAL-RESEARCH-003)."""
 
     stage: str | None = Field(default=None, description="Funding stage (e.g., Series C)")
-    total_raised: str | None = Field(
-        default=None, description="Total funding raised (e.g., $120M)"
-    )
+    total_raised: str | None = Field(default=None, description="Total funding raised (e.g., $120M)")
     lead_investor: str | None = Field(default=None, description="Lead investor name")
     last_round_date: str | None = Field(
         default=None, description="Date of last funding round (YYYY-MM)"
@@ -86,9 +78,7 @@ class GlassdoorReport(BaseModel):
 class ValuesAlignmentReport(BaseModel):
     """Values alignment scoring (VAL-RESEARCH-005)."""
 
-    score: float = Field(
-        ..., ge=0, le=10, description="Values alignment score (1-10)"
-    )
+    score: float = Field(..., ge=0, le=10, description="Values alignment score (1-10)")
     rationale: str = Field(
         ...,
         description="Rationale referencing user's specific values",
@@ -173,9 +163,7 @@ class CompanyResearchReport(BaseModel):
         default=None,
         description="Industry segment classification (VAL-RESEARCH-010)",
     )
-    employee_count: str | None = Field(
-        default=None, description="Estimated employee count"
-    )
+    employee_count: str | None = Field(default=None, description="Estimated employee count")
     news: list[NewsItem] = Field(
         default_factory=list,
         description="Recent news items about the company",

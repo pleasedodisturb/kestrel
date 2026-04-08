@@ -13,27 +13,42 @@ Usage:
 import argparse
 import asyncio
 import json
-import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 STANDARD_FIELDS = {
-    "name", "first_name", "last_name", "email", "phone", "location",
-    "resume", "cover_letter", "linkedin", "github", "website", "twitter",
-    "current_company", "org", "current_title",
+    "name",
+    "first_name",
+    "last_name",
+    "email",
+    "phone",
+    "location",
+    "resume",
+    "cover_letter",
+    "linkedin",
+    "github",
+    "website",
+    "twitter",
+    "current_company",
+    "org",
+    "current_title",
 }
 
 
 def detect_platform(url: str) -> str:
-    if "jobs.ashbyhq.com" in url: return "ashby"
-    if "lever.co" in url: return "lever"
-    if "greenhouse.io" in url: return "greenhouse"
-    if "linkedin.com" in url: return "linkedin"
-    if "workable.com" in url: return "workable"
+    if "jobs.ashbyhq.com" in url:
+        return "ashby"
+    if "lever.co" in url:
+        return "lever"
+    if "greenhouse.io" in url:
+        return "greenhouse"
+    if "linkedin.com" in url:
+        return "linkedin"
+    if "workable.com" in url:
+        return "workable"
     return "other"
 
 
@@ -56,15 +71,30 @@ async def scrape_lever_questions(page, url: str) -> list[dict]:
 
         # Skip standard fields
         lower = text.lower()
-        if any(s in lower for s in ["full name", "email", "phone", "resume", "cv",
-                                     "cover letter", "linkedin url", "github url",
-                                     "twitter url", "current company",
-                                     "google scholar", "design portfolio"]):
+        if any(
+            s in lower
+            for s in [
+                "full name",
+                "email",
+                "phone",
+                "resume",
+                "cv",
+                "cover letter",
+                "linkedin url",
+                "github url",
+                "twitter url",
+                "current company",
+                "google scholar",
+                "design portfolio",
+            ]
+        ):
             continue
 
         # Check if it has an associated input/textarea/select
         parent = label.locator("..")
-        inputs = await parent.locator("input:not([type='file']):not([type='hidden']), textarea, select").count()
+        inputs = await parent.locator(
+            "input:not([type='file']):not([type='hidden']), textarea, select"
+        ).count()
 
         if inputs > 0:
             # Get field type
@@ -86,12 +116,14 @@ async def scrape_lever_questions(page, url: str) -> list[dict]:
             required = await parent.locator("[required], .required").count() > 0
             asterisk = "*" in text
 
-            questions.append({
-                "label": text.replace("*", "").strip(),
-                "type": field_type,
-                "required": required or asterisk,
-                "options": options if options else None,
-            })
+            questions.append(
+                {
+                    "label": text.replace("*", "").strip(),
+                    "type": field_type,
+                    "required": required or asterisk,
+                    "options": options if options else None,
+                }
+            )
 
     # Also check for section headers that indicate custom question groups
     sections = await page.locator("h3, h4, .section-header").all()
@@ -124,12 +156,25 @@ async def scrape_greenhouse_questions(page, url: str) -> list[dict]:
             continue
 
         lower = text.lower()
-        if any(s in lower for s in ["first name", "last name", "email", "phone",
-                                     "resume", "cover letter", "linkedin", "location"]):
+        if any(
+            s in lower
+            for s in [
+                "first name",
+                "last name",
+                "email",
+                "phone",
+                "resume",
+                "cover letter",
+                "linkedin",
+                "location",
+            ]
+        ):
             continue
 
         parent = label.locator("..")
-        inputs = await parent.locator("input:not([type='file']):not([type='hidden']), textarea, select").count()
+        inputs = await parent.locator(
+            "input:not([type='file']):not([type='hidden']), textarea, select"
+        ).count()
 
         if inputs > 0:
             textarea = await parent.locator("textarea").count()
@@ -146,12 +191,14 @@ async def scrape_greenhouse_questions(page, url: str) -> list[dict]:
 
             required = "*" in text or await parent.locator("[required]").count() > 0
 
-            questions.append({
-                "label": text.replace("*", "").strip(),
-                "type": field_type,
-                "required": required,
-                "options": options if options else None,
-            })
+            questions.append(
+                {
+                    "label": text.replace("*", "").strip(),
+                    "type": field_type,
+                    "required": required,
+                    "options": options if options else None,
+                }
+            )
 
     return questions
 
@@ -176,13 +223,26 @@ async def scrape_ashby_questions(page, url: str) -> list[dict]:
             continue
 
         lower = text.lower()
-        if any(s in lower for s in ["name", "email", "phone", "resume", "cv",
-                                     "cover letter", "linkedin", "location",
-                                     "how did you hear"]):
+        if any(
+            s in lower
+            for s in [
+                "name",
+                "email",
+                "phone",
+                "resume",
+                "cv",
+                "cover letter",
+                "linkedin",
+                "location",
+                "how did you hear",
+            ]
+        ):
             continue
 
         parent = label.locator("..")
-        inputs = await parent.locator("input:not([type='file']):not([type='hidden']), textarea, select").count()
+        inputs = await parent.locator(
+            "input:not([type='file']):not([type='hidden']), textarea, select"
+        ).count()
 
         if inputs > 0:
             textarea = await parent.locator("textarea").count()
@@ -191,12 +251,14 @@ async def scrape_ashby_questions(page, url: str) -> list[dict]:
 
             required = "*" in text or await parent.locator("[required]").count() > 0
 
-            questions.append({
-                "label": text.replace("*", "").strip(),
-                "type": field_type,
-                "required": required,
-                "options": None,
-            })
+            questions.append(
+                {
+                    "label": text.replace("*", "").strip(),
+                    "type": field_type,
+                    "required": required,
+                    "options": None,
+                }
+            )
 
     return questions
 
@@ -222,15 +284,19 @@ async def main():
         applications = [a for a in applications if detect_platform(a["url"]) == args.platform]
     if args.only:
         needle = args.only.lower()
-        applications = [a for a in applications
-                       if needle in a.get("company", "").lower()
-                       or needle in a.get("role", "").lower()
-                       or needle in a.get("slug", "").lower()]
+        applications = [
+            a
+            for a in applications
+            if needle in a.get("company", "").lower()
+            or needle in a.get("role", "").lower()
+            or needle in a.get("slug", "").lower()
+        ]
 
     scrapeable = [a for a in applications if detect_platform(a["url"]) in SCRAPERS]
     print(f"Scraping {len(scrapeable)} application forms for custom questions...\n")
 
     from playwright.async_api import async_playwright
+
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
 
@@ -251,25 +317,29 @@ async def main():
                 custom = [q for q in questions if q["label"]]
                 print(f"{len(custom)} custom question(s)")
 
-                all_results.append({
-                    "slug": slug,
-                    "company": app.get("company", ""),
-                    "role": role,
-                    "platform": platform,
-                    "url": app["url"],
-                    "questions": custom,
-                })
+                all_results.append(
+                    {
+                        "slug": slug,
+                        "company": app.get("company", ""),
+                        "role": role,
+                        "platform": platform,
+                        "url": app["url"],
+                        "questions": custom,
+                    }
+                )
             except Exception as e:
                 print(f"ERROR: {e}")
-                all_results.append({
-                    "slug": slug,
-                    "company": app.get("company", ""),
-                    "role": role,
-                    "platform": platform,
-                    "url": app["url"],
-                    "questions": [],
-                    "error": str(e),
-                })
+                all_results.append(
+                    {
+                        "slug": slug,
+                        "company": app.get("company", ""),
+                        "role": role,
+                        "platform": platform,
+                        "url": app["url"],
+                        "questions": [],
+                        "error": str(e),
+                    }
+                )
             finally:
                 await context.close()
 
@@ -281,9 +351,9 @@ async def main():
         json.dump(all_results, f, indent=2)
 
     # Print summary
-    print(f"\n{'='*60}")
-    print(f"FORM QUESTIONS REPORT")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("FORM QUESTIONS REPORT")
+    print(f"{'=' * 60}")
 
     has_questions = [r for r in all_results if r["questions"]]
     no_questions = [r for r in all_results if not r["questions"] and "error" not in r]
@@ -298,7 +368,7 @@ async def main():
                 opts = f" Options: {q['options']}" if q.get("options") else ""
                 print(f"  {'>'} {q['label']} ({q['type']}){req}{opts}")
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"With custom questions: {len(has_questions)}")
     print(f"Standard form only: {len(no_questions)}")
     print(f"Errors: {len(errors)}")

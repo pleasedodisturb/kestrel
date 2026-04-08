@@ -39,9 +39,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -109,9 +107,7 @@ def client(_db_engine, test_db) -> TestClient:
 class TestOneClickDeepDive:
     """Test that research returns structured report with all sections."""
 
-    def test_research_returns_all_sections(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_research_returns_all_sections(self, client: TestClient, test_profile: Profile):
         """POST /api/research/company returns report with all required sections."""
         response = client.post(
             "/api/research/company",
@@ -135,9 +131,7 @@ class TestOneClickDeepDive:
         assert "industry_segment" in data
         assert "warnings" in data
 
-    def test_research_with_company_url(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_research_with_company_url(self, client: TestClient, test_profile: Profile):
         """Research with optional company_url accepted."""
         response = client.post(
             "/api/research/company",
@@ -162,9 +156,7 @@ class TestOneClickDeepDive:
         )
         assert response.status_code == 404
 
-    def test_research_empty_company_name_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_research_empty_company_name_422(self, client: TestClient, test_profile: Profile):
         """Research with empty company name returns 422 validation error."""
         response = client.post(
             "/api/research/company",
@@ -175,9 +167,7 @@ class TestOneClickDeepDive:
         )
         assert response.status_code == 422
 
-    def test_research_missing_company_name_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_research_missing_company_name_422(self, client: TestClient, test_profile: Profile):
         """Research without company_name returns 422."""
         response = client.post(
             "/api/research/company",
@@ -196,9 +186,7 @@ class TestOneClickDeepDive:
 class TestTechStackDetection:
     """Test tech stack is categorized by frontend/backend/infra/analytics."""
 
-    def test_tech_stack_has_four_categories(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_tech_stack_has_four_categories(self, client: TestClient, test_profile: Profile):
         """Tech stack report includes all 4 categories."""
         response = client.post(
             "/api/research/company",
@@ -214,9 +202,7 @@ class TestTechStackDetection:
         assert "infrastructure" in tech
         assert "analytics" in tech
 
-    def test_tech_stack_categories_populated(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_tech_stack_categories_populated(self, client: TestClient, test_profile: Profile):
         """Known company has populated tech stack categories (≥3 populated)."""
         response = client.post(
             "/api/research/company",
@@ -234,9 +220,7 @@ class TestTechStackDetection:
         )
         assert populated >= 3, f"Only {populated} categories populated"
 
-    def test_tech_stack_values_are_strings(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_tech_stack_values_are_strings(self, client: TestClient, test_profile: Profile):
         """Tech stack values are lists of strings."""
         response = client.post(
             "/api/research/company",
@@ -260,9 +244,7 @@ class TestTechStackDetection:
 class TestFundingData:
     """Test funding data includes stage, amount, investors."""
 
-    def test_funding_has_required_fields(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_funding_has_required_fields(self, client: TestClient, test_profile: Profile):
         """Funding report includes stage, total_raised, lead_investor."""
         response = client.post(
             "/api/research/company",
@@ -303,9 +285,7 @@ class TestFundingData:
 class TestGlassdoorCulture:
     """Test Glassdoor rating and culture keywords."""
 
-    def test_glassdoor_has_rating(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_glassdoor_has_rating(self, client: TestClient, test_profile: Profile):
         """Glassdoor includes overall_rating (numeric)."""
         response = client.post(
             "/api/research/company",
@@ -319,9 +299,7 @@ class TestGlassdoorCulture:
         assert isinstance(glassdoor["overall_rating"], (int, float))
         assert 0 <= glassdoor["overall_rating"] <= 5
 
-    def test_glassdoor_has_ceo_approval(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_glassdoor_has_ceo_approval(self, client: TestClient, test_profile: Profile):
         """Glassdoor includes CEO approval percentage."""
         response = client.post(
             "/api/research/company",
@@ -334,9 +312,7 @@ class TestGlassdoorCulture:
         assert glassdoor["ceo_approval"] is not None
         assert isinstance(glassdoor["ceo_approval"], int)
 
-    def test_glassdoor_has_culture_keywords(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_glassdoor_has_culture_keywords(self, client: TestClient, test_profile: Profile):
         """Glassdoor includes ≥3 culture keywords."""
         response = client.post(
             "/api/research/company",
@@ -377,9 +353,7 @@ class TestValuesAlignment:
         assert 0 <= va["score"] <= 10
         assert len(va["rationale"]) > 0
 
-    def test_aligned_company_higher_score(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_aligned_company_higher_score(self, client: TestClient, test_profile: Profile):
         """Aligned company (Stripe) has higher score than misaligned company."""
         # Research aligned company
         resp_aligned = client.post(
@@ -406,9 +380,7 @@ class TestValuesAlignment:
             f"than misaligned ({misaligned_score})"
         )
 
-    def test_different_companies_different_scores(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_different_companies_different_scores(self, client: TestClient, test_profile: Profile):
         """Different companies produce different values alignment scores."""
         resp_stripe = client.post(
             "/api/research/company",
@@ -442,9 +414,7 @@ class TestValuesAlignment:
 class TestATSDetection:
     """Test ATS platform detection."""
 
-    def test_ats_detected_for_known_company(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_ats_detected_for_known_company(self, client: TestClient, test_profile: Profile):
         """Known company returns detected ATS platform."""
         response = client.post(
             "/api/research/company",
@@ -455,12 +425,18 @@ class TestATSDetection:
         )
         ats = response.json()["ats_platform"]
         assert ats is not None
-        assert ats in ["Greenhouse", "Lever", "Ashby", "Workday", "Taleo",
-                        "iCIMS", "SmartRecruiters", "Personio"]
+        assert ats in [
+            "Greenhouse",
+            "Lever",
+            "Ashby",
+            "Workday",
+            "Taleo",
+            "iCIMS",
+            "SmartRecruiters",
+            "Personio",
+        ]
 
-    def test_ats_identifies_greenhouse(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_ats_identifies_greenhouse(self, client: TestClient, test_profile: Profile):
         """Stripe mock returns Greenhouse ATS."""
         response = client.post(
             "/api/research/company",
@@ -471,9 +447,7 @@ class TestATSDetection:
         )
         assert response.json()["ats_platform"] == "Greenhouse"
 
-    def test_ats_identifies_workday(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_ats_identifies_workday(self, client: TestClient, test_profile: Profile):
         """Misaligned company mock returns Workday ATS."""
         response = client.post(
             "/api/research/company",
@@ -484,9 +458,7 @@ class TestATSDetection:
         )
         assert response.json()["ats_platform"] == "Workday"
 
-    def test_ats_null_for_obscure_company(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_ats_null_for_obscure_company(self, client: TestClient, test_profile: Profile):
         """Obscure company may have null ATS."""
         response = client.post(
             "/api/research/company",
@@ -507,9 +479,7 @@ class TestATSDetection:
 class TestHiringPatterns:
     """Test hiring patterns include velocity and departments."""
 
-    def test_hiring_patterns_has_required_fields(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_hiring_patterns_has_required_fields(self, client: TestClient, test_profile: Profile):
         """Hiring patterns include active_postings, velocity, departments."""
         response = client.post(
             "/api/research/company",
@@ -549,9 +519,7 @@ class TestHiringPatterns:
 class TestObscureCompanyPartialReport:
     """Test that obscure companies get partial report without crash."""
 
-    def test_obscure_company_returns_200(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_obscure_company_returns_200(self, client: TestClient, test_profile: Profile):
         """Obscure company research returns 200 (no crash)."""
         response = client.post(
             "/api/research/company",
@@ -562,9 +530,7 @@ class TestObscureCompanyPartialReport:
         )
         assert response.status_code == 200
 
-    def test_obscure_company_has_all_sections(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_obscure_company_has_all_sections(self, client: TestClient, test_profile: Profile):
         """Obscure company report has all sections (possibly empty)."""
         response = client.post(
             "/api/research/company",
@@ -582,9 +548,7 @@ class TestObscureCompanyPartialReport:
         assert "hiring_patterns" in data
         assert "industry_segment" in data
 
-    def test_obscure_company_empty_tech_stack(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_obscure_company_empty_tech_stack(self, client: TestClient, test_profile: Profile):
         """Obscure company has empty tech stack lists."""
         response = client.post(
             "/api/research/company",
@@ -599,9 +563,7 @@ class TestObscureCompanyPartialReport:
         assert tech["infrastructure"] == []
         assert tech["analytics"] == []
 
-    def test_obscure_company_null_funding(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_obscure_company_null_funding(self, client: TestClient, test_profile: Profile):
         """Obscure company has null funding fields."""
         response = client.post(
             "/api/research/company",
@@ -614,9 +576,7 @@ class TestObscureCompanyPartialReport:
         assert funding["stage"] is None
         assert funding["total_raised"] is None
 
-    def test_obscure_company_null_glassdoor(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_obscure_company_null_glassdoor(self, client: TestClient, test_profile: Profile):
         """Obscure company has null glassdoor rating."""
         response = client.post(
             "/api/research/company",
@@ -628,9 +588,7 @@ class TestObscureCompanyPartialReport:
         glassdoor = response.json()["glassdoor"]
         assert glassdoor["overall_rating"] is None
 
-    def test_obscure_company_null_industry(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_obscure_company_null_industry(self, client: TestClient, test_profile: Profile):
         """Obscure company has null industry segment."""
         response = client.post(
             "/api/research/company",
@@ -655,13 +613,9 @@ class TestGracefulDegradation:
     ):
         """When AI provider fails, returns partial report with warning."""
         # Patch get_ai_provider to raise an exception
-        with patch(
-            "career_os.services.company_research.get_ai_provider"
-        ) as mock_factory:
+        with patch("career_os.services.company_research.get_ai_provider") as mock_factory:
             mock_provider = AsyncMock()
-            mock_provider.complete.side_effect = RuntimeError(
-                "AI provider unavailable"
-            )
+            mock_provider.complete.side_effect = RuntimeError("AI provider unavailable")
             mock_factory.return_value = mock_provider
 
             response = client.post(
@@ -689,9 +643,7 @@ class TestGracefulDegradation:
         self, client: TestClient, test_profile: Profile, _db_engine
     ):
         """When AI fails, values alignment defaults to 5.0."""
-        with patch(
-            "career_os.services.company_research.get_ai_provider"
-        ) as mock_factory:
+        with patch("career_os.services.company_research.get_ai_provider") as mock_factory:
             mock_provider = AsyncMock()
             mock_provider.complete.side_effect = RuntimeError("fail")
             mock_factory.return_value = mock_provider
@@ -711,9 +663,7 @@ class TestGracefulDegradation:
         self, client: TestClient, test_profile: Profile, _db_engine
     ):
         """Warnings include descriptive error messages."""
-        with patch(
-            "career_os.services.company_research.get_ai_provider"
-        ) as mock_factory:
+        with patch("career_os.services.company_research.get_ai_provider") as mock_factory:
             mock_provider = AsyncMock()
             mock_provider.complete.side_effect = RuntimeError("Connection timeout")
             mock_factory.return_value = mock_provider
@@ -738,9 +688,7 @@ class TestGracefulDegradation:
 class TestIndustryClassification:
     """Test industry segment classification."""
 
-    def test_industry_segment_present(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_industry_segment_present(self, client: TestClient, test_profile: Profile):
         """Known company has industry segment."""
         response = client.post(
             "/api/research/company",
@@ -777,8 +725,7 @@ class TestIndustryClassification:
         assert stripe_industry is not None
         assert datadog_industry is not None
         assert stripe_industry != datadog_industry, (
-            f"Industries should differ: Stripe='{stripe_industry}', "
-            f"Datadog='{datadog_industry}'"
+            f"Industries should differ: Stripe='{stripe_industry}', Datadog='{datadog_industry}'"
         )
 
     def test_three_companies_distinct_classifications(
@@ -814,9 +761,7 @@ class TestIndustryClassification:
 class TestProfileScoping:
     """Test that company research requires valid profile ownership."""
 
-    def test_research_with_valid_profile(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_research_with_valid_profile(self, client: TestClient, test_profile: Profile):
         """Research succeeds with a valid profile."""
         response = client.post(
             "/api/research/company",
@@ -827,9 +772,7 @@ class TestProfileScoping:
         )
         assert response.status_code == 200
 
-    def test_research_with_nonexistent_profile_404(
-        self, client: TestClient
-    ):
+    def test_research_with_nonexistent_profile_404(self, client: TestClient):
         """Research with nonexistent profile returns 404."""
         response = client.post(
             "/api/research/company",
@@ -873,9 +816,7 @@ class TestProfileScoping:
 class TestDeterministicResponses:
     """Test that mock provider returns deterministic results."""
 
-    def test_same_company_same_results(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_same_company_same_results(self, client: TestClient, test_profile: Profile):
         """Same company name returns identical results across calls."""
         resp1 = client.post(
             "/api/research/company",
@@ -921,9 +862,7 @@ class TestSchemaValidation:
         )
         assert response.status_code == 422
 
-    def test_response_values_alignment_is_object(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_response_values_alignment_is_object(self, client: TestClient, test_profile: Profile):
         """Values alignment in response is an object with score and rationale."""
         response = client.post(
             "/api/research/company",
@@ -937,9 +876,7 @@ class TestSchemaValidation:
         assert "score" in va
         assert "rationale" in va
 
-    def test_warnings_is_list(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_warnings_is_list(self, client: TestClient, test_profile: Profile):
         """Warnings field is always a list."""
         response = client.post(
             "/api/research/company",
@@ -959,9 +896,7 @@ class TestSchemaValidation:
 class TestMockProviderCompanyResearch:
     """Test the mock AI provider's company research feature directly."""
 
-    def test_mock_provider_stripe_response(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_mock_provider_stripe_response(self, client: TestClient, test_profile: Profile):
         """Mock provider returns full data for Stripe."""
         response = client.post(
             "/api/research/company",
@@ -979,9 +914,7 @@ class TestMockProviderCompanyResearch:
         assert data["funding"]["stage"] == "Series I"
         assert len(data["glassdoor"]["culture_keywords"]) >= 3
 
-    def test_mock_provider_datadog_response(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_mock_provider_datadog_response(self, client: TestClient, test_profile: Profile):
         """Mock provider returns full data for Datadog."""
         response = client.post(
             "/api/research/company",
@@ -996,9 +929,7 @@ class TestMockProviderCompanyResearch:
         assert data["ats_platform"] == "Greenhouse"
         assert data["values_alignment"]["score"] == 7.0
 
-    def test_mock_provider_evilcorp_response(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_mock_provider_evilcorp_response(self, client: TestClient, test_profile: Profile):
         """Mock provider returns low-aligned data for misaligned company."""
         response = client.post(
             "/api/research/company",
@@ -1023,9 +954,7 @@ class TestMockProviderCompanyResearch:
 class TestValuesAlignmentRationale:
     """Test that values_alignment includes rationale referencing user values."""
 
-    def test_stripe_rationale_non_empty(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_stripe_rationale_non_empty(self, client: TestClient, test_profile: Profile):
         """Stripe values alignment has meaningful rationale text."""
         response = client.post(
             "/api/research/company",
@@ -1062,9 +991,7 @@ class TestValuesAlignmentRationale:
         self, client: TestClient, test_profile: Profile, _db_engine
     ):
         """When AI fails, rationale has fallback text (not empty)."""
-        with patch(
-            "career_os.services.company_research.get_ai_provider"
-        ) as mock_factory:
+        with patch("career_os.services.company_research.get_ai_provider") as mock_factory:
             mock_provider = AsyncMock()
             mock_provider.complete.side_effect = RuntimeError("fail")
             mock_factory.return_value = mock_provider
@@ -1089,9 +1016,7 @@ class TestValuesAlignmentRationale:
 class TestEmployeeCountAndNews:
     """Test that report includes employee_count and news section."""
 
-    def test_stripe_has_employee_count(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_stripe_has_employee_count(self, client: TestClient, test_profile: Profile):
         """Known company includes employee_count string."""
         response = client.post(
             "/api/research/company",
@@ -1106,9 +1031,7 @@ class TestEmployeeCountAndNews:
         assert isinstance(data["employee_count"], str)
         assert len(data["employee_count"]) > 0
 
-    def test_stripe_has_news(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_stripe_has_news(self, client: TestClient, test_profile: Profile):
         """Known company includes news section with items."""
         response = client.post(
             "/api/research/company",
@@ -1126,9 +1049,7 @@ class TestEmployeeCountAndNews:
             assert "title" in item
             assert len(item["title"]) > 0
 
-    def test_datadog_has_employee_count_and_news(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_datadog_has_employee_count_and_news(self, client: TestClient, test_profile: Profile):
         """Datadog includes employee_count and news."""
         response = client.post(
             "/api/research/company",
@@ -1142,9 +1063,7 @@ class TestEmployeeCountAndNews:
         assert isinstance(data["news"], list)
         assert len(data["news"]) > 0
 
-    def test_obscure_company_null_employee_count(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_obscure_company_null_employee_count(self, client: TestClient, test_profile: Profile):
         """Obscure company has null employee_count."""
         response = client.post(
             "/api/research/company",
@@ -1156,9 +1075,7 @@ class TestEmployeeCountAndNews:
         data = response.json()
         assert data["employee_count"] is None
 
-    def test_obscure_company_empty_news(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_obscure_company_empty_news(self, client: TestClient, test_profile: Profile):
         """Obscure company has empty news list."""
         response = client.post(
             "/api/research/company",
@@ -1174,9 +1091,7 @@ class TestEmployeeCountAndNews:
         self, client: TestClient, test_profile: Profile, _db_engine
     ):
         """When AI fails, employee_count is null and news is empty."""
-        with patch(
-            "career_os.services.company_research.get_ai_provider"
-        ) as mock_factory:
+        with patch("career_os.services.company_research.get_ai_provider") as mock_factory:
             mock_provider = AsyncMock()
             mock_provider.complete.side_effect = RuntimeError("fail")
             mock_factory.return_value = mock_provider

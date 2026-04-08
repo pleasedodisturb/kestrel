@@ -31,9 +31,7 @@ def client() -> TestClient:
 @pytest.fixture
 def db_engine():
     """Create a fresh in-memory SQLite engine with FK enforcement."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_conn, connection_record):

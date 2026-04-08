@@ -153,9 +153,6 @@ async def _check_openrouter(api_key: str) -> ProviderHealthStatus:
         )
 
 
-
-
-
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -169,11 +166,7 @@ def _get_stored_ai_config(db: Session | None) -> dict[str, str]:
     """
     creds: dict[str, str] = {}
     if db is not None:
-        row = (
-            db.query(IntegrationConfig)
-            .filter(IntegrationConfig.name == "ai_providers")
-            .first()
-        )
+        row = db.query(IntegrationConfig).filter(IntegrationConfig.name == "ai_providers").first()
         if row and row.credentials:
             with contextlib.suppress(json.JSONDecodeError, TypeError):
                 creds = json.loads(row.credentials)
@@ -275,9 +268,7 @@ async def check_single_provider(
 
     checkers = {
         "mock": lambda: _check_mock(),
-        "openrouter": lambda: _check_openrouter(
-            _resolve_api_key("openrouter", stored_config)
-        ),
+        "openrouter": lambda: _check_openrouter(_resolve_api_key("openrouter", stored_config)),
     }
 
     checker = checkers.get(name)

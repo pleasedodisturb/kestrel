@@ -36,7 +36,13 @@ def md_to_html_content(md_text: str) -> tuple[str, str, str]:
             if subject:
                 break
             continue
-        if not subject and stripped and not stripped.startswith("**") and not stripped.startswith("March") and not stripped.startswith("---"):
+        if (
+            not subject
+            and stripped
+            and not stripped.startswith("**")
+            and not stripped.startswith("March")
+            and not stripped.startswith("---")
+        ):
             header_lines.append(stripped)
 
     # Parse header
@@ -46,7 +52,10 @@ def md_to_html_content(md_text: str) -> tuple[str, str, str]:
     # Find the date
     date_line = ""
     for line in lines[:10]:
-        if re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d", line.strip()):
+        if re.match(
+            r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d",
+            line.strip(),
+        ):
             date_line = line.strip()
             break
 
@@ -74,17 +83,17 @@ def md_to_html_content(md_text: str) -> tuple[str, str, str]:
             continue
 
         # Bold text
-        stripped = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
+        stripped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", stripped)
 
         # Links
-        stripped = re.sub(r'\(?(https?://[^\s\)]+)\)?', r'<a href="\1">\1</a>', stripped)
+        stripped = re.sub(r"\(?(https?://[^\s\)]+)\)?", r'<a href="\1">\1</a>', stripped)
 
         # Numbered list items (role links)
-        if re.match(r'^\d+\.', stripped):
+        if re.match(r"^\d+\.", stripped):
             if not in_roles_list:
                 body_html += '<ol class="roles-list">\n'
                 in_roles_list = True
-            item = re.sub(r'^\d+\.\s*', '', stripped)
+            item = re.sub(r"^\d+\.\s*", "", stripped)
             body_html += f"  <li>{item}</li>\n"
             continue
 
@@ -123,7 +132,7 @@ def build_cover_letter_html(md_text: str) -> str:
     """Build full HTML document for cover letter."""
     header_html, subject, body_html = md_to_html_content(md_text)
 
-    return f'''<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -293,12 +302,12 @@ def build_cover_letter_html(md_text: str) -> str:
   </div>
 </div>
 </body>
-</html>'''
+</html>"""
 
 
 def html_to_pdf(html_path: Path, pdf_path: Path) -> bool:
     """Convert HTML to PDF using Playwright."""
-    script = f'''
+    script = f"""
 const {{ chromium }} = require('playwright');
 (async () => {{
     const browser = await chromium.launch();
@@ -312,20 +321,28 @@ const {{ chromium }} = require('playwright');
     }});
     await browser.close();
 }})();
-'''
+"""
     js_path = html_path.parent / "_render_cl.cjs"
     js_path.write_text(script, encoding="utf-8")
 
     try:
         # Try cv/ dir first (has playwright installed), then project root
         cv_dir = PROJECT_ROOT / "cv"
-        node_modules = cv_dir / "node_modules" if (cv_dir / "node_modules").exists() else PROJECT_ROOT / "node_modules"
+        node_modules = (
+            cv_dir / "node_modules"
+            if (cv_dir / "node_modules").exists()
+            else PROJECT_ROOT / "node_modules"
+        )
 
         result = subprocess.run(
             ["node", str(js_path.resolve())],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
             cwd=str(cv_dir) if (cv_dir / "node_modules").exists() else str(PROJECT_ROOT),
-            env={"PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin", "NODE_PATH": str(node_modules)},
+            env={
+                "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin",
+                "NODE_PATH": str(node_modules),
+            },
         )
         if result.returncode != 0:
             print(f"  Error: {result.stderr}")

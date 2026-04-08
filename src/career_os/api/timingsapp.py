@@ -141,9 +141,7 @@ async def update_session_endpoint(
 ) -> TimeSessionResponse:
     """Update a time session's details."""
     try:
-        session_record = update_session(
-            db, session_id, payload, profile_id=profile_id
-        )
+        session_record = update_session(db, session_id, payload, profile_id=profile_id)
         return TimeSessionResponse.model_validate(session_record)
     except TimeSessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Time session not found") from exc

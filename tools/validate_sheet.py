@@ -27,14 +27,47 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SHEET_ID = os.getenv("SHEET_ID", "1sAeXWISdlMTk_UdJTYafQToI0G8FZcnLCATGKigjGQM")
 DB_PATH = PROJECT_ROOT / "data" / "career_os.db"
 
-EXPECTED_HEADERS = ["ID", "Company", "Role", "Score", "Status", "Location",
-                    "Salary", "Source", "URL", "Date Added", "Last Updated", "Notes"]
-EXPECTED_LOG_HEADERS = ["Date", "Scraped", "Scored", "New (above threshold)",
-                        "Top Score", "Top Role", "Top Company", "CI Run URL"]
-VALID_STATUSES = {"discovered", "interested", "applied", "rejected",
-                  "closed", "interviewing", "withdrawn"}
-STATUS_ORDER = {"interviewing": 1, "applied": 2, "interested": 3,
-                "discovered": 4, "rejected": 5, "closed": 6}
+EXPECTED_HEADERS = [
+    "ID",
+    "Company",
+    "Role",
+    "Score",
+    "Status",
+    "Location",
+    "Salary",
+    "Source",
+    "URL",
+    "Date Added",
+    "Last Updated",
+    "Notes",
+]
+EXPECTED_LOG_HEADERS = [
+    "Date",
+    "Scraped",
+    "Scored",
+    "New (above threshold)",
+    "Top Score",
+    "Top Role",
+    "Top Company",
+    "CI Run URL",
+]
+VALID_STATUSES = {
+    "discovered",
+    "interested",
+    "applied",
+    "rejected",
+    "closed",
+    "interviewing",
+    "withdrawn",
+}
+STATUS_ORDER = {
+    "interviewing": 1,
+    "applied": 2,
+    "interested": 3,
+    "discovered": 4,
+    "rejected": 5,
+    "closed": 6,
+}
 
 
 def get_client():

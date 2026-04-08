@@ -109,9 +109,7 @@ class ApplicationCreate(BaseModel):
     contact: str | None = Field(default=None, description="Contact person")
     next_step: str | None = Field(default=None, description="Next action to take")
     notes: str | None = Field(default=None, description="Free-form notes")
-    fit_score: float | None = Field(
-        default=None, ge=0, le=10, description="Fit score 0-10"
-    )
+    fit_score: float | None = Field(default=None, ge=0, le=10, description="Fit score 0-10")
 
 
 class ApplicationUpdate(BaseModel):

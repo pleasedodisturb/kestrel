@@ -11,7 +11,6 @@ from career_os.database import Base, get_db
 from career_os.main import app
 from career_os.models.models import Application, Profile
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -19,9 +18,7 @@ from career_os.models.models import Application, Profile
 
 @pytest.fixture(autouse=True)
 def db_session():
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def _pragma(dbapi_conn, connection_record):
@@ -126,9 +123,7 @@ def test_interaction_updates_last_contacted(client: TestClient):
     assert resp.status_code == 201
 
     # Verify last_contacted_at was updated
-    resp = client.get(
-        f"/api/contacts/{contact['id']}", params={"profile_id": 1}
-    )
+    resp = client.get(f"/api/contacts/{contact['id']}", params={"profile_id": 1})
     assert resp.status_code == 200
     updated = resp.json()
     assert updated["last_contacted_at"] is not None
@@ -159,9 +154,7 @@ def test_archive_app_contacts_survive(client: TestClient, sample_app: int):
     assert resp.status_code in (200, 204)
 
     # Contact should still exist and be accessible
-    resp = client.get(
-        f"/api/contacts/{contact['id']}", params={"profile_id": 1}
-    )
+    resp = client.get(f"/api/contacts/{contact['id']}", params={"profile_id": 1})
     assert resp.status_code == 200
     assert resp.json()["name"] == "Jane Doe"
 
@@ -183,9 +176,7 @@ def test_archive_contact_excluded_from_app(client: TestClient, sample_app: int):
     )
 
     # Archive the contact
-    resp = client.delete(
-        f"/api/contacts/{contact['id']}", params={"profile_id": 1}
-    )
+    resp = client.delete(f"/api/contacts/{contact['id']}", params={"profile_id": 1})
     assert resp.status_code == 204
 
     # Reverse lookup should not include archived contact
@@ -205,9 +196,7 @@ def test_archive_contact_excluded_from_app(client: TestClient, sample_app: int):
 
 def test_referral_badge_data(client: TestClient, sample_app: int):
     """When a referral-type contact is linked, badge data is available."""
-    contact = _create_contact(
-        client, name="Referrer Jane", relationship_type="referral"
-    )
+    contact = _create_contact(client, name="Referrer Jane", relationship_type="referral")
 
     client.post(
         f"/api/contacts/{contact['id']}/applications",

@@ -45,9 +45,7 @@ class InterviewPrepSession(Base):
     topics: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
     questions: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
     total_prep_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
-    company_researched: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False
-    )
+    company_researched: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
@@ -61,10 +59,7 @@ class InterviewPrepSession(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<InterviewPrepSession(id={self.id}, "
-            f"application_id={self.application_id})>"
-        )
+        return f"<InterviewPrepSession(id={self.id}, application_id={self.application_id})>"
 
 
 class InterviewPrepItem(Base):
@@ -84,13 +79,9 @@ class InterviewPrepItem(Base):
     )
     item: Mapped[str] = mapped_column(Text, nullable=False)
     time_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
-    priority: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="medium"
-    )
+    priority: Mapped[str] = mapped_column(String(50), nullable=False, default="medium")
     completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

@@ -65,9 +65,7 @@ def _validate_profile(db: Session, profile_id: int) -> Profile:
     return profile
 
 
-def _get_application(
-    db: Session, application_id: int, profile_id: int
-) -> Application:
+def _get_application(db: Session, application_id: int, profile_id: int) -> Application:
     """Get application scoped by profile."""
     app_obj = (
         db.query(Application)
@@ -335,11 +333,7 @@ def get_recommended_stories(
     required_skills = {r.skill_name.lower().strip() for r in requirements}
 
     # Get all stories for this profile
-    stories = (
-        db.query(StarStory)
-        .filter(StarStory.profile_id == profile_id)
-        .all()
-    )
+    stories = db.query(StarStory).filter(StarStory.profile_id == profile_id).all()
 
     recommended: list[RecommendedStory] = []
     covered_skills: set[str] = set()
@@ -407,11 +401,7 @@ def get_story_gaps(
     )
 
     # Collect all skill tags from stories
-    stories = (
-        db.query(StarStory)
-        .filter(StarStory.profile_id == profile_id)
-        .all()
-    )
+    stories = db.query(StarStory).filter(StarStory.profile_id == profile_id).all()
     covered_skills = set()
     for story in stories:
         for tag in story.get_skill_tags_list():

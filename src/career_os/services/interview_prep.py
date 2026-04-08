@@ -70,9 +70,7 @@ def _validate_profile(db: Session, profile_id: int) -> Profile:
     return profile
 
 
-def _get_application(
-    db: Session, application_id: int, profile_id: int
-) -> Application:
+def _get_application(db: Session, application_id: int, profile_id: int) -> Application:
     """Get application scoped by profile."""
     app_obj = (
         db.query(Application)
@@ -88,9 +86,7 @@ def _get_application(
     return app_obj
 
 
-def _get_skill_gaps(
-    db: Session, application_id: int, profile_id: int
-) -> list[dict]:
+def _get_skill_gaps(db: Session, application_id: int, profile_id: int) -> list[dict]:
     """Get skill gaps for an application (requirements vs skills).
 
     Each gap dict includes a ``distance`` field (0-3) so downstream
@@ -120,14 +116,16 @@ def _get_skill_gaps(
 
         distance = _compute_distance(current_level, req.required_level)
 
-        gaps.append({
-            "skill_name": req.skill_name,
-            "required_level": req.required_level,
-            "current_level": current_level,
-            "severity": req.severity,
-            "distance": distance,
-            "is_gap": distance > 0,
-        })
+        gaps.append(
+            {
+                "skill_name": req.skill_name,
+                "required_level": req.required_level,
+                "current_level": current_level,
+                "severity": req.severity,
+                "distance": distance,
+                "is_gap": distance > 0,
+            }
+        )
 
     return gaps
 
@@ -149,9 +147,7 @@ def _compute_distance(current_level: str | None, required_level: str) -> int:
 
 def _proficiency_index(level: str) -> int:
     """Map proficiency to integer for comparison."""
-    return {"beginner": 0, "intermediate": 1, "advanced": 2, "expert": 3}.get(
-        level.lower(), 1
-    )
+    return {"beginner": 0, "intermediate": 1, "advanced": 2, "expert": 3}.get(level.lower(), 1)
 
 
 def _check_company_researched(db: Session, company_name: str, profile_id: int) -> bool:
@@ -185,9 +181,7 @@ def _check_company_researched(db: Session, company_name: str, profile_id: int) -
         return bool(company_name and company_name.strip())
 
 
-def _get_company_research_data(
-    db: Session, company_name: str, profile_id: int
-) -> dict | None:
+def _get_company_research_data(db: Session, company_name: str, profile_id: int) -> dict | None:
     """Fetch persisted company research data for inclusion in prep prompt.
 
     Returns a dict with tech_stack, culture, values_alignment, hiring_patterns,
@@ -277,9 +271,7 @@ def _is_prep_stale(
 
     # Check if any skills were updated after the prep was generated
     latest_skill_update = _strip_tz(
-        db.query(sa_func.max(Skill.updated_at))
-        .filter(Skill.profile_id == profile_id)
-        .scalar()
+        db.query(sa_func.max(Skill.updated_at)).filter(Skill.profile_id == profile_id).scalar()
     )
 
     if latest_skill_update and latest_skill_update > session_created:
@@ -302,8 +294,7 @@ def _is_prep_stale(
 
     if latest_proficiency_change and latest_proficiency_change > session_created:
         logger.info(
-            "Prep session %d is stale: skill proficiency changed at %s "
-            "> prep created at %s",
+            "Prep session %d is stale: skill proficiency changed at %s > prep created at %s",
             session.id,
             latest_proficiency_change,
             session_created,
@@ -334,11 +325,7 @@ def _is_prep_stale(
         from career_os.models.company_research import CompanyResearchReportModel
 
         # Look up the application to get the company name
-        app_obj = (
-            db.query(Application)
-            .filter(Application.id == session.application_id)
-            .first()
-        )
+        app_obj = db.query(Application).filter(Application.id == session.application_id).first()
         if app_obj and app_obj.company and app_obj.company.strip():
             latest_research_update = _strip_tz(
                 db.query(sa_func.max(CompanyResearchReportModel.updated_at))
@@ -352,8 +339,7 @@ def _is_prep_stale(
 
             if latest_research_update and latest_research_update > session_created:
                 logger.info(
-                    "Prep session %d is stale: company research updated at %s "
-                    "> prep created at %s",
+                    "Prep session %d is stale: company research updated at %s > prep created at %s",
                     session.id,
                     latest_research_update,
                     session_created,
@@ -401,8 +387,7 @@ def _build_prep_prompt(
         ]
         gap_section = (
             "\n\nUser's UNRESOLVED skill gaps for this role "
-            "(focus prep on these):\n"
-            + "\n".join(gap_lines)
+            "(focus prep on these):\n" + "\n".join(gap_lines)
         )
     if resolved_gaps:
         resolved_lines = [
@@ -422,9 +407,7 @@ def _build_prep_prompt(
             f"distance: {g.get('distance', '?')})"
             for g in gaps
         ]
-        requirements_section = (
-            "\n\nRole requirements:\n" + "\n".join(req_lines)
-        )
+        requirements_section = "\n\nRole requirements:\n" + "\n".join(req_lines)
 
     # Build company research section from persisted research data
     research_section = ""
@@ -454,13 +437,9 @@ def _build_prep_prompt(
         hiring = research_data.get("hiring_patterns")
         if hiring and isinstance(hiring, dict):
             if hiring.get("active_postings"):
-                research_lines.append(
-                    f"  - Active postings: {hiring['active_postings']}"
-                )
+                research_lines.append(f"  - Active postings: {hiring['active_postings']}")
             if hiring.get("posting_velocity"):
-                research_lines.append(
-                    f"  - Posting velocity: {hiring['posting_velocity']}"
-                )
+                research_lines.append(f"  - Posting velocity: {hiring['posting_velocity']}")
             if hiring.get("top_departments"):
                 research_lines.append(
                     f"  - Top departments: {', '.join(hiring['top_departments'])}"

@@ -199,11 +199,16 @@ class TestPipelineAdd:
         result = runner.invoke(
             app,
             [
-                "pipeline", "add",
-                "--company", "FullCo",
-                "--role", "SRE",
-                "--url", "https://fullco.com/jobs/1",
-                "--source", "linkedin",
+                "pipeline",
+                "add",
+                "--company",
+                "FullCo",
+                "--role",
+                "SRE",
+                "--url",
+                "https://fullco.com/jobs/1",
+                "--source",
+                "linkedin",
             ],
         )
         assert result.exit_code == 0
@@ -292,9 +297,13 @@ class TestPipelineUpdate:
         result = runner.invoke(
             app,
             [
-                "pipeline", "update", "3",
-                "--status", "interested",
-                "--notes", "Looks promising",
+                "pipeline",
+                "update",
+                "3",
+                "--status",
+                "interested",
+                "--notes",
+                "Looks promising",
             ],
         )
         assert result.exit_code == 0
@@ -311,11 +320,7 @@ class TestPipelineUpdate:
             ["pipeline", "update", "3", "--status", "interested"],
         )
         seeded_db.expire_all()
-        logs = (
-            seeded_db.query(ActivityLog)
-            .filter_by(application_id=3)
-            .all()
-        )
+        logs = seeded_db.query(ActivityLog).filter_by(application_id=3).all()
         cli_logs = [log for log in logs if log.source == "cli"]
         assert len(cli_logs) > 0
 

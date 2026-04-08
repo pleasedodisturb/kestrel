@@ -41,9 +41,7 @@ from career_os.models.skills import Skill
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -59,12 +57,18 @@ def db_session():
 
     # Seed two profiles for scoping tests
     profile_a = Profile(
-        id=1, name="Test User", email="test@example.com",
-        location="Frankfurt", job_family="TPM",
+        id=1,
+        name="Test User",
+        email="test@example.com",
+        location="Frankfurt",
+        job_family="TPM",
     )
     profile_b = Profile(
-        id=2, name="Other User", email="b@test.com",
-        location="Berlin", job_family="SWE",
+        id=2,
+        name="Other User",
+        email="b@test.com",
+        location="Berlin",
+        job_family="SWE",
     )
     session.add_all([profile_a, profile_b])
     session.commit()
@@ -103,8 +107,7 @@ def _seed_discovered_jobs(session, profile_id: int = 1) -> list[DiscoveredJob]:
             "location": "Germany",
             "salary_range": "130000-160000 EUR",
             "description": (
-                "Senior TPM role requiring Python,"
-                " Kubernetes, AWS, Agile, Stakeholder Management"
+                "Senior TPM role requiring Python, Kubernetes, AWS, Agile, Stakeholder Management"
             ),
             "remote": True,
             "posted_at": now - timedelta(days=5),
@@ -136,8 +139,7 @@ def _seed_discovered_jobs(session, profile_id: int = 1) -> list[DiscoveredJob]:
             "location": "Remote EU",
             "salary_range": "110000-140000 EUR",
             "description": (
-                "Build product features. React, TypeScript,"
-                " Node.js, GraphQL, System Design"
+                "Build product features. React, TypeScript, Node.js, GraphQL, System Design"
             ),
             "remote": True,
             "posted_at": now - timedelta(days=2),
@@ -181,8 +183,7 @@ def _seed_discovered_jobs(session, profile_id: int = 1) -> list[DiscoveredJob]:
             "location": "Germany",
             "salary_range": "135000-165000 EUR",
             "description": (
-                "Staff TPM role at Google. Python, AWS,"
-                " Kubernetes, Agile, Program Management"
+                "Staff TPM role at Google. Python, AWS, Kubernetes, Agile, Program Management"
             ),
             "remote": True,
             "posted_at": now - timedelta(days=6),
@@ -230,17 +231,19 @@ def _seed_scored_jobs(
             readiness_score=65.0 + (dj.id % 4) * 10,  # 65, 75, 85, 95 ...
             career_alignment=6.5 + (dj.id % 3),
             reasoning="Detailed scoring explanation with factors: skills match is good, "
-                      "career alignment moderate, culture fit strong. Overall a solid match "
-                      "for the candidate's profile and career goals.",
+            "career alignment moderate, culture fit strong. Overall a solid match "
+            "for the candidate's profile and career goals.",
             estimated_salary=dj.salary_range or "120000-150000 EUR",
             effort_flag="medium",
             prep_level="moderate",
             prep_notes="Review system design concepts",
             is_stale=False,
-            weights_snapshot=json.dumps({
-                "skills_match": 0.25,
-                "career_alignment": 0.20,
-            }),
+            weights_snapshot=json.dumps(
+                {
+                    "skills_match": 0.25,
+                    "career_alignment": 0.20,
+                }
+            ),
         )
         session.add(sj)
         scored.append(sj)
@@ -504,9 +507,7 @@ class TestHiringPatterns:
         _seed_discovered_jobs(db_session)
         resp = client.get("/api/market/hiring-patterns", params={"profile_id": 1})
         data = resp.json()
-        google = next(
-            (c for c in data["companies"] if c["company"] == "Google"), None
-        )
+        google = next((c for c in data["companies"] if c["company"] == "Google"), None)
         assert google is not None
         assert google["active_postings_count"] == 3
 
@@ -523,9 +524,7 @@ class TestHiringPatterns:
         _seed_discovered_jobs(db_session)
         resp = client.get("/api/market/hiring-patterns", params={"profile_id": 1})
         data = resp.json()
-        google = next(
-            (c for c in data["companies"] if c["company"] == "Google"), None
-        )
+        google = next((c for c in data["companies"] if c["company"] == "Google"), None)
         assert google is not None
         assert len(google["roles_trending"]) > 0
 
@@ -592,9 +591,7 @@ class TestMarketPositioning:
             match1 = {p["role_type"]: p["match_percentage"] for p in data1["positions"]}
             match2 = {p["role_type"]: p["match_percentage"] for p in data2["positions"]}
             # At least one role type should have improved match
-            some_improved = any(
-                match2.get(rt, 0) >= match1.get(rt, 0) for rt in match2
-            )
+            some_improved = any(match2.get(rt, 0) >= match1.get(rt, 0) for rt in match2)
             assert some_improved
 
     def test_positioning_empty_data(self, client, db_session):

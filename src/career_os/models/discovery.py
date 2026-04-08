@@ -54,9 +54,7 @@ class DiscoveredJob(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     salary_range: Mapped[str | None] = mapped_column(String(255), nullable=True)
     remote: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    posted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Dedup-normalized keys (lowercase, stripped)
     title_normalized: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
@@ -84,10 +82,7 @@ class DiscoveredJob(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<DiscoveredJob(id={self.id}, title='{self.title}', "
-            f"company='{self.company}')>"
-        )
+        return f"<DiscoveredJob(id={self.id}, title='{self.title}', company='{self.company}')>"
 
 
 class SearchProfile(Base):
@@ -109,12 +104,8 @@ class SearchProfile(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Schedule fields
-    cadence: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
-    )  # weekly | daily | None
-    next_run: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    cadence: Mapped[str | None] = mapped_column(String(50), nullable=True)  # weekly | daily | None
+    next_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
@@ -153,15 +144,10 @@ class DiscoveryRun(Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self) -> str:
-        return (
-            f"<DiscoveryRun(id={self.id}, trigger='{self.trigger}', "
-            f"status='{self.status}')>"
-        )
+        return f"<DiscoveryRun(id={self.id}, trigger='{self.trigger}', status='{self.status}')>"
 
 
 class SavedSearch(Base):

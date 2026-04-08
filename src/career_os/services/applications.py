@@ -28,9 +28,7 @@ class InvalidStatusTransitionError(Exception):
     def __init__(self, from_status: str, to_status: str) -> None:
         self.from_status = from_status
         self.to_status = to_status
-        super().__init__(
-            f"Invalid status transition from '{from_status}' to '{to_status}'"
-        )
+        super().__init__(f"Invalid status transition from '{from_status}' to '{to_status}'")
 
 
 # ---------------------------------------------------------------------------
@@ -140,10 +138,7 @@ def get_application(
     if profile_id is not None:
         filters.append(Application.profile_id == profile_id)
     app_obj = (
-        db.query(Application)
-        .options(joinedload(Application.packages))
-        .filter(*filters)
-        .first()
+        db.query(Application).options(joinedload(Application.packages)).filter(*filters).first()
     )
     if app_obj is None:
         raise ApplicationNotFoundError(f"Application {application_id} not found")
@@ -263,9 +258,7 @@ def update_application(
     if status_changed:
         from career_os.services.ticktick_sync import try_auto_push_pipeline_action
 
-        try_auto_push_pipeline_action(
-            db, app_obj, f"Status changed to {app_obj.status}"
-        )
+        try_auto_push_pipeline_action(db, app_obj, f"Status changed to {app_obj.status}")
 
     return app_obj
 

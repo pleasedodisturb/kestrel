@@ -19,7 +19,6 @@ import asyncio
 import os
 import re
 import sqlite3
-import sys
 import time
 from datetime import date
 from pathlib import Path
@@ -180,7 +179,7 @@ async def fill_source_field(page) -> None:
                                     continue
                         else:
                             await sibling.first.fill("Job board")
-                            print(f"    [source] Filled via label sibling: Job board")
+                            print("    [source] Filled via label sibling: Job board")
                             return
         except Exception:
             continue
@@ -216,16 +215,24 @@ async def fill_lever(page, app: dict, dry_run: bool) -> bool:
         await phone_input.fill(PERSONAL["phone"])
 
     # Fill LinkedIn
-    for sel in ['input[name="urls[LinkedIn]"]', 'input[name="urls[LinkedIn URL]"]',
-                'input[placeholder*="LinkedIn"]', 'input[placeholder*="linkedin"]']:
+    for sel in [
+        'input[name="urls[LinkedIn]"]',
+        'input[name="urls[LinkedIn URL]"]',
+        'input[placeholder*="LinkedIn"]',
+        'input[placeholder*="linkedin"]',
+    ]:
         loc = page.locator(sel)
         if await loc.count() > 0:
             await loc.first.fill(PERSONAL["linkedin"])
             break
 
     # Fill GitHub
-    for sel in ['input[name="urls[GitHub]"]', 'input[placeholder*="GitHub"]',
-                'input[placeholder*="github"]', 'input[placeholder*="Portfolio"]']:
+    for sel in [
+        'input[name="urls[GitHub]"]',
+        'input[placeholder*="GitHub"]',
+        'input[placeholder*="github"]',
+        'input[placeholder*="Portfolio"]',
+    ]:
         loc = page.locator(sel)
         if await loc.count() > 0:
             await loc.first.fill(PERSONAL["github"])
@@ -267,16 +274,18 @@ async def fill_greenhouse(page, app: dict, dry_run: bool) -> bool:
         await page.wait_for_timeout(2000)
 
     # Fill first name
-    for sel in ['input[id*="first_name"]', 'input[name*="first_name"]',
-                'input[placeholder*="First"]']:
+    for sel in [
+        'input[id*="first_name"]',
+        'input[name*="first_name"]',
+        'input[placeholder*="First"]',
+    ]:
         loc = page.locator(sel)
         if await loc.count() > 0:
             await loc.first.fill(PERSONAL["first_name"])
             break
 
     # Fill last name
-    for sel in ['input[id*="last_name"]', 'input[name*="last_name"]',
-                'input[placeholder*="Last"]']:
+    for sel in ['input[id*="last_name"]', 'input[name*="last_name"]', 'input[placeholder*="Last"]']:
         loc = page.locator(sel)
         if await loc.count() > 0:
             await loc.first.fill(PERSONAL["last_name"])
@@ -317,8 +326,11 @@ async def fill_greenhouse(page, app: dict, dry_run: bool) -> bool:
         await page.wait_for_timeout(1000)
 
     # Fill LinkedIn URL field if present
-    for sel in ['input[id*="linkedin"]', 'input[name*="linkedin"]',
-                'input[placeholder*="LinkedIn"]']:
+    for sel in [
+        'input[id*="linkedin"]',
+        'input[name*="linkedin"]',
+        'input[placeholder*="LinkedIn"]',
+    ]:
         loc = page.locator(sel)
         if await loc.count() > 0:
             await loc.first.fill(PERSONAL["linkedin"])
@@ -359,12 +371,16 @@ async def fill_ashby(page, app: dict, dry_run: bool) -> bool:
             await last.first.fill(PERSONAL["last_name"])
 
     # Fill email
-    email_input = page.locator('input[name="email"], input[name="_systemfield_email"], input[type="email"]')
+    email_input = page.locator(
+        'input[name="email"], input[name="_systemfield_email"], input[type="email"]'
+    )
     if await email_input.count() > 0:
         await email_input.first.fill(PERSONAL["email"])
 
     # Fill phone
-    phone_input = page.locator('input[name="phone"], input[name="_systemfield_phone"], input[type="tel"]')
+    phone_input = page.locator(
+        'input[name="phone"], input[name="_systemfield_phone"], input[type="tel"]'
+    )
     if await phone_input.count() > 0:
         await phone_input.first.fill(PERSONAL["phone"])
 
@@ -487,10 +503,12 @@ async def _fill_field_by_label(page, label_text: str, value: str, exact: bool = 
                 return True
 
     # Fallback: search by placeholder or aria-label
-    for sel in [f'textarea[aria-label*="{label_text}" i]',
-                f'input[aria-label*="{label_text}" i]',
-                f'textarea[placeholder*="{label_text}" i]',
-                f'input[placeholder*="{label_text}" i]']:
+    for sel in [
+        f'textarea[aria-label*="{label_text}" i]',
+        f'input[aria-label*="{label_text}" i]',
+        f'textarea[placeholder*="{label_text}" i]',
+        f'input[placeholder*="{label_text}" i]',
+    ]:
         loc = page.locator(sel)
         if await loc.count() > 0:
             await loc.first.fill(value)
@@ -537,7 +555,8 @@ async def _click_radio_by_label(page, label_text: str) -> bool:
 
     # Stage 3: JS fallback - find any clickable element whose textContent matches
     try:
-        clicked = await page.evaluate("""(searchText) => {
+        clicked = await page.evaluate(
+            """(searchText) => {
             const allElements = document.querySelectorAll(
                 '[role="radio"], [role="option"], label, '
                 + 'div[class*="option"], div[class*="radio"], '
@@ -550,7 +569,9 @@ async def _click_radio_by_label(page, label_text: str) -> bool:
                 }
             }
             return false;
-        }""", label_text)
+        }""",
+            label_text,
+        )
         if clicked:
             return True
     except Exception:
@@ -584,7 +605,9 @@ async def _select_dropdown_option(page, label_text: str, option_text: str) -> bo
         # Custom dropdown: click to open, then click option
         await el.click()
         await page.wait_for_timeout(500)
-        option = page.locator(f'[role="option"]:has-text("{option_text}"), li:has-text("{option_text}")')
+        option = page.locator(
+            f'[role="option"]:has-text("{option_text}"), li:has-text("{option_text}")'
+        )
         if await option.count() > 0:
             await option.first.click()
             return True
@@ -670,7 +693,9 @@ async def fill_custom_questions(page, app: dict) -> None:
                         await loc_select.first.select_option(value=london_opt["value"])
                         print(f"    [custom] Selected Location dropdown: {london_opt['text']}")
                     else:
-                        print(f"    [custom] Location dropdown options: {options} - no London match")
+                        print(
+                            f"    [custom] Location dropdown options: {options} - no London match"
+                        )
             elif await loc_ta.count() > 0:
                 await loc_ta.first.fill("London (UK) or Paris (France)")
                 print("    [custom] Filled Location textarea: London (UK) or Paris (France)")
@@ -775,7 +800,8 @@ async def fill_custom_questions(page, app: dict) -> None:
         # Greenhouse's <div class="field"> blocks.
         try:
             field_data = [(label, value) for label, value, exact in gh_fields]
-            await page.evaluate("""(fieldData) => {
+            await page.evaluate(
+                """(fieldData) => {
                 const fields = document.querySelectorAll('.field, [class*="field"]');
                 for (const field of fields) {
                     const text = field.textContent;
@@ -809,7 +835,9 @@ async def fill_custom_questions(page, app: dict) -> None:
                         }
                     }
                 }
-            }""", field_data)
+            }""",
+                field_data,
+            )
             print("    [custom] Greenhouse/Anthropic: JS fallback applied for React dynamic fields")
         except Exception as e:
             print(f"    [custom] Greenhouse/Anthropic: JS fallback error: {e}")
@@ -839,8 +867,7 @@ async def fill_custom_questions(page, app: dict) -> None:
             )
             if not ok:
                 await _select_dropdown_option(
-                    page, "Location",
-                    "I can be based in Germany and do not need visa support"
+                    page, "Location", "I can be based in Germany and do not need visa support"
                 )
             await page.wait_for_timeout(300)
         except Exception as e:
@@ -855,7 +882,10 @@ async def fill_custom_questions(page, app: dict) -> None:
             ("ICs managed", "9+"),
             ("Functions managed", "None of the above"),
             ("Video program", "I contributed but did not own it"),
-            ("Technical demos", "Advanced (multi-step orchestration, agents/tools, evals, repos with tests/templates)"),
+            (
+                "Technical demos",
+                "Advanced (multi-step orchestration, agents/tools, evals, repos with tests/templates)",
+            ),
         ]
         for question, answer in ashby_radio_fields:
             try:
@@ -913,17 +943,22 @@ async def process_application(browser, app: dict, index: int, total: int, dry_ru
         print(f"  Screenshot: {screenshot_path.name}")
 
         if dry_run:
-            print(f"  [DRY RUN] Form filled, not submitting")
+            print("  [DRY RUN] Form filled, not submitting")
             return {"slug": slug, "status": "dry-run", "screenshot": str(screenshot_path)}
 
         if success:
             # Solve captcha automatically via Anti-Captcha API
             from captcha_solver import solve_and_inject
+
             captcha_ok = await solve_and_inject(page, timeout=120)
 
             if not captcha_ok:
-                print(f"  Captcha solve failed - skipping")
-                return {"slug": slug, "status": "captcha-failed", "screenshot": str(screenshot_path)}
+                print("  Captcha solve failed - skipping")
+                return {
+                    "slug": slug,
+                    "status": "captcha-failed",
+                    "screenshot": str(screenshot_path),
+                }
 
             # Submit the form via direct form.submit() or fetch, bypassing hCaptcha widget
             submitted_via_js = await page.evaluate("""() => {
@@ -958,29 +993,50 @@ async def process_application(browser, app: dict, index: int, total: int, dry_ru
 
                 # Check for confirmation page
                 page_text = await page.inner_text("body")
-                submitted = any(phrase in page_text.lower() for phrase in [
-                    "thank you", "application received", "successfully submitted",
-                    "thanks for applying", "we've received", "application has been",
-                ])
+                submitted = any(
+                    phrase in page_text.lower()
+                    for phrase in [
+                        "thank you",
+                        "application received",
+                        "successfully submitted",
+                        "thanks for applying",
+                        "we've received",
+                        "application has been",
+                    ]
+                )
 
                 post_path = SCREENSHOTS_DIR / f"{slug}_submitted_{int(time.time())}.png"
                 await page.screenshot(path=str(post_path), full_page=True)
 
                 if submitted:
-                    print(f"  SUBMITTED! Confirmation detected.")
+                    print("  SUBMITTED! Confirmation detected.")
                 else:
                     # May have hit validation error - check for error messages
-                    has_error = any(phrase in page_text.lower() for phrase in [
-                        "error", "required", "please fill", "invalid",
-                    ])
+                    has_error = any(
+                        phrase in page_text.lower()
+                        for phrase in [
+                            "error",
+                            "required",
+                            "please fill",
+                            "invalid",
+                        ]
+                    )
                     if has_error:
                         print(f"  VALIDATION ERROR - check screenshot: {post_path.name}")
-                        return {"slug": slug, "status": "validation-error", "screenshot": str(post_path)}
+                        return {
+                            "slug": slug,
+                            "status": "validation-error",
+                            "screenshot": str(post_path),
+                        }
                     print(f"  Clicked submit - check screenshot: {post_path.name}")
 
-                return {"slug": slug, "status": "submitted" if submitted else "clicked-submit", "screenshot": str(post_path)}
+                return {
+                    "slug": slug,
+                    "status": "submitted" if submitted else "clicked-submit",
+                    "screenshot": str(post_path),
+                }
             else:
-                print(f"  No visible submit button found - check screenshot")
+                print("  No visible submit button found - check screenshot")
 
         return {"slug": slug, "status": "filled", "screenshot": str(screenshot_path)}
 
@@ -1027,6 +1083,7 @@ async def _run_test_url(url: str, headless: bool = False) -> None:
     print(f"  Slug: {slug}")
 
     from playwright.async_api import async_playwright
+
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=headless)
         context = await browser.new_context(viewport={"width": 1280, "height": 900})
@@ -1059,8 +1116,15 @@ async def main():
     parser.add_argument("--only", help="Only process matching company/role")
     parser.add_argument("--dry-run", action="store_true", help="Fill forms but don't submit")
     parser.add_argument("--headless", action="store_true", help="Run headless (no visible browser)")
-    parser.add_argument("--batch-size", type=int, default=1, help="Parallel contexts (default 1, use 3+ for headless)")
-    parser.add_argument("--test-url", help="Test form filling on a single URL (no submit, no YAML needed)")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=1,
+        help="Parallel contexts (default 1, use 3+ for headless)",
+    )
+    parser.add_argument(
+        "--test-url", help="Test form filling on a single URL (no submit, no YAML needed)"
+    )
     parser.add_argument("yaml_file", nargs="?", default="batch-apply-2026-03-27.yaml")
     args = parser.parse_args()
 
@@ -1077,10 +1141,13 @@ async def main():
         applications = [a for a in applications if detect_platform(a["url"]) == args.platform]
     if args.only:
         needle = args.only.lower()
-        applications = [a for a in applications
-                       if needle in a.get("company", "").lower()
-                       or needle in a.get("role", "").lower()
-                       or needle in a.get("slug", "").lower()]
+        applications = [
+            a
+            for a in applications
+            if needle in a.get("company", "").lower()
+            or needle in a.get("role", "").lower()
+            or needle in a.get("slug", "").lower()
+        ]
 
     applications = [a for a in applications if a.get("status") == "pending"]
 
@@ -1092,7 +1159,7 @@ async def main():
     print(f"  Manual (LinkedIn/other): {len(manual)}")
 
     if manual:
-        print(f"\n  Manual apply needed:")
+        print("\n  Manual apply needed:")
         for a in manual:
             print(f"    {a.get('slug', a['company'])} - {a['role']} ({detect_platform(a['url'])})")
 
@@ -1103,6 +1170,7 @@ async def main():
     print(f"\nLaunching browser ({'headless' if args.headless else 'visible'})...")
 
     from playwright.async_api import async_playwright
+
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=args.headless)
 
@@ -1118,7 +1186,9 @@ async def main():
                     a["status"] = new_status
                     db_id = a.get("db_id")
                     break
-            yaml_path.write_text(yaml.dump(cfg, default_flow_style=False, allow_unicode=True, sort_keys=False))
+            yaml_path.write_text(
+                yaml.dump(cfg, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            )
 
             # Update pipeline DB
             if db_id and new_status == "submitted":
@@ -1138,7 +1208,7 @@ async def main():
 
         # Process in batches
         for i in range(0, len(automatable), args.batch_size):
-            batch = automatable[i:i + args.batch_size]
+            batch = automatable[i : i + args.batch_size]
             tasks = [
                 process_application(browser, app, i + j + 1, len(automatable), args.dry_run)
                 for j, app in enumerate(batch)
@@ -1159,13 +1229,13 @@ async def main():
     errors = [r for r in results if r["status"] == "error"]
     skipped = [r for r in results if r["status"] == "skipped"]
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"DONE: {len(submitted)} submitted, {len(errors)} errors, {len(skipped)} skipped")
     if errors:
-        print(f"\nErrors:")
+        print("\nErrors:")
         for r in errors:
             print(f"  {r['slug']}: {r.get('error', '?')}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

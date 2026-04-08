@@ -15,27 +15,25 @@ Tests cover:
 All browser interactions are mocked — no real Playwright or network calls.
 """
 
-import asyncio
-import re
+# Import the module under test
+import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Import the module under test
-import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tools.batch_apply_browser import (
+    PERSONAL,
     detect_platform,
     get_cover_letter_text,
-    PERSONAL,
 )
-
 
 # ---------------------------------------------------------------------------
 # detect_platform
 # ---------------------------------------------------------------------------
+
 
 class TestDetectPlatform:
     def test_ashby(self):
@@ -51,7 +49,9 @@ class TestDetectPlatform:
         assert detect_platform("https://job-boards.greenhouse.io/company/jobs/123") == "greenhouse"
 
     def test_greenhouse_eu(self):
-        assert detect_platform("https://job-boards.eu.greenhouse.io/company/jobs/123") == "greenhouse"
+        assert (
+            detect_platform("https://job-boards.eu.greenhouse.io/company/jobs/123") == "greenhouse"
+        )
 
     def test_linkedin(self):
         assert detect_platform("https://www.linkedin.com/jobs/view/12345") == "linkedin"
@@ -69,6 +69,7 @@ class TestDetectPlatform:
 # ---------------------------------------------------------------------------
 # get_cover_letter_text
 # ---------------------------------------------------------------------------
+
 
 class TestGetCoverLetterText:
     def test_extracts_body_after_frontmatter(self, tmp_path):
@@ -126,12 +127,21 @@ class TestGetCoverLetterText:
 # PERSONAL constants
 # ---------------------------------------------------------------------------
 
+
 class TestPersonalConstants:
     """Verify PERSONAL dict has all required fields."""
 
     def test_has_required_fields(self):
-        required = ["first_name", "last_name", "full_name", "email", "phone",
-                     "linkedin", "github", "location"]
+        required = [
+            "first_name",
+            "last_name",
+            "full_name",
+            "email",
+            "phone",
+            "linkedin",
+            "github",
+            "location",
+        ]
         for field in required:
             assert field in PERSONAL, f"Missing field: {field}"
 
@@ -151,6 +161,7 @@ class TestPersonalConstants:
 # ---------------------------------------------------------------------------
 # Mock helpers for async Playwright tests
 # ---------------------------------------------------------------------------
+
 
 def _make_empty_locator():
     """Create a mock locator that reports count=0 (field not found)."""
@@ -262,6 +273,7 @@ def make_page_with_fields(field_map=None, url="https://jobs.lever.co/company/abc
 # fill_source_field
 # ---------------------------------------------------------------------------
 
+
 class TestFillSourceField:
     @pytest.mark.asyncio
     async def test_fills_text_input_by_name(self):
@@ -299,10 +311,12 @@ class TestFillSourceField:
 
         target_loc = _make_found_locator(tag="input")
 
-        page = make_page_with_fields({
-            'label:has-text("How did you hear': label_loc,
-            '#source-input': target_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'label:has-text("How did you hear': label_loc,
+                "#source-input": target_loc,
+            }
+        )
 
         await fill_source_field(page)
         target_loc.first.fill.assert_called_with("Job board")
@@ -311,6 +325,7 @@ class TestFillSourceField:
 # ---------------------------------------------------------------------------
 # fill_lever
 # ---------------------------------------------------------------------------
+
 
 class TestFillLever:
     @pytest.mark.asyncio
@@ -357,11 +372,13 @@ class TestFillLever:
         email_loc = _make_found_locator()
         phone_loc = _make_found_locator()
 
-        page = make_page_with_fields({
-            'name="name"': name_loc,
-            'name="email"': email_loc,
-            'name="phone"': phone_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'name="name"': name_loc,
+                'name="email"': email_loc,
+                'name="phone"': phone_loc,
+            }
+        )
 
         app = {
             "url": "https://jobs.lever.co/company/abc123",
@@ -385,10 +402,12 @@ class TestFillLever:
         linkedin_loc = _make_found_locator()
         github_loc = _make_found_locator()
 
-        page = make_page_with_fields({
-            'name="urls[LinkedIn]"': linkedin_loc,
-            'name="urls[GitHub]"': github_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'name="urls[LinkedIn]"': linkedin_loc,
+                'name="urls[GitHub]"': github_loc,
+            }
+        )
 
         app = {
             "url": "https://jobs.lever.co/company/abc123",
@@ -423,15 +442,18 @@ class TestFillLever:
 # fill_greenhouse
 # ---------------------------------------------------------------------------
 
+
 class TestFillGreenhouse:
     @pytest.mark.asyncio
     async def test_clicks_apply_button(self):
         from tools.batch_apply_browser import fill_greenhouse
 
         apply_loc = _make_found_locator()
-        page = make_page_with_fields({
-            'Apply': apply_loc,
-        })
+        page = make_page_with_fields(
+            {
+                "Apply": apply_loc,
+            }
+        )
 
         app = {
             "url": "https://job-boards.greenhouse.io/company/jobs/123",
@@ -453,12 +475,14 @@ class TestFillGreenhouse:
         email_loc = _make_found_locator()
         phone_loc = _make_found_locator()
 
-        page = make_page_with_fields({
-            'id*="first_name"': first_loc,
-            'id*="last_name"': last_loc,
-            'id*="email"': email_loc,
-            'id*="phone"': phone_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'id*="first_name"': first_loc,
+                'id*="last_name"': last_loc,
+                'id*="email"': email_loc,
+                'id*="phone"': phone_loc,
+            }
+        )
 
         app = {
             "url": "https://job-boards.greenhouse.io/company/jobs/123",
@@ -486,9 +510,11 @@ class TestFillGreenhouse:
         # .first needs count (source: resume_input = loc.first, await resume_input.count())
         file_loc.first.count = AsyncMock(return_value=1)
 
-        page = make_page_with_fields({
-            'type="file"': file_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'type="file"': file_loc,
+            }
+        )
 
         app = {
             "url": "https://job-boards.greenhouse.io/company/jobs/123",
@@ -523,6 +549,7 @@ class TestFillGreenhouse:
 # fill_ashby
 # ---------------------------------------------------------------------------
 
+
 class TestFillAshby:
     @pytest.mark.asyncio
     async def test_fills_system_fields(self):
@@ -532,11 +559,14 @@ class TestFillAshby:
         email_loc = _make_found_locator()
         phone_loc = _make_found_locator()
 
-        page = make_page_with_fields({
-            'name="name"': name_loc,
-            'name="email"': email_loc,
-            'name="phone"': phone_loc,
-        }, url="https://jobs.ashbyhq.com/company/abc123")
+        page = make_page_with_fields(
+            {
+                'name="name"': name_loc,
+                'name="email"': email_loc,
+                'name="phone"': phone_loc,
+            },
+            url="https://jobs.ashbyhq.com/company/abc123",
+        )
 
         app = {
             "url": "https://jobs.ashbyhq.com/company/abc123",
@@ -556,9 +586,12 @@ class TestFillAshby:
         from tools.batch_apply_browser import fill_ashby
 
         apply_loc = _make_found_locator()
-        page = make_page_with_fields({
-            'Apply': apply_loc,
-        }, url="https://jobs.ashbyhq.com/company/abc123")
+        page = make_page_with_fields(
+            {
+                "Apply": apply_loc,
+            },
+            url="https://jobs.ashbyhq.com/company/abc123",
+        )
 
         app = {
             "url": "https://jobs.ashbyhq.com/company/abc123",
@@ -576,9 +609,12 @@ class TestFillAshby:
         from tools.batch_apply_browser import fill_ashby
 
         linkedin_loc = _make_found_locator()
-        page = make_page_with_fields({
-            'linkedin': linkedin_loc,
-        }, url="https://jobs.ashbyhq.com/company/abc123")
+        page = make_page_with_fields(
+            {
+                "linkedin": linkedin_loc,
+            },
+            url="https://jobs.ashbyhq.com/company/abc123",
+        )
 
         app = {
             "url": "https://jobs.ashbyhq.com/company/abc123",
@@ -612,6 +648,7 @@ class TestFillAshby:
 # _fill_field_by_label
 # ---------------------------------------------------------------------------
 
+
 class TestFillFieldByLabel:
     @pytest.mark.asyncio
     async def test_fills_via_for_attribute(self):
@@ -622,10 +659,12 @@ class TestFillFieldByLabel:
 
         target_loc = _make_found_locator(tag="input")
 
-        page = make_page_with_fields({
-            'label:has-text("My Label")': label_loc,
-            '#my-input': target_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'label:has-text("My Label")': label_loc,
+                "#my-input": target_loc,
+            }
+        )
 
         result = await _fill_field_by_label(page, "My Label", "my value")
         assert result is True
@@ -640,10 +679,12 @@ class TestFillFieldByLabel:
 
         target_loc = _make_found_locator(tag="select")
 
-        page = make_page_with_fields({
-            'label:has-text("Country")': label_loc,
-            '#my-select': target_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'label:has-text("Country")': label_loc,
+                "#my-select": target_loc,
+            }
+        )
 
         result = await _fill_field_by_label(page, "Country", "Germany")
         assert result is True
@@ -659,9 +700,11 @@ class TestFillFieldByLabel:
         sibling_loc = _make_found_locator(tag="textarea")
         label_loc.first.locator = MagicMock(return_value=sibling_loc)
 
-        page = make_page_with_fields({
-            'label:has-text("Description")': label_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'label:has-text("Description")': label_loc,
+            }
+        )
 
         result = await _fill_field_by_label(page, "Description", "some text")
         assert result is True
@@ -672,9 +715,11 @@ class TestFillFieldByLabel:
         from tools.batch_apply_browser import _fill_field_by_label
 
         aria_loc = _make_found_locator(tag="input")
-        page = make_page_with_fields({
-            'aria-label*="Email"': aria_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'aria-label*="Email"': aria_loc,
+            }
+        )
 
         result = await _fill_field_by_label(page, "Email", "test@example.com")
         assert result is True
@@ -698,10 +743,12 @@ class TestFillFieldByLabel:
 
         target_loc = _make_found_locator(tag="input")
 
-        page = make_page_with_fields({
-            'label:text-is("Exact Label")': label_loc,
-            '#exact-field': target_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'label:text-is("Exact Label")': label_loc,
+                "#exact-field": target_loc,
+            }
+        )
 
         result = await _fill_field_by_label(page, "Exact Label", "val", exact=True)
         assert result is True
@@ -712,15 +759,18 @@ class TestFillFieldByLabel:
 # _click_radio_by_label
 # ---------------------------------------------------------------------------
 
+
 class TestClickRadioByLabel:
     @pytest.mark.asyncio
     async def test_clicks_standard_radio(self):
         from tools.batch_apply_browser import _click_radio_by_label
 
         radio_loc = _make_found_locator()
-        page = make_page_with_fields({
-            'label:has-text("Yes")': radio_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'label:has-text("Yes")': radio_loc,
+            }
+        )
 
         result = await _click_radio_by_label(page, "Yes")
         assert result is True
@@ -765,6 +815,7 @@ class TestClickRadioByLabel:
 # _select_dropdown_option
 # ---------------------------------------------------------------------------
 
+
 class TestSelectDropdownOption:
     @pytest.mark.asyncio
     async def test_selects_native_dropdown(self):
@@ -777,9 +828,11 @@ class TestSelectDropdownOption:
         parent_loc.locator = MagicMock(return_value=select_loc)
         label_loc.first.locator = MagicMock(return_value=parent_loc)
 
-        page = make_page_with_fields({
-            'label:has-text("Country")': label_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'label:has-text("Country")': label_loc,
+            }
+        )
 
         result = await _select_dropdown_option(page, "Country", "Germany")
         assert result is True
@@ -799,10 +852,12 @@ class TestSelectDropdownOption:
 
         option_loc = _make_found_locator()
 
-        page = make_page_with_fields({
-            'label:has-text("Type")': label_loc,
-            'role="option"': option_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'label:has-text("Type")': label_loc,
+                'role="option"': option_loc,
+            }
+        )
 
         result = await _select_dropdown_option(page, "Type", "Full-time")
         assert result is True
@@ -829,9 +884,11 @@ class TestSelectDropdownOption:
         parent_loc.locator = MagicMock(return_value=select_loc)
         div_loc.first.locator = MagicMock(return_value=parent_loc)
 
-        page = make_page_with_fields({
-            'div:has-text("Region")': div_loc,
-        })
+        page = make_page_with_fields(
+            {
+                'div:has-text("Region")': div_loc,
+            }
+        )
 
         result = await _select_dropdown_option(page, "Region", "Europe")
         assert result is True
@@ -842,27 +899,33 @@ class TestSelectDropdownOption:
 # Company-specific constants
 # ---------------------------------------------------------------------------
 
+
 class TestCompanyConstants:
     def test_anthropic_why_not_empty(self):
         from tools.batch_apply_browser import ANTHROPIC_WHY
+
         assert len(ANTHROPIC_WHY) > 100
 
     def test_anthropic_ai_policy_not_empty(self):
         from tools.batch_apply_browser import ANTHROPIC_AI_POLICY
+
         assert len(ANTHROPIC_AI_POLICY) > 20
 
     def test_n8n_why_not_empty(self):
         from tools.batch_apply_browser import N8N_WHY
+
         assert len(N8N_WHY) > 50
 
     def test_anthropic_claude_code_exp_not_empty(self):
         from tools.batch_apply_browser import ANTHROPIC_CLAUDE_CODE_EXP
+
         assert len(ANTHROPIC_CLAUDE_CODE_EXP) > 20
 
 
 # ---------------------------------------------------------------------------
 # fill_custom_questions
 # ---------------------------------------------------------------------------
+
 
 class TestFillCustomQuestions:
     @pytest.mark.asyncio
@@ -872,7 +935,11 @@ class TestFillCustomQuestions:
         page = make_page_with_fields({})
         app = {"url": "https://jobs.lever.co/mistral/abc123", "slug": "mistral"}
 
-        with patch("tools.batch_apply_browser._fill_field_by_label", new_callable=AsyncMock, return_value=True) as mock_fill:
+        with patch(
+            "tools.batch_apply_browser._fill_field_by_label",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_fill:
             await fill_custom_questions(page, app)
             # Should have tried to fill "Current location"
             calls = [c[0] for c in mock_fill.call_args_list]
@@ -889,7 +956,11 @@ class TestFillCustomQuestions:
             "slug": "anthropic",
         }
 
-        with patch("tools.batch_apply_browser._fill_field_by_label", new_callable=AsyncMock, return_value=True) as mock_fill:
+        with patch(
+            "tools.batch_apply_browser._fill_field_by_label",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_fill:
             with patch("tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
                 await fill_custom_questions(page, app)
                 assert mock_fill.call_count > 0
@@ -907,12 +978,24 @@ class TestFillCustomQuestions:
             "slug": "n8n",
         }
 
-        with patch("tools.batch_apply_browser._fill_field_by_label", new_callable=AsyncMock, return_value=True) as mock_fill:
-            with patch("tools.batch_apply_browser._click_radio_by_label", new_callable=AsyncMock, return_value=True):
-                with patch("tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
+        with patch(
+            "tools.batch_apply_browser._fill_field_by_label",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_fill:
+            with patch(
+                "tools.batch_apply_browser._click_radio_by_label",
+                new_callable=AsyncMock,
+                return_value=True,
+            ):
+                with patch(
+                    "tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock
+                ):
                     await fill_custom_questions(page, app)
                     labels = [c[0][1] for c in mock_fill.call_args_list if len(c[0]) >= 2]
-                    assert any("salary" in label.lower() or "n8n" in label.lower() for label in labels)
+                    assert any(
+                        "salary" in label.lower() or "n8n" in label.lower() for label in labels
+                    )
 
     @pytest.mark.asyncio
     async def test_unknown_company_does_nothing(self):
@@ -928,6 +1011,7 @@ class TestFillCustomQuestions:
 # ---------------------------------------------------------------------------
 # process_application
 # ---------------------------------------------------------------------------
+
 
 class TestProcessApplication:
     @pytest.mark.asyncio
@@ -1005,6 +1089,7 @@ class TestProcessApplication:
 # _run_test_url
 # ---------------------------------------------------------------------------
 
+
 class TestRunTestUrl:
     @pytest.mark.asyncio
     async def test_unsupported_platform_returns_early(self):
@@ -1014,7 +1099,11 @@ class TestRunTestUrl:
         with patch("builtins.print") as mock_print:
             await _run_test_url("https://www.linkedin.com/jobs/view/12345")
             printed = " ".join(str(c) for c in mock_print.call_args_list)
-            assert "No filler" in printed or "no filler" in printed.lower() or "linkedin" in printed.lower()
+            assert (
+                "No filler" in printed
+                or "no filler" in printed.lower()
+                or "linkedin" in printed.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_lever_url_runs_filler(self):
@@ -1040,10 +1129,16 @@ class TestRunTestUrl:
         # Mock playwright at sys.modules level since it's imported locally inside _run_test_url
         mock_pw_module = MagicMock()
         mock_pw_module.async_api.async_playwright = mock_async_pw
-        with patch.dict("sys.modules", {"playwright": mock_pw_module, "playwright.async_api": mock_pw_module.async_api}):
+        with patch.dict(
+            "sys.modules",
+            {"playwright": mock_pw_module, "playwright.async_api": mock_pw_module.async_api},
+        ):
             from tools.batch_apply_browser import _run_test_url
+
             with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-                with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+                with patch(
+                    "tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock
+                ):
                     with patch("tools.batch_apply_browser.SCREENSHOTS_DIR") as mock_dir:
                         mock_dir.mkdir = MagicMock()
                         mock_dir.__truediv__ = MagicMock(return_value=Path("/tmp/test.png"))
@@ -1056,14 +1151,17 @@ class TestRunTestUrl:
 # FILLERS dict
 # ---------------------------------------------------------------------------
 
+
 class TestFillersDict:
     def test_fillers_has_all_platforms(self):
         from tools.batch_apply_browser import FILLERS
+
         assert "lever" in FILLERS
         assert "greenhouse" in FILLERS
         assert "ashby" in FILLERS
 
     def test_fillers_values_are_callable(self):
         from tools.batch_apply_browser import FILLERS
+
         for platform, func in FILLERS.items():
             assert callable(func), f"FILLERS['{platform}'] is not callable"

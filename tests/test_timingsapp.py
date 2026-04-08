@@ -56,9 +56,7 @@ api_client = TestClient(app)
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -118,10 +116,12 @@ def timingsapp_config(db_session) -> IntegrationConfig:
         name="timingsapp",
         display_name="TimingsApp",
         enabled=True,
-        credentials=json.dumps({
-            "api_token": "test-token-abc",
-            "api_url": "https://web.timingapp.com/api/v1",
-        }),
+        credentials=json.dumps(
+            {
+                "api_token": "test-token-abc",
+                "api_url": "https://web.timingapp.com/api/v1",
+            }
+        ),
         status="connected",
     )
     db_session.add(config)
@@ -262,9 +262,7 @@ class TestStartSession:
             activity_name="Research companies",
             category=ActivityCategory.researching,
         )
-        session_record = start_session(
-            db_session, payload, client=mock_timingsapp_client
-        )
+        session_record = start_session(db_session, payload, client=mock_timingsapp_client)
 
         assert session_record.timingsapp_entry_id == "/time-entries/42"
         assert session_record.timingsapp_project == "Job Search ▸ Researching"
@@ -278,17 +276,13 @@ class TestStartSession:
         self, db_session, profile, timingsapp_config, mock_timingsapp_client
     ):
         """TimingsApp API failure doesn't prevent local session creation."""
-        mock_timingsapp_client.start_timer.side_effect = TimingsAppAPIError(
-            "Server error", 500
-        )
+        mock_timingsapp_client.start_timer.side_effect = TimingsAppAPIError("Server error", 500)
         payload = TimeSessionCreate(
             profile_id=profile.id,
             activity_name="Submit application",
             category=ActivityCategory.applying,
         )
-        session_record = start_session(
-            db_session, payload, client=mock_timingsapp_client
-        )
+        session_record = start_session(db_session, payload, client=mock_timingsapp_client)
 
         assert session_record.id is not None
         assert session_record.timingsapp_entry_id is None
@@ -382,9 +376,7 @@ class TestStopSession:
         )
         session_record = start_session(db_session, payload)
 
-        stopped = stop_session(
-            db_session, session_record.id, profile_id=profile.id
-        )
+        stopped = stop_session(db_session, session_record.id, profile_id=profile.id)
 
         assert stopped.stopped_at is not None
         assert stopped.duration_seconds is not None
@@ -417,9 +409,7 @@ class TestStopSession:
             activity_name="Study",
             category=ActivityCategory.learning,
         )
-        session_record = start_session(
-            db_session, payload, client=mock_timingsapp_client
-        )
+        session_record = start_session(db_session, payload, client=mock_timingsapp_client)
 
         stop_session(
             db_session,
@@ -565,17 +555,13 @@ class TestTimeAnalytics:
         assert by_cat["learning"].total_hours == 1.0
         assert by_cat["learning"].session_count == 1
 
-    def test_analytics_category_percentages_sum_to_100(
-        self, db_session, profile, sample_sessions
-    ):
+    def test_analytics_category_percentages_sum_to_100(self, db_session, profile, sample_sessions):
         """Category percentages should roughly sum to 100."""
         analytics = get_time_analytics(db_session, profile_id=profile.id)
         total_pct = sum(cb.percentage for cb in analytics.category_breakdown)
         assert 99.0 <= total_pct <= 101.0  # allow rounding
 
-    def test_analytics_weekly_trend_has_4_weeks(
-        self, db_session, profile, sample_sessions
-    ):
+    def test_analytics_weekly_trend_has_4_weeks(self, db_session, profile, sample_sessions):
         """Weekly trend returns 4 data points."""
         analytics = get_time_analytics(db_session, profile_id=profile.id)
         assert len(analytics.weekly_trend) == 4
@@ -646,31 +632,21 @@ class TestSessionCRUD:
         # Most recent first
         assert sessions[0].activity_name == "Tailoring CV for startup role"
 
-    def test_list_sessions_filter_by_category(
-        self, db_session, profile, sample_sessions
-    ):
+    def test_list_sessions_filter_by_category(self, db_session, profile, sample_sessions):
         """Filter by category works correctly."""
-        sessions, total = list_sessions(
-            db_session, profile_id=profile.id, category="applying"
-        )
+        sessions, total = list_sessions(db_session, profile_id=profile.id, category="applying")
         assert total == 2
         assert all(s.category == "applying" for s in sessions)
 
-    def test_list_sessions_with_pagination(
-        self, db_session, profile, sample_sessions
-    ):
+    def test_list_sessions_with_pagination(self, db_session, profile, sample_sessions):
         """Pagination works correctly."""
-        sessions, total = list_sessions(
-            db_session, profile_id=profile.id, limit=2, offset=0
-        )
+        sessions, total = list_sessions(db_session, profile_id=profile.id, limit=2, offset=0)
         assert total == 6
         assert len(sessions) == 2
 
     def test_get_session(self, db_session, profile, sample_sessions):
         """Get a specific session by ID."""
-        session_record = get_session(
-            db_session, sample_sessions[0].id, profile_id=profile.id
-        )
+        session_record = get_session(db_session, sample_sessions[0].id, profile_id=profile.id)
         assert session_record.activity_name == sample_sessions[0].activity_name
 
     def test_get_nonexistent_session_raises(self, db_session, profile):
@@ -728,9 +704,7 @@ class TestSessionCRUD:
 class TestProfileIsolation:
     """Profile B cannot access Profile A's sessions."""
 
-    def test_profile_b_cannot_read_profile_a_session(
-        self, db_session, profile, profile_b
-    ):
+    def test_profile_b_cannot_read_profile_a_session(self, db_session, profile, profile_b):
         """Profile B cannot read Profile A's sessions."""
         payload = TimeSessionCreate(
             profile_id=profile.id,
@@ -742,9 +716,7 @@ class TestProfileIsolation:
         with pytest.raises(TimeSessionNotFoundError):
             get_session(db_session, session_record.id, profile_id=profile_b.id)
 
-    def test_profile_b_cannot_stop_profile_a_session(
-        self, db_session, profile, profile_b
-    ):
+    def test_profile_b_cannot_stop_profile_a_session(self, db_session, profile, profile_b):
         """Profile B cannot stop Profile A's sessions."""
         payload = TimeSessionCreate(
             profile_id=profile.id,
@@ -756,9 +728,7 @@ class TestProfileIsolation:
         with pytest.raises(TimeSessionNotFoundError):
             stop_session(db_session, session_record.id, profile_id=profile_b.id)
 
-    def test_profile_b_cannot_list_profile_a_sessions(
-        self, db_session, profile, profile_b
-    ):
+    def test_profile_b_cannot_list_profile_a_sessions(self, db_session, profile, profile_b):
         """Profile B cannot see Profile A's sessions in list."""
         payload = TimeSessionCreate(
             profile_id=profile.id,
@@ -771,9 +741,7 @@ class TestProfileIsolation:
         assert total == 0
         assert len(sessions) == 0
 
-    def test_analytics_scoped_by_profile(
-        self, db_session, profile, profile_b, sample_sessions
-    ):
+    def test_analytics_scoped_by_profile(self, db_session, profile, profile_b, sample_sessions):
         """Analytics data is scoped to the requesting profile."""
         analytics_a = get_time_analytics(db_session, profile_id=profile.id)
         analytics_b = get_time_analytics(db_session, profile_id=profile_b.id)
@@ -981,9 +949,7 @@ class TestTimingsAppAPI:
 
     def test_test_connection_configured(self, db_session, timingsapp_config):
         """POST /api/timingsapp/test with mock returns success."""
-        with patch(
-            "career_os.services.timingsapp.TimingsAppClient"
-        ) as MockClient:
+        with patch("career_os.services.timingsapp.TimingsAppClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.test_connection.return_value = True
 
@@ -1007,9 +973,7 @@ class TestTimingsAppClient:
             mock_resp = MagicMock()
             mock_resp.status_code = 200
             mock_resp.text = '{"data": {"self": "/time-entries/1", "is_running": true}}'
-            mock_resp.json.return_value = {
-                "data": {"self": "/time-entries/1", "is_running": True}
-            }
+            mock_resp.json.return_value = {"data": {"self": "/time-entries/1", "is_running": True}}
             mock_req.return_value = mock_resp
 
             client = TimingsAppClient("test-token")
@@ -1032,9 +996,7 @@ class TestTimingsAppClient:
             mock_resp = MagicMock()
             mock_resp.status_code = 200
             mock_resp.text = '{"data": {"self": "/time-entries/1", "is_running": false}}'
-            mock_resp.json.return_value = {
-                "data": {"self": "/time-entries/1", "is_running": False}
-            }
+            mock_resp.json.return_value = {"data": {"self": "/time-entries/1", "is_running": False}}
             mock_req.return_value = mock_resp
 
             client = TimingsAppClient("test-token")
@@ -1050,9 +1012,7 @@ class TestTimingsAppClient:
             mock_resp = MagicMock()
             mock_resp.status_code = 200
             mock_resp.text = '{"data": {"self": "/time-entries/2"}}'
-            mock_resp.json.return_value = {
-                "data": {"self": "/time-entries/2"}
-            }
+            mock_resp.json.return_value = {"data": {"self": "/time-entries/2"}}
             mock_req.return_value = mock_resp
 
             client = TimingsAppClient("test-token")
@@ -1162,9 +1122,7 @@ class TestConnectionTest:
 
     def test_configured_and_connected(self, db_session, timingsapp_config):
         """Configured integration with mocked API returns success."""
-        with patch(
-            "career_os.services.timingsapp.TimingsAppClient"
-        ) as MockClient:
+        with patch("career_os.services.timingsapp.TimingsAppClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.test_connection.return_value = True
 
@@ -1174,9 +1132,7 @@ class TestConnectionTest:
 
     def test_configured_but_api_fails(self, db_session, timingsapp_config):
         """Configured integration with API failure returns failure."""
-        with patch(
-            "career_os.services.timingsapp.TimingsAppClient"
-        ) as MockClient:
+        with patch("career_os.services.timingsapp.TimingsAppClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.test_connection.return_value = False
 

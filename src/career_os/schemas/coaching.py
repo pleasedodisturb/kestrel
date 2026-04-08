@@ -29,9 +29,7 @@ class EffortEstimate(BaseModel):
 
     hours: float | None = Field(default=None, description="Estimated hours to complete")
     weeks: float | None = Field(default=None, description="Estimated weeks to complete")
-    difficulty: str | None = Field(
-        default=None, description="Difficulty: low, medium, high"
-    )
+    difficulty: str | None = Field(default=None, description="Difficulty: low, medium, high")
 
 
 class CoachingSuggestionResponse(BaseModel):
@@ -66,6 +64,4 @@ class CoachingSuggestionsResponse(BaseModel):
 
     suggestions: list[CoachingSuggestionResponse]
     total: int
-    focus_area: str | None = Field(
-        default=None, description="AI-recommended primary focus area"
-    )
+    focus_area: str | None = Field(default=None, description="AI-recommended primary focus area")

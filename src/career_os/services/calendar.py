@@ -46,9 +46,7 @@ class ApplicationNotFoundError(Exception):
 # ---------------------------------------------------------------------------
 
 
-def create_calendar_event(
-    db: Session, payload: CalendarEventCreate
-) -> CalendarEvent:
+def create_calendar_event(db: Session, payload: CalendarEventCreate) -> CalendarEvent:
     """Create a new calendar event and optionally a prep reminder.
 
     Returns the created CalendarEvent.
@@ -163,9 +161,7 @@ def _create_prep_reminder(db: Session, interview_event: CalendarEvent) -> Calend
     return reminder_event
 
 
-def get_calendar_event(
-    db: Session, event_id: int, *, profile_id: int
-) -> CalendarEvent:
+def get_calendar_event(db: Session, event_id: int, *, profile_id: int) -> CalendarEvent:
     """Get a calendar event by ID, scoped to profile.
 
     Raises CalendarEventNotFoundError if not found.
@@ -276,9 +272,7 @@ def _update_prep_reminders(db: Session, interview_event: CalendarEvent) -> None:
         db.commit()
 
 
-def delete_calendar_event(
-    db: Session, event_id: int, *, profile_id: int
-) -> None:
+def delete_calendar_event(db: Session, event_id: int, *, profile_id: int) -> None:
     """Delete a calendar event and its associated prep reminders.
 
     Raises CalendarEventNotFoundError if not found.
@@ -287,9 +281,7 @@ def delete_calendar_event(
 
     # Delete child prep reminders first (if this is an interview event)
     if event.event_type == "interview":
-        db.query(CalendarEvent).filter(
-            CalendarEvent.parent_event_id == event.id
-        ).delete()
+        db.query(CalendarEvent).filter(CalendarEvent.parent_event_id == event.id).delete()
 
     db.delete(event)
     db.commit()
@@ -308,11 +300,7 @@ def create_follow_up_calendar_event(
 
     Returns the created CalendarEvent.
     """
-    app_obj = (
-        db.query(Application)
-        .filter(Application.id == follow_up.application_id)
-        .first()
-    )
+    app_obj = db.query(Application).filter(Application.id == follow_up.application_id).first()
     app_context = f"{app_obj.company} — {app_obj.role}" if app_obj else "Unknown"
 
     payload = CalendarEventCreate(
@@ -336,9 +324,7 @@ def create_follow_up_calendar_event(
 # ---------------------------------------------------------------------------
 
 
-def export_event_ical(
-    db: Session, event_id: int, *, profile_id: int
-) -> str:
+def export_event_ical(db: Session, event_id: int, *, profile_id: int) -> str:
     """Export a calendar event as iCal (.ics) string.
 
     Provider 1: Standard iCal format, importable by any calendar app.
@@ -426,10 +412,7 @@ def _event_to_vevent(event: CalendarEvent) -> Event:
         alarm = Alarm()
         alarm.add("action", "DISPLAY")
         alarm.add("trigger", timedelta(minutes=-event.reminder_minutes_before))
-        alarm.add(
-            "description",
-            f"Prep reminder: {event.title}"
-        )
+        alarm.add("description", f"Prep reminder: {event.title}")
         vevent.add_component(alarm)
 
     return vevent
@@ -440,9 +423,7 @@ def _event_to_vevent(event: CalendarEvent) -> Event:
 # ---------------------------------------------------------------------------
 
 
-def generate_google_calendar_url(
-    db: Session, event_id: int, *, profile_id: int
-) -> str:
+def generate_google_calendar_url(db: Session, event_id: int, *, profile_id: int) -> str:
     """Generate a Google Calendar 'Add Event' URL.
 
     Provider 2: Opens Google Calendar with pre-filled event details.
@@ -493,9 +474,7 @@ def _build_google_calendar_url(event: CalendarEvent) -> str:
 # ---------------------------------------------------------------------------
 
 
-def generate_fantastical_url(
-    db: Session, event_id: int, *, profile_id: int
-) -> str:
+def generate_fantastical_url(db: Session, event_id: int, *, profile_id: int) -> str:
     """Generate a Fantastical URL scheme for adding an event.
 
     Provider 3: Opens Fantastical with pre-filled event details.
@@ -544,9 +523,7 @@ def _build_fantastical_url(event: CalendarEvent) -> str:
 # ---------------------------------------------------------------------------
 
 
-def get_event_provider_urls(
-    db: Session, event_id: int, *, profile_id: int
-) -> dict[str, str]:
+def get_event_provider_urls(db: Session, event_id: int, *, profile_id: int) -> dict[str, str]:
     """Get export URLs/data for all supported providers.
 
     Returns dict: provider_name -> url_or_ical_data

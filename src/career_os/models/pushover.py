@@ -31,18 +31,10 @@ class NotificationPreference(Base):
     )
 
     # Per-category toggles (default True = enabled)
-    follow_up_reminders: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
-    ghost_alerts: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
-    discovery_alerts: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
-    interview_reminders: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
+    follow_up_reminders: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    ghost_alerts: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    discovery_alerts: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    interview_reminders: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     # Quiet hours (24h format, e.g., 22 = 10 PM, 8 = 8 AM)
     quiet_hours_start: Mapped[int | None] = mapped_column(
@@ -54,13 +46,13 @@ class NotificationPreference(Base):
 
     # Interview reminder lead time (minutes before interview)
     interview_lead_time_minutes: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=1440  # 24h default
+        Integer,
+        nullable=False,
+        default=1440,  # 24h default
     )
 
     # Discovery score threshold (only notify for scores >= this)
-    discovery_score_threshold: Mapped[float] = mapped_column(
-        Integer, nullable=False, default=7
-    )
+    discovery_score_threshold: Mapped[float] = mapped_column(Integer, nullable=False, default=7)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
@@ -100,6 +92,5 @@ class NotificationLog(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<NotificationLog(id={self.id}, "
-            f"category='{self.category}', status='{self.status}')>"
+            f"<NotificationLog(id={self.id}, category='{self.category}', status='{self.status}')>"
         )

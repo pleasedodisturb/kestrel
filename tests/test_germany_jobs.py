@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from germany_jobs import (
     PRESETS,
     fetch_arbeitnow,
@@ -12,7 +10,6 @@ from germany_jobs import (
     score_job,
     stars,
 )
-
 
 # ==================== is_likely_german_only ====================
 
@@ -27,7 +24,11 @@ class TestIsLikelyGermanOnly:
         assert is_likely_german_only(job) is True
 
     def test_passes_english_role(self):
-        job = {"title": "AI Product Manager", "description": "English working environment", "tags": []}
+        job = {
+            "title": "AI Product Manager",
+            "description": "English working environment",
+            "tags": [],
+        }
         assert is_likely_german_only(job) is False
 
     def test_detects_signal_in_tags(self):
@@ -69,7 +70,13 @@ class TestScoreJob:
 
     def test_score_range(self):
         """All scores should be 1-5."""
-        for title in ["Nothing", "AI", "AI Product", "AI Product Program Technical", "AI Product Program Technical Innovation Digital Platform Builder"]:
+        for title in [
+            "Nothing",
+            "AI",
+            "AI Product",
+            "AI Product Program Technical",
+            "AI Product Program Technical Innovation Digital Platform Builder",
+        ]:
             job = {"title": title, "company": "", "tags": []}
             s = score_job(job)
             assert 1 <= s <= 5
@@ -206,8 +213,20 @@ class TestFetchArbeitnow:
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "data": [
-                {"title": "Dev", "company_name": "Co", "location": "Munich", "url": "u", "created_at": 0},
-                {"title": "Dev", "company_name": "Co", "location": "Berlin", "url": "u", "created_at": 0},
+                {
+                    "title": "Dev",
+                    "company_name": "Co",
+                    "location": "Munich",
+                    "url": "u",
+                    "created_at": 0,
+                },
+                {
+                    "title": "Dev",
+                    "company_name": "Co",
+                    "location": "Berlin",
+                    "url": "u",
+                    "created_at": 0,
+                },
             ]
         }
         mock_response.raise_for_status = MagicMock()
@@ -226,8 +245,22 @@ class TestFetchArbeitnow:
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "data": [
-                {"title": "Dev1", "company_name": "A", "location": "X", "url": "u", "remote": False, "created_at": 0},
-                {"title": "Dev2", "company_name": "B", "location": "Y", "url": "u", "remote": True, "created_at": 0},
+                {
+                    "title": "Dev1",
+                    "company_name": "A",
+                    "location": "X",
+                    "url": "u",
+                    "remote": False,
+                    "created_at": 0,
+                },
+                {
+                    "title": "Dev2",
+                    "company_name": "B",
+                    "location": "Y",
+                    "url": "u",
+                    "remote": True,
+                    "created_at": 0,
+                },
             ]
         }
         mock_response.raise_for_status = MagicMock()

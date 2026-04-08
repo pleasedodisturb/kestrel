@@ -1,12 +1,8 @@
 """Tests for API key auth middleware (#22)."""
 
-from unittest.mock import patch
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette.requests import Request
-from starlette.responses import JSONResponse
 
 from career_os.middleware import APIKeyAuthMiddleware
 
