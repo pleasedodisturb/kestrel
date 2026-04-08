@@ -56,7 +56,7 @@ OpenRouter is a service that gives you one API key to access 200+ AI models from
    AI_PROVIDER=openrouter
    OPENROUTER_API_KEY=sk-or-your-key-here
    ```
-8. Restart Kestrel: `docker compose restart`
+8. Restart Kestrel: `docker compose down && docker compose up -d`
 
 ### Cost
 
