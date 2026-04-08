@@ -68,6 +68,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 "src/career_os/services/*.py" = ["E501", "SIM117", "E402"]
 "src/career_os/discovery/*.py" = ["E402"]
 "tests/*.py" = ["B008", "B017", "E501", "SIM117", "E741", "E402", "F821"]
+"src/career_os/_alembic/*.py" = ["UP007", "E501", "I001", "E402"]
+"src/career_os/_alembic/versions/*.py" = ["UP007", "E501", "I001", "E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
