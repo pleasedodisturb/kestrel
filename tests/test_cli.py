@@ -1,6 +1,7 @@
 """Tests for the Typer CLI skeleton."""
 
 from typer.testing import CliRunner
+import pytest
 
 from career_os.cli.main import app
 
