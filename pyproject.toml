@@ -29,6 +29,9 @@ dev = [
     "pytest-cov>=6.1.0",
     "ruff>=0.11.0",
     "httpx>=0.28.0",
+    "pandas>=2.2.0",
+    "python-jobspy>=1.1.0",
+    "fpdf2>=2.8.0",
 ]
 
 [project.scripts]
