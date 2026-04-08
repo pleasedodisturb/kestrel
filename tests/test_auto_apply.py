@@ -81,13 +81,13 @@ class TestDetectPlatform:
         url = "https://boards.greenhouse.io/embed/job_board?for=grafanalabs"
         assert detect_platform(url) == "greenhouse"
 
-    def test_lever_in_query_param_still_detects(self):
-        # The check is substring-based, so even unusual positions match
-        assert detect_platform("https://redirect.example.com/?next=jobs.lever.co/x") == "lever"
+    def test_lever_in_query_param_rejected(self):
+        # Proper URL parsing rejects lever.co in query params (not in hostname)
+        assert detect_platform("https://redirect.example.com/?next=jobs.lever.co/x") == "unknown"
 
-    def test_case_sensitive_no_match(self):
-        # Domain matching is case-sensitive in the current implementation
-        assert detect_platform("https://JOBS.LEVER.CO/test/123") == "unknown"
+    def test_case_insensitive_match(self):
+        # URL hostnames are case-insensitive per RFC 3986
+        assert detect_platform("https://JOBS.LEVER.CO/test/123") == "lever"
 
 
 # ===================================================================
@@ -766,7 +766,9 @@ class TestSubmitGreenhouseApi:
             submit_greenhouse_api(personal, app, dry_run=False)
         # Verify EU endpoint was used
         call_url = mock_post.call_args[0][0]
-        assert "eu.greenhouse.io" in call_url
+        from urllib.parse import urlparse
+
+        assert "eu.greenhouse.io" in urlparse(call_url).hostname  # noqa: S101
 
     def test_missing_files_still_posts(self, personal, tmp_path):
         """When CV/CL files don't exist, no files attached but POST still sent."""
