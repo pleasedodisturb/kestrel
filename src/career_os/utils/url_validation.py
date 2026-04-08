@@ -11,8 +11,12 @@ from urllib.parse import urlparse
 _PLATFORM_DOMAINS: dict[str, list[str]] = {
     "ashby": ["jobs.ashbyhq.com"],
     "lever": ["jobs.lever.co", "jobs.eu.lever.co"],
-    "greenhouse": ["boards.greenhouse.io", "boards.eu.greenhouse.io",
-                    "job-boards.greenhouse.io", "job-boards.eu.greenhouse.io"],
+    "greenhouse": [
+        "boards.greenhouse.io",
+        "boards.eu.greenhouse.io",
+        "job-boards.greenhouse.io",
+        "job-boards.eu.greenhouse.io",
+    ],
     "remotely": ["www.remotely.de", "remotely.de"],
     "linkedin": ["www.linkedin.com", "linkedin.com"],
     "workable": ["apply.workable.com"],
