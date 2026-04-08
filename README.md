@@ -20,22 +20,31 @@
 
 ## Install
 
-You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (free). That's it.
+Pick whichever feels right. All three give you the same app.
+
+### Option 1: pip install (no Docker needed)
+
+```bash
+pip install kestrel-app
+kestrel start
+```
+
+Opens your browser automatically. Data stored in `~/.kestrel/`. Requires Python 3.13+.
+
+### Option 2: Docker (isolated, one command)
 
 ```bash
 git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 bash setup.sh
 ```
 
-Open [http://localhost:8101](http://localhost:8101). Done.
-
-**Never used a terminal?** [Full step-by-step guide](docs/QUICKSTART.md) - takes 10 minutes, no coding.
-
-### Or try it instantly in your browser (no install)
+### Option 3: Try in your browser (zero install)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pleasedodisturb/kestrel)
 
-Click the button above. GitHub will build a complete Kestrel instance for you in about 2 minutes. Free with a GitHub account (120 hours/month included). Your own isolated environment with your own data.
+Free with a GitHub account. Your own instance in 2 minutes. No install, nothing on your computer.
+
+**Need more help?** [Step-by-step guide](docs/QUICKSTART.md) - no coding knowledge required.
 
 ---
 
