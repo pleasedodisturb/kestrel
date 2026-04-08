@@ -50,12 +50,12 @@ class TestStripHtmlTags:
     def test_entities_preserved(self):
         html = "<p>5 &gt; 3 &amp; 2 &lt; 4</p>"
         result = strip_html_tags(html)
-        assert "5 > 3 & 2 < 4" == result
+        assert result == "5 > 3 & 2 < 4"
 
     def test_numeric_entity_preserved(self):
         html = "&#169; 2026"
         result = strip_html_tags(html)
-        assert "\u00a9 2026" == result
+        assert result == "\u00a9 2026"
 
     def test_empty_string(self):
         assert strip_html_tags("") == ""
