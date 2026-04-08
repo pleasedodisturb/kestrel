@@ -222,9 +222,16 @@ async def health_check() -> dict:
 # development with Vite's dev server this directory won't exist, so this block
 # is a no-op.
 
-_FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+# Check multiple locations for the built frontend:
+# 1. Development: project_root/frontend/dist (when running from repo)
+# 2. pip install: package_dir/_frontend_dist (bundled in wheel)
+_FRONTEND_DIR_CANDIDATES = [
+    Path(__file__).resolve().parents[2] / "frontend" / "dist",  # dev / Docker
+    Path(__file__).resolve().parent / "_frontend_dist",  # pip install
+]
+_FRONTEND_DIR = next((d for d in _FRONTEND_DIR_CANDIDATES if d.is_dir()), None)
 
-if _FRONTEND_DIR.is_dir():
+if _FRONTEND_DIR is not None and _FRONTEND_DIR.is_dir():
     # Serve static assets (JS, CSS, images) under /assets
     app.mount(
         "/assets",

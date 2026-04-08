@@ -1,0 +1,29 @@
+{
+  "name": "Kestrel",
+  "image": "mcr.microsoft.com/devcontainers/python:3.13",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "postCreateCommand": "pip install -e '.[dev]' && cd frontend && npm install --legacy-peer-deps && npm run build && cd .. && mkdir -p data && alembic upgrade head",
+  "postStartCommand": "nohup uvicorn career_os.main:app --host 0.0.0.0 --port 8100 > /tmp/kestrel.log 2>&1 &",
+  "forwardPorts": [8100],
+  "portsAttributes": {
+    "8100": {
+      "label": "Kestrel Dashboard",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      },
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff"
+      ]
+    }
+  }
+}
