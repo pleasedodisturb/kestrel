@@ -57,21 +57,13 @@ PERSONAL = _load_personal_config()
 
 
 def detect_platform(url: str) -> str:
-    if "jobs.ashbyhq.com" in url:
-        return "ashby"
-    if "lever.co" in url:
-        # NOTE: Lever pages are fully client-side rendered JS. WebFetch and
-        # non-browser tools cannot extract content. Many companies have also
-        # migrated off jobs.lever.co (returns 404). The Playwright-based
-        # fill_lever handler still works for companies that remain on Lever.
-        return "lever"
-    if "greenhouse.io" in url:
-        return "greenhouse"
-    if "linkedin.com" in url:
-        return "linkedin"
-    if "workable.com" in url:
-        return "workable"
-    return "other"
+    # NOTE: Lever pages are fully client-side rendered JS. WebFetch and
+    # non-browser tools cannot extract content. Many companies have also
+    # migrated off jobs.lever.co (returns 404). The Playwright-based
+    # fill_lever handler still works for companies that remain on Lever.
+    from career_os.utils.url_validation import detect_platform as _detect
+
+    return _detect(url)
 
 
 def get_cover_letter_text(cl_md_path: Path) -> str:
@@ -768,7 +760,9 @@ async def fill_custom_questions(page, app: dict) -> None:
             print(f"    [custom] Right-to-work radio error: {e}")
 
     # ---- Greenhouse: Anthropic ----
-    if "greenhouse.io" in url and ("anthropic" in slug or "anthropic" in url.lower()):
+    from career_os.utils.url_validation import url_has_domain
+
+    if url_has_domain(url, "greenhouse.io") and ("anthropic" in slug or "anthropic" in url.lower()):
         gh_fields = [
             # (label_text, value, exact_match)
             ("Country", "United Kingdom", False),
@@ -846,7 +840,7 @@ async def fill_custom_questions(page, app: dict) -> None:
         # No action needed - just skip it
 
     # ---- Ashby: n8n Head of DevRel ----
-    elif "ashbyhq.com" in url and ("n8n" in slug or "n8n" in url.lower() or "a8aea5b5" in url):
+    elif url_has_domain(url, "ashbyhq.com") and ("n8n" in slug or "n8n" in url.lower() or "a8aea5b5" in url):
         ashby_fields = [
             # Text/textarea fields: (label_text, value)
             ("Expected yearly salary", "150,000 - 180,000 EUR"),

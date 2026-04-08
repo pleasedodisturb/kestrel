@@ -36,19 +36,16 @@ SCREENSHOTS_DIR = PROJECT_ROOT / "screenshots"
 
 
 def detect_platform(url: str) -> str:
-    """Detect job board platform from URL."""
-    if "jobs.ashbyhq.com" in url:
-        return "ashby"
-    if "jobs.lever.co" in url or "jobs.eu.lever.co" in url:
-        return "lever"
-    if "greenhouse.io" in url:
-        return "greenhouse"
-    if "remotely.de" in url:
-        return "remotely"
-    if "attio.com" in url:
+    """Detect job board platform from URL using hostname validation."""
+    from career_os.utils.url_validation import detect_platform as _detect
+    from career_os.utils.url_validation import url_has_domain
+
+    result = _detect(url)
+    if result != "unknown":
+        return result
+    # Additional platforms not in the shared module
+    if url_has_domain(url, "attio.com"):
         return "company"
-    if "linkedin.com" in url:
-        return "linkedin"
     return "unknown"
 
 
@@ -203,7 +200,9 @@ def submit_greenhouse_api(personal: dict, app: dict, dry_run: bool) -> dict:
     board_token, job_id = parse_greenhouse_url(app["url"])
 
     # Determine if EU or global
-    if "eu.greenhouse.io" in app["url"]:
+    from career_os.utils.url_validation import is_greenhouse_eu
+
+    if is_greenhouse_eu(app["url"]):
         endpoint = f"https://boards-api.eu.greenhouse.io/v1/boards/{board_token}/jobs/{job_id}"
     else:
         endpoint = f"https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs/{job_id}"
