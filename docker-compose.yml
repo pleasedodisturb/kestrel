@@ -12,6 +12,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runtime
+    restart: unless-stopped
     ports:
       - "8100:8100"
     volumes:
@@ -38,6 +39,7 @@ services:
 
   frontend:
     image: node:22-alpine
+    restart: unless-stopped
     working_dir: /app
     ports:
       - "8101:8101"

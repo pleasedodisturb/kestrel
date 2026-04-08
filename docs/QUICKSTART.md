@@ -224,6 +224,72 @@ Files starting with a dot (like `.env`) are hidden on Mac by default. They're th
 
 Skip git entirely. Use the ZIP download method in Step 2, Option A. It does the same thing.
 
+### macOS blocks Docker installation
+
+**What you see:** "Docker can't be opened because it is from an unidentified developer" or similar.
+
+**What to do:** Go to System Settings > Privacy & Security. Scroll down and click "Open Anyway" next to the Docker message. This is a standard Mac security prompt for apps downloaded from the internet.
+
+### Docker Desktop asks for a lot of memory
+
+**What you see:** Docker might feel slow or your Mac's fans spin up.
+
+**What to do:** Docker uses 2GB of memory by default. If your Mac only has 8GB, this can feel tight. Open Docker Desktop > Settings > Resources and lower the memory to 1.5GB. Kestrel runs fine with less.
+
+### Discovery finds zero jobs
+
+**What you see:** You set up a search profile but no jobs come back.
+
+**What to do:**
+- Broaden your search terms. Instead of "Marketing Operations Manager Berlin" try "Marketing Manager" with location "Remote"
+- Try different job boards. Some boards have more listings for certain regions.
+- Check that your search profile is active (not paused)
+- If you're outside Germany/EU, the Arbeitsagentur source won't have results for you. Use Indeed or LinkedIn sources instead.
+
+### Scores all look the same (Demo Mode)
+
+In Demo Mode, scores are simulated and not based on your actual profile. They might look repetitive because they're pre-generated. This is normal. Connect a real AI provider to get personalized scores that actually vary based on the job description. See the [AI Provider Guide](AI-PROVIDERS.md).
+
+### Build fails with a wall of red/orange text
+
+**What you see:** A lot of scary-looking output with words like ERROR, FATAL, or "failed to fetch."
+
+**What to do:**
+1. Check your internet connection. The first build downloads ~500MB of components.
+2. If you're on WiFi, try moving closer to your router or switching to a wired connection.
+3. Run `bash setup.sh` again. It's safe to retry - nothing breaks.
+4. If it keeps failing, check disk space. Kestrel needs about 2GB free.
+5. Still stuck? Copy the last 5 lines of the error and paste this into ChatGPT or Claude:
+   "I'm setting up Kestrel, a Docker-based app, and the build failed with this error: [paste here]. I'm on a Mac/Windows. How do I fix this?"
+
+### I set up an API key but scoring still looks fake
+
+**What to do:**
+1. Check that your key starts with `sk-or-` (for OpenRouter)
+2. Make sure there are no extra spaces before or after the key in the settings file
+3. Restart Kestrel: `docker compose restart`
+4. Open http://localhost:8100/api/ai/health in your browser - it should say "openrouter", not "mock"
+5. If it still says "mock", double-check that AI_PROVIDER=openrouter is set (no spaces around the =)
+
+### "I don't understand the scores"
+
+The number (0-10) is how well a job matches YOUR profile. Here's what it means:
+- **8-10:** Strong match. Worth spending time on a great application.
+- **5-7:** Decent match. Review the details before deciding.
+- **Below 5:** Probably not worth your time. Move on.
+
+In Demo Mode, scores are simulated. They look real but aren't personalized to you. Connect an AI provider (see the [AI Provider Guide](AI-PROVIDERS.md)) for real personalized scoring.
+
+### Everything feels overwhelming
+
+That's okay. You don't need to use everything at once. Here's the minimum to get value:
+
+1. Add a few jobs you're interested in to the pipeline (just company name and role)
+2. Drag them between stages as you progress (Applied, Interviewing, etc.)
+3. That's it. You already have a better system than a spreadsheet.
+
+When you're ready, try Discovery to find new jobs automatically. Then try AI scoring. Each feature adds value on its own.
+
 ### If something goes wrong during setup
 
 Don't panic. Your computer is fine. Kestrel runs inside Docker, which is a sandbox - it can't break anything on your system. If the setup failed partway through, you can safely run `bash setup.sh` again. It will pick up where it left off or start fresh.

@@ -2110,5 +2110,81 @@ def stories_edit(
         db.close()
 
 
+# ---------------------------------------------------------------------------
+# Server start command
+# ---------------------------------------------------------------------------
+
+
+@app.command("start")
+def start(
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Bind address"),
+    port: int = typer.Option(8100, "--port", "-p", help="Port number"),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Don't open browser automatically"),
+) -> None:
+    """Start the Kestrel web server.
+
+    Runs database migrations, then starts the FastAPI server.
+    Opens your browser to the dashboard automatically.
+    """
+    import subprocess
+    import sys
+    import threading
+    import time
+    import webbrowser
+
+    console.print(Panel.fit("[bold]Kestrel[/bold] - Starting up...", border_style="blue"))
+
+    # Ensure data directory exists
+    from pathlib import Path
+
+    data_dir = Path.home() / ".kestrel" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    # Set DATABASE_URL if not already set (default to ~/.kestrel/data/)
+    import os
+
+    if "DATABASE_URL" not in os.environ:
+        os.environ["DATABASE_URL"] = f"sqlite:///{data_dir}/career_os.db"
+
+    # Run migrations
+    console.print("  Running database migrations...", style="dim")
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "alembic", "upgrade", "head"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            console.print(f"  [yellow]Migration warning:[/yellow] {result.stderr.strip()[:200]}")
+        else:
+            console.print("  [green]OK[/green] Database ready")
+    except Exception as e:
+        console.print(f"  [yellow]Migration skipped:[/yellow] {e}")
+
+    # Open browser after a short delay
+    if not no_browser:
+
+        def _open_browser() -> None:
+            time.sleep(2)
+            webbrowser.open(f"http://localhost:{port}")
+
+        threading.Thread(target=_open_browser, daemon=True).start()
+
+    console.print(f"  Dashboard: [link]http://localhost:{port}[/link]")
+    console.print("  Press Ctrl+C to stop\n")
+
+    # Start uvicorn
+    import uvicorn
+
+    uvicorn.run(
+        "career_os.main:app",
+        host=host,
+        port=port,
+        reload=False,
+        log_level="info",
+    )
+
+
 if __name__ == "__main__":
     app()

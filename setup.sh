@@ -39,6 +39,19 @@ fi
 
 echo "[ok] Docker is ready"
 
+# -- Check for spaces in path --
+if [[ "$PWD" == *" "* ]]; then
+    echo ""
+    echo "Your Kestrel folder path contains spaces: $PWD"
+    echo ""
+    echo "  This can cause problems with Docker. Move the Kestrel folder to a"
+    echo "  location without spaces in the path, like ~/Documents/kestrel"
+    echo "  or ~/Desktop/kestrel"
+    echo ""
+    echo "  Then navigate to the new location and run setup again."
+    exit 1
+fi
+
 # -- Check ports --
 check_port() {
     local port=$1
@@ -58,6 +71,33 @@ check_port() {
 check_port 8100
 check_port 8101
 echo "[ok] Ports 8100 and 8101 are free"
+
+# -- Check disk space --
+if command -v df &>/dev/null; then
+    available_mb=$(df -m . 2>/dev/null | awk 'NR==2 {print $4}')
+    if [ -n "$available_mb" ] && [ "$available_mb" -lt 2048 ] 2>/dev/null; then
+        echo ""
+        echo "Low disk space: ${available_mb}MB available, Kestrel needs about 2GB."
+        echo ""
+        echo "  Free up some space and try again."
+        echo "  Tip: Docker images from other projects can take a lot of space."
+        echo "  Run 'docker system prune' to clean up unused Docker data."
+        exit 1
+    fi
+fi
+echo "[ok] Disk space looks fine"
+
+# -- Check internet (quick) --
+if ! curl -sf --max-time 5 https://registry-1.docker.io/v2/ >/dev/null 2>&1; then
+    echo ""
+    echo "Can't reach Docker's servers. Check your internet connection."
+    echo "Kestrel needs internet for the first setup (to download components)."
+    echo "After setup, it works fully offline."
+    echo ""
+    echo "  If you're behind a VPN or firewall, try disconnecting and running again."
+    exit 1
+fi
+echo "[ok] Internet connection works"
 
 # -- Config files --
 if [ ! -f .env ]; then
@@ -122,18 +162,49 @@ echo ""
 
 if [ "$healthy" = true ]; then
     echo "[ok] Kestrel is healthy and ready"
+
+    # -- Check AI provider status --
+    ai_provider=$(grep "^AI_PROVIDER=" .env 2>/dev/null | cut -d= -f2 | tr -d ' "')
+    if [ "$ai_provider" = "openrouter" ]; then
+        api_key=$(grep "^OPENROUTER_API_KEY=" .env 2>/dev/null | cut -d= -f2 | tr -d ' "')
+        if [ -z "$api_key" ]; then
+            echo ""
+            echo "[!] AI_PROVIDER is set to openrouter but OPENROUTER_API_KEY is empty."
+            echo "    Kestrel will fall back to Demo Mode until you add a key."
+        elif [[ ! "$api_key" == sk-or-* ]]; then
+            echo ""
+            echo "[!] Your OPENROUTER_API_KEY doesn't start with 'sk-or-'."
+            echo "    It might be pasted incorrectly. Check for extra spaces."
+            echo "    Get your key at: https://openrouter.ai/keys"
+        fi
+    fi
 else
     echo ""
-    echo "Kestrel didn't start in 90 seconds. This sometimes happens on the first run."
+    echo "Kestrel didn't start in 90 seconds."
     echo ""
-    echo "  Try these in order:"
-    echo "  1. Wait another minute, then refresh http://localhost:8101"
-    echo "  2. Run: docker compose logs backend"
-    echo "     (look for error messages near the bottom)"
-    echo "  3. Start fresh: docker compose down -v && bash setup.sh"
+    # Try to diagnose the actual problem
+    backend_log=$(docker compose logs backend --tail 5 2>/dev/null)
+    if echo "$backend_log" | grep -qi "address already in use"; then
+        echo "  Problem: Port 8100 is being used by something else."
+        echo "  Fix: Close that program, or edit .env and change PORT=8200"
+    elif echo "$backend_log" | grep -qi "no space left"; then
+        echo "  Problem: Not enough disk space."
+        echo "  Fix: Free up space and run 'bash setup.sh' again."
+    elif echo "$backend_log" | grep -qi "connection refused\|network"; then
+        echo "  Problem: Network issue during startup."
+        echo "  Fix: Check your internet and run 'bash setup.sh' again."
+    else
+        echo "  This sometimes happens on the first run. Try these:"
+        echo "  1. Wait another minute, then open http://localhost:8101"
+        echo "  2. Start fresh: docker compose down -v && bash setup.sh"
+    fi
     echo ""
-    echo "  Still stuck? Open an issue: https://github.com/pleasedodisturb/kestrel/issues"
-    echo "  Or ask ChatGPT: 'Kestrel Docker setup failed. Here's what I see: [paste output]'"
+    echo "  Still stuck? Here's what to do:"
+    echo "  - Open an issue: https://github.com/pleasedodisturb/kestrel/issues"
+    echo "  - Or paste this into ChatGPT/Claude:"
+    echo "    'I'm setting up Kestrel (a Docker job search tool) and it didn't"
+    echo "     start after 90 seconds. Here's the last few log lines:"
+    echo "     $(docker compose logs backend --tail 3 2>/dev/null | head -3)'"
     exit 1
 fi
 
