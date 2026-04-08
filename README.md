@@ -49,9 +49,10 @@ Everything runs on your machine. No account needed. No data leaves your computer
 | [Quickstart](docs/QUICKSTART.md) | First-time setup, step by step |
 | [FAQ](docs/FAQ.md) | Common questions answered |
 | [Help](docs/HELP.md) | Troubleshooting when something breaks |
+| [AI Provider Guide](docs/AI-PROVIDERS.md) | Choosing and configuring an AI provider |
+| [Comparison](docs/COMPARISON.md) | How Kestrel compares to other tools |
 | [Features & API Reference](docs/REFERENCE.md) | Full feature list, architecture, CLI, API endpoints |
 | [Deployment](DEPLOY.md) | Railway, Fly.io, VPS hosting |
-| [Daily Scan Setup](docs/REFERENCE.md#daily-scan-automated-job-discovery) | Automated job discovery via GitHub Actions |
 | [Contributing](CONTRIBUTING.md) | Development setup and pull request guidelines |
 
 ---
