@@ -669,7 +669,7 @@ class TestInterviewReminders:
         trigger_interview_reminders(db_session, profile.id)
 
         call_args = mock_instance.send_notification.call_args
-        assert "meet.google.com" in call_args.kwargs["message"]
+        assert "meet.google.com" in call_args.kwargs["message"]  # content check, not URL validation
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_no_duplicate_interview_reminders(

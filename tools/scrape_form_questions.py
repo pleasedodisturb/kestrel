@@ -39,17 +39,10 @@ STANDARD_FIELDS = {
 
 
 def detect_platform(url: str) -> str:
-    if "jobs.ashbyhq.com" in url:
-        return "ashby"
-    if "lever.co" in url:
-        return "lever"
-    if "greenhouse.io" in url:
-        return "greenhouse"
-    if "linkedin.com" in url:
-        return "linkedin"
-    if "workable.com" in url:
-        return "workable"
-    return "other"
+    from career_os.utils.url_validation import detect_platform as _detect
+
+    result = _detect(url)
+    return "other" if result == "unknown" else result
 
 
 async def scrape_lever_questions(page, url: str) -> list[dict]:
