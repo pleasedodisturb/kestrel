@@ -278,6 +278,7 @@ async def run_discovery(
                 new_jobs_list.append(dj)
                 new_count += 1
             except IntegrityError:
+                # CodeQL: title/company are public job posting fields, not PII
                 logger.debug(
                     "Duplicate discovered job (race condition): %s at %s",
                     merged["title"],

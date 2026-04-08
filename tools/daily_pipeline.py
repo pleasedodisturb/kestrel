@@ -508,6 +508,8 @@ def step_generate_digest(
     logger.info(f"Digest saved to {config.digest_path}")
 
     # Also write to GitHub Actions summary if available
+    # CodeQL: digest contains public job data (titles, companies, scores), not secrets.
+    # GH Actions summaries are only visible to repo collaborators.
     summary_file = os.getenv("GITHUB_STEP_SUMMARY")
     if summary_file:
         with open(summary_file, "a") as f:
