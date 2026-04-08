@@ -41,16 +41,34 @@ Named after the small falcon that hovers with precision before striking. The phi
 
 ## Quick Start
 
-Requires [Docker](https://docker.com) (or [OrbStack](https://orbstack.dev) on Mac).
+No coding required. You just need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (free).
+
+### If you're comfortable with the command line
 
 ```bash
 git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 ./setup.sh
 ```
 
-That's it. Backend runs on `:8100`, frontend on `:8101`. Open `http://localhost:8101` to see the dashboard.
+### If you've never used a terminal before
 
-If `setup.sh` fails, it will tell you what's missing (usually Docker not running). Fix what it says and run it again.
+1. **Install Docker Desktop** - download from [docker.com](https://www.docker.com/products/docker-desktop/), install like any other app. Free for personal use, skip the account creation if it asks.
+2. **Open Docker Desktop** and wait for the whale icon in your menu bar to stop animating. Keep it running.
+3. **Download Kestrel** - click the green **Code** button at the top of this page, then **Download ZIP**. Unzip the file.
+4. **Open Terminal** - press Cmd+Space, type "Terminal", press Enter.
+5. **Type these two commands** (press Enter after each):
+   ```
+   cd ~/Downloads/kestrel-main
+   bash setup.sh
+   ```
+6. **Wait 2-3 minutes** for the first build. Don't close the window.
+7. **Open your browser** to [http://localhost:8101](http://localhost:8101)
+
+That's it. Your job search dashboard is running.
+
+> **New to all this?** See the full [Quickstart Guide](docs/QUICKSTART.md) with detailed explanations at every step, or check the [FAQ](docs/FAQ.md) if you get stuck.
+
+If `setup.sh` fails, it will tell you what went wrong and how to fix it. The most common issue is Docker not running - just open Docker Desktop and try again.
 
 ---
 
