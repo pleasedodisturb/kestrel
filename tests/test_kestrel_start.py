@@ -1,6 +1,7 @@
 """Tests for the kestrel start command and pip install support."""
 
 import importlib
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -8,6 +9,11 @@ from typer.testing import CliRunner
 from career_os.cli.main import app
 
 runner = CliRunner()
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from text (Rich/Typer color output)."""
+    return re.sub(r"\x1b\[[0-9;]*m", "", text)
 
 
 class TestStartCommand:
@@ -22,17 +28,17 @@ class TestStartCommand:
     def test_start_shows_host_option(self) -> None:
         """Start command should accept --host option."""
         result = runner.invoke(app, ["start", "--help"])
-        assert "--host" in result.output
+        assert "--host" in _strip_ansi(result.output)
 
     def test_start_shows_port_option(self) -> None:
         """Start command should accept --port option."""
         result = runner.invoke(app, ["start", "--help"])
-        assert "--port" in result.output
+        assert "--port" in _strip_ansi(result.output)
 
     def test_start_shows_no_browser_option(self) -> None:
         """Start command should accept --no-browser option."""
         result = runner.invoke(app, ["start", "--help"])
-        assert "--no-browser" in result.output
+        assert "--no-browser" in _strip_ansi(result.output)
 
     def test_start_command_invocable(self) -> None:
         """Start command should be invocable (will fail on uvicorn import in test, but should get past arg parsing)."""
