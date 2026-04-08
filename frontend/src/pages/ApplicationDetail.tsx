@@ -47,6 +47,7 @@ export function ApplicationDetail() {
   // Sync edit data from server data when it changes
   useEffect(() => {
     if (!data) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEditData({
       company: data.company,
       role: data.role,
