@@ -36,6 +36,17 @@ class Settings(BaseSettings):
                 "OPENROUTER_API_KEY is required when AI_PROVIDER=openrouter. "
                 "Set it in your .env file or environment."
             )
+        if (
+            self.ai_provider == "openrouter"
+            and self.openrouter_api_key
+            and not self.openrouter_api_key.startswith("sk-or-")
+        ):
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "OPENROUTER_API_KEY doesn't start with 'sk-or-'. "
+                "It may be pasted incorrectly. Check for extra spaces or missing characters."
+            )
         if self.auth_enabled and not self.auth_api_key:
             raise ValueError(
                 "AUTH_API_KEY is required when AUTH_ENABLED=true. "
