@@ -1,7 +1,10 @@
 """Tests for the Typer CLI skeleton."""
 
-from typer.testing import CliRunner
+
 import pytest
+from typer.testing import CliRunner
+
+
 
 from career_os.cli.main import app
 
