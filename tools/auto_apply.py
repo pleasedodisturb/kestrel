@@ -62,7 +62,8 @@ def parse_lever_url(url: str) -> tuple[str, str, str]:
         raise ValueError(f"Cannot parse Lever URL: {url}")
     site = parts[0]
     posting_id = parts[1]
-    if "eu.lever.co" in parsed.hostname:
+    hostname = (parsed.hostname or "").lower()
+    if hostname.endswith(".eu.lever.co") or hostname == "eu.lever.co":
         base = "https://api.eu.lever.co"
     else:
         base = "https://api.lever.co"

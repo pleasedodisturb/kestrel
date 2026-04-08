@@ -63,7 +63,8 @@ def detect_platform(url: str) -> str:
     # fill_lever handler still works for companies that remain on Lever.
     from career_os.utils.url_validation import detect_platform as _detect
 
-    return _detect(url)
+    result = _detect(url)
+    return "other" if result == "unknown" else result
 
 
 def get_cover_letter_text(cl_md_path: Path) -> str:
@@ -840,7 +841,9 @@ async def fill_custom_questions(page, app: dict) -> None:
         # No action needed - just skip it
 
     # ---- Ashby: n8n Head of DevRel ----
-    elif url_has_domain(url, "ashbyhq.com") and ("n8n" in slug or "n8n" in url.lower() or "a8aea5b5" in url):
+    elif url_has_domain(url, "ashbyhq.com") and (
+        "n8n" in slug or "n8n" in url.lower() or "a8aea5b5" in url
+    ):
         ashby_fields = [
             # Text/textarea fields: (label_text, value)
             ("Expected yearly salary", "150,000 - 180,000 EUR"),
