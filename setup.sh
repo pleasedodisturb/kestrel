@@ -39,6 +39,19 @@ fi
 
 echo "[ok] Docker is ready"
 
+# -- Check for spaces in path --
+if [[ "$PWD" == *" "* ]]; then
+    echo ""
+    echo "Your Kestrel folder path contains spaces: $PWD"
+    echo ""
+    echo "  This can cause problems with Docker. Move the Kestrel folder to a"
+    echo "  location without spaces in the path, like ~/Documents/kestrel"
+    echo "  or ~/Desktop/kestrel"
+    echo ""
+    echo "  Then navigate to the new location and run setup again."
+    exit 1
+fi
+
 # -- Check ports --
 check_port() {
     local port=$1
