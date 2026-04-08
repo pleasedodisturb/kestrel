@@ -237,7 +237,7 @@ Maybe. Docker containers usually survive sleep/wake on Mac. Open http://localhos
 
 ### I forgot about Kestrel for a week. Is my data gone?
 
-No. Your data is stored in a database file on your computer (data/career_os.db inside the Kestrel folder). Even if Docker was stopped, restarted, or updated, your data is still there. Just run `docker compose up -d` and open the dashboard.
+No. Your data is stored in a database file on your computer (data/career_os.db inside the Kestrel folder - the database file's internal name is career_os.db, this is normal). Even if Docker was stopped, restarted, or updated, your data is still there. Just run `docker compose up -d` and open the dashboard.
 
 ---
 
