@@ -57,7 +57,7 @@ check_port() {
     local port=$1
     if command -v lsof &>/dev/null && lsof -i :"$port" >/dev/null 2>&1; then
         echo ""
-        echo "Port $port is already in use by another program."
+        echo "Port $port is already in use. Kestrel uses ports 8100 (backend) and 8101 (frontend)."
         echo ""
         echo "  Either close that program, or change the port:"
         echo "  1. Open the .env file in a text editor"
