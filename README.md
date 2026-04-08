@@ -6,10 +6,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Docker-one--click_setup-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/AI-built--in_(free)-22c55e?style=flat-square" alt="AI included">
+  <a href="https://pypi.org/project/kestrel-app/"><img src="https://img.shields.io/pypi/v/kestrel-app?style=flat-square&label=pip%20install&color=22c55e" alt="PyPI"></a>
+  <img src="https://img.shields.io/badge/AI-built--in_(free)-blue?style=flat-square" alt="AI included">
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License">
-  <img src="https://img.shields.io/badge/No_coding_required-blue?style=flat-square" alt="No coding required">
+  <img src="https://img.shields.io/badge/No_coding_required-gray?style=flat-square" alt="No coding required">
 </p>
 
 <p align="center">
@@ -22,29 +22,33 @@
 
 Pick whichever feels right. All three give you the same app.
 
-### Option 1: pip install (no Docker needed)
+### Option 1: pip install (simplest)
 
 ```bash
 pip install kestrel-app
 kestrel start
 ```
 
-Opens your browser automatically. Data stored in `~/.kestrel/`. Requires Python 3.13+.
+Opens your browser automatically. Data stored in `~/.kestrel/`.
 
-### Option 2: Docker (isolated, one command)
+Requires Python 3.13+. Don't have Python? Install it from [python.org/downloads](https://www.python.org/downloads/) (Mac/Windows installer, takes 2 minutes). Or use Option 2 or 3 below instead.
+
+### Option 2: Docker (isolated, nothing touches your system)
 
 ```bash
 git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 bash setup.sh
 ```
 
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (free). Don't know what Docker is? The [step-by-step guide](docs/QUICKSTART.md) explains everything.
+
 ### Option 3: Try in your browser (zero install)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pleasedodisturb/kestrel)
 
-Free with a GitHub account. Your own instance in 2 minutes. No install, nothing on your computer.
+Free with a GitHub account. Your own instance in 2 minutes. Nothing installed on your computer.
 
-**Need more help?** [Step-by-step guide](docs/QUICKSTART.md) - no coding knowledge required.
+**Lost?** [Step-by-step guide](docs/QUICKSTART.md) or [FAQ](docs/FAQ.md).
 
 ---
 
@@ -76,28 +80,23 @@ Everything runs on your machine. No account needed. No data leaves your computer
 
 ---
 
-## Quick look
+## Add real AI (optional)
 
-**Web dashboard** with Kanban board, AI scoring, discovery, analytics, and more:
-
-```
-http://localhost:8101  - Dashboard (what you use)
-http://localhost:8100/docs  - API docs (if you're curious)
-```
-
-**Add real AI** (optional - works fine without it):
+Kestrel works out of the box in Demo Mode (free, offline). To get real AI-powered scoring:
 
 1. Sign up at [openrouter.ai](https://openrouter.ai) and copy your API key
-2. Open the settings file in your Kestrel folder:
-   - **Mac:** Open Terminal, go to your Kestrel folder, type `open .env`
-   - **Windows:** Open the Kestrel folder, type `.env` in the address bar
-   - **Or any text editor:** the file is called `.env` (hidden file - [how to see it](docs/FAQ.md#hidden-files-on-mac))
+2. Open the settings file (`.env`) in your Kestrel folder:
+   - **pip users:** it's at `~/.kestrel/.env` - open with any text editor
+   - **Docker users:** it's in the Kestrel folder - on Mac type `open .env` in Terminal
+   - Hidden file? [How to see it](docs/FAQ.md)
 3. Change these two lines:
    ```
    AI_PROVIDER=openrouter
    OPENROUTER_API_KEY=sk-or-paste-your-key-here
    ```
-4. Save the file, then restart: `docker compose restart`
+4. Restart:
+   - **pip:** stop with Ctrl+C, run `kestrel start` again
+   - **Docker:** `docker compose restart`
 
 Costs about $1-3/month. Full guide: [AI Provider Guide](docs/AI-PROVIDERS.md)
 
