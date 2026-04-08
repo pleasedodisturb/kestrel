@@ -33,9 +33,7 @@ class TestJobScorerNoSalaryInOutput:
         effort, prep, reasoning = "low", 3, "Good fit"
 
         # Old format included ~{salary} - verify it does not
-        output_line = (
-            f"  [{score}/10] {title} @ {company} [{effort}] prep:{prep}/5 -- {reasoning}"
-        )
+        output_line = f"  [{score}/10] {title} @ {company} [{effort}] prep:{prep}/5 -- {reasoning}"
         assert "120k" not in output_line
         assert "salary" not in output_line.lower()
         assert "~" not in output_line  # the ~{salary} prefix is gone
@@ -48,7 +46,7 @@ class TestJobScorerNoSalaryInOutput:
         # Look for the specific print pattern
         import re
 
-        prints_in_loop = re.findall(r'print\(.*score.*title.*company.*\)', source)
+        prints_in_loop = re.findall(r"print\(.*score.*title.*company.*\)", source)
         for p in prints_in_loop:
             assert "salary" not in p.lower(), f"Salary leaked in print: {p}"
 
@@ -63,18 +61,14 @@ class TestCsvImportNoSalaryInLog:
 
     def test_salary_format_log_redacted(self):
         """The logger.info for non-standard salary must not contain the salary string."""
-        source = (
-            PROJECT_ROOT / "src" / "career_os" / "migration" / "csv_import.py"
-        ).read_text()
+        source = (PROJECT_ROOT / "src" / "career_os" / "migration" / "csv_import.py").read_text()
         # Find the non-standard salary format log line
         import re
 
-        matches = re.findall(r'logger\.info\(.*[Nn]on-standard salary.*\)', source)
+        matches = re.findall(r"logger\.info\(.*[Nn]on-standard salary.*\)", source)
         assert len(matches) >= 1, "Expected at least one non-standard salary log line"
         for m in matches:
-            assert "salary_range" not in m, (
-                f"salary_range value must not be logged: {m}"
-            )
+            assert "salary_range" not in m, f"salary_range value must not be logged: {m}"
             assert "%s" not in m.split("salary")[1] if "salary" in m else True, (
                 f"salary value interpolated in log: {m}"
             )
@@ -109,26 +103,22 @@ class TestDailyPipelineNoDigestInSummary:
         # Find the block that writes to GITHUB_STEP_SUMMARY
         # After the fix, it should write safe_summary, not digest
         summary_block = re.search(
-            r'summary_file.*?GITHUB_STEP_SUMMARY.*?f\.write\((.*?)\)',
+            r"summary_file.*?GITHUB_STEP_SUMMARY.*?f\.write\((.*?)\)",
             source,
             re.DOTALL,
         )
         assert summary_block is not None, "GITHUB_STEP_SUMMARY block not found"
         written_var = summary_block.group(1).strip()
-        assert written_var != "digest", (
-            "Full digest must not be written to GH Actions summary"
-        )
-        assert "safe_summary" in written_var or "reference" in source[
-            summary_block.start():summary_block.end() + 200
-        ].lower(), "Expected a safe/redacted summary to be written"
+        assert written_var != "digest", "Full digest must not be written to GH Actions summary"
+        assert (
+            "safe_summary" in written_var
+            or "reference" in source[summary_block.start() : summary_block.end() + 200].lower()
+        ), "Expected a safe/redacted summary to be written"
 
     def test_safe_summary_has_no_pii(self):
         """Simulate the safe_summary construction and verify no sensitive data."""
         timestamp = "2026-04-08T10:00:00"
-        safe_summary = (
-            f"Daily pipeline completed at {timestamp}. "
-            f"See digest file for details."
-        )
+        safe_summary = f"Daily pipeline completed at {timestamp}. See digest file for details."
         # Must not contain any job/salary/company data
         assert "Senior" not in safe_summary
         assert "salary" not in safe_summary.lower()
@@ -165,7 +155,12 @@ class TestLocalScorerNoSalaryInOutput:
     def test_display_output_format(self, capsys):
         """Verify the output format excludes salary."""
         s, title, company, loc, effort, reason = (
-            8, "Senior PM", "TestCo", "Berlin", "low", "Good match"
+            8,
+            "Senior PM",
+            "TestCo",
+            "Berlin",
+            "low",
+            "Good match",
         )
         # Replicate the fixed print pattern
         print(f"\n  [{s:2d}/10] {title}")
@@ -189,18 +184,14 @@ class TestDiscoveryNoPiiInLog:
 
     def test_source_code_no_pii_in_debug(self):
         """The duplicate job debug message must not include merged['title'] or merged['company']."""
-        source = (
-            PROJECT_ROOT / "src" / "career_os" / "services" / "discovery.py"
-        ).read_text()
+        source = (PROJECT_ROOT / "src" / "career_os" / "services" / "discovery.py").read_text()
         import re
 
         # Find the duplicate debug log
-        dup_logs = re.findall(r'logger\.debug\(.*[Dd]uplicate.*\)', source, re.DOTALL)
+        dup_logs = re.findall(r"logger\.debug\(.*[Dd]uplicate.*\)", source, re.DOTALL)
         assert len(dup_logs) >= 1, "Expected duplicate debug log"
         for log_call in dup_logs:
-            assert 'merged["title"]' not in log_call, (
-                f"Title PII still in debug log: {log_call}"
-            )
+            assert 'merged["title"]' not in log_call, f"Title PII still in debug log: {log_call}"
             assert 'merged["company"]' not in log_call, (
                 f"Company PII still in debug log: {log_call}"
             )

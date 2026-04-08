@@ -278,9 +278,7 @@ async def run_discovery(
                 new_jobs_list.append(dj)
                 new_count += 1
             except IntegrityError:
-                logger.debug(
-                    "Duplicate discovered job skipped (race condition)"
-                )
+                logger.debug("Duplicate discovered job skipped (race condition)")
                 duplicates += 1
 
     # Finalize the run
