@@ -224,6 +224,32 @@ Files starting with a dot (like `.env`) are hidden on Mac by default. They're th
 
 Skip git entirely. Use the ZIP download method in Step 2, Option A. It does the same thing.
 
+### macOS blocks Docker installation
+
+**What you see:** "Docker can't be opened because it is from an unidentified developer" or similar.
+
+**What to do:** Go to System Settings > Privacy & Security. Scroll down and click "Open Anyway" next to the Docker message. This is a standard Mac security prompt for apps downloaded from the internet.
+
+### Docker Desktop asks for a lot of memory
+
+**What you see:** Docker might feel slow or your Mac's fans spin up.
+
+**What to do:** Docker uses 2GB of memory by default. If your Mac only has 8GB, this can feel tight. Open Docker Desktop > Settings > Resources and lower the memory to 1.5GB. Kestrel runs fine with less.
+
+### Discovery finds zero jobs
+
+**What you see:** You set up a search profile but no jobs come back.
+
+**What to do:**
+- Broaden your search terms. Instead of "Marketing Operations Manager Berlin" try "Marketing Manager" with location "Remote"
+- Try different job boards. Some boards have more listings for certain regions.
+- Check that your search profile is active (not paused)
+- If you're outside Germany/EU, the Arbeitsagentur source won't have results for you. Use Indeed or LinkedIn sources instead.
+
+### Scores all look the same (Demo Mode)
+
+In Demo Mode, scores are simulated and not based on your actual profile. They might look repetitive because they're pre-generated. This is normal. Connect a real AI provider to get personalized scores that actually vary based on the job description. See the [AI Provider Guide](AI-PROVIDERS.md).
+
 ### Build fails with a wall of red/orange text
 
 **What you see:** A lot of scary-looking output with words like ERROR, FATAL, or "failed to fetch."

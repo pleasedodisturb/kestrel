@@ -229,6 +229,37 @@ There's no catch. The author built this to solve their own job search problem an
 
 ---
 
+### I closed my laptop / computer went to sleep. Is Kestrel still running?
+
+Maybe. Docker containers usually survive sleep/wake on Mac. Open http://localhost:8101 - if it loads, you're fine. If not, open Terminal and run `docker compose up -d` from your Kestrel folder. Your data is never lost - it's saved in a file on your computer, not in Docker's memory.
+
+---
+
+### I forgot about Kestrel for a week. Is my data gone?
+
+No. Your data is stored in a database file on your computer (data/career_os.db inside the Kestrel folder). Even if Docker was stopped, restarted, or updated, your data is still there. Just run `docker compose up -d` and open the dashboard.
+
+---
+
+### How do I set up the daily job scan?
+
+The daily scan runs as a GitHub Action - it uses GitHub's servers to scrape job boards every morning and score the results. To set it up:
+1. Fork the Kestrel repo to your own GitHub account
+2. Go to your fork's Settings > Secrets and variables > Actions
+3. Add your AI key as a secret called OPENAI_API_KEY
+4. The scan runs automatically Monday-Friday at 7am UTC
+5. Results appear as commits in your repo's tracking/ folder
+
+This is the most technical feature to set up. If GitHub Actions feels like too much, you can run the same thing manually: `docker compose exec backend python tools/daily_pipeline.py`
+
+---
+
+### My profile is empty. Will scoring still work?
+
+Technically yes, but the scores won't be meaningful. AI scoring compares the job description against YOUR profile - if your profile is empty, there's nothing to compare against. Take 5 minutes to fill in your profile (Settings > Profiles): your target roles, skills, preferred location, and salary range. This makes a huge difference in score quality.
+
+---
+
 ### I need help and this FAQ doesn't cover it.
 
 A few options:
