@@ -507,12 +507,16 @@ def step_generate_digest(
     config.digest_path.write_text(digest)
     logger.info(f"Digest saved to {config.digest_path}")
 
-    # Also write to GitHub Actions summary if available
+    # Log a non-sensitive summary to GitHub Actions (no PII/salary data)
     summary_file = os.getenv("GITHUB_STEP_SUMMARY")
     if summary_file:
+        safe_summary = (
+            f"Daily pipeline completed at {config.timestamp}. "
+            f"See digest file for details."
+        )
         with open(summary_file, "a") as f:
-            f.write(digest)
-        logger.info("Digest written to GitHub Actions summary")
+            f.write(safe_summary)
+        logger.info("Summary reference written to GitHub Actions summary")
 
     return digest
 

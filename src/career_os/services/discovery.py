@@ -279,9 +279,7 @@ async def run_discovery(
                 new_count += 1
             except IntegrityError:
                 logger.debug(
-                    "Duplicate discovered job (race condition): %s at %s",
-                    merged["title"],
-                    merged["company"],
+                    "Duplicate discovered job skipped (race condition)"
                 )
                 duplicates += 1
 

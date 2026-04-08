@@ -448,10 +448,8 @@ def main():
         reason = j.get("fit_reasoning", "")
         url = j.get("url", "")
         print(f"\n  [{s:2d}/10] {title}")
-        print(f"         @ {company} | {loc} | ~{sal} | {effort}")
+        print(f"         @ {company} | {loc} | {effort}")
         print(f"         {reason}")
-        if url:
-            print(f"         {url}")
 
     print(f"\nSaved {len(scored)} scored jobs to {output_path}")
 

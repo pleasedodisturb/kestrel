@@ -523,7 +523,7 @@ def main():
         prep_levels.append(prep)
         prep_notes_list.append(prep_note)
         print(
-            f"  [{score}/10] {title} @ {company} ~{salary} [{effort}] prep:{prep}/5 -- {reasoning}"
+            f"  [{score}/10] {title} @ {company} [{effort}] prep:{prep}/5 -- {reasoning}"
         )
 
     df["fit_score"] = scores
