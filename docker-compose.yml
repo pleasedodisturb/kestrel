@@ -1,0 +1,57 @@
+# docker-compose.yml — Local development with two containers (hot-reload)
+#
+# Usage:
+#   docker compose up              # backend + frontend dev servers
+#   docker compose up --build      # rebuild after dependency changes
+#
+# For single-container production mode, see docker-compose.prod.yml
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      - career-data:/app/data
+    environment:
+      - AI_PROVIDER=mock
+      - DATABASE_URL=sqlite:///data/career_os.db
+      - DEBUG=true
+      - FRONTEND_URL=http://localhost:8101
+    command: >
+      sh -c "alembic upgrade head &&
+      python -m uvicorn career_os.main:app
+      --host 0.0.0.0 --port 8100 --reload
+      --reload-dir /app/src"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8100/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    ports:
+      - "8101:8101"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  career-data:
+    driver: local
+  frontend-node-modules:

@@ -1,0 +1,26 @@
+# Kestrel Personal Configuration
+# Copy to config/personal.yaml and fill in your details:
+#   cp config/personal.yaml.example config/personal.yaml
+
+name:
+  first: "Jane"
+  last: "Doe"
+  full: "Jane Doe"
+
+contact:
+  email: "jane.doe@example.com"
+  phone: "+1 555 000 0000"
+  linkedin: "https://linkedin.com/in/janedoe"
+  github: "https://github.com/janedoe"
+
+location: "Berlin, Germany"
+
+target_roles:
+  - "Senior Software Engineer"
+  - "Staff Engineer"
+  - "Engineering Manager"
+
+salary_range:
+  min: 80000
+  max: 140000
+  currency: "EUR"

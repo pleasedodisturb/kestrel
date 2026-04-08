@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: |
+          ruff check src/ tests/
+          ruff format --check src/ tests/
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml
+
+      - name: Security audit (dependencies)
+        run: pip install pip-audit && pip-audit
+
+      - name: PII leak check
+        run: |
+          # Fail if any personal data patterns found in source code
+          if grep -rn "vitalii\|garan\|vitalik\|[redacted]\|pm\.me\|pleasedodisturb\|abandoned\.yachts" \
+            --include="*.py" --include="*.ts" --include="*.tsx" --include="*.yaml" --include="*.yml" \
+            src/ tests/ frontend/src/ tools/ 2>/dev/null; then
+            echo "PII leak detected in source code!"
+            exit 1
+          fi
+          echo "No PII found - clean."
+
+  frontend:
+    name: Frontend (React)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        run: npx eslint src/
+
+      - name: Run tests
+        run: npx vitest run
+
+      - name: Security audit (dependencies)
+        run: npm audit --audit-level=moderate || true
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    strategy:
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3

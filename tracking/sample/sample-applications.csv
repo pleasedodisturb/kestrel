@@ -1,0 +1,5 @@
+date_applied,company,role,url,source,status,salary_range,contact,next_step,notes,fit_score
+2026-01-15,Acme Corp,Senior Software Engineer,https://acme.com/careers/123,linkedin,interviewing,120-150k EUR,,Prepare system design,Great team culture,8.5
+2026-01-20,Globex Industries,Staff Engineer,https://globex.io/jobs/456,company_website,applied,130-160k EUR,recruiter@globex.io,Follow up next week,Remote-first company,7.2
+2026-02-01,Initech,Engineering Manager,https://initech.com/apply/789,referral,rejected,110-140k EUR,friend@initech.com,,Rejected after final round - too senior for the role,6.8
+2026-02-10,Umbrella Corp,Platform Engineer,https://umbrella.dev/careers,arbeitsagentur,bookmarked,100-130k EUR,,Review job description,Interesting stack but unclear team size,7.5

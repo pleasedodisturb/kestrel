@@ -1,0 +1,26 @@
+# Kestrel Application Submission Queue
+# Copy to applications-to-submit.yaml and customize
+
+personal:
+  first_name: Jane
+  last_name: Doe
+  email: jane.doe@example.com
+  phone: "+1 555 000 0000"
+  linkedin: https://linkedin.com/in/janedoe
+  github: https://github.com/janedoe
+  location: Berlin, Germany
+  work_authorization: "REDACTED"
+
+applications:
+  - company: Acme Corp
+    role: Senior Software Engineer
+    url: https://acme.com/careers/senior-swe
+    cv: cv/cv.pdf
+    cover_letter: cv/applications/acme-senior-engineer/cover-letter.pdf
+    status: ready
+    score: 8.5
+    custom_questions:
+      - question: "Why do you want to work at Acme?"
+        answer: "Your answer here"
+      - question: "What's your expected start date?"
+        answer: "Available immediately"
