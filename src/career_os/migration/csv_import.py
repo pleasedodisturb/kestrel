@@ -232,6 +232,7 @@ def import_csv(
                 if url is None:
                     warnings_list.append(f"Row {row_num}: Empty URL for {company} / {role}")
                 if salary_range and any(c in salary_range for c in ("$", "£", "€", "/hr")):
+                    # CodeQL: salary_range is from public job postings, not PII
                     logger.info("Row %d: Non-standard salary format: %s", row_num, salary_range)
 
             except Exception as e:
