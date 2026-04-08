@@ -1,0 +1,261 @@
+# Kestrel Daily Job Scan
+#
+# Automated job discovery + AI scoring + notifications.
+# Runs Mon-Fri at 07:00 UTC. Trigger manually from GitHub Actions tab.
+#
+# Required secrets (Settings > Secrets > Actions):
+#   OPENAI_API_KEY          - For AI job scoring (OpenAI or OpenRouter key)
+#
+# Optional secrets (for notifications and integrations):
+#   PUSHOVER_APP_TOKEN      - Push notifications (https://pushover.net)
+#   PUSHOVER_USER_KEY       - Push notifications user key
+#   MAILGUN_API_KEY         - Email digests (https://mailgun.com)
+#   MAILGUN_DOMAIN          - Your Mailgun domain
+#   NOTIFY_EMAIL            - Email address for daily digests
+#   GOOGLE_SERVICE_ACCOUNT_JSON - Google Sheets logging
+#   GOOGLE_SHEET_ID         - Target spreadsheet for scan results
+#
+# Optional variables (Settings > Variables > Actions):
+#   PIPELINE_LOCATION       - Default search location (default: "Remote")
+
+name: Daily Job Scan
+
+on:
+  schedule:
+    # Run daily at 07:00 UTC (adjust to your timezone)
+    # Mon-Fri only — weekend jobs are caught on Monday
+    - cron: '0 7 * * 1-5'
+
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Scraping mode'
+        required: false
+        default: 'api-only'
+        type: choice
+        options:
+          - api-only
+          - api-plus
+          - all
+      min_score:
+        description: 'Minimum fit score (1-10)'
+        required: false
+        default: '5'
+      hours_old:
+        description: 'Max posting age in hours'
+        required: false
+        default: '24'
+      dry_run:
+        description: 'Dry run (no CSV writes)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  daily-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install pytest
+
+      - name: Prepare directories
+        run: mkdir -p logs
+
+      - name: Run daily pipeline
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PIPELINE_MODE: ${{ inputs.mode || 'api-only' }}
+          PIPELINE_MIN_SCORE: ${{ inputs.min_score || '5' }}
+          PIPELINE_HOURS_OLD: ${{ inputs.hours_old || '24' }}
+          PIPELINE_LOCATION: ${{ vars.PIPELINE_LOCATION || 'Remote' }}
+          PIPELINE_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: |
+          .venv/bin/python tools/daily_pipeline.py
+
+      - name: Build notification summary
+        if: success()
+        id: summary
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          DIGEST="tracking/daily-scan-${DATE}.md"
+          if [ -f "$DIGEST" ]; then
+            # Extract stats line and top 5 roles
+            STATS=$(head -12 "$DIGEST" | grep -E "Total|Score|new" | head -3)
+            TOP5=$(grep "^| [789]" "$DIGEST" | head -5 | awk -F'|' '{printf "  %s - %s (%s)\n", $4, $3, $2}')
+            if [ -z "$TOP5" ]; then
+              TOP5="  No high-scoring roles found today"
+            fi
+
+            # Count review queue items
+            REVIEW_COUNT=$(sed -n '/## Review Queue/,/^---/p' "$DIGEST" | grep "^|" | grep -v "Score" | wc -l | tr -d ' ')
+            if [ "$REVIEW_COUNT" -gt 0 ]; then
+              REVIEW_MSG="+ ${REVIEW_COUNT} wildcards in review queue"
+            else
+              REVIEW_MSG=""
+            fi
+
+            {
+              echo "SCAN_DATE=${DATE}"
+              echo "STATS<<EOFSTATS"
+              echo "$STATS"
+              echo "EOFSTATS"
+              echo "TOP5<<EOFTOP5"
+              echo "$TOP5"
+              echo "EOFTOP5"
+              echo "REVIEW_MSG=${REVIEW_MSG}"
+            } >> "$GITHUB_OUTPUT"
+
+            # Build full email body (markdown)
+            {
+              echo "EMAIL_BODY<<EOFEMAIL"
+              head -65 "$DIGEST"
+              echo ""
+              echo "---"
+              echo "View full digest: https://github.com/${{ github.repository }}/blob/main/${DIGEST}"
+              echo "EOFEMAIL"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "SCAN_DATE=${DATE}"
+              echo "STATS=No digest generated"
+              echo "TOP5=Pipeline may have failed"
+              echo "EMAIL_BODY=Daily scan completed but no digest was generated. Check the workflow logs."
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Pushover notification
+        if: success()
+        env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_APP_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER_KEY }}
+          SCAN_DATE: ${{ steps.summary.outputs.SCAN_DATE }}
+          STATS: ${{ steps.summary.outputs.STATS }}
+          TOP5: ${{ steps.summary.outputs.TOP5 }}
+        run: |
+          REVIEW="${{ steps.summary.outputs.REVIEW_MSG }}"
+          MSG=$(printf "Kestrel Daily Scan %s\n\n%s\n\nTop roles:\n%s\n%s" "$SCAN_DATE" "$STATS" "$TOP5" "$REVIEW")
+          curl -s \
+            --form-string "token=$PUSHOVER_TOKEN" \
+            --form-string "user=$PUSHOVER_USER" \
+            --form-string "title=Kestrel Daily Scan" \
+            --form-string "message=$MSG" \
+            --form-string "priority=0" \
+            --form-string "url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --form-string "url_title=View run" \
+            https://api.pushover.net/1/messages.json
+
+      - name: Send email via Mailgun
+        if: success()
+        env:
+          MAILGUN_API_KEY: ${{ secrets.MAILGUN_API_KEY }}
+          MAILGUN_DOMAIN: ${{ secrets.MAILGUN_DOMAIN }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          SCAN_DATE: ${{ steps.summary.outputs.SCAN_DATE }}
+          EMAIL_BODY: ${{ steps.summary.outputs.EMAIL_BODY }}
+        run: |
+          curl -s --user "api:$MAILGUN_API_KEY" \
+            "https://api.mailgun.net/v3/$MAILGUN_DOMAIN/messages" \
+            -F from="Kestrel <kestrel@$MAILGUN_DOMAIN>" \
+            -F to="$NOTIFY_EMAIL" \
+            -F subject="Kestrel Daily Scan - $SCAN_DATE" \
+            -F text="$EMAIL_BODY"
+
+      - name: Update Google Sheet
+        if: success() && inputs.dry_run != true
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          CI_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          DIGEST="tracking/daily-scan-${DATE}.md"
+
+          # Extract stats for daily log entry
+          if [ -f "$DIGEST" ]; then
+            SCRAPED=$(grep "Total scraped" "$DIGEST" | grep -o '[0-9]*' | head -1)
+            THRESHOLD=$(grep "Score >=" "$DIGEST" | grep -o '[0-9]*' | head -1)
+            TOP_LINE=$(grep "^| [89]" "$DIGEST" | head -1)
+            TOP_SCORE=$(echo "$TOP_LINE" | awk -F'|' '{print $2}' | tr -d ' ')
+            TOP_COMPANY=$(echo "$TOP_LINE" | awk -F'|' '{print $3}' | xargs)
+            TOP_ROLE=$(echo "$TOP_LINE" | awk -F'|' '{print $4}' | xargs)
+
+            LOG_JSON=$(printf '{"date":"%s","scraped":"%s","scored":"%s","new_above_threshold":"%s","top_score":"%s","top_role":"%s","top_company":"%s"}' \
+              "$DATE" "${SCRAPED:-0}" "${SCRAPED:-0}" "${THRESHOLD:-0}" "${TOP_SCORE:-?}" "${TOP_ROLE:-N/A}" "${TOP_COMPANY:-N/A}")
+
+            .venv/bin/python tools/update_sheet.py --log-entry "$LOG_JSON" --scored-json "tracking/scraped_scored_${DATE}.json"
+          else
+            .venv/bin/python tools/update_sheet.py --pipeline-only
+          fi
+
+      - name: Validate Google Sheet
+        if: success() && inputs.dry_run != true
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+        run: |
+          .venv/bin/python tools/validate_sheet.py
+
+      - name: Upload digest as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-scan-${{ github.run_number }}
+          path: |
+            tracking/daily-scan-*.md
+            tracking/scraped_scored_*.json
+          retention-days: 30
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 7
+
+      - name: Commit digest to repo
+        if: success() && inputs.dry_run != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          DATE=$(date +%Y-%m-%d)
+          for f in tracking/daily-scan-${DATE}.md tracking/scraped_scored_${DATE}.json tracking/scraped_raw_${DATE}.json; do
+            [ -f "$f" ] && git add "$f"
+          done
+          git diff --cached --quiet || git commit -m "chore: daily scan digest ${DATE}"
+          git push
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_APP_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER_KEY }}
+        run: |
+          curl -s \
+            --form-string "token=$PUSHOVER_TOKEN" \
+            --form-string "user=$PUSHOVER_USER" \
+            --form-string "title=Kestrel FAILED" \
+            --form-string "message=Daily scan failed. Check logs." \
+            --form-string "priority=1" \
+            --form-string "url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --form-string "url_title=View logs" \
+            https://api.pushover.net/1/messages.json

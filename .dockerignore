@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+.venv-career/
+.venv_mcp/
+*.egg
+
+# Node (frontend deps rebuilt in Docker)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Data (mounted as volume, not baked into image)
+data/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Environment / secrets
+.env
+.env.local
+*.key
+credentials.json
+
+# Private
+private/
+
+# Docs and non-essential files
+docs/
+interview-prep/
+learning/
+assets/
+cv/
+profile/
+tracking/
+dashboard/
+worker/
+tools/
+mcp-configs/
+.cursor/
+.claude/
+.ruff_cache/
+.pytest_cache/
+.browser-profile/
+agent-transcripts/
+jobspy-mcp-server/
+
+# Test files (not needed in production image)
+tests/
+
+# Mission files
+.factory/
+
+# Deployment docs (not needed inside container)
+DEPLOY.md
+*.md
+!frontend/*.md

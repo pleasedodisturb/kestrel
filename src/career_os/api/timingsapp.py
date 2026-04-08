@@ -1,0 +1,171 @@
+"""TimingsApp integration API routes.
+
+Provides endpoints for:
+- Starting/stopping tracked time sessions
+- Listing sessions with filtering
+- Time analytics (total hours, category breakdown, 4-week trend)
+- Running session status
+- Connection testing
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from career_os.database import get_db
+from career_os.schemas.timingsapp import (
+    TimeAnalyticsResponse,
+    TimeSessionCreate,
+    TimeSessionListResponse,
+    TimeSessionResponse,
+    TimeSessionStop,
+    TimeSessionUpdate,
+)
+from career_os.services.timingsapp import (
+    ConcurrentSessionError,
+    TimeSessionAlreadyStoppedError,
+    TimeSessionNotFoundError,
+    check_timingsapp_connection,
+    get_running_session,
+    get_session,
+    get_time_analytics,
+    list_sessions,
+    start_session,
+    stop_session,
+    update_session,
+)
+
+router = APIRouter(prefix="/api/timingsapp", tags=["timingsapp"])
+
+
+@router.post("/sessions", response_model=TimeSessionResponse, status_code=201)
+async def create_session(
+    payload: TimeSessionCreate,
+    db: Session = Depends(get_db),
+) -> TimeSessionResponse:
+    """Start a new tracked time session.
+
+    Creates a local session record and optionally starts a timer
+    in TimingsApp if the integration is configured and enabled.
+    Category is auto-assigned from context if not provided.
+    """
+    try:
+        session_record = start_session(db, payload)
+    except ConcurrentSessionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+    return TimeSessionResponse.model_validate(session_record)
+
+
+@router.put("/sessions/{session_id}/stop", response_model=TimeSessionResponse)
+async def stop_session_endpoint(
+    session_id: int,
+    payload: TimeSessionStop | None = None,
+    profile_id: int = Query(..., description="Profile ID"),
+    db: Session = Depends(get_db),
+) -> TimeSessionResponse:
+    """Stop a tracked time session.
+
+    Updates the session with stop time, duration, and optionally
+    stops the timer in TimingsApp.
+    """
+    try:
+        session_record = stop_session(
+            db,
+            session_id,
+            profile_id=profile_id,
+            notes=payload.notes if payload else None,
+        )
+        return TimeSessionResponse.model_validate(session_record)
+    except TimeSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Time session not found") from exc
+    except TimeSessionAlreadyStoppedError as exc:
+        raise HTTPException(status_code=400, detail="Session is already stopped") from exc
+
+
+@router.get("/sessions", response_model=TimeSessionListResponse)
+async def list_sessions_endpoint(
+    profile_id: int = Query(..., description="Profile ID"),
+    category: str | None = Query(default=None, description="Filter by category"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+) -> TimeSessionListResponse:
+    """List tracked time sessions for a profile."""
+    sessions, total = list_sessions(
+        db,
+        profile_id=profile_id,
+        category=category,
+        limit=limit,
+        offset=offset,
+    )
+    return TimeSessionListResponse(
+        sessions=[TimeSessionResponse.model_validate(s) for s in sessions],
+        total=total,
+    )
+
+
+@router.get("/sessions/running", response_model=TimeSessionResponse | None)
+async def get_running_session_endpoint(
+    profile_id: int = Query(..., description="Profile ID"),
+    db: Session = Depends(get_db),
+) -> TimeSessionResponse | None:
+    """Get the currently running (unstopped) time session, or null."""
+    session_record = get_running_session(db, profile_id=profile_id)
+    if session_record is None:
+        return None
+    return TimeSessionResponse.model_validate(session_record)
+
+
+@router.get("/sessions/{session_id}", response_model=TimeSessionResponse)
+async def get_session_endpoint(
+    session_id: int,
+    profile_id: int = Query(..., description="Profile ID"),
+    db: Session = Depends(get_db),
+) -> TimeSessionResponse:
+    """Get a specific time session by ID."""
+    try:
+        session_record = get_session(db, session_id, profile_id=profile_id)
+        return TimeSessionResponse.model_validate(session_record)
+    except TimeSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Time session not found") from exc
+
+
+@router.patch("/sessions/{session_id}", response_model=TimeSessionResponse)
+async def update_session_endpoint(
+    session_id: int,
+    payload: TimeSessionUpdate,
+    profile_id: int = Query(..., description="Profile ID"),
+    db: Session = Depends(get_db),
+) -> TimeSessionResponse:
+    """Update a time session's details."""
+    try:
+        session_record = update_session(
+            db, session_id, payload, profile_id=profile_id
+        )
+        return TimeSessionResponse.model_validate(session_record)
+    except TimeSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Time session not found") from exc
+
+
+@router.get("/analytics", response_model=TimeAnalyticsResponse)
+async def get_analytics(
+    profile_id: int = Query(..., description="Profile ID"),
+    weeks: int = Query(default=4, ge=1, le=52, description="Number of weeks to analyze"),
+    db: Session = Depends(get_db),
+) -> TimeAnalyticsResponse:
+    """Get time analytics with total hours, category breakdown, and weekly trend."""
+    return get_time_analytics(db, profile_id=profile_id, weeks=weeks)
+
+
+@router.post("/test")
+async def test_connection(
+    db: Session = Depends(get_db),
+) -> dict:
+    """Test the TimingsApp API connection using stored credentials."""
+    success, message = check_timingsapp_connection(db)
+    return {
+        "success": success,
+        "message": message,
+    }

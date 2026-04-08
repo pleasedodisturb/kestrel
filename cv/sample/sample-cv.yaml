@@ -1,0 +1,57 @@
+# Kestrel Sample CV (RenderCV format)
+# See https://docs.rendercv.com for full documentation
+# Copy this to cv/cv.yaml and customize
+
+cv:
+  name: Jane Doe
+  location: Berlin, Germany
+  email: jane.doe@example.com
+  phone: "+1 555 000 0000"
+  website: https://janedoe.dev
+  social_networks:
+    - network: LinkedIn
+      username: janedoe
+    - network: GitHub
+      username: janedoe
+
+  sections:
+    summary:
+      - "Senior software engineer with 8 years of experience building distributed systems and leading cross-functional teams. Passionate about developer tools and open source."
+
+    experience:
+      - company: Acme Corp
+        position: Senior Software Engineer
+        location: Berlin, Germany
+        start_date: 2022-01
+        end_date: present
+        highlights:
+          - "Led migration of monolith to microservices, reducing deploy time from 2h to 15min"
+          - "Mentored 4 junior engineers through structured pairing program"
+
+      - company: Globex Industries
+        position: Software Engineer
+        location: Remote
+        start_date: 2019-06
+        end_date: 2021-12
+        highlights:
+          - "Built real-time data pipeline processing 1M events/day"
+          - "Introduced automated testing, improving coverage from 30% to 85%"
+
+    education:
+      - institution: University of Technology
+        area: Computer Science
+        degree: BSc
+        start_date: 2015-09
+        end_date: 2019-06
+
+    skills:
+      - label: Languages
+        details: Python, TypeScript, Go, SQL
+      - label: Infrastructure
+        details: Docker, Kubernetes, AWS, Terraform
+      - label: Tools
+        details: FastAPI, React, PostgreSQL, Redis
+
+design:
+  theme: classic
+  color: "#0066FF"
