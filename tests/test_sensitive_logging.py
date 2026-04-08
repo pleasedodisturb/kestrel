@@ -4,15 +4,9 @@ Covers CodeQL alerts for py/clear-text-logging-sensitive-data and
 py/clear-text-storage-sensitive-data.
 """
 
-import io
 import logging
-import os
 import sys
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
 
 # Ensure tools/ is importable (conftest already does this, but be explicit)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
