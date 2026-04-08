@@ -147,9 +147,7 @@ def _compute_time_in_stage(
 
         days_list: list[float] = []
         for app_obj in apps_in_stage:
-            entered_at = _find_stage_entry_time(
-                app_obj, status, log_by_app.get(app_obj.id, [])
-            )
+            entered_at = _find_stage_entry_time(app_obj, status, log_by_app.get(app_obj.id, []))
             if entered_at is not None:
                 if entered_at.tzinfo is None:
                     entered_at = entered_at.replace(tzinfo=UTC)
@@ -201,9 +199,7 @@ def _compute_prep_metrics(db: Session, profile_id: int) -> PrepMetrics:
     from career_os.models.interview_prep import InterviewPrepItem, InterviewPrepSession
 
     sessions = (
-        db.query(InterviewPrepSession)
-        .filter(InterviewPrepSession.profile_id == profile_id)
-        .all()
+        db.query(InterviewPrepSession).filter(InterviewPrepSession.profile_id == profile_id).all()
     )
     total_sessions = len(sessions)
     if total_sessions == 0:
@@ -214,11 +210,7 @@ def _compute_prep_metrics(db: Session, profile_id: int) -> PrepMetrics:
     completed_sessions = 0
 
     for session in sessions:
-        items = (
-            db.query(InterviewPrepItem)
-            .filter(InterviewPrepItem.session_id == session.id)
-            .all()
-        )
+        items = db.query(InterviewPrepItem).filter(InterviewPrepItem.session_id == session.id).all()
         session_total = len(items)
         session_completed = sum(1 for it in items if it.completed)
         total_items += session_total
@@ -227,9 +219,7 @@ def _compute_prep_metrics(db: Session, profile_id: int) -> PrepMetrics:
             completed_sessions += 1
 
     completion_rate = (
-        round(completed_sessions / total_sessions * 100, 1)
-        if total_sessions > 0
-        else None
+        round(completed_sessions / total_sessions * 100, 1) if total_sessions > 0 else None
     )
 
     return PrepMetrics(
@@ -245,11 +235,7 @@ def _compute_notification_metrics(db: Session, profile_id: int) -> NotificationM
     """Compute notification delivery metrics (VAL-CROSS-007)."""
     from career_os.models.pushover import NotificationLog
 
-    logs = (
-        db.query(NotificationLog)
-        .filter(NotificationLog.profile_id == profile_id)
-        .all()
-    )
+    logs = db.query(NotificationLog).filter(NotificationLog.profile_id == profile_id).all()
     if not logs:
         return NotificationMetrics()
 
@@ -287,20 +273,14 @@ def get_analytics(db: Session, *, profile_id: int) -> AnalyticsResponse:
         FunnelStage(
             stage=status,
             count=count,
-            percentage=_compute_stage_to_stage_percentage(
-                status, count, status_counts, total
-            ),
+            percentage=_compute_stage_to_stage_percentage(status, count, status_counts, total),
         )
         for status, count in status_counts.items()
     ]
 
     # --- Response rate ---
-    applied_plus = sum(
-        1 for a in all_apps if a.status.lower() in APPLIED_PLUS_STATUSES
-    )
-    responded = sum(
-        1 for a in all_apps if a.status.lower() in RESPONDED_STATUSES
-    )
+    applied_plus = sum(1 for a in all_apps if a.status.lower() in APPLIED_PLUS_STATUSES)
+    responded = sum(1 for a in all_apps if a.status.lower() in RESPONDED_STATUSES)
     response_rate: float | None = None
     if applied_plus > 0:
         response_rate = round(responded / applied_plus * 100, 1)
@@ -331,11 +311,7 @@ def get_analytics(db: Session, *, profile_id: int) -> AnalyticsResponse:
     # --- Score distribution ---
     score_dist: list[ScoreBucket] = []
     for label, low, high in SCORE_BUCKETS:
-        count = sum(
-            1
-            for a in all_apps
-            if a.fit_score is not None and low <= a.fit_score < high
-        )
+        count = sum(1 for a in all_apps if a.fit_score is not None and low <= a.fit_score < high)
         score_dist.append(ScoreBucket(range=label, count=count))
 
     # --- Prep completion metrics (VAL-CROSS-007) ---

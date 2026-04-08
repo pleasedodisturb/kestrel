@@ -22,9 +22,7 @@ runner = CliRunner()
 
 @pytest.fixture(autouse=True)
 def db_session(monkeypatch):
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def _pragma(dbapi_conn, connection_record):
@@ -67,6 +65,7 @@ def _add_contact(name: str = "Jane Doe", **kwargs) -> int:
     assert result.exit_code == 0, result.output
     # Extract ID from output
     import re
+
     match = re.search(r"ID: (\d+)", result.output)
     assert match, f"Could not find ID in output: {result.output}"
     return int(match.group(1))
@@ -81,14 +80,22 @@ def test_contacts_add_full(db_session):
     result = runner.invoke(
         app,
         [
-            "contacts", "add",
-            "--name", "Jane Doe",
-            "--company", "Mistral",
-            "--type", "referral",
-            "--warmth", "hot",
-            "--source", "conference",
-            "--notes", "Met at AI conf",
-            "--tags", "ai,tpm",
+            "contacts",
+            "add",
+            "--name",
+            "Jane Doe",
+            "--company",
+            "Mistral",
+            "--type",
+            "referral",
+            "--warmth",
+            "hot",
+            "--source",
+            "conference",
+            "--notes",
+            "Met at AI conf",
+            "--tags",
+            "ai,tpm",
         ],
     )
     assert result.exit_code == 0
@@ -170,9 +177,7 @@ def test_contacts_show(db_session):
 
 def test_contacts_update(db_session):
     cid = _add_contact("Jane")
-    result = runner.invoke(
-        app, ["contacts", "update", str(cid), "--referral-status", "cv_sent"]
-    )
+    result = runner.invoke(app, ["contacts", "update", str(cid), "--referral-status", "cv_sent"])
     assert result.exit_code == 0
     assert "Updated" in result.output
 
@@ -187,10 +192,15 @@ def test_contacts_log_interaction(db_session):
     result = runner.invoke(
         app,
         [
-            "contacts", "log", str(cid),
-            "--type", "email",
-            "--direction", "outbound",
-            "--notes", "Sent CV for TPM role",
+            "contacts",
+            "log",
+            str(cid),
+            "--type",
+            "email",
+            "--direction",
+            "outbound",
+            "--notes",
+            "Sent CV for TPM role",
         ],
     )
     assert result.exit_code == 0
@@ -205,12 +215,8 @@ def test_contacts_log_interaction(db_session):
 
 def test_contacts_history(db_session):
     cid = _add_contact("Jane")
-    runner.invoke(
-        app, ["contacts", "log", str(cid), "--type", "email", "--direction", "outbound"]
-    )
-    runner.invoke(
-        app, ["contacts", "log", str(cid), "--type", "call", "--direction", "inbound"]
-    )
+    runner.invoke(app, ["contacts", "log", str(cid), "--type", "email", "--direction", "outbound"])
+    runner.invoke(app, ["contacts", "log", str(cid), "--type", "call", "--direction", "inbound"])
     result = runner.invoke(app, ["contacts", "history", str(cid)])
     assert result.exit_code == 0
     assert "email" in result.output

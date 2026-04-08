@@ -29,9 +29,7 @@ class IntegrationConfig(Base):
     __tablename__ = "integration_configs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(
-        String(100), nullable=False, unique=True, index=True
-    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     credentials: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON blob
@@ -39,9 +37,7 @@ class IntegrationConfig(Base):
         String(50), nullable=False, default="not_configured"
     )  # not_configured | connected | error | disabled
     status_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    last_tested_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_tested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

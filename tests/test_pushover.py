@@ -53,9 +53,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -422,16 +420,18 @@ class TestFollowUpReminders:
 
         trigger_follow_up_reminders(db_session, profile.id)
 
-        logs = db_session.query(NotificationLog).filter(
-            NotificationLog.profile_id == profile.id,
-            NotificationLog.category == "follow_up",
-        ).all()
+        logs = (
+            db_session.query(NotificationLog)
+            .filter(
+                NotificationLog.profile_id == profile.id,
+                NotificationLog.category == "follow_up",
+            )
+            .all()
+        )
         assert len(logs) == 1
         assert logs[0].status == "sent"
 
-    def test_follow_up_disabled_skipped(
-        self, db_session, profile, pushover_config, due_follow_up
-    ):
+    def test_follow_up_disabled_skipped(self, db_session, profile, pushover_config, due_follow_up):
         """When follow_up_reminders is disabled, no notification sent."""
         update_preferences(
             db_session,
@@ -498,20 +498,20 @@ class TestGhostAlerts:
 
         trigger_ghost_alerts(db_session, profile.id)
 
-        logs = db_session.query(NotificationLog).filter(
-            NotificationLog.category == "ghost",
-        ).all()
+        logs = (
+            db_session.query(NotificationLog)
+            .filter(
+                NotificationLog.category == "ghost",
+            )
+            .all()
+        )
         assert len(logs) >= 1
         assert logs[0].application_id == ghost_application.id
         assert logs[0].status == "sent"
 
-    def test_ghost_disabled_skipped(
-        self, db_session, profile, pushover_config, ghost_application
-    ):
+    def test_ghost_disabled_skipped(self, db_session, profile, pushover_config, ghost_application):
         """When ghost_alerts is disabled, no notification sent."""
-        update_preferences(
-            db_session, profile.id, NotificationPreferenceUpdate(ghost_alerts=False)
-        )
+        update_preferences(db_session, profile.id, NotificationPreferenceUpdate(ghost_alerts=False))
         result = trigger_ghost_alerts(db_session, profile.id)
         assert result["triggered"] == 0
         assert result["skipped"] == 1
@@ -540,8 +540,11 @@ class TestDiscoveryAlerts:
         MockClient.return_value = mock_instance
 
         result = trigger_discovery_alert(
-            db_session, profile.id,
-            company="DreamCo", role="AI Lead", score=9.0,
+            db_session,
+            profile.id,
+            company="DreamCo",
+            role="AI Lead",
+            score=9.0,
         )
         assert result["triggered"] == 1
 
@@ -552,21 +555,20 @@ class TestDiscoveryAlerts:
         assert "High-Scoring" in call_args.kwargs["title"]
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_below_threshold_skipped(
-        self, MockClient, db_session, profile, pushover_config
-    ):
+    def test_below_threshold_skipped(self, MockClient, db_session, profile, pushover_config):
         """Score below threshold is skipped."""
         result = trigger_discovery_alert(
-            db_session, profile.id,
-            company="LowCo", role="Intern", score=3.0,
+            db_session,
+            profile.id,
+            company="LowCo",
+            role="Intern",
+            score=3.0,
         )
         assert result["triggered"] == 0
         assert result["skipped"] == 1
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_custom_threshold(
-        self, MockClient, db_session, profile, pushover_config
-    ):
+    def test_custom_threshold(self, MockClient, db_session, profile, pushover_config):
         """Custom threshold is respected."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
@@ -574,35 +576,44 @@ class TestDiscoveryAlerts:
 
         # Set threshold to 9
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(discovery_score_threshold=9.0),
         )
 
         # Score of 8 should be skipped
         result = trigger_discovery_alert(
-            db_session, profile.id,
-            company="MedCo", role="Lead", score=8.0,
+            db_session,
+            profile.id,
+            company="MedCo",
+            role="Lead",
+            score=8.0,
         )
         assert result["skipped"] == 1
 
         # Score of 9 should trigger
         result = trigger_discovery_alert(
-            db_session, profile.id,
-            company="HighCo", role="Lead", score=9.0,
+            db_session,
+            profile.id,
+            company="HighCo",
+            role="Lead",
+            score=9.0,
         )
         assert result["triggered"] == 1
 
-    def test_discovery_disabled_skipped(
-        self, db_session, profile, pushover_config
-    ):
+    def test_discovery_disabled_skipped(self, db_session, profile, pushover_config):
         """When discovery_alerts is disabled, no notification sent."""
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(discovery_alerts=False),
         )
         result = trigger_discovery_alert(
-            db_session, profile.id,
-            company="Co", role="Role", score=10.0,
+            db_session,
+            profile.id,
+            company="Co",
+            role="Role",
+            score=10.0,
         )
         assert result["skipped"] == 1
 
@@ -683,20 +694,20 @@ class TestInterviewReminders:
     ):
         """When interview_reminders is disabled, no notification sent."""
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(interview_reminders=False),
         )
         result = trigger_interview_reminders(db_session, profile.id)
         assert result["skipped"] == 1
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_custom_lead_time(
-        self, MockClient, db_session, profile, pushover_config, application
-    ):
+    def test_custom_lead_time(self, MockClient, db_session, profile, pushover_config, application):
         """Custom lead time is respected — short lead time misses far-future interview."""
         # Set very short lead time (30 minutes)
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(interview_lead_time_minutes=30),
         )
 
@@ -742,10 +753,14 @@ class TestAuthFailure:
         assert result["failed"] == 1
 
         # Check log entry
-        log = db_session.query(NotificationLog).filter(
-            NotificationLog.category == "follow_up",
-            NotificationLog.status == "failed",
-        ).first()
+        log = (
+            db_session.query(NotificationLog)
+            .filter(
+                NotificationLog.category == "follow_up",
+                NotificationLog.status == "failed",
+            )
+            .first()
+        )
         assert log is not None
         assert "Auth error" in log.error_message
 
@@ -760,9 +775,9 @@ class TestAuthFailure:
 
         trigger_follow_up_reminders(db_session, profile.id)
 
-        config = db_session.query(IntegrationConfig).filter(
-            IntegrationConfig.name == "pushover"
-        ).first()
+        config = (
+            db_session.query(IntegrationConfig).filter(IntegrationConfig.name == "pushover").first()
+        )
         assert config.status == "error"
         assert "Authentication failed" in config.status_message
 
@@ -847,9 +862,7 @@ class TestNotificationLog:
             db_session.add(log)
         db_session.commit()
 
-        resp = client.get(
-            f"/api/notifications/log?profile_id={profile.id}&category=ghost"
-        )
+        resp = client.get(f"/api/notifications/log?profile_id={profile.id}&category=ghost")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 1
@@ -877,17 +890,20 @@ class TestCrossArea:
         assert result["triggered"] >= 1
 
         # Verify log entry references the ghost application ID
-        log = db_session.query(NotificationLog).filter(
-            NotificationLog.category == "ghost",
-            NotificationLog.application_id == ghost_application.id,
-        ).first()
+        log = (
+            db_session.query(NotificationLog)
+            .filter(
+                NotificationLog.category == "ghost",
+                NotificationLog.application_id == ghost_application.id,
+            )
+            .first()
+        )
         assert log is not None
         assert log.status == "sent"
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_category_disable_honored(
-        self, MockClient, db_session, profile, pushover_config,
-        due_follow_up, ghost_application
+        self, MockClient, db_session, profile, pushover_config, due_follow_up, ghost_application
     ):
         """VAL-CROSS-018: Per-category disable prevents notification."""
         mock_instance = MagicMock()
@@ -896,7 +912,8 @@ class TestCrossArea:
 
         # Disable ghost alerts
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(ghost_alerts=False),
         )
 
@@ -923,7 +940,8 @@ class TestCrossArea:
         start = now_hour
         end = (now_hour + 2) % 24
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(quiet_hours_start=start, quiet_hours_end=end),
         )
 
@@ -969,7 +987,8 @@ class TestDeliverQueuedNotifications:
         start = now_hour
         end = (now_hour + 2) % 24
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(quiet_hours_start=start, quiet_hours_end=end),
         )
 
@@ -978,14 +997,16 @@ class TestDeliverQueuedNotifications:
 
         # Verify queued
         from career_os.services.pushover import deliver_queued_notifications
-        queued = db_session.query(NotificationLog).filter(
-            NotificationLog.status == "queued"
-        ).count()
+
+        queued = (
+            db_session.query(NotificationLog).filter(NotificationLog.status == "queued").count()
+        )
         assert queued >= 1
 
         # Now clear quiet hours and deliver
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(quiet_hours_start=None, quiet_hours_end=None),
         )
 
@@ -993,20 +1014,19 @@ class TestDeliverQueuedNotifications:
         assert result["delivered"] >= 1
 
         # Verify all queued are now sent
-        still_queued = db_session.query(NotificationLog).filter(
-            NotificationLog.status == "queued"
-        ).count()
+        still_queued = (
+            db_session.query(NotificationLog).filter(NotificationLog.status == "queued").count()
+        )
         assert still_queued == 0
 
-    def test_deliver_during_quiet_hours_does_nothing(
-        self, db_session, profile, pushover_config
-    ):
+    def test_deliver_during_quiet_hours_does_nothing(self, db_session, profile, pushover_config):
         """Deliver during quiet hours returns without sending."""
         from career_os.services.pushover import deliver_queued_notifications
 
         now_hour = datetime.now(UTC).hour
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(
                 quiet_hours_start=now_hour,
                 quiet_hours_end=(now_hour + 2) % 24,
@@ -1027,7 +1047,8 @@ class TestProfileIsolation:
     def test_preferences_isolated(self, db_session, profile, profile_b):
         """Profile A preferences don't affect Profile B."""
         update_preferences(
-            db_session, profile.id,
+            db_session,
+            profile.id,
             NotificationPreferenceUpdate(follow_up_reminders=False),
         )
         pref_b = get_preferences(db_session, profile_b.id)
@@ -1059,9 +1080,7 @@ class TestProfileIsolation:
         MockClient.return_value = mock_instance
 
         # Create application and follow-up for profile A
-        app_obj = Application(
-            profile_id=profile.id, company="ACo", role="Dev", status="applied"
-        )
+        app_obj = Application(profile_id=profile.id, company="ACo", role="Dev", status="applied")
         db_session.add(app_obj)
         db_session.commit()
         fu = FollowUp(

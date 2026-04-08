@@ -27,24 +27,12 @@ class ScoreRequest(BaseModel):
     """Request body for POST /api/score — score a job against a profile."""
 
     profile_id: int = Field(..., description="Profile to score against")
-    job_url: str | None = Field(
-        default=None, description="Job posting URL (for reference)"
-    )
-    job_title: str | None = Field(
-        default=None, description="Job title"
-    )
-    job_company: str | None = Field(
-        default=None, description="Company name"
-    )
-    job_description: str = Field(
-        ..., min_length=1, description="Job description text to score"
-    )
-    discovered_job_id: int | None = Field(
-        default=None, description="Link to discovered job record"
-    )
-    application_id: int | None = Field(
-        default=None, description="Link to application record"
-    )
+    job_url: str | None = Field(default=None, description="Job posting URL (for reference)")
+    job_title: str | None = Field(default=None, description="Job title")
+    job_company: str | None = Field(default=None, description="Company name")
+    job_description: str = Field(..., min_length=1, description="Job description text to score")
+    discovered_job_id: int | None = Field(default=None, description="Link to discovered job record")
+    application_id: int | None = Field(default=None, description="Link to application record")
 
 
 class ScoreResponse(BaseModel):
@@ -57,12 +45,8 @@ class ScoreResponse(BaseModel):
 
     # Core scores
     fit_score: float = Field(..., ge=0, le=10, description="Overall fit 1-10")
-    readiness_score: float = Field(
-        ..., ge=0, le=100, description="Skills readiness 0-100"
-    )
-    career_alignment: float = Field(
-        ..., ge=0, le=10, description="Career alignment 0-10"
-    )
+    readiness_score: float = Field(..., ge=0, le=100, description="Skills readiness 0-100")
+    career_alignment: float = Field(..., ge=0, le=10, description="Career alignment 0-10")
 
     # Detailed breakdown
     score_breakdown: list[ScoreBreakdownFactor] = Field(
@@ -74,9 +58,7 @@ class ScoreResponse(BaseModel):
     )
     estimated_salary: str = Field(..., description="Estimated salary range")
     effort_flag: str = Field(..., description="Effort level: low / medium / high")
-    prep_level: str = Field(
-        ..., description="Preparation level: light / moderate / intensive"
-    )
+    prep_level: str = Field(..., description="Preparation level: light / moderate / intensive")
     prep_notes: str = Field(..., description="Prep recommendations")
 
     is_stale: bool = False
@@ -158,9 +140,7 @@ class BatchScoreRequest(BaseModel):
         default_factory=list,
         description="Specific discovered job IDs to score (empty = all unscored)",
     )
-    rescore_stale: bool = Field(
-        default=False, description="Also re-score stale scores"
-    )
+    rescore_stale: bool = Field(default=False, description="Also re-score stale scores")
 
 
 class BatchScoreResponse(BaseModel):

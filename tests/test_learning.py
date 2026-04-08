@@ -37,9 +37,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -255,9 +253,7 @@ class TestGetRecommendations:
         assert "resource_type" in rec
         assert "status" in rec
 
-    def test_nonexistent_gap_returns_404(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_nonexistent_gap_returns_404(self, client: TestClient, test_profile: Profile):
         """404 for non-existent gap."""
         resp = client.get(
             "/api/gaps/99999/recommendations",
@@ -337,9 +333,7 @@ class TestLearningProgressTracking:
         assert data["status"] == "in_progress"
         assert data["started_at"] is not None
 
-    def test_transition_to_completed(
-        self, client: TestClient, test_profile: Profile, gap_id: int
-    ):
+    def test_transition_to_completed(self, client: TestClient, test_profile: Profile, gap_id: int):
         """Status can be changed to completed with completed_at timestamp."""
         # Create resource
         create_resp = client.post(
@@ -552,9 +546,7 @@ class TestEffortEstimates:
         data = resp.json()
         assert data["estimated_hours"] == 5.0
 
-    def test_difficulty_field_present(
-        self, client: TestClient, test_profile: Profile, gap_id: int
-    ):
+    def test_difficulty_field_present(self, client: TestClient, test_profile: Profile, gap_id: int):
         """Created resource has difficulty rating."""
         resp = client.post(
             f"/api/gaps/{gap_id}/recommendations",
@@ -604,9 +596,7 @@ class TestEmptyLearningState:
 class TestCreateRecommendation:
     """Test creating learning resources manually (add CTA functionality)."""
 
-    def test_create_returns_201(
-        self, client: TestClient, test_profile: Profile, gap_id: int
-    ):
+    def test_create_returns_201(self, client: TestClient, test_profile: Profile, gap_id: int):
         """POST creates recommendation returns 201."""
         resp = client.post(
             f"/api/gaps/{gap_id}/recommendations",
@@ -640,9 +630,7 @@ class TestCreateRecommendation:
         )
         assert resp.status_code == 422
 
-    def test_create_nonexistent_gap_returns_404(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_create_nonexistent_gap_returns_404(self, client: TestClient, test_profile: Profile):
         """Creating recommendation for nonexistent gap returns 404."""
         resp = client.post(
             "/api/gaps/99999/recommendations",
@@ -842,11 +830,7 @@ class TestIdempotentCompleted:
 
         # Proficiency must NOT have changed
         test_db.expire_all()
-        skill_after_second = (
-            test_db.query(Skill)
-            .filter(Skill.id == skill_after_first.id)
-            .first()
-        )
+        skill_after_second = test_db.query(Skill).filter(Skill.id == skill_after_first.id).first()
         assert skill_after_second.proficiency == proficiency_after_first
 
         # History count must NOT have increased

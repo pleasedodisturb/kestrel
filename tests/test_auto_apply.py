@@ -7,13 +7,10 @@ confirm_and_submit_browser, process_application, BROWSER_HANDLERS.
 """
 
 import csv
-import time
 from datetime import date
-from pathlib import Path
-from unittest.mock import MagicMock, call, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from auto_apply import (
     BROWSER_HANDLERS,
     _fill_input,
@@ -31,10 +28,10 @@ from auto_apply import (
     update_csv_status,
 )
 
-
 # ===================================================================
 # detect_platform
 # ===================================================================
+
 
 class TestDetectPlatform:
     """Tests for detect_platform(url)."""
@@ -52,10 +49,15 @@ class TestDetectPlatform:
         assert detect_platform("https://jobs.eu.lever.co/tradelink/42af") == "lever"
 
     def test_greenhouse(self):
-        assert detect_platform("https://job-boards.greenhouse.io/grafanalabs/jobs/123") == "greenhouse"
+        assert (
+            detect_platform("https://job-boards.greenhouse.io/grafanalabs/jobs/123") == "greenhouse"
+        )
 
     def test_greenhouse_eu(self):
-        assert detect_platform("https://job-boards.eu.greenhouse.io/jetbrains/jobs/456") == "greenhouse"
+        assert (
+            detect_platform("https://job-boards.eu.greenhouse.io/jetbrains/jobs/456")
+            == "greenhouse"
+        )
 
     def test_remotely(self):
         assert detect_platform("https://remotely.de/jobs/some-role") == "remotely"
@@ -91,6 +93,7 @@ class TestDetectPlatform:
 # ===================================================================
 # parse_lever_url
 # ===================================================================
+
 
 class TestParseLeverUrl:
     """Tests for parse_lever_url(url)."""
@@ -145,6 +148,7 @@ class TestParseLeverUrl:
 # parse_greenhouse_url
 # ===================================================================
 
+
 class TestParseGreenhouseUrl:
     """Tests for parse_greenhouse_url(url)."""
 
@@ -198,6 +202,7 @@ class TestParseGreenhouseUrl:
 # ===================================================================
 # update_csv_status
 # ===================================================================
+
 
 class TestUpdateCsvStatus:
     """Tests for update_csv_status(company, role, new_status)."""
@@ -326,6 +331,7 @@ class TestUpdateCsvStatus:
 # _fill_input
 # ===================================================================
 
+
 class TestFillInput:
     """Tests for _fill_input(context, selector, value).
 
@@ -372,6 +378,7 @@ class TestFillInput:
 # ===================================================================
 # _try_fill
 # ===================================================================
+
 
 class TestTryFill:
     """Tests for _try_fill(context, selectors, value)."""
@@ -423,6 +430,7 @@ class TestTryFill:
 # _upload_file
 # ===================================================================
 
+
 class TestUploadFile:
     """Tests for _upload_file(context, index, file_path, label)."""
 
@@ -471,6 +479,7 @@ class TestUploadFile:
 # screenshot
 # ===================================================================
 
+
 class TestScreenshot:
     """Tests for screenshot(page, name)."""
 
@@ -478,8 +487,10 @@ class TestScreenshot:
         page = MagicMock()
         screenshots_dir = tmp_path / "screenshots"
 
-        with patch("auto_apply.SCREENSHOTS_DIR", screenshots_dir), \
-             patch("auto_apply.time") as mock_time:
+        with (
+            patch("auto_apply.SCREENSHOTS_DIR", screenshots_dir),
+            patch("auto_apply.time") as mock_time,
+        ):
             mock_time.time.return_value = 1234567890
             result = screenshot(page, "test_shot")
 
@@ -493,8 +504,10 @@ class TestScreenshot:
         screenshots_dir = tmp_path / "screenshots"
         screenshots_dir.mkdir()
 
-        with patch("auto_apply.SCREENSHOTS_DIR", screenshots_dir), \
-             patch("auto_apply.time") as mock_time:
+        with (
+            patch("auto_apply.SCREENSHOTS_DIR", screenshots_dir),
+            patch("auto_apply.time") as mock_time,
+        ):
             mock_time.time.return_value = 9999999999
             result = screenshot(page, "existing_dir")
 
@@ -504,6 +517,7 @@ class TestScreenshot:
 # ===================================================================
 # extract_greenhouse_api_key
 # ===================================================================
+
 
 class TestExtractGreenhouseApiKey:
     """Tests for extract_greenhouse_api_key(board_token)."""
@@ -555,6 +569,7 @@ class TestExtractGreenhouseApiKey:
 # submit_lever_api
 # ===================================================================
 
+
 class TestSubmitLeverApi:
     """Tests for submit_lever_api(personal, app, dry_run)."""
 
@@ -596,8 +611,10 @@ class TestSubmitLeverApi:
         mock_resp.status_code = 200
         mock_resp.json.return_value = {"ok": True, "applicationId": "app-42"}
 
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", return_value=mock_resp):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", return_value=mock_resp),
+        ):
             result = submit_lever_api(personal, lever_app, dry_run=False)
         assert result["ok"] is True
         assert "app-42" in result["detail"]
@@ -608,15 +625,19 @@ class TestSubmitLeverApi:
         mock_resp.json.return_value = {"ok": False, "error": "invalid posting"}
         mock_resp.text = "invalid posting"
 
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", return_value=mock_resp):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", return_value=mock_resp),
+        ):
             result = submit_lever_api(personal, lever_app, dry_run=False)
         assert result["ok"] is False
         assert result["method"] == "lever_api"
 
     def test_network_exception(self, personal, lever_app, tmp_path):
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", side_effect=Exception("connection refused")):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", side_effect=Exception("connection refused")),
+        ):
             result = submit_lever_api(personal, lever_app, dry_run=False)
         assert result["ok"] is False
         assert "connection refused" in result["detail"]
@@ -642,6 +663,7 @@ class TestSubmitLeverApi:
 # ===================================================================
 # submit_greenhouse_api
 # ===================================================================
+
 
 class TestSubmitGreenhouseApi:
     """Tests for submit_greenhouse_api(personal, app, dry_run)."""
@@ -681,8 +703,10 @@ class TestSubmitGreenhouseApi:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
 
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", return_value=mock_resp):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", return_value=mock_resp),
+        ):
             result = submit_greenhouse_api(personal, gh_app, dry_run=False)
         assert result["ok"] is True
         assert "200" in result["detail"]
@@ -691,8 +715,10 @@ class TestSubmitGreenhouseApi:
         mock_resp = MagicMock()
         mock_resp.status_code = 201
 
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", return_value=mock_resp):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", return_value=mock_resp),
+        ):
             result = submit_greenhouse_api(personal, gh_app, dry_run=False)
         assert result["ok"] is True
 
@@ -701,15 +727,19 @@ class TestSubmitGreenhouseApi:
         mock_resp.status_code = 422
         mock_resp.text = "Validation failed"
 
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", return_value=mock_resp):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", return_value=mock_resp),
+        ):
             result = submit_greenhouse_api(personal, gh_app, dry_run=False)
         assert result["ok"] is False
         assert "Validation failed" in result["detail"]
 
     def test_network_exception(self, personal, gh_app, tmp_path):
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", side_effect=Exception("timeout")):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", side_effect=Exception("timeout")),
+        ):
             result = submit_greenhouse_api(personal, gh_app, dry_run=False)
         assert result["ok"] is False
         assert "timeout" in result["detail"]
@@ -729,8 +759,10 @@ class TestSubmitGreenhouseApi:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
 
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", return_value=mock_resp) as mock_post:
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", return_value=mock_resp) as mock_post,
+        ):
             submit_greenhouse_api(personal, app, dry_run=False)
         # Verify EU endpoint was used
         call_url = mock_post.call_args[0][0]
@@ -748,8 +780,10 @@ class TestSubmitGreenhouseApi:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
 
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.httpx.post", return_value=mock_resp) as mock_post:
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.httpx.post", return_value=mock_resp) as mock_post,
+        ):
             result = submit_greenhouse_api(personal, app, dry_run=False)
         assert result["ok"] is True
         # files dict should be empty (no files attached)
@@ -760,6 +794,7 @@ class TestSubmitGreenhouseApi:
 # ===================================================================
 # confirm_and_submit_browser
 # ===================================================================
+
 
 class TestConfirmAndSubmitBrowser:
     """Tests for confirm_and_submit_browser(page, company, role, dry_run)."""
@@ -779,9 +814,11 @@ class TestConfirmAndSubmitBrowser:
         submit_btn.count.return_value = 1
         page.locator.return_value = submit_btn
 
-        with patch("auto_apply.screenshot"), \
-             patch("builtins.input", return_value=""), \
-             patch("auto_apply.time"):
+        with (
+            patch("auto_apply.screenshot"),
+            patch("builtins.input", return_value=""),
+            patch("auto_apply.time"),
+        ):
             result = confirm_and_submit_browser(page, "Acme", "Dev", dry_run=False)
         assert result is True
         submit_btn.first.click.assert_called_once()
@@ -789,17 +826,18 @@ class TestConfirmAndSubmitBrowser:
     def test_skip_returns_false(self):
         page = MagicMock()
 
-        with patch("auto_apply.screenshot"), \
-             patch("builtins.input", return_value="s"):
+        with patch("auto_apply.screenshot"), patch("builtins.input", return_value="s"):
             result = confirm_and_submit_browser(page, "Acme", "Dev", dry_run=False)
         assert result is False
 
     def test_quit_exits(self):
         page = MagicMock()
 
-        with patch("auto_apply.screenshot"), \
-             patch("builtins.input", return_value="q"), \
-             pytest.raises(SystemExit):
+        with (
+            patch("auto_apply.screenshot"),
+            patch("builtins.input", return_value="q"),
+            pytest.raises(SystemExit),
+        ):
             confirm_and_submit_browser(page, "Acme", "Dev", dry_run=False)
 
     def test_no_submit_button_asks_manual(self):
@@ -808,8 +846,7 @@ class TestConfirmAndSubmitBrowser:
         submit_btn.count.return_value = 0
         page.locator.return_value = submit_btn
 
-        with patch("auto_apply.screenshot"), \
-             patch("builtins.input", side_effect=["", ""]):
+        with patch("auto_apply.screenshot"), patch("builtins.input", side_effect=["", ""]):
             result = confirm_and_submit_browser(page, "Acme", "Dev", dry_run=False)
         assert result is True
 
@@ -825,6 +862,7 @@ class TestConfirmAndSubmitBrowser:
 # ===================================================================
 # process_application
 # ===================================================================
+
 
 class TestProcessApplication:
     """Tests for process_application(page, personal, app, dry_run, browser_only)."""
@@ -879,9 +917,11 @@ class TestProcessApplication:
             "cover_letter": "cover.pdf",
         }
         page = MagicMock()
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.submit_lever_api", return_value={"ok": True, "method": "lever_api"}), \
-             patch("auto_apply.update_csv_status"):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.submit_lever_api", return_value={"ok": True, "method": "lever_api"}),
+            patch("auto_apply.update_csv_status"),
+        ):
             result = process_application(page, personal, app, dry_run=False, browser_only=False)
         assert result is True
 
@@ -899,11 +939,13 @@ class TestProcessApplication:
         }
         page = MagicMock()
         mock_fill = MagicMock(return_value=True)
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.submit_lever_api", return_value={"ok": False, "detail": "fail"}), \
-             patch.dict("auto_apply.BROWSER_HANDLERS", {"lever": mock_fill}), \
-             patch("auto_apply.confirm_and_submit_browser", return_value=True), \
-             patch("auto_apply.update_csv_status"):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.submit_lever_api", return_value={"ok": False, "detail": "fail"}),
+            patch.dict("auto_apply.BROWSER_HANDLERS", {"lever": mock_fill}),
+            patch("auto_apply.confirm_and_submit_browser", return_value=True),
+            patch("auto_apply.update_csv_status"),
+        ):
             result = process_application(page, personal, app, dry_run=False, browser_only=False)
         assert result is True
         mock_fill.assert_called_once()
@@ -922,11 +964,13 @@ class TestProcessApplication:
         }
         page = MagicMock()
         mock_fill = MagicMock(return_value=True)
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.submit_lever_api") as mock_api, \
-             patch.dict("auto_apply.BROWSER_HANDLERS", {"lever": mock_fill}), \
-             patch("auto_apply.confirm_and_submit_browser", return_value=True), \
-             patch("auto_apply.update_csv_status"):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.submit_lever_api") as mock_api,
+            patch.dict("auto_apply.BROWSER_HANDLERS", {"lever": mock_fill}),
+            patch("auto_apply.confirm_and_submit_browser", return_value=True),
+            patch("auto_apply.update_csv_status"),
+        ):
             result = process_application(page, personal, app, dry_run=False, browser_only=True)
         assert result is True
         mock_api.assert_not_called()
@@ -944,9 +988,14 @@ class TestProcessApplication:
             "cover_letter": "cover.pdf",
         }
         page = MagicMock()
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.submit_greenhouse_api", return_value={"ok": True, "method": "greenhouse_api"}), \
-             patch("auto_apply.update_csv_status"):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch(
+                "auto_apply.submit_greenhouse_api",
+                return_value={"ok": True, "method": "greenhouse_api"},
+            ),
+            patch("auto_apply.update_csv_status"),
+        ):
             result = process_application(page, personal, app, dry_run=False, browser_only=False)
         assert result is True
 
@@ -963,9 +1012,11 @@ class TestProcessApplication:
             "cover_letter": "cover.pdf",
         }
         page = MagicMock()
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.fill_generic_browser", side_effect=Exception("form broken")), \
-             patch("auto_apply.screenshot"):
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.fill_generic_browser", side_effect=Exception("form broken")),
+            patch("auto_apply.screenshot"),
+        ):
             result = process_application(page, personal, app, dry_run=False, browser_only=False)
         assert result is False
 
@@ -982,9 +1033,11 @@ class TestProcessApplication:
             "cover_letter": "cover.pdf",
         }
         page = MagicMock()
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.submit_lever_api", return_value={"ok": True, "method": "lever_api"}), \
-             patch("auto_apply.update_csv_status") as mock_csv:
+        with (
+            patch("auto_apply.PROJECT_ROOT", tmp_path),
+            patch("auto_apply.submit_lever_api", return_value={"ok": True, "method": "lever_api"}),
+            patch("auto_apply.update_csv_status") as mock_csv,
+        ):
             process_application(page, personal, app, dry_run=True, browser_only=False)
         mock_csv.assert_not_called()
 
@@ -1001,8 +1054,7 @@ class TestProcessApplication:
             "cover_letter": "cover.pdf",
         }
         page = MagicMock()
-        with patch("auto_apply.PROJECT_ROOT", tmp_path), \
-             patch("auto_apply.time"):
+        with patch("auto_apply.PROJECT_ROOT", tmp_path), patch("auto_apply.time"):
             result = process_application(page, personal, app, dry_run=True, browser_only=False)
         assert result is True
         page.goto.assert_called_once()
@@ -1011,6 +1063,7 @@ class TestProcessApplication:
 # ===================================================================
 # BROWSER_HANDLERS mapping
 # ===================================================================
+
 
 class TestBrowserHandlers:
     """Tests for the BROWSER_HANDLERS dict."""
@@ -1025,6 +1078,7 @@ class TestBrowserHandlers:
 
     def test_company_and_remotely_use_generic(self):
         from auto_apply import fill_generic_browser
+
         assert BROWSER_HANDLERS["company"] is fill_generic_browser
         assert BROWSER_HANDLERS["remotely"] is fill_generic_browser
         assert BROWSER_HANDLERS["unknown"] is fill_generic_browser

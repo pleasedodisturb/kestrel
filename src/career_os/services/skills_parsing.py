@@ -214,8 +214,7 @@ def _extract_skills_from_experience(experience: list[dict]) -> list[ParsedSkill]
                             proficiency="advanced",
                             evidence_source="cv.yaml",
                             evidence_detail=(
-                                f"Experience at {company} ({position}): "
-                                f"{highlight[:120]}"
+                                f"Experience at {company} ({position}): {highlight[:120]}"
                             ),
                         )
                     )
@@ -417,9 +416,7 @@ def parse_workplace_insights(file_path: Path) -> list[ParsedSkill]:
 
     # Parse notable traits table
     # Format: | Trait | Description |
-    notable_pattern = re.compile(
-        r"\|\s*\*\*([^*]+)\*\*\s*\|\s*([^|]+)\s*\|"
-    )
+    notable_pattern = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*([^|]+)\s*\|")
     matches = notable_pattern.findall(content)
 
     trait_map = {

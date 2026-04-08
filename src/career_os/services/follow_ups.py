@@ -83,9 +83,7 @@ def create_follow_up(db: Session, payload: FollowUpCreate) -> FollowUp:
         .first()
     )
     if app_obj is None:
-        raise ApplicationNotFoundError(
-            f"Application {payload.application_id} not found"
-        )
+        raise ApplicationNotFoundError(f"Application {payload.application_id} not found")
 
     follow_up = FollowUp(
         profile_id=payload.profile_id,

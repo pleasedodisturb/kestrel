@@ -18,7 +18,8 @@ import sys
 import time
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
+from playwright.sync_api import sync_playwright
 
 PROFILE_DIR = Path(__file__).parent.parent / ".browser-profile"
 REMOTELY_MATCHES_URL = "https://www.remotely.de/user/cv/matches"
@@ -61,7 +62,7 @@ def scrape_remotely(page) -> list[dict]:
     # Click "Job-Matches ansehen" button to navigate to matches
     print("  Clicking 'Job-Matches ansehen'...")
     try:
-        page.click('text=Job-Matches ansehen', timeout=10000)
+        page.click("text=Job-Matches ansehen", timeout=10000)
         time.sleep(5)  # wait for matches page to load
     except PlaywrightTimeout:
         # Try direct navigation as fallback
@@ -174,7 +175,11 @@ def scrape_linkedin(page) -> list[dict]:
     # Navigate to recommended/saved jobs
     # Try "My Jobs" → "Recommended for you"
     try:
-        page.goto("https://www.linkedin.com/jobs/collections/recommended/", wait_until="domcontentloaded", timeout=30000)
+        page.goto(
+            "https://www.linkedin.com/jobs/collections/recommended/",
+            wait_until="domcontentloaded",
+            timeout=30000,
+        )
     except PlaywrightTimeout:
         pass
 
@@ -233,11 +238,15 @@ def scrape_linkedin(page) -> list[dict]:
 def main():
     parser = argparse.ArgumentParser(description="Scrape job matches from remotely.de and LinkedIn")
     parser.add_argument("--linkedin", action="store_true", help="Scrape LinkedIn recommended jobs")
-    parser.add_argument("--remotely", action="store_true", help="Scrape remotely.de CV matches (default)")
+    parser.add_argument(
+        "--remotely", action="store_true", help="Scrape remotely.de CV matches (default)"
+    )
     parser.add_argument("--all", action="store_true", help="Scrape both sites")
     parser.add_argument("--login", action="store_true", help="Force re-login (clear session)")
     parser.add_argument("--json", action="store_true", help="Output as JSON (default: table)")
-    parser.add_argument("--headless", action="store_true", help="Run headless (only works if already logged in)")
+    parser.add_argument(
+        "--headless", action="store_true", help="Run headless (only works if already logged in)"
+    )
     args = parser.parse_args()
 
     # Default to remotely if nothing specified
@@ -246,6 +255,7 @@ def main():
 
     if args.login:
         import shutil
+
         if PROFILE_DIR.exists():
             shutil.rmtree(PROFILE_DIR)
             print("Cleared browser profile. Will prompt for fresh login.")
@@ -283,17 +293,17 @@ def main():
             print("\nNo jobs found. Try running with --login to re-authenticate.")
             sys.exit(1)
 
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"  Found {len(all_jobs)} total jobs")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         for i, job in enumerate(all_jobs, 1):
             print(f"  {i}. [{job.get('source', '?')}] {job.get('title', 'Unknown')}")
-            if job.get('company'):
+            if job.get("company"):
                 print(f"     Company:  {job['company']}")
-            if job.get('location'):
+            if job.get("location"):
                 print(f"     Location: {job['location']}")
-            if job.get('url'):
+            if job.get("url"):
                 print(f"     URL:      {job['url']}")
             print()
 

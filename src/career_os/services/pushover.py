@@ -43,11 +43,7 @@ def _get_pushover_client(db: Session) -> PushoverClient:
 
     Raises PushoverNotConfiguredError if not configured or disabled.
     """
-    row = (
-        db.query(IntegrationConfig)
-        .filter(IntegrationConfig.name == "pushover")
-        .first()
-    )
+    row = db.query(IntegrationConfig).filter(IntegrationConfig.name == "pushover").first()
     if row is None or not row.enabled:
         raise PushoverNotConfiguredError("Pushover integration is not enabled")
 
@@ -69,9 +65,7 @@ def _get_pushover_client(db: Session) -> PushoverClient:
     return PushoverClient(user_key=user_key, app_token=app_token)
 
 
-def _get_or_create_preferences(
-    db: Session, profile_id: int
-) -> NotificationPreference:
+def _get_or_create_preferences(db: Session, profile_id: int) -> NotificationPreference:
     """Get or create notification preferences for a profile."""
     pref = (
         db.query(NotificationPreference)
@@ -167,11 +161,13 @@ def _queue_notification(
         message=message,
         application_id=application_id,
         status="queued",
-        error_message=json.dumps({
-            "url": url,
-            "url_title": url_title,
-            "priority": priority,
-        }),
+        error_message=json.dumps(
+            {
+                "url": url,
+                "url_title": url_title,
+                "priority": priority,
+            }
+        ),
     )
     db.add(log)
     db.commit()
@@ -228,9 +224,7 @@ def _send_and_log(
             error_message=f"Auth error: {exc}",
         )
         # Update integration status to error
-        _update_integration_status(
-            db, status="error", message=f"Authentication failed: {exc}"
-        )
+        _update_integration_status(db, status="error", message=f"Authentication failed: {exc}")
         return {"status": "failed", "error": str(exc), "title": title}
     except PushoverAPIError as exc:
         logger.error("Pushover API error: %s", exc)
@@ -247,15 +241,9 @@ def _send_and_log(
         return {"status": "failed", "error": str(exc), "title": title}
 
 
-def _update_integration_status(
-    db: Session, *, status: str, message: str
-) -> None:
+def _update_integration_status(db: Session, *, status: str, message: str) -> None:
     """Update the pushover integration config status."""
-    row = (
-        db.query(IntegrationConfig)
-        .filter(IntegrationConfig.name == "pushover")
-        .first()
-    )
+    row = db.query(IntegrationConfig).filter(IntegrationConfig.name == "pushover").first()
     if row:
         row.status = status
         row.status_message = message
@@ -314,21 +302,14 @@ def list_notification_logs(
         .filter(
             NotificationLog.profile_id == profile_id,
             # Include if no application_id OR application is not archived
-            (NotificationLog.application_id.is_(None))
-            | (Application.archived_at.is_(None)),
+            (NotificationLog.application_id.is_(None)) | (Application.archived_at.is_(None)),
         )
     )
     if category:
         query = query.filter(NotificationLog.category == category)
 
     total = query.count()
-    logs = (
-        query
-        .order_by(NotificationLog.sent_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    logs = query.order_by(NotificationLog.sent_at.desc()).offset(offset).limit(limit).all()
     return logs, total
 
 
@@ -337,9 +318,7 @@ def list_notification_logs(
 # ---------------------------------------------------------------------------
 
 
-def trigger_follow_up_reminders(
-    db: Session, profile_id: int
-) -> dict:
+def trigger_follow_up_reminders(db: Session, profile_id: int) -> dict:
     """Check for due follow-ups and send Pushover notifications.
 
     VAL-PUSH-001: Due follow-up triggers Pushover notification with company,
@@ -431,9 +410,7 @@ def trigger_follow_up_reminders(
 # ---------------------------------------------------------------------------
 
 
-def trigger_ghost_alerts(
-    db: Session, profile_id: int
-) -> dict:
+def trigger_ghost_alerts(db: Session, profile_id: int) -> dict:
     """Check for ghost applications and send Pushover notifications.
 
     VAL-PUSH-002: Application past ghost threshold triggers notification
@@ -517,11 +494,13 @@ def trigger_ghost_alerts(
             result["details"].append(send_result)
         else:
             # No Pushover — log but don't count as failed
-            result["details"].append({
-                "status": "skipped",
-                "reason": "Pushover not configured",
-                "title": title,
-            })
+            result["details"].append(
+                {
+                    "status": "skipped",
+                    "reason": "Pushover not configured",
+                    "title": title,
+                }
+            )
 
         # VAL-CROSS-008: Auto-create follow-up for ghost application.
         # Check if an open (incomplete) ghost-type follow-up already exists
@@ -595,23 +574,18 @@ def trigger_discovery_alert(
     # Check score threshold
     if score < pref.discovery_score_threshold:
         result["skipped"] = 1
-        result["details"].append({
-            "reason": f"Score {score} below threshold {pref.discovery_score_threshold}"
-        })
+        result["details"].append(
+            {"reason": f"Score {score} below threshold {pref.discovery_score_threshold}"}
+        )
         return result
 
     quiet = _is_quiet_hours(pref)
 
     title = "🎯 New High-Scoring Job"
-    message = (
-        f"{company} — {role}\n"
-        f"Fit Score: {score}/10"
-    )
+    message = f"{company} — {role}\nFit Score: {score}/10"
 
     notification_url = url or (
-        f"http://localhost:8101/applications/{application_id}"
-        if application_id
-        else None
+        f"http://localhost:8101/applications/{application_id}" if application_id else None
     )
     notification_priority = PRIORITY_HIGH if score >= 9 else PRIORITY_NORMAL
 
@@ -662,9 +636,7 @@ def trigger_discovery_alert(
 # ---------------------------------------------------------------------------
 
 
-def trigger_interview_reminders(
-    db: Session, profile_id: int
-) -> dict:
+def trigger_interview_reminders(db: Session, profile_id: int) -> dict:
     """Check for upcoming interviews and send Pushover reminders.
 
     VAL-PUSH-004: Notification sent at configured interval before interview
@@ -750,7 +722,8 @@ def trigger_interview_reminders(
                 title=title,
                 message=message,
                 application_id=event.application_id,
-                url=event.meeting_link or (
+                url=event.meeting_link
+                or (
                     f"http://localhost:8101/applications/{event.application_id}"
                     if event.application_id
                     else None
@@ -767,7 +740,8 @@ def trigger_interview_reminders(
                 title=title,
                 message=message,
                 application_id=event.application_id,
-                url=event.meeting_link or (
+                url=event.meeting_link
+                or (
                     f"http://localhost:8101/applications/{event.application_id}"
                     if event.application_id
                     else None
@@ -851,14 +825,10 @@ def test_pushover_connection(db: Session) -> dict:
         )
         return {"success": True, "message": "Pushover connection successful"}
     except PushoverAuthError as exc:
-        _update_integration_status(
-            db, status="error", message=f"Authentication failed: {exc}"
-        )
+        _update_integration_status(db, status="error", message=f"Authentication failed: {exc}")
         return {"success": False, "message": f"Auth error: {exc}"}
     except PushoverAPIError as exc:
-        _update_integration_status(
-            db, status="error", message=f"API error: {exc}"
-        )
+        _update_integration_status(db, status="error", message=f"API error: {exc}")
         return {"success": False, "message": f"API error: {exc}"}
 
 
@@ -867,9 +837,7 @@ def test_pushover_connection(db: Session) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def deliver_queued_notifications(
-    db: Session, profile_id: int
-) -> dict:
+def deliver_queued_notifications(db: Session, profile_id: int) -> dict:
     """Deliver all queued notifications for a profile.
 
     Called when quiet hours end. Sends all queued notifications

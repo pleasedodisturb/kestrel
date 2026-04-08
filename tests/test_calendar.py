@@ -46,9 +46,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -271,9 +269,7 @@ class TestFollowUpCalendarEvent:
 
     def test_follow_up_event_nonexistent_returns_404(self, db_session, profile):
         """Creating event from nonexistent follow-up returns 404."""
-        resp = client.post(
-            f"/api/calendar/events/from-follow-up/9999?profile_id={profile.id}"
-        )
+        resp = client.post(f"/api/calendar/events/from-follow-up/9999?profile_id={profile.id}")
         assert resp.status_code == 404
 
     def test_follow_up_event_wrong_profile_returns_404(
@@ -404,9 +400,7 @@ class TestICalExport:
         assert "BEGIN:VALARM" in ical_data
         assert "TRIGGER" in ical_data
 
-    def test_ical_export_includes_description_with_details(
-        self, db_session, profile, application
-    ):
+    def test_ical_export_includes_description_with_details(self, db_session, profile, application):
         """iCal DESCRIPTION includes company, role, type, link, prep notes."""
         payload = CalendarEventCreate(**_interview_payload(profile.id, application.id))
         event = create_calendar_event(db_session, payload)
@@ -424,9 +418,7 @@ class TestICalExport:
         create_resp = client.post("/api/calendar/events", json=payload)
         event_id = create_resp.json()["id"]
 
-        resp = client.get(
-            f"/api/calendar/events/{event_id}/ical?profile_id={profile.id}"
-        )
+        resp = client.get(f"/api/calendar/events/{event_id}/ical?profile_id={profile.id}")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "text/calendar; charset=utf-8"
         assert "BEGIN:VCALENDAR" in resp.text
@@ -439,9 +431,7 @@ class TestICalExport:
             p["title"] = f"Interview {i}"
             client.post("/api/calendar/events", json=p)
 
-        resp = client.get(
-            f"/api/calendar/export/ical?profile_id={profile.id}"
-        )
+        resp = client.get(f"/api/calendar/export/ical?profile_id={profile.id}")
         assert resp.status_code == 200
         # At least 2 VEVENTs (2 interviews + 2 prep reminders)
         vevent_count = resp.text.count("BEGIN:VEVENT")
@@ -481,9 +471,7 @@ class TestGoogleCalendar:
         create_resp = client.post("/api/calendar/events", json=payload)
         event_id = create_resp.json()["id"]
 
-        resp = client.get(
-            f"/api/calendar/events/{event_id}/google?profile_id={profile.id}"
-        )
+        resp = client.get(f"/api/calendar/events/{event_id}/google?profile_id={profile.id}")
         assert resp.status_code == 200
         data = resp.json()
         assert "url" in data
@@ -521,9 +509,7 @@ class TestFantastical:
         create_resp = client.post("/api/calendar/events", json=payload)
         event_id = create_resp.json()["id"]
 
-        resp = client.get(
-            f"/api/calendar/events/{event_id}/fantastical?profile_id={profile.id}"
-        )
+        resp = client.get(f"/api/calendar/events/{event_id}/fantastical?profile_id={profile.id}")
         assert resp.status_code == 200
         data = resp.json()
         assert "url" in data
@@ -539,9 +525,7 @@ class TestMultiProvider:
         create_resp = client.post("/api/calendar/events", json=payload)
         event_id = create_resp.json()["id"]
 
-        resp = client.get(
-            f"/api/calendar/events/{event_id}/providers?profile_id={profile.id}"
-        )
+        resp = client.get(f"/api/calendar/events/{event_id}/providers?profile_id={profile.id}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["event_id"] == event_id
@@ -586,9 +570,7 @@ class TestRescheduling:
             start_time=new_start,
             end_time=new_end,
         )
-        updated = update_calendar_event(
-            db_session, event.id, update_payload, profile_id=profile.id
-        )
+        updated = update_calendar_event(db_session, event.id, update_payload, profile_id=profile.id)
 
         assert updated.start_time == new_start
 
@@ -650,9 +632,7 @@ class TestCalendarCRUD:
         p = _interview_payload(profile.id, application.id)
         client.post("/api/calendar/events", json=p)
 
-        resp = client.get(
-            f"/api/calendar/events?profile_id={profile.id}&event_type=interview"
-        )
+        resp = client.get(f"/api/calendar/events?profile_id={profile.id}&event_type=interview")
         assert resp.status_code == 200
         data = resp.json()
         for ev in data["events"]:
@@ -678,18 +658,14 @@ class TestCalendarCRUD:
         create_resp = client.post("/api/calendar/events", json=payload)
         event_id = create_resp.json()["id"]
 
-        resp = client.get(
-            f"/api/calendar/events/{event_id}?profile_id={profile.id}"
-        )
+        resp = client.get(f"/api/calendar/events/{event_id}?profile_id={profile.id}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["id"] == event_id
 
     def test_get_nonexistent_event_returns_404(self, db_session, profile):
         """Getting nonexistent event returns 404."""
-        resp = client.get(
-            f"/api/calendar/events/9999?profile_id={profile.id}"
-        )
+        resp = client.get(f"/api/calendar/events/9999?profile_id={profile.id}")
         assert resp.status_code == 404
 
     def test_update_event(self, db_session, profile, application):
@@ -713,22 +689,16 @@ class TestCalendarCRUD:
         create_resp = client.post("/api/calendar/events", json=payload)
         event_id = create_resp.json()["id"]
 
-        resp = client.delete(
-            f"/api/calendar/events/{event_id}?profile_id={profile.id}"
-        )
+        resp = client.delete(f"/api/calendar/events/{event_id}?profile_id={profile.id}")
         assert resp.status_code == 204
 
         # Verify deleted
-        get_resp = client.get(
-            f"/api/calendar/events/{event_id}?profile_id={profile.id}"
-        )
+        get_resp = client.get(f"/api/calendar/events/{event_id}?profile_id={profile.id}")
         assert get_resp.status_code == 404
 
     def test_delete_nonexistent_returns_404(self, db_session, profile):
         """Deleting nonexistent event returns 404."""
-        resp = client.delete(
-            f"/api/calendar/events/9999?profile_id={profile.id}"
-        )
+        resp = client.delete(f"/api/calendar/events/9999?profile_id={profile.id}")
         assert resp.status_code == 404
 
 
@@ -749,9 +719,7 @@ class TestProfileIsolation:
         event_id = create_resp.json()["id"]
 
         # Profile B can't see it
-        resp = client.get(
-            f"/api/calendar/events/{event_id}?profile_id={profile_b.id}"
-        )
+        resp = client.get(f"/api/calendar/events/{event_id}?profile_id={profile_b.id}")
         assert resp.status_code == 404
 
     def test_profile_b_cannot_update_profile_a_events(
@@ -776,9 +744,7 @@ class TestProfileIsolation:
         create_resp = client.post("/api/calendar/events", json=payload)
         event_id = create_resp.json()["id"]
 
-        resp = client.delete(
-            f"/api/calendar/events/{event_id}?profile_id={profile_b.id}"
-        )
+        resp = client.delete(f"/api/calendar/events/{event_id}?profile_id={profile_b.id}")
         assert resp.status_code == 404
 
     def test_list_only_own_events(self, db_session, profile, profile_b, application):
@@ -800,9 +766,7 @@ class TestProfileIsolation:
         create_resp = client.post("/api/calendar/events", json=payload)
         event_id = create_resp.json()["id"]
 
-        resp = client.get(
-            f"/api/calendar/events/{event_id}/ical?profile_id={profile_b.id}"
-        )
+        resp = client.get(f"/api/calendar/events/{event_id}/ical?profile_id={profile_b.id}")
         assert resp.status_code == 404
 
     def test_follow_up_event_wrong_profile_isolated(

@@ -1,25 +1,22 @@
 """Tests for tools/scrape_new_sources.py - new German/EMEA market scrapers."""
 
-import json
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from scrape_new_sources import (
     ASHBY_COMPANIES,
     GREENHOUSE_COMPANIES,
     LEVER_COMPANIES,
+    scrape_all_new_sources,
     scrape_ashby,
     scrape_greenhouse,
     scrape_himalayas,
     scrape_lever,
     scrape_startupjobs,
     scrape_thehub,
-    scrape_all_new_sources,
 )
 
-
 # ==================== Helper: mock httpx.Client context manager ====================
+
 
 def _mock_httpx_client(mock_client_cls, response_data, is_json=True):
     """Set up a mock httpx.Client that returns the given data."""
@@ -69,20 +66,23 @@ class TestScrapeHimalayas:
     @patch("scrape_new_sources.time", create=True)
     @patch("scrape_new_sources.httpx.Client")
     def test_parses_response(self, mock_client_cls, mock_time, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "jobs": [
-                {
-                    "title": "Senior Product Manager",
-                    "companyName": "RemoteCo",
-                    "location": "Remote, EU",
-                    "applicationUrl": "https://himalayas.app/job/123",
-                    "description": "Build product strategy.",
-                    "pubDate": "2026-03-10",
-                    "salary": "120-150k EUR",
-                    "categories": ["product"],
-                }
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobs": [
+                    {
+                        "title": "Senior Product Manager",
+                        "companyName": "RemoteCo",
+                        "location": "Remote, EU",
+                        "applicationUrl": "https://himalayas.app/job/123",
+                        "description": "Build product strategy.",
+                        "pubDate": "2026-03-10",
+                        "salary": "120-150k EUR",
+                        "categories": ["product"],
+                    }
+                ]
+            },
+        )
 
         jobs = scrape_himalayas(keywords=["product manager"], limit=10)
         assert len(jobs) == 1
@@ -118,26 +118,29 @@ class TestScrapeGreenhouse:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_parses_jobs(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "jobs": [
-                {
-                    "title": "Technical Program Manager",
-                    "location": {"name": "Berlin, Germany"},
-                    "departments": [{"name": "Engineering"}],
-                    "content": "<p>Build great things.</p>",
-                    "absolute_url": "https://boards.greenhouse.io/acme/jobs/1",
-                    "updated_at": "2026-03-10T12:00:00Z",
-                },
-                {
-                    "title": "Marketing Associate",
-                    "location": {"name": "New York"},
-                    "departments": [],
-                    "content": "<p>Marketing stuff.</p>",
-                    "absolute_url": "https://boards.greenhouse.io/acme/jobs/2",
-                    "updated_at": "2026-03-09",
-                },
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobs": [
+                    {
+                        "title": "Technical Program Manager",
+                        "location": {"name": "Berlin, Germany"},
+                        "departments": [{"name": "Engineering"}],
+                        "content": "<p>Build great things.</p>",
+                        "absolute_url": "https://boards.greenhouse.io/acme/jobs/1",
+                        "updated_at": "2026-03-10T12:00:00Z",
+                    },
+                    {
+                        "title": "Marketing Associate",
+                        "location": {"name": "New York"},
+                        "departments": [],
+                        "content": "<p>Marketing stuff.</p>",
+                        "absolute_url": "https://boards.greenhouse.io/acme/jobs/2",
+                        "updated_at": "2026-03-09",
+                    },
+                ]
+            },
+        )
 
         # No keyword filter - get all
         jobs = scrape_greenhouse(companies=["acme"])
@@ -150,24 +153,27 @@ class TestScrapeGreenhouse:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_keyword_filter(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "jobs": [
-                {
-                    "title": "Technical Program Manager",
-                    "location": {"name": "Remote"},
-                    "departments": [],
-                    "content": "",
-                    "absolute_url": "https://example.com/1",
-                },
-                {
-                    "title": "Sales Rep",
-                    "location": {"name": "NY"},
-                    "departments": [],
-                    "content": "",
-                    "absolute_url": "https://example.com/2",
-                },
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobs": [
+                    {
+                        "title": "Technical Program Manager",
+                        "location": {"name": "Remote"},
+                        "departments": [],
+                        "content": "",
+                        "absolute_url": "https://example.com/1",
+                    },
+                    {
+                        "title": "Sales Rep",
+                        "location": {"name": "NY"},
+                        "departments": [],
+                        "content": "",
+                        "absolute_url": "https://example.com/2",
+                    },
+                ]
+            },
+        )
 
         jobs = scrape_greenhouse(
             companies=["acme"],
@@ -179,17 +185,20 @@ class TestScrapeGreenhouse:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_remote_detection(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "jobs": [
-                {
-                    "title": "Dev",
-                    "location": {"name": "Remote, EMEA"},
-                    "departments": [],
-                    "content": "",
-                    "absolute_url": "",
-                },
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobs": [
+                    {
+                        "title": "Dev",
+                        "location": {"name": "Remote, EMEA"},
+                        "departments": [],
+                        "content": "",
+                        "absolute_url": "",
+                    },
+                ]
+            },
+        )
         jobs = scrape_greenhouse(companies=["test"])
         assert jobs[0].remote is True
 
@@ -208,21 +217,24 @@ class TestScrapeLever:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_parses_postings(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, [
-            {
-                "text": "Developer Relations Engineer",
-                "categories": {
-                    "location": "Remote, EU",
-                    "team": "DevRel",
-                    "commitment": "Full-time",
+        _mock_httpx_client(
+            mock_client_cls,
+            [
+                {
+                    "text": "Developer Relations Engineer",
+                    "categories": {
+                        "location": "Remote, EU",
+                        "team": "DevRel",
+                        "commitment": "Full-time",
+                    },
+                    "lists": [
+                        {"text": "Responsibilities", "content": "<li>Build community</li>"},
+                    ],
+                    "hostedUrl": "https://jobs.lever.co/acme/123",
+                    "createdAt": 1710000000,
                 },
-                "lists": [
-                    {"text": "Responsibilities", "content": "<li>Build community</li>"},
-                ],
-                "hostedUrl": "https://jobs.lever.co/acme/123",
-                "createdAt": 1710000000,
-            },
-        ])
+            ],
+        )
 
         jobs = scrape_lever(companies=["acme"])
         assert len(jobs) == 1
@@ -234,10 +246,18 @@ class TestScrapeLever:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_keyword_filter(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, [
-            {"text": "DevRel", "categories": {"location": ""}, "lists": [], "hostedUrl": ""},
-            {"text": "Accountant", "categories": {"location": ""}, "lists": [], "hostedUrl": ""},
-        ])
+        _mock_httpx_client(
+            mock_client_cls,
+            [
+                {"text": "DevRel", "categories": {"location": ""}, "lists": [], "hostedUrl": ""},
+                {
+                    "text": "Accountant",
+                    "categories": {"location": ""},
+                    "lists": [],
+                    "hostedUrl": "",
+                },
+            ],
+        )
 
         jobs = scrape_lever(companies=["co"], keyword_filter=["devrel"])
         assert len(jobs) == 1
@@ -258,23 +278,26 @@ class TestScrapeAshby:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_parses_jobs(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "jobs": [
-                {
-                    "title": "Staff Engineer",
-                    "location": "Remote",
-                    "department": "Engineering",
-                    "compensation": {
-                        "min": 140000,
-                        "max": 180000,
-                        "currency": "EUR",
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobs": [
+                    {
+                        "title": "Staff Engineer",
+                        "location": "Remote",
+                        "department": "Engineering",
+                        "compensation": {
+                            "min": 140000,
+                            "max": 180000,
+                            "currency": "EUR",
+                        },
+                        "descriptionPlain": "Build infra.",
+                        "jobUrl": "https://jobs.ashbyhq.com/acme/1",
+                        "publishedAt": "2026-03-10",
                     },
-                    "descriptionPlain": "Build infra.",
-                    "jobUrl": "https://jobs.ashbyhq.com/acme/1",
-                    "publishedAt": "2026-03-10",
-                },
-            ]
-        })
+                ]
+            },
+        )
 
         jobs = scrape_ashby(companies=["acme"])
         assert len(jobs) == 1
@@ -287,17 +310,20 @@ class TestScrapeAshby:
     @patch("scrape_new_sources.httpx.Client")
     def test_handles_jobpostings_key(self, mock_client_cls, mock_delay):
         """Ashby may return jobPostings instead of jobs."""
-        _mock_httpx_client(mock_client_cls, {
-            "jobPostings": [
-                {
-                    "title": "PM",
-                    "location": {"name": "Berlin"},
-                    "department": {"name": "Product"},
-                    "descriptionPlain": "Manage products.",
-                    "publishedUrl": "https://jobs.ashbyhq.com/co/2",
-                },
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobPostings": [
+                    {
+                        "title": "PM",
+                        "location": {"name": "Berlin"},
+                        "department": {"name": "Product"},
+                        "descriptionPlain": "Manage products.",
+                        "publishedUrl": "https://jobs.ashbyhq.com/co/2",
+                    },
+                ]
+            },
+        )
 
         jobs = scrape_ashby(companies=["co"])
         assert len(jobs) == 1
@@ -307,28 +333,34 @@ class TestScrapeAshby:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_keyword_filter(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "jobs": [
-                {"title": "Engineer", "location": "", "jobUrl": ""},
-                {"title": "Sales", "location": "", "jobUrl": ""},
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobs": [
+                    {"title": "Engineer", "location": "", "jobUrl": ""},
+                    {"title": "Sales", "location": "", "jobUrl": ""},
+                ]
+            },
+        )
         jobs = scrape_ashby(companies=["co"], keyword_filter=["engineer"])
         assert len(jobs) == 1
 
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_string_compensation(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "jobs": [
-                {
-                    "title": "Dev",
-                    "location": "",
-                    "compensationTierSummary": "120-150k EUR",
-                    "jobUrl": "",
-                },
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobs": [
+                    {
+                        "title": "Dev",
+                        "location": "",
+                        "compensationTierSummary": "120-150k EUR",
+                        "jobUrl": "",
+                    },
+                ]
+            },
+        )
         jobs = scrape_ashby(companies=["co"])
         assert jobs[0].salary == "120-150k EUR"
 
@@ -340,20 +372,23 @@ class TestScrapeStartupJobs:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_parses_algolia_hits(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "hits": [
-                {
-                    "title": "AI Product Lead",
-                    "company_name": "Cool Startup",
-                    "location": "Remote",
-                    "url": "https://startup.jobs/ai-lead",
-                    "description": "Lead AI product.",
-                    "published_at": "2026-03-10",
-                    "remote": True,
-                    "tags": ["ai", "product"],
-                },
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "hits": [
+                    {
+                        "title": "AI Product Lead",
+                        "company_name": "Cool Startup",
+                        "location": "Remote",
+                        "url": "https://startup.jobs/ai-lead",
+                        "description": "Lead AI product.",
+                        "published_at": "2026-03-10",
+                        "remote": True,
+                        "tags": ["ai", "product"],
+                    },
+                ]
+            },
+        )
 
         jobs = scrape_startupjobs(keywords=["AI"])
         assert len(jobs) == 1
@@ -364,16 +399,19 @@ class TestScrapeStartupJobs:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_builds_url_from_slug(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "hits": [
-                {
-                    "title": "Dev",
-                    "company_name": "Co",
-                    "slug": "dev-at-co-123",
-                    "location": "",
-                },
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "hits": [
+                    {
+                        "title": "Dev",
+                        "company_name": "Co",
+                        "slug": "dev-at-co-123",
+                        "location": "",
+                    },
+                ]
+            },
+        )
         jobs = scrape_startupjobs(keywords=["dev"])
         assert "startup.jobs/dev-at-co-123" in jobs[0].url
 
@@ -392,20 +430,23 @@ class TestScrapeTheHub:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_parses_list_response(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "jobs": [
-                {
-                    "title": "Founding Engineer",
-                    "company_name": "Berlin Startup",
-                    "location": "Berlin, Germany",
-                    "url": "https://thehub.io/jobs/1",
-                    "description": "Build from scratch.",
-                    "published_at": "2026-03-10",
-                    "remote": False,
-                    "tags": ["engineering"],
-                },
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "jobs": [
+                    {
+                        "title": "Founding Engineer",
+                        "company_name": "Berlin Startup",
+                        "location": "Berlin, Germany",
+                        "url": "https://thehub.io/jobs/1",
+                        "description": "Build from scratch.",
+                        "published_at": "2026-03-10",
+                        "remote": False,
+                        "tags": ["engineering"],
+                    },
+                ]
+            },
+        )
 
         jobs = scrape_thehub(keywords=["engineer"])
         assert len(jobs) == 1
@@ -415,11 +456,19 @@ class TestScrapeTheHub:
     @patch("scrape_new_sources._random_delay")
     @patch("scrape_new_sources.httpx.Client")
     def test_handles_data_key(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(mock_client_cls, {
-            "data": [
-                {"title": "PM", "company": {"name": "Startup"}, "location": "Berlin", "url": "u"},
-            ]
-        })
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "data": [
+                    {
+                        "title": "PM",
+                        "company": {"name": "Startup"},
+                        "location": "Berlin",
+                        "url": "u",
+                    },
+                ]
+            },
+        )
         jobs = scrape_thehub(keywords=["pm"])
         assert len(jobs) == 1
         assert jobs[0].company == "Startup"
@@ -447,13 +496,18 @@ class TestScrapeAllNewSources:
     @patch("scrape_new_sources.scrape_greenhouse", return_value=[])
     @patch("scrape_new_sources.scrape_himalayas", return_value=[])
     @patch("scrape_new_sources._random_delay")
-    def test_calls_all_sources(self, mock_delay, mock_h, mock_gh, mock_lv, mock_as, mock_sj, mock_th):
+    def test_calls_all_sources(
+        self, mock_delay, mock_h, mock_gh, mock_lv, mock_as, mock_sj, mock_th
+    ):
         from scrape_resilient import ScrapedJob
+
         mock_h.return_value = [
             ScrapedJob(title="Job1", company="Co1", location="Remote", url="u1", source="himalayas")
         ]
         mock_gh.return_value = [
-            ScrapedJob(title="Job2", company="Co2", location="Berlin", url="u2", source="greenhouse")
+            ScrapedJob(
+                title="Job2", company="Co2", location="Berlin", url="u2", source="greenhouse"
+            )
         ]
 
         result = scrape_all_new_sources()
@@ -472,7 +526,9 @@ class TestScrapeAllNewSources:
     @patch("scrape_new_sources.scrape_greenhouse", return_value=[])
     @patch("scrape_new_sources.scrape_himalayas", return_value=[])
     @patch("scrape_new_sources._random_delay")
-    def test_graceful_on_individual_failure(self, mock_delay, mock_h, mock_gh, mock_lv, mock_as, mock_sj, mock_th):
+    def test_graceful_on_individual_failure(
+        self, mock_delay, mock_h, mock_gh, mock_lv, mock_as, mock_sj, mock_th
+    ):
         """If one source throws, others still run."""
         result = scrape_all_new_sources()
         assert isinstance(result, list)  # no exception
@@ -484,11 +540,13 @@ class TestScrapeAllNewSources:
 class TestExpandedPresets:
     def test_new_presets_exist(self):
         from germany_jobs import PRESETS
+
         assert "devrel" in PRESETS
         assert "leadership" in PRESETS
 
     def test_devrel_has_keywords(self):
         from germany_jobs import PRESETS
+
         devrel = PRESETS["devrel"]
         assert any("Developer Relations" in k for k in devrel)
         assert any("Developer Advocate" in k for k in devrel)
@@ -496,19 +554,23 @@ class TestExpandedPresets:
 
     def test_leadership_has_keywords(self):
         from germany_jobs import PRESETS
+
         leadership = PRESETS["leadership"]
         assert any("Head of Engineering" in k for k in leadership)
         assert any("VP Engineering" in k for k in leadership)
 
     def test_expanded_tpm_has_technical_product_manager(self):
         from germany_jobs import PRESETS
+
         assert "Technical Product Manager" in PRESETS["tpm"]
 
     def test_expanded_ai_has_mlops(self):
         from germany_jobs import PRESETS
+
         assert "MLOps" in PRESETS["ai"]
 
     def test_expanded_builder_has_founding_engineer(self):
         from germany_jobs import PRESETS
+
         assert "Founding Engineer" in PRESETS["builder"]
         assert "Staff Engineer" in PRESETS["builder"]

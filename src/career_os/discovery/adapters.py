@@ -85,9 +85,7 @@ async def _request_with_backoff(
 
     for attempt in range(max_retries + 1):
         try:
-            response = await client.request(
-                method, url, headers=headers, params=params
-            )
+            response = await client.request(method, url, headers=headers, params=params)
             if response.status_code == 429:
                 if attempt < max_retries:
                     logger.warning(
@@ -198,7 +196,9 @@ class ArbeitsagenturAdapter(ScraperAdapter):
                         hash_id = j.get("hashId", "")
 
                         if hash_id:
-                            job_url = f"https://www.arbeitsagentur.de/jobboerse/jobsuche/detail/{hash_id}"
+                            job_url = (
+                                f"https://www.arbeitsagentur.de/jobboerse/jobsuche/detail/{hash_id}"
+                            )
                         elif refnr:
                             job_url = (
                                 f"https://www.arbeitsagentur.de/jobsuche/suche"
@@ -218,9 +218,7 @@ class ArbeitsagenturAdapter(ScraperAdapter):
                                 company=arbeitgeber,
                                 location=location_str,
                                 url=job_url,
-                                posted_at=_parse_date(
-                                    j.get("aktuelleVeroeffentlichungsdatum", "")
-                                ),
+                                posted_at=_parse_date(j.get("aktuelleVeroeffentlichungsdatum", "")),
                             )
                         )
 
@@ -266,9 +264,7 @@ class ArbeitnowAdapter(ScraperAdapter):
 
             if loc_lower and not any(lc in loc.lower() for lc in loc_lower):
                 continue
-            if kw_lower and not any(
-                k in (title + " " + company).lower() for k in kw_lower
-            ):
+            if kw_lower and not any(k in (title + " " + company).lower() for k in kw_lower):
                 continue
 
             posted_at = None
@@ -318,8 +314,7 @@ class JobSpyAdapter(ScraperAdapter):
             from jobspy import scrape_jobs
         except ImportError as exc:
             raise RuntimeError(
-                "python-jobspy is not installed. "
-                "Install it with: pip install python-jobspy"
+                "python-jobspy is not installed. Install it with: pip install python-jobspy"
             ) from exc
 
         keywords = params.keywords or [""]

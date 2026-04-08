@@ -37,9 +37,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -272,9 +270,7 @@ class TestPracticeQuestions:
         )
         data = response.json()
         assert "questions" in data
-        assert len(data["questions"]) >= 5, (
-            f"Expected ≥5 questions, got {len(data['questions'])}"
-        )
+        assert len(data["questions"]) >= 5, f"Expected ≥5 questions, got {len(data['questions'])}"
 
     def test_questions_have_required_fields(
         self, client: TestClient, test_profile: Profile, test_application: Application
@@ -460,9 +456,7 @@ class TestProgressTracking:
         assert data2["completed_items"] == 2
         assert data2["progress_percentage"] > 0
         # The specific items should be marked as completed
-        completed_ids = {
-            c["id"] for c in data2["checklist"] if c["completed"]
-        }
+        completed_ids = {c["id"] for c in data2["checklist"] if c["completed"]}
         assert set(item_ids) == completed_ids
 
     def test_unmark_item(
@@ -613,9 +607,7 @@ class TestNoResearchPrompt:
 class TestErrorHandling:
     """Test error handling for invalid inputs."""
 
-    def test_nonexistent_application_404(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_nonexistent_application_404(self, client: TestClient, test_profile: Profile):
         """Nonexistent application returns 404."""
         response = client.get(
             "/api/applications/99999/interview-prep",
@@ -623,9 +615,7 @@ class TestErrorHandling:
         )
         assert response.status_code == 404
 
-    def test_nonexistent_profile_404(
-        self, client: TestClient, test_application: Application
-    ):
+    def test_nonexistent_profile_404(self, client: TestClient, test_application: Application):
         """Nonexistent profile returns 404."""
         response = client.get(
             f"/api/applications/{test_application.id}/interview-prep",
@@ -633,9 +623,7 @@ class TestErrorHandling:
         )
         assert response.status_code == 404
 
-    def test_nonexistent_item_404(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_nonexistent_item_404(self, client: TestClient, test_profile: Profile):
         """Updating nonexistent prep item returns 404."""
         response = client.patch(
             "/api/applications/interview-prep/items/99999",
@@ -644,9 +632,7 @@ class TestErrorHandling:
         )
         assert response.status_code == 404
 
-    def test_missing_profile_id_422(
-        self, client: TestClient, test_application: Application
-    ):
+    def test_missing_profile_id_422(self, client: TestClient, test_application: Application):
         """Missing profile_id query param returns 422."""
         response = client.get(
             f"/api/applications/{test_application.id}/interview-prep",
@@ -739,9 +725,7 @@ class TestAIProviderFailure:
         _db_engine,
     ):
         """When AI provider fails, returns empty but valid prep structure."""
-        with patch(
-            "career_os.services.interview_prep.get_ai_provider"
-        ) as mock_factory:
+        with patch("career_os.services.interview_prep.get_ai_provider") as mock_factory:
             mock_provider = AsyncMock()
             mock_provider.complete.side_effect = RuntimeError("AI unavailable")
             mock_factory.return_value = mock_provider

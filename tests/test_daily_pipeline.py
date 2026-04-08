@@ -1,13 +1,8 @@
 """Tests for tools/daily_pipeline.py — all pipeline steps."""
 
-import csv
-import json
 import os
 import sys
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from daily_pipeline import (
     PipelineConfig,
@@ -16,7 +11,6 @@ from daily_pipeline import (
     step_filter,
     step_generate_digest,
 )
-
 
 # ==================== PipelineConfig ====================
 
@@ -64,7 +58,11 @@ class TestPipelineConfig:
 class TestFallbackScore:
     def test_positive_signals_increase_score(self):
         jobs = [
-            {"title": "AI Product Manager", "company": "ML Startup", "description": "Build AI platform with innovation"},
+            {
+                "title": "AI Product Manager",
+                "company": "ML Startup",
+                "description": "Build AI platform with innovation",
+            },
         ]
         result = _fallback_score(jobs)
         # "ai", "product", "ml", "platform", "startup", "innovation" = 6 positive
@@ -72,7 +70,11 @@ class TestFallbackScore:
 
     def test_negative_signals_decrease_score(self):
         jobs = [
-            {"title": "PMO Coordinator", "company": "Admin Corp", "description": "PMBOK methodology administrator"},
+            {
+                "title": "PMO Coordinator",
+                "company": "Admin Corp",
+                "description": "PMBOK methodology administrator",
+            },
         ]
         result = _fallback_score(jobs)
         # "coordinator" + "pmbok" + "administrator" = 3 negative, no positive
@@ -87,15 +89,21 @@ class TestFallbackScore:
 
     def test_score_capped_at_bounds(self):
         jobs = [
-            {"title": "AI ML Product Platform Innovation Builder Remote Startup Founding Technical Program",
-             "company": "", "description": ""},
+            {
+                "title": "AI ML Product Platform Innovation Builder Remote Startup Founding Technical Program",
+                "company": "",
+                "description": "",
+            },
         ]
         result = _fallback_score(jobs)
         assert result[0]["fit_score"] <= 10
 
         jobs = [
-            {"title": "PMBOK PMO Coordinator Administrator Sachbearbeiter",
-             "company": "", "description": ""},
+            {
+                "title": "PMBOK PMO Coordinator Administrator Sachbearbeiter",
+                "company": "",
+                "description": "",
+            },
         ]
         result = _fallback_score(jobs)
         assert result[0]["fit_score"] >= 1
@@ -174,7 +182,9 @@ class TestStepDedupAgainstTracking:
 
     def test_empty_csv(self, tmp_path):
         csv_path = tmp_path / "applications.csv"
-        csv_path.write_text("date_applied,company,role,url,source,status,salary_range,contact,next_step,notes,fit_score\n")
+        csv_path.write_text(
+            "date_applied,company,role,url,source,status,salary_range,contact,next_step,notes,fit_score\n"
+        )
 
         config = PipelineConfig()
         config.csv_path = csv_path

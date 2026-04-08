@@ -23,9 +23,7 @@ def db_session():
     Uses a single shared connection so both the test and the app see the
     same in-memory tables.
     """
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -69,6 +67,7 @@ def client(db_session):
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
+
 
 def _create_app(client: TestClient, **overrides) -> dict:
     """Helper to create an application with defaults."""
@@ -182,9 +181,7 @@ class TestCreateApplication:
 
     def test_create_creates_activity_log(self, client: TestClient, db_session: Session):
         data = _create_app(client)
-        logs = db_session.query(ActivityLog).filter(
-            ActivityLog.application_id == data["id"]
-        ).all()
+        logs = db_session.query(ActivityLog).filter(ActivityLog.application_id == data["id"]).all()
         assert len(logs) == 1
         assert logs[0].action == "created"
 
@@ -349,10 +346,14 @@ class TestUpdateApplication:
             f"/api/applications/{created['id']}?profile_id=1",
             json={"notes": "Changed"},
         )
-        logs = db_session.query(ActivityLog).filter(
-            ActivityLog.application_id == created["id"],
-            ActivityLog.action == "updated",
-        ).all()
+        logs = (
+            db_session.query(ActivityLog)
+            .filter(
+                ActivityLog.application_id == created["id"],
+                ActivityLog.action == "updated",
+            )
+            .all()
+        )
         assert len(logs) == 1
 
     def test_update_status_valid_transition(self, client: TestClient):
@@ -364,18 +365,20 @@ class TestUpdateApplication:
         assert resp.status_code == 200
         assert resp.json()["status"] == "interested"
 
-    def test_update_status_creates_status_change_log(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_update_status_creates_status_change_log(self, client: TestClient, db_session: Session):
         created = _create_app(client)
         client.patch(
             f"/api/applications/{created['id']}?profile_id=1",
             json={"status": "interested"},
         )
-        logs = db_session.query(ActivityLog).filter(
-            ActivityLog.application_id == created["id"],
-            ActivityLog.action == "status_changed",
-        ).all()
+        logs = (
+            db_session.query(ActivityLog)
+            .filter(
+                ActivityLog.application_id == created["id"],
+                ActivityLog.action == "status_changed",
+            )
+            .all()
+        )
         assert len(logs) == 1
         assert "discovered" in logs[0].details
         assert "interested" in logs[0].details
@@ -485,7 +488,6 @@ class TestStatusWorkflow:
         detail = resp.json()["detail"].lower()
         assert "transition" in detail or "status" in detail
 
-
     # Status normalization — title-cased values from Kanban DnD
     @pytest.mark.parametrize(
         "status_input,expected",
@@ -540,9 +542,7 @@ def _transition_path(current: str, target: str) -> list[str]:
     """Get the minimal valid transition path from current to target status."""
     if current == target:
         return []
-    forward_chain = [
-        "discovered", "interested", "applied", "interviewing", "offer"
-    ]
+    forward_chain = ["discovered", "interested", "applied", "interviewing", "offer"]
     if current in forward_chain and target in forward_chain:
         start = forward_chain.index(current)
         end = forward_chain.index(target)
@@ -582,10 +582,14 @@ class TestDeleteApplication:
     def test_delete_creates_activity_log(self, client: TestClient, db_session: Session):
         created = _create_app(client)
         client.delete(f"/api/applications/{created['id']}?profile_id=1")
-        logs = db_session.query(ActivityLog).filter(
-            ActivityLog.application_id == created["id"],
-            ActivityLog.action == "archived",
-        ).all()
+        logs = (
+            db_session.query(ActivityLog)
+            .filter(
+                ActivityLog.application_id == created["id"],
+                ActivityLog.action == "archived",
+            )
+            .all()
+        )
         assert len(logs) == 1
 
     def test_delete_nonexistent_returns_404(self, client: TestClient):
@@ -612,20 +616,18 @@ class TestDeleteApplication:
         db_session.commit()
         client.delete(f"/api/applications/{created['id']}?profile_id=1")
         # Follow-up still exists (not orphaned)
-        existing = db_session.query(FollowUp).filter(
-            FollowUp.application_id == created["id"]
-        ).first()
+        existing = (
+            db_session.query(FollowUp).filter(FollowUp.application_id == created["id"]).first()
+        )
         assert existing is not None
 
-    def test_delete_does_not_destroy_activity_logs(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_delete_does_not_destroy_activity_logs(self, client: TestClient, db_session: Session):
         """VAL-CROSS-019: Soft delete preserves activity logs."""
         created = _create_app(client)
         client.delete(f"/api/applications/{created['id']}?profile_id=1")
-        logs = db_session.query(ActivityLog).filter(
-            ActivityLog.application_id == created["id"]
-        ).all()
+        logs = (
+            db_session.query(ActivityLog).filter(ActivityLog.application_id == created["id"]).all()
+        )
         assert len(logs) >= 2  # created + archived
 
 

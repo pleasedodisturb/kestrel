@@ -145,11 +145,7 @@ def get_or_create_weights(db: Session, profile_id: int) -> ScoringWeights:
     if not profile:
         raise ProfileNotFoundError(f"Profile {profile_id} not found")
 
-    weights = (
-        db.query(ScoringWeights)
-        .filter(ScoringWeights.profile_id == profile_id)
-        .first()
-    )
+    weights = db.query(ScoringWeights).filter(ScoringWeights.profile_id == profile_id).first()
     if not weights:
         preset = _weights_for_job_family(profile.job_family)
         weights = ScoringWeights(profile_id=profile_id, **preset)
@@ -160,9 +156,7 @@ def get_or_create_weights(db: Session, profile_id: int) -> ScoringWeights:
     return weights
 
 
-def update_weights(
-    db: Session, profile_id: int, data: dict[str, float]
-) -> ScoringWeights:
+def update_weights(db: Session, profile_id: int, data: dict[str, float]) -> ScoringWeights:
     """Update scoring weights for a profile. Marks existing scores as stale."""
     weights = get_or_create_weights(db, profile_id)
 
@@ -186,9 +180,7 @@ def regenerate_weights_for_job_family(
     GET /api/scoring-weights returns job-family-appropriate values.
     """
     # Delete existing weights row if any
-    db.query(ScoringWeights).filter(
-        ScoringWeights.profile_id == profile_id
-    ).delete()
+    db.query(ScoringWeights).filter(ScoringWeights.profile_id == profile_id).delete()
     db.flush()
 
     # Create fresh weights using the new job_family preset
@@ -211,11 +203,7 @@ def _gather_profile_data(db: Session, profile: Profile) -> dict:
     Includes skills, goals, and market positioning data (VAL-CROSS-010).
     """
     # Skills
-    skills = (
-        db.query(Skill)
-        .filter(Skill.profile_id == profile.id)
-        .all()
-    )
+    skills = db.query(Skill).filter(Skill.profile_id == profile.id).all()
     skills_data = [
         {
             "name": s.name,
@@ -226,11 +214,7 @@ def _gather_profile_data(db: Session, profile: Profile) -> dict:
     ]
 
     # Goals
-    goals = (
-        db.query(Goal)
-        .filter(Goal.profile_id == profile.id, Goal.status == "active")
-        .all()
-    )
+    goals = db.query(Goal).filter(Goal.profile_id == profile.id, Goal.status == "active").all()
     goals_data = [
         {
             "title": g.title,
@@ -349,9 +333,11 @@ async def score_job(
         raise ScoringError("AI provider did not return a valid ScoreResult")
 
     # Serialize score_breakdown to JSON for storage
-    breakdown_json = json.dumps(
-        [f.model_dump() for f in score_data.score_breakdown]
-    ) if score_data.score_breakdown else None
+    breakdown_json = (
+        json.dumps([f.model_dump() for f in score_data.score_breakdown])
+        if score_data.score_breakdown
+        else None
+    )
 
     # Persist the score
     scored_job = ScoredJob(
@@ -416,9 +402,7 @@ def _build_scoring_prompt(
     if profile_data.get("skills"):
         parts.append("\nSkills:")
         for skill in profile_data["skills"][:20]:  # Limit to avoid huge prompts
-            parts.append(
-                f"  - {skill['name']} ({skill['category']}, {skill['proficiency']})"
-            )
+            parts.append(f"  - {skill['name']} ({skill['category']}, {skill['proficiency']})")
 
     if profile_data.get("goals"):
         parts.append("\nCareer Goals:")
@@ -478,13 +462,10 @@ async def batch_score_discovery(
     else:
         if rescore_stale:
             # Score jobs with no non-stale score (includes never-scored + stale-only)
-            fresh_scored_ids = (
-                db.query(ScoredJob.discovered_job_id)
-                .filter(
-                    ScoredJob.profile_id == profile_id,
-                    ScoredJob.discovered_job_id.isnot(None),
-                    ScoredJob.is_stale.is_(False),
-                )
+            fresh_scored_ids = db.query(ScoredJob.discovered_job_id).filter(
+                ScoredJob.profile_id == profile_id,
+                ScoredJob.discovered_job_id.isnot(None),
+                ScoredJob.is_stale.is_(False),
             )
             jobs = (
                 db.query(DiscoveredJob)
@@ -496,12 +477,9 @@ async def batch_score_discovery(
             )
         else:
             # Score only never-scored jobs (no ScoredJob record at all)
-            any_scored_ids = (
-                db.query(ScoredJob.discovered_job_id)
-                .filter(
-                    ScoredJob.profile_id == profile_id,
-                    ScoredJob.discovered_job_id.isnot(None),
-                )
+            any_scored_ids = db.query(ScoredJob.discovered_job_id).filter(
+                ScoredJob.profile_id == profile_id,
+                ScoredJob.discovered_job_id.isnot(None),
             )
             jobs = (
                 db.query(DiscoveredJob)
@@ -531,10 +509,12 @@ async def batch_score_discovery(
             scores.append(scored)
         except Exception as exc:
             logger.warning("Failed to score job %d: %s", job.id, exc)
-            errors.append({
-                "discovered_job_id": str(job.id),
-                "error": str(exc),
-            })
+            errors.append(
+                {
+                    "discovered_job_id": str(job.id),
+                    "error": str(exc),
+                }
+            )
 
     total_time = time.monotonic() - start_time
 
@@ -572,9 +552,7 @@ def flag_stale_scores(db: Session, profile_id: int) -> int:
     discovered_job_ids = {
         s.discovered_job_id for s in stale_scores if s.discovered_job_id is not None
     }
-    application_ids = {
-        s.application_id for s in stale_scores if s.application_id is not None
-    }
+    application_ids = {s.application_id for s in stale_scores if s.application_id is not None}
 
     count = (
         db.query(ScoredJob)
@@ -608,9 +586,7 @@ def flag_stale_scores(db: Session, profile_id: int) -> int:
 # ---------------------------------------------------------------------------
 
 
-def get_score_for_job(
-    db: Session, profile_id: int, discovered_job_id: int
-) -> ScoredJob | None:
+def get_score_for_job(db: Session, profile_id: int, discovered_job_id: int) -> ScoredJob | None:
     """Get the latest non-stale score for a discovered job."""
     return (
         db.query(ScoredJob)

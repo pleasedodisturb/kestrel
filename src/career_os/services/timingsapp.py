@@ -58,24 +58,57 @@ class ConcurrentSessionError(Exception):
 # Keywords that map to each category
 _CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "applying": [
-        "apply", "application", "submit", "cover letter", "resume",
-        "cv", "tailoring", "applied",
+        "apply",
+        "application",
+        "submit",
+        "cover letter",
+        "resume",
+        "cv",
+        "tailoring",
+        "applied",
     ],
     "researching": [
-        "research", "company", "market", "discover", "search", "browse",
-        "explore", "looking", "searching",
+        "research",
+        "company",
+        "market",
+        "discover",
+        "search",
+        "browse",
+        "explore",
+        "looking",
+        "searching",
     ],
     "prepping": [
-        "prep", "interview", "practice", "mock", "star stor", "prepare",
-        "rehearse", "whiteboard",
+        "prep",
+        "interview",
+        "practice",
+        "mock",
+        "star stor",
+        "prepare",
+        "rehearse",
+        "whiteboard",
     ],
     "networking": [
-        "network", "connect", "linkedin", "meetup", "coffee chat",
-        "referral", "outreach", "event",
+        "network",
+        "connect",
+        "linkedin",
+        "meetup",
+        "coffee chat",
+        "referral",
+        "outreach",
+        "event",
     ],
     "learning": [
-        "learn", "course", "tutorial", "study", "read", "skill",
-        "certification", "training", "udemy", "coursera",
+        "learn",
+        "course",
+        "tutorial",
+        "study",
+        "read",
+        "skill",
+        "certification",
+        "training",
+        "udemy",
+        "coursera",
     ],
 }
 
@@ -111,11 +144,7 @@ def _get_timingsapp_credentials(db: Session) -> tuple[str, str | None]:
     Returns (api_token, api_url).
     Raises TimingsAppNotConfiguredError if not configured or disabled.
     """
-    row = (
-        db.query(IntegrationConfig)
-        .filter(IntegrationConfig.name == "timingsapp")
-        .first()
-    )
+    row = db.query(IntegrationConfig).filter(IntegrationConfig.name == "timingsapp").first()
     if row is None or not row.enabled:
         raise TimingsAppNotConfiguredError("TimingsApp integration is not enabled")
 
@@ -246,9 +275,7 @@ def stop_session(
             f"Time session {session_id} not found for profile {profile_id}"
         )
     if session_record.stopped_at is not None:
-        raise TimeSessionAlreadyStoppedError(
-            f"Time session {session_id} is already stopped"
-        )
+        raise TimeSessionAlreadyStoppedError(f"Time session {session_id} is already stopped")
 
     now = datetime.now(UTC)
     session_record.stopped_at = now
@@ -321,12 +348,7 @@ def list_sessions(
         query = query.filter(TimeSession.category == category)
 
     total = query.count()
-    sessions = (
-        query.order_by(TimeSession.started_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    sessions = query.order_by(TimeSession.started_at.desc()).offset(offset).limit(limit).all()
     return sessions, total
 
 
@@ -500,10 +522,7 @@ def get_time_analytics(
             WeeklyTrend(
                 week=week_label,
                 total_hours=round(week_total / 3600, 2),
-                category_hours={
-                    cat: round(hrs / 3600, 2)
-                    for cat, hrs in week_cat_hours.items()
-                },
+                category_hours={cat: round(hrs / 3600, 2) for cat, hrs in week_cat_hours.items()},
             )
         )
 
@@ -541,11 +560,7 @@ def check_timingsapp_connection(db: Session) -> tuple[bool, str]:
     try:
         ok = client.test_connection()
         if ok:
-            row = (
-                db.query(IntegrationConfig)
-                .filter(IntegrationConfig.name == "timingsapp")
-                .first()
-            )
+            row = db.query(IntegrationConfig).filter(IntegrationConfig.name == "timingsapp").first()
             if row:
                 row.status = "connected"
                 row.status_message = "TimingsApp API connection successful"

@@ -16,7 +16,6 @@ Usage:
 
 import argparse
 import csv
-import json
 import re
 import sys
 import time
@@ -34,6 +33,7 @@ SCREENSHOTS_DIR = PROJECT_ROOT / "screenshots"
 # ---------------------------------------------------------------------------
 # Platform detection
 # ---------------------------------------------------------------------------
+
 
 def detect_platform(url: str) -> str:
     """Detect job board platform from URL."""
@@ -91,6 +91,7 @@ def parse_greenhouse_url(url: str) -> tuple[str, str]:
 # Greenhouse API key extraction
 # ---------------------------------------------------------------------------
 
+
 def extract_greenhouse_api_key(board_token: str) -> str | None:
     """Try to find the Greenhouse Job Board API key from the embed script.
 
@@ -128,6 +129,7 @@ def extract_greenhouse_api_key(board_token: str) -> str | None:
 # ---------------------------------------------------------------------------
 # Direct API submissions
 # ---------------------------------------------------------------------------
+
 
 def submit_lever_api(personal: dict, app: dict, dry_run: bool) -> dict:
     """Submit application via Lever Postings API (no browser needed).
@@ -256,6 +258,7 @@ def submit_greenhouse_api(personal: dict, app: dict, dry_run: bool) -> dict:
 # Browser-based submissions (Playwright)
 # ---------------------------------------------------------------------------
 
+
 def screenshot(page, name: str) -> Path:
     """Take a screenshot and save it."""
     SCREENSHOTS_DIR.mkdir(exist_ok=True)
@@ -326,32 +329,48 @@ def fill_ashby_browser(page, personal: dict, app: dict):
     full_name = f"{personal['first_name']} {personal['last_name']}"
 
     # Ashby uses _systemfield_ prefixed names or plain names
-    _try_fill(page, [
-        'input[name="_systemfield_name"]',
-        'input[name="name"]',
-        'input[aria-label*="name" i]',
-        'input[placeholder*="name" i]',
-    ], full_name)
+    _try_fill(
+        page,
+        [
+            'input[name="_systemfield_name"]',
+            'input[name="name"]',
+            'input[aria-label*="name" i]',
+            'input[placeholder*="name" i]',
+        ],
+        full_name,
+    )
 
-    _try_fill(page, [
-        'input[name="_systemfield_email"]',
-        'input[name="email"]',
-        'input[type="email"]',
-        'input[aria-label*="email" i]',
-    ], personal["email"])
+    _try_fill(
+        page,
+        [
+            'input[name="_systemfield_email"]',
+            'input[name="email"]',
+            'input[type="email"]',
+            'input[aria-label*="email" i]',
+        ],
+        personal["email"],
+    )
 
-    _try_fill(page, [
-        'input[name="_systemfield_phone"]',
-        'input[name="phone"]',
-        'input[type="tel"]',
-        'input[aria-label*="phone" i]',
-    ], personal["phone"])
+    _try_fill(
+        page,
+        [
+            'input[name="_systemfield_phone"]',
+            'input[name="phone"]',
+            'input[type="tel"]',
+            'input[aria-label*="phone" i]',
+        ],
+        personal["phone"],
+    )
 
-    _try_fill(page, [
-        'input[name*="linkedin" i]',
-        'input[placeholder*="linkedin" i]',
-        'input[aria-label*="linkedin" i]',
-    ], personal.get("linkedin", ""))
+    _try_fill(
+        page,
+        [
+            'input[name*="linkedin" i]',
+            'input[placeholder*="linkedin" i]',
+            'input[aria-label*="linkedin" i]',
+        ],
+        personal.get("linkedin", ""),
+    )
 
     # File uploads
     cv_path = str(PROJECT_ROOT / app["cv"])
@@ -379,8 +398,16 @@ def fill_lever_browser(page, personal: dict, app: dict):
     _try_fill(page, ['input[name="email"]', 'input[type="email"]'], personal["email"])
     _try_fill(page, ['input[name="phone"]', 'input[type="tel"]'], personal["phone"])
     _try_fill(page, ['input[name="org"]'], personal.get("current_company", ""))
-    _try_fill(page, ['input[name="urls[LinkedIn]"]', 'input[placeholder*="linkedin" i]'], personal.get("linkedin", ""))
-    _try_fill(page, ['input[name="urls[GitHub]"]', 'input[placeholder*="github" i]'], personal.get("github", ""))
+    _try_fill(
+        page,
+        ['input[name="urls[LinkedIn]"]', 'input[placeholder*="linkedin" i]'],
+        personal.get("linkedin", ""),
+    )
+    _try_fill(
+        page,
+        ['input[name="urls[GitHub]"]', 'input[placeholder*="github" i]'],
+        personal.get("github", ""),
+    )
 
     # Resume upload
     resume_input = page.locator('input[name="resume"], input[type="file"]')
@@ -421,39 +448,63 @@ def fill_greenhouse_browser(page, personal: dict, app: dict):
     has_iframe = page.locator("#grnhse_iframe").count() > 0
     ctx = page.frame_locator("#grnhse_iframe") if has_iframe else page
 
-    _try_fill(ctx, [
-        'input[name="job_application[first_name]"]',
-        'input#first_name',
-        'input[autocomplete="given-name"]',
-    ], personal["first_name"])
+    _try_fill(
+        ctx,
+        [
+            'input[name="job_application[first_name]"]',
+            "input#first_name",
+            'input[autocomplete="given-name"]',
+        ],
+        personal["first_name"],
+    )
 
-    _try_fill(ctx, [
-        'input[name="job_application[last_name]"]',
-        'input#last_name',
-        'input[autocomplete="family-name"]',
-    ], personal["last_name"])
+    _try_fill(
+        ctx,
+        [
+            'input[name="job_application[last_name]"]',
+            "input#last_name",
+            'input[autocomplete="family-name"]',
+        ],
+        personal["last_name"],
+    )
 
-    _try_fill(ctx, [
-        'input[name="job_application[email]"]',
-        'input#email',
-        'input[type="email"]',
-    ], personal["email"])
+    _try_fill(
+        ctx,
+        [
+            'input[name="job_application[email]"]',
+            "input#email",
+            'input[type="email"]',
+        ],
+        personal["email"],
+    )
 
-    _try_fill(ctx, [
-        'input[name="job_application[phone]"]',
-        'input#phone',
-        'input[type="tel"]',
-    ], personal["phone"])
+    _try_fill(
+        ctx,
+        [
+            'input[name="job_application[phone]"]',
+            "input#phone",
+            'input[type="tel"]',
+        ],
+        personal["phone"],
+    )
 
-    _try_fill(ctx, [
-        'input[name="job_application[location]"]',
-        'input#location',
-    ], personal.get("location", ""))
+    _try_fill(
+        ctx,
+        [
+            'input[name="job_application[location]"]',
+            "input#location",
+        ],
+        personal.get("location", ""),
+    )
 
-    _try_fill(ctx, [
-        'input[name*="linkedin" i]',
-        'input[id*="linkedin" i]',
-    ], personal.get("linkedin", ""))
+    _try_fill(
+        ctx,
+        [
+            'input[name*="linkedin" i]',
+            'input[id*="linkedin" i]',
+        ],
+        personal.get("linkedin", ""),
+    )
 
     # File uploads
     cv_path = str(PROJECT_ROOT / app["cv"])
@@ -473,39 +524,63 @@ def fill_generic_browser(page, personal: dict, app: dict):
     full_name = f"{personal['first_name']} {personal['last_name']}"
 
     # Try common field patterns
-    _try_fill(page, [
-        'input[name*="name" i]:not([name*="last"]):not([name*="company"])',
-        'input[autocomplete="name"]',
-        'input[placeholder*="full name" i]',
-        'input[placeholder*="name" i]:not([placeholder*="last"]):not([placeholder*="company"])',
-    ], full_name)
+    _try_fill(
+        page,
+        [
+            'input[name*="name" i]:not([name*="last"]):not([name*="company"])',
+            'input[autocomplete="name"]',
+            'input[placeholder*="full name" i]',
+            'input[placeholder*="name" i]:not([placeholder*="last"]):not([placeholder*="company"])',
+        ],
+        full_name,
+    )
 
-    _try_fill(page, [
-        'input[name*="first" i]',
-        'input[autocomplete="given-name"]',
-    ], personal["first_name"])
+    _try_fill(
+        page,
+        [
+            'input[name*="first" i]',
+            'input[autocomplete="given-name"]',
+        ],
+        personal["first_name"],
+    )
 
-    _try_fill(page, [
-        'input[name*="last" i]',
-        'input[autocomplete="family-name"]',
-    ], personal["last_name"])
+    _try_fill(
+        page,
+        [
+            'input[name*="last" i]',
+            'input[autocomplete="family-name"]',
+        ],
+        personal["last_name"],
+    )
 
-    _try_fill(page, [
-        'input[type="email"]',
-        'input[name*="email" i]',
-        'input[autocomplete="email"]',
-    ], personal["email"])
+    _try_fill(
+        page,
+        [
+            'input[type="email"]',
+            'input[name*="email" i]',
+            'input[autocomplete="email"]',
+        ],
+        personal["email"],
+    )
 
-    _try_fill(page, [
-        'input[type="tel"]',
-        'input[name*="phone" i]',
-        'input[autocomplete="tel"]',
-    ], personal["phone"])
+    _try_fill(
+        page,
+        [
+            'input[type="tel"]',
+            'input[name*="phone" i]',
+            'input[autocomplete="tel"]',
+        ],
+        personal["phone"],
+    )
 
-    _try_fill(page, [
-        'input[name*="linkedin" i]',
-        'input[placeholder*="linkedin" i]',
-    ], personal.get("linkedin", ""))
+    _try_fill(
+        page,
+        [
+            'input[name*="linkedin" i]',
+            'input[placeholder*="linkedin" i]',
+        ],
+        personal.get("linkedin", ""),
+    )
 
     # File uploads
     cv_path = str(PROJECT_ROOT / app["cv"])
@@ -530,6 +605,7 @@ BROWSER_HANDLERS = {
 # CSV update
 # ---------------------------------------------------------------------------
 
+
 def update_csv_status(company: str, role: str, new_status: str = "applied"):
     """Update application status in tracking CSV."""
     csv_path = PROJECT_ROOT / "tracking" / "applications.csv"
@@ -538,7 +614,7 @@ def update_csv_status(company: str, role: str, new_status: str = "applied"):
 
     rows = []
     updated = False
-    with open(csv_path, "r", newline="") as f:
+    with open(csv_path, newline="") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames
         for row in reader:
@@ -560,17 +636,18 @@ def update_csv_status(company: str, role: str, new_status: str = "applied"):
 # Main orchestration
 # ---------------------------------------------------------------------------
 
+
 def confirm_and_submit_browser(page, company: str, role: str, dry_run: bool) -> bool:
     """Screenshot, ask for confirmation, click submit."""
     slug = company.lower().replace(" ", "-").replace(".", "")
     screenshot(page, f"pre_submit_{slug}")
 
     if dry_run:
-        print(f"\n    [DRY RUN] Form filled — NOT submitting.")
+        print("\n    [DRY RUN] Form filled — NOT submitting.")
         return True
 
     print(f"\n    >>> Form filled for {company} — {role}")
-    print(f"    >>> Review the browser window, then:")
+    print("    >>> Review the browser window, then:")
     response = input("    >>> ENTER=submit, s=skip, q=quit: ").strip().lower()
 
     if response == "q":
@@ -596,7 +673,7 @@ def confirm_and_submit_browser(page, company: str, role: str, dry_run: bool) -> 
         print(f"    SUBMITTED via browser: {company} — {role}")
         return True
     else:
-        print(f"    No submit button found — please click submit manually in the browser.")
+        print("    No submit button found — please click submit manually in the browser.")
         input("    Press ENTER when done...")
         return True
 
@@ -608,11 +685,11 @@ def process_application(page, personal: dict, app: dict, dry_run: bool, browser_
     url = app["url"]
     platform = detect_platform(url)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {company} — {role}")
     print(f"  Platform: {platform}")
     print(f"  URL: {url}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Verify files exist
     cv_path = PROJECT_ROOT / app["cv"]
@@ -626,31 +703,31 @@ def process_application(page, personal: dict, app: dict, dry_run: bool, browser_
 
     # ---- Try direct API first (Lever, Greenhouse) ----
     if not browser_only and platform == "lever":
-        print(f"  Attempting Lever API submission...")
+        print("  Attempting Lever API submission...")
         result = submit_lever_api(personal, app, dry_run)
         if result["ok"]:
             if not dry_run:
                 update_csv_status(company, role, "applied")
             return True
         else:
-            print(f"  API failed, falling back to browser...")
+            print("  API failed, falling back to browser...")
 
     if not browser_only and platform == "greenhouse":
-        print(f"  Attempting Greenhouse API submission...")
+        print("  Attempting Greenhouse API submission...")
         result = submit_greenhouse_api(personal, app, dry_run)
         if result["ok"]:
             if not dry_run:
                 update_csv_status(company, role, "applied")
             return True
         else:
-            print(f"  API failed, falling back to browser...")
+            print("  API failed, falling back to browser...")
 
     # ---- Browser fallback ----
     if platform == "linkedin":
-        print(f"  LinkedIn requires manual application — opening URL...")
+        print("  LinkedIn requires manual application — opening URL...")
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
         time.sleep(2)
-        print(f"  >>> Apply manually in the browser window.")
+        print("  >>> Apply manually in the browser window.")
         if not dry_run:
             response = input("  >>> Press ENTER when done, 's' to skip: ").strip().lower()
             if response == "s":
@@ -676,9 +753,13 @@ def process_application(page, personal: dict, app: dict, dry_run: bool, browser_
 def main():
     parser = argparse.ArgumentParser(description="Auto-submit job applications (API + browser)")
     parser.add_argument("config", help="Path to applications-to-submit.yaml")
-    parser.add_argument("--dry-run", action="store_true", help="Fill forms / simulate API but don't submit")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Fill forms / simulate API but don't submit"
+    )
     parser.add_argument("--only", help="Only process applications matching this string")
-    parser.add_argument("--browser-only", action="store_true", help="Skip API attempts, use browser for everything")
+    parser.add_argument(
+        "--browser-only", action="store_true", help="Skip API attempts, use browser for everything"
+    )
     args = parser.parse_args()
 
     config_path = Path(args.config)
@@ -695,8 +776,7 @@ def main():
     if args.only:
         needle = args.only.lower()
         applications = [
-            a for a in applications
-            if needle in a["company"].lower() or needle in a["role"].lower()
+            a for a in applications if needle in a["company"].lower() or needle in a["role"].lower()
         ]
 
     applications = [a for a in applications if a.get("status", "pending") == "pending"]
@@ -726,7 +806,7 @@ def main():
             print(f"    [{detect_platform(a['url'])}] {a['company']} — {a['role']}")
 
     if args.dry_run:
-        print(f"\n  MODE: DRY RUN")
+        print("\n  MODE: DRY RUN")
     print()
 
     submitted = 0
@@ -759,13 +839,13 @@ def main():
                     update_csv_status(company, role, "applied")
             else:
                 # Move to browser queue for retry
-                print(f"    → Moving to browser queue for retry")
+                print("    → Moving to browser queue for retry")
                 browser_apps.append(app)
                 errors += 1
 
     # ---- Phase 2: Browser submissions ----
     if browser_apps:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("PHASE 2: Browser submissions")
         print("=" * 60)
 
@@ -799,10 +879,10 @@ def main():
     with open(config_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"DONE: {submitted} submitted, {errors} errors")
     print(f"Config saved: {config_path}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

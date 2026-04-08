@@ -296,7 +296,8 @@ class TestSkillsList:
     def test_list_filter_no_results(self, skills_db: Session) -> None:
         """Filter with no matching skills shows friendly message."""
         result = runner.invoke(
-            app, ["skills", "list", "--category", "tools", "--source", "cv.yaml"],
+            app,
+            ["skills", "list", "--category", "tools", "--source", "cv.yaml"],
         )
         assert result.exit_code == 0
         out = result.output.lower()
@@ -367,7 +368,8 @@ class TestSkillsGapsApplication:
         skills_db.commit()
 
         result = runner.invoke(
-            app, ["skills", "gaps", "--application", str(app_obj.id)],
+            app,
+            ["skills", "gaps", "--application", str(app_obj.id)],
         )
         assert result.exit_code != 0
         out = result.output.lower()

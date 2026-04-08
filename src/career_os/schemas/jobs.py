@@ -110,12 +110,8 @@ class SavedSearchCreate(BaseModel):
 class SavedSearchUpdate(BaseModel):
     """Request body for updating a saved search."""
 
-    name: str | None = Field(
-        default=None, min_length=1, max_length=255, description="Search name"
-    )
-    config: SavedSearchConfig | None = Field(
-        default=None, description="Updated configuration"
-    )
+    name: str | None = Field(default=None, min_length=1, max_length=255, description="Search name")
+    config: SavedSearchConfig | None = Field(default=None, description="Updated configuration")
 
 
 class SavedSearchResponse(BaseModel):

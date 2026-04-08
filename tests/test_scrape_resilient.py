@@ -1,12 +1,8 @@
 """Tests for tools/scrape_resilient.py — all scrapers, dedup, retry logic."""
 
 import json
-import time
 from dataclasses import asdict
 from unittest.mock import MagicMock, patch
-
-import httpx
-import pytest
 
 from scrape_resilient import (
     ScrapedJob,
@@ -15,13 +11,12 @@ from scrape_resilient import (
     deduplicate,
     save_results,
     scrape_aijobs,
+    scrape_germantechjobs,
     scrape_jobicy,
     scrape_remoteok,
     scrape_remotive,
     scrape_weworkremotely,
-    scrape_germantechjobs,
 )
-
 
 # ==================== ScrapedJob dataclass ====================
 
@@ -444,9 +439,7 @@ class TestScrapeAiJobs:
     def test_handles_dict_response(self, mock_client_cls, mock_sleep, mock_delay):
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "jobs": [
-                {"title": "ML Eng", "company": "Co", "location": "Berlin"}
-            ]
+            "jobs": [{"title": "ML Eng", "company": "Co", "location": "Berlin"}]
         }
         mock_response.raise_for_status = MagicMock()
         mock_client = MagicMock()

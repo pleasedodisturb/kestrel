@@ -92,9 +92,7 @@ async def update_star_story_endpoint(
 ) -> StarStoryResponse:
     """Update an existing STAR story."""
     try:
-        return update_star_story(
-            db=db, story_id=story_id, profile_id=profile_id, data=body
-        )
+        return update_star_story(db=db, story_id=story_id, profile_id=profile_id, data=body)
     except ProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except StoryNotFoundError as exc:
@@ -137,9 +135,7 @@ async def get_recommended_stories_endpoint(
     Matches story skill tags against application's job requirements.
     """
     try:
-        return get_recommended_stories(
-            db=db, application_id=application_id, profile_id=profile_id
-        )
+        return get_recommended_stories(db=db, application_id=application_id, profile_id=profile_id)
     except ProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ApplicationNotFoundError as exc:
@@ -161,9 +157,7 @@ async def get_story_gaps_endpoint(
     as story gaps with a prompt to create a new story.
     """
     try:
-        return get_story_gaps(
-            db=db, application_id=application_id, profile_id=profile_id
-        )
+        return get_story_gaps(db=db, application_id=application_id, profile_id=profile_id)
     except ProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ApplicationNotFoundError as exc:

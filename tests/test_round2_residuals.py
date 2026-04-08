@@ -40,9 +40,7 @@ from career_os.services.salary import parse_salary_range, salary_midpoint
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -58,8 +56,11 @@ def db_session():
 
     # Seed a profile
     profile = Profile(
-        id=1, name="Test User", email="test@example.com",
-        location="Frankfurt", job_family="TPM",
+        id=1,
+        name="Test User",
+        email="test@example.com",
+        location="Frankfurt",
+        job_family="TPM",
     )
     session.add(profile)
     session.commit()
@@ -185,6 +186,7 @@ class TestOpenRouterScoreBreakdown:
 
         provider = OpenRouterProvider(api_key="test-key")
         import inspect
+
         source = inspect.getsource(provider.score)
         assert "score_breakdown" in source
 
@@ -200,32 +202,36 @@ class TestSalaryTrendsLocationGrouping:
     def test_trends_grouped_by_location(self, db_session: Session, profile: Profile):
         """Jobs in different locations should produce separate trend entries."""
         now = datetime.now(UTC)
-        db_session.add(DiscoveredJob(
-            profile_id=profile.id,
-            title="Senior TPM",
-            company="CompA",
-            location="Frankfurt",
-            salary_range="120000-160000 EUR",
-            title_normalized="senior tpm",
-            company_normalized="compa",
-            location_normalized="frankfurt",
-            sources="[]",
-            source_urls="[]",
-            posted_at=now,
-        ))
-        db_session.add(DiscoveredJob(
-            profile_id=profile.id,
-            title="Senior TPM",
-            company="CompB",
-            location="Berlin",
-            salary_range="100000-140000 EUR",
-            title_normalized="senior tpm",
-            company_normalized="compb",
-            location_normalized="berlin",
-            sources="[]",
-            source_urls="[]",
-            posted_at=now,
-        ))
+        db_session.add(
+            DiscoveredJob(
+                profile_id=profile.id,
+                title="Senior TPM",
+                company="CompA",
+                location="Frankfurt",
+                salary_range="120000-160000 EUR",
+                title_normalized="senior tpm",
+                company_normalized="compa",
+                location_normalized="frankfurt",
+                sources="[]",
+                source_urls="[]",
+                posted_at=now,
+            )
+        )
+        db_session.add(
+            DiscoveredJob(
+                profile_id=profile.id,
+                title="Senior TPM",
+                company="CompB",
+                location="Berlin",
+                salary_range="100000-140000 EUR",
+                title_normalized="senior tpm",
+                company_normalized="compb",
+                location_normalized="berlin",
+                sources="[]",
+                source_urls="[]",
+                posted_at=now,
+            )
+        )
         db_session.commit()
 
         result = get_salary_trends(db_session, profile.id)
@@ -240,19 +246,21 @@ class TestSalaryTrendsLocationGrouping:
         """Jobs in the same location should be aggregated together."""
         now = datetime.now(UTC)
         for i in range(3):
-            db_session.add(DiscoveredJob(
-                profile_id=profile.id,
-                title="Engineer",
-                company=f"Comp{i}",
-                location="Frankfurt",
-                salary_range=f"{100000 + i * 10000}-{130000 + i * 10000} EUR",
-                title_normalized="engineer",
-                company_normalized=f"comp{i}",
-                location_normalized="frankfurt",
-                sources="[]",
-                source_urls="[]",
-                posted_at=now,
-            ))
+            db_session.add(
+                DiscoveredJob(
+                    profile_id=profile.id,
+                    title="Engineer",
+                    company=f"Comp{i}",
+                    location="Frankfurt",
+                    salary_range=f"{100000 + i * 10000}-{130000 + i * 10000} EUR",
+                    title_normalized="engineer",
+                    company_normalized=f"comp{i}",
+                    location_normalized="frankfurt",
+                    sources="[]",
+                    source_urls="[]",
+                    posted_at=now,
+                )
+            )
         db_session.commit()
 
         result = get_salary_trends(db_session, profile.id)
@@ -265,19 +273,21 @@ class TestSalaryTrendsLocationGrouping:
     def test_trend_location_field_not_empty(self, db_session: Session, profile: Profile):
         """Even without a location filter param, trends should have actual locations."""
         now = datetime.now(UTC)
-        db_session.add(DiscoveredJob(
-            profile_id=profile.id,
-            title="TPM",
-            company="TestCo",
-            location="Munich",
-            salary_range="120000-150000 EUR",
-            title_normalized="tpm",
-            company_normalized="testco",
-            location_normalized="munich",
-            sources="[]",
-            source_urls="[]",
-            posted_at=now,
-        ))
+        db_session.add(
+            DiscoveredJob(
+                profile_id=profile.id,
+                title="TPM",
+                company="TestCo",
+                location="Munich",
+                salary_range="120000-150000 EUR",
+                title_normalized="tpm",
+                company_normalized="testco",
+                location_normalized="munich",
+                sources="[]",
+                source_urls="[]",
+                posted_at=now,
+            )
+        )
         db_session.commit()
 
         result = get_salary_trends(db_session, profile.id)
@@ -389,9 +399,7 @@ class TestScheduledDiscoveryGating:
         db_session.add(sp)
         db_session.commit()
 
-        mock_target = (
-            "career_os.services.discovery.run_discovery"
-        )
+        mock_target = "career_os.services.discovery.run_discovery"
         with patch(mock_target, new_callable=AsyncMock) as mock_run:
             mock_run.return_value = {
                 "run_id": 1,
@@ -435,9 +443,7 @@ class TestScheduledDiscoveryGating:
         db_session.add(sp)
         db_session.commit()
 
-        mock_target = (
-            "career_os.services.discovery.run_discovery"
-        )
+        mock_target = "career_os.services.discovery.run_discovery"
         with patch(mock_target, new_callable=AsyncMock) as mock_run:
             mock_run.return_value = {
                 "run_id": 1,
@@ -463,23 +469,29 @@ class TestSearchProfileCadenceExposure:
     """Verify SearchProfile API response includes cadence/next_run fields."""
 
     def test_create_search_profile_returns_cadence(self, client):
-        resp = client.post("/api/search-profiles", json={
-            "profile_id": 1,
-            "name": "Weekly TPM Search",
-            "keywords": ["TPM", "AI"],
-            "locations": ["Frankfurt"],
-        })
+        resp = client.post(
+            "/api/search-profiles",
+            json={
+                "profile_id": 1,
+                "name": "Weekly TPM Search",
+                "keywords": ["TPM", "AI"],
+                "locations": ["Frankfurt"],
+            },
+        )
         assert resp.status_code == 201
         data = resp.json()
         assert "cadence" in data
         assert "next_run" in data
 
     def test_list_search_profiles_shows_cadence(self, client):
-        client.post("/api/search-profiles", json={
-            "profile_id": 1,
-            "name": "Daily Search",
-            "keywords": ["engineer"],
-        })
+        client.post(
+            "/api/search-profiles",
+            json={
+                "profile_id": 1,
+                "name": "Daily Search",
+                "keywords": ["engineer"],
+            },
+        )
         resp = client.get("/api/search-profiles?profile_id=1")
         assert resp.status_code == 200
         data = resp.json()
@@ -488,11 +500,14 @@ class TestSearchProfileCadenceExposure:
             assert "next_run" in sp
 
     def test_get_search_profile_shows_cadence(self, client):
-        create_resp = client.post("/api/search-profiles", json={
-            "profile_id": 1,
-            "name": "Test Search",
-            "keywords": ["python"],
-        })
+        create_resp = client.post(
+            "/api/search-profiles",
+            json={
+                "profile_id": 1,
+                "name": "Test Search",
+                "keywords": ["python"],
+            },
+        )
         sp_id = create_resp.json()["id"]
 
         resp = client.get(f"/api/search-profiles/{sp_id}?profile_id=1")

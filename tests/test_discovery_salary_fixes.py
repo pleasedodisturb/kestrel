@@ -35,9 +35,7 @@ from career_os.services.salary import parse_salary_range, salary_midpoint
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -52,12 +50,8 @@ def db_session():
     session = TestSession()
 
     # Seed two profiles
-    profile_a = Profile(
-        id=1, name="Profile A", email="a@test.com", location="Frankfurt"
-    )
-    profile_b = Profile(
-        id=2, name="Profile B", email="b@test.com", location="Berlin"
-    )
+    profile_a = Profile(id=1, name="Profile A", email="a@test.com", location="Frankfurt")
+    profile_b = Profile(id=2, name="Profile B", email="b@test.com", location="Berlin")
     session.add_all([profile_a, profile_b])
     session.commit()
 
@@ -169,16 +163,8 @@ class TestDedupProfileScoped:
             assert result_b["new_jobs"] == 1
 
         # Both profiles have their own row
-        jobs_a = (
-            db_session.query(DiscoveredJob)
-            .filter(DiscoveredJob.profile_id == 1)
-            .all()
-        )
-        jobs_b = (
-            db_session.query(DiscoveredJob)
-            .filter(DiscoveredJob.profile_id == 2)
-            .all()
-        )
+        jobs_a = db_session.query(DiscoveredJob).filter(DiscoveredJob.profile_id == 1).all()
+        jobs_b = db_session.query(DiscoveredJob).filter(DiscoveredJob.profile_id == 2).all()
         assert len(jobs_a) == 1
         assert len(jobs_b) == 1
         assert jobs_a[0].id != jobs_b[0].id
@@ -217,11 +203,7 @@ class TestDedupProfileScoped:
             assert result2["duplicates"] == 1
 
         # Only one row for profile A
-        jobs = (
-            db_session.query(DiscoveredJob)
-            .filter(DiscoveredJob.profile_id == 1)
-            .all()
-        )
+        jobs = db_session.query(DiscoveredJob).filter(DiscoveredJob.profile_id == 1).all()
         assert len(jobs) == 1
 
 
@@ -292,11 +274,7 @@ class TestSavedSearchFiltersApplied:
 
         # Only the high-salary job should be saved
         assert result["new_jobs"] == 1
-        jobs = (
-            db_session.query(DiscoveredJob)
-            .filter(DiscoveredJob.profile_id == 1)
-            .all()
-        )
+        jobs = db_session.query(DiscoveredJob).filter(DiscoveredJob.profile_id == 1).all()
         assert len(jobs) == 1
         assert jobs[0].company == "BigCo"
 
@@ -357,11 +335,7 @@ class TestSavedSearchFiltersApplied:
             )
 
         assert result["new_jobs"] == 1
-        jobs = (
-            db_session.query(DiscoveredJob)
-            .filter(DiscoveredJob.profile_id == 1)
-            .all()
-        )
+        jobs = db_session.query(DiscoveredJob).filter(DiscoveredJob.profile_id == 1).all()
         assert len(jobs) == 1
         assert jobs[0].company == "RemoteCo"
 
@@ -656,73 +630,43 @@ class TestPassesSpFilters:
         return base
 
     def test_empty_filters_passes(self):
-        merged = self._make_merged(
-            salary_range="50000", sources=["indeed"]
-        )
+        merged = self._make_merged(salary_range="50000", sources=["indeed"])
         assert _passes_sp_filters(merged, {}) is True
 
     def test_salary_min_passes(self):
-        merged = self._make_merged(
-            salary_range="130000-160000 EUR"
-        )
-        assert _passes_sp_filters(
-            merged, {"salary_min": 100000}
-        ) is True
+        merged = self._make_merged(salary_range="130000-160000 EUR")
+        assert _passes_sp_filters(merged, {"salary_min": 100000}) is True
 
     def test_salary_min_fails(self):
         merged = self._make_merged(salary_range="50000 EUR")
-        assert _passes_sp_filters(
-            merged, {"salary_min": 100000}
-        ) is False
+        assert _passes_sp_filters(merged, {"salary_min": 100000}) is False
 
     def test_salary_max_passes(self):
         merged = self._make_merged(salary_range="50000 EUR")
-        assert _passes_sp_filters(
-            merged, {"salary_max": 100000}
-        ) is True
+        assert _passes_sp_filters(merged, {"salary_max": 100000}) is True
 
     def test_salary_max_fails(self):
         merged = self._make_merged(salary_range="200000 EUR")
-        assert _passes_sp_filters(
-            merged, {"salary_max": 100000}
-        ) is False
+        assert _passes_sp_filters(merged, {"salary_max": 100000}) is False
 
     def test_no_salary_fails_min_filter(self):
         merged = self._make_merged()
-        assert _passes_sp_filters(
-            merged, {"salary_min": 100000}
-        ) is False
+        assert _passes_sp_filters(merged, {"salary_min": 100000}) is False
 
     def test_remote_filter_true(self):
-        merged = self._make_merged(
-            remote=True, location="Remote"
-        )
-        assert _passes_sp_filters(
-            merged, {"remote": True}
-        ) is True
+        merged = self._make_merged(remote=True, location="Remote")
+        assert _passes_sp_filters(merged, {"remote": True}) is True
 
     def test_remote_filter_false(self):
         merged = self._make_merged(remote=False)
-        assert _passes_sp_filters(
-            merged, {"remote": True}
-        ) is False
+        assert _passes_sp_filters(merged, {"remote": True}) is False
 
     def test_company_filter(self):
         merged = self._make_merged(company="Stripe Inc")
-        assert _passes_sp_filters(
-            merged, {"company": "stripe"}
-        ) is True
-        assert _passes_sp_filters(
-            merged, {"company": "Google"}
-        ) is False
+        assert _passes_sp_filters(merged, {"company": "stripe"}) is True
+        assert _passes_sp_filters(merged, {"company": "Google"}) is False
 
     def test_location_filter(self):
-        merged = self._make_merged(
-            location="Frankfurt, Germany"
-        )
-        assert _passes_sp_filters(
-            merged, {"location": "Frankfurt"}
-        ) is True
-        assert _passes_sp_filters(
-            merged, {"location": "Berlin"}
-        ) is False
+        merged = self._make_merged(location="Frankfurt, Germany")
+        assert _passes_sp_filters(merged, {"location": "Frankfurt"}) is True
+        assert _passes_sp_filters(merged, {"location": "Berlin"}) is False

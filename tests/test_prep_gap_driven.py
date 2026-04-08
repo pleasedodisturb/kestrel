@@ -32,9 +32,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -184,9 +182,7 @@ class TestPrepContentChangesAfterGapResolution:
 
         # Verify initial prep includes Kubernetes gap content
         all_text1 = " ".join(topics1 + questions1 + checklist1)
-        assert "Kubernetes" in all_text1, (
-            "Initial prep should reference Kubernetes gap"
-        )
+        assert "Kubernetes" in all_text1, "Initial prep should reference Kubernetes gap"
 
         # Step 2: Add Kubernetes skill at advanced level (closing the gap)
         future = datetime.now(UTC) + timedelta(seconds=5)
@@ -214,8 +210,7 @@ class TestPrepContentChangesAfterGapResolution:
 
         # Step 4: Prep content MUST be different
         assert topics1 != topics2, (
-            f"Topics should change after gap resolution.\n"
-            f"Before: {topics1}\nAfter: {topics2}"
+            f"Topics should change after gap resolution.\nBefore: {topics1}\nAfter: {topics2}"
         )
 
     def test_resolved_gap_topics_omitted(
@@ -261,13 +256,9 @@ class TestPrepContentChangesAfterGapResolution:
         topics2 = [t["topic"] for t in data2["topics"]]
 
         # Kubernetes-specific gap topic should be gone
-        k8s_gap_topics = [
-            t for t in topics2
-            if "Kubernetes" in t and "Gap" in t
-        ]
+        k8s_gap_topics = [t for t in topics2 if "Kubernetes" in t and "Gap" in t]
         assert len(k8s_gap_topics) == 0, (
-            f"Kubernetes gap topic should be omitted after gap resolution. "
-            f"Found: {k8s_gap_topics}"
+            f"Kubernetes gap topic should be omitted after gap resolution. Found: {k8s_gap_topics}"
         )
 
     def test_checklist_changes_after_gap_resolution(
@@ -312,9 +303,7 @@ class TestPrepContentChangesAfterGapResolution:
         data2 = resp2.json()
         checklist2 = [c["item"] for c in data2["checklist"]]
 
-        assert checklist1 != checklist2, (
-            "Checklist should change after gap resolution"
-        )
+        assert checklist1 != checklist2, "Checklist should change after gap resolution"
 
     def test_questions_change_after_gap_resolution(
         self,
@@ -334,9 +323,7 @@ class TestPrepContentChangesAfterGapResolution:
 
         # Should have gap-specific questions
         k8s_questions = [q for q in questions1 if "Kubernetes" in q]
-        assert len(k8s_questions) > 0, (
-            "Should have Kubernetes gap question initially"
-        )
+        assert len(k8s_questions) > 0, "Should have Kubernetes gap question initially"
 
         # Step 2: Close the gap
         future = datetime.now(UTC) + timedelta(seconds=5)
@@ -360,9 +347,7 @@ class TestPrepContentChangesAfterGapResolution:
         data2 = resp2.json()
         questions2 = [q["question"] for q in data2["questions"]]
 
-        assert questions1 != questions2, (
-            "Questions should change after gap resolution"
-        )
+        assert questions1 != questions2, "Questions should change after gap resolution"
 
 
 class TestGapDrivenTopicGeneration:
@@ -384,9 +369,7 @@ class TestGapDrivenTopicGeneration:
         all_text = " ".join(topics)
 
         # Kubernetes (missing entirely, distance 3) should appear
-        assert "Kubernetes" in all_text, (
-            "Kubernetes gap should produce a topic"
-        )
+        assert "Kubernetes" in all_text, "Kubernetes gap should produce a topic"
 
     def test_met_requirement_not_in_gap_topics(
         self,
@@ -403,12 +386,9 @@ class TestGapDrivenTopicGeneration:
         topics = [t["topic"] for t in data["topics"]]
 
         # Python should not appear as a gap topic
-        python_gap_topics = [
-            t for t in topics if "Python" in t and "Gap" in t
-        ]
+        python_gap_topics = [t for t in topics if "Python" in t and "Gap" in t]
         assert len(python_gap_topics) == 0, (
-            f"Python (met requirement) should not appear as gap topic. "
-            f"Found: {python_gap_topics}"
+            f"Python (met requirement) should not appear as gap topic. Found: {python_gap_topics}"
         )
 
     def test_fewer_gap_topics_when_all_gaps_resolved(
@@ -503,15 +483,12 @@ class TestGapDrivenTopicGeneration:
 
         # Topics should differ because the distance changed (3 → 1)
         assert topics1 != topics2, (
-            f"Topics should change when gap distance changes.\n"
-            f"Before: {topics1}\nAfter: {topics2}"
+            f"Topics should change when gap distance changes.\nBefore: {topics1}\nAfter: {topics2}"
         )
 
         # Kubernetes should still appear since it's still a gap
         k8s_topics = [t for t in topics2 if "Kubernetes" in t]
-        assert len(k8s_topics) > 0, (
-            "Kubernetes should still appear as gap topic (distance 1)"
-        )
+        assert len(k8s_topics) > 0, "Kubernetes should still appear as gap topic (distance 1)"
 
 
 class TestGapDrivenQuestionsAndChecklist:
@@ -533,9 +510,7 @@ class TestGapDrivenQuestionsAndChecklist:
 
         # Should have a question about Kubernetes
         k8s_questions = [q for q in questions if "Kubernetes" in q]
-        assert len(k8s_questions) > 0, (
-            "Should have a gap-targeted question for Kubernetes"
-        )
+        assert len(k8s_questions) > 0, "Should have a gap-targeted question for Kubernetes"
 
     def test_unresolved_gap_generates_checklist_item(
         self,
@@ -553,9 +528,7 @@ class TestGapDrivenQuestionsAndChecklist:
 
         # Should have a checklist item for Kubernetes
         k8s_items = [c for c in checklist if "Kubernetes" in c]
-        assert len(k8s_items) > 0, (
-            "Should have a gap-targeted checklist item for Kubernetes"
-        )
+        assert len(k8s_items) > 0, "Should have a gap-targeted checklist item for Kubernetes"
 
     def test_total_prep_time_changes_with_gap_resolution(
         self,

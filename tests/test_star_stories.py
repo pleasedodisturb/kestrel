@@ -32,9 +32,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -154,22 +152,15 @@ def sample_story_data() -> dict:
     """Sample STAR story creation data."""
     return {
         "title": "Led Kubernetes Migration at Scale",
-        "situation": (
-            "Our company needed to migrate 200+ microservices "
-            "from VMs to Kubernetes."
-        ),
+        "situation": ("Our company needed to migrate 200+ microservices from VMs to Kubernetes."),
         "task": (
-            "As TPM, I was responsible for planning and executing "
-            "the migration across 5 teams."
+            "As TPM, I was responsible for planning and executing the migration across 5 teams."
         ),
         "action": (
             "Created a phased migration plan, established rollback "
             "procedures, and ran weekly syncs."
         ),
-        "result": (
-            "Completed migration 2 weeks ahead of schedule "
-            "with zero downtime incidents."
-        ),
+        "result": ("Completed migration 2 weeks ahead of schedule with zero downtime incidents."),
         "skill_tags": ["Kubernetes", "Program Management", "Cross-functional Leadership"],
     }
 
@@ -1128,9 +1119,7 @@ class TestEdgeCases:
 class TestStarStoryUpdateValidation:
     """Test that PUT /api/star-stories/{id} with empty fields returns 422."""
 
-    def _create_story(
-        self, client: TestClient, profile_id: int
-    ) -> dict:
+    def _create_story(self, client: TestClient, profile_id: int) -> dict:
         """Helper to create a story for testing."""
         resp = client.post(
             "/api/star-stories",
@@ -1147,9 +1136,7 @@ class TestStarStoryUpdateValidation:
         assert resp.status_code == 201
         return resp.json()
 
-    def test_update_empty_situation_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_update_empty_situation_422(self, client: TestClient, test_profile: Profile):
         """PUT with empty situation returns 422."""
         story = self._create_story(client, test_profile.id)
         response = client.put(
@@ -1159,9 +1146,7 @@ class TestStarStoryUpdateValidation:
         )
         assert response.status_code == 422
 
-    def test_update_empty_task_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_update_empty_task_422(self, client: TestClient, test_profile: Profile):
         """PUT with empty task returns 422."""
         story = self._create_story(client, test_profile.id)
         response = client.put(
@@ -1171,9 +1156,7 @@ class TestStarStoryUpdateValidation:
         )
         assert response.status_code == 422
 
-    def test_update_empty_action_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_update_empty_action_422(self, client: TestClient, test_profile: Profile):
         """PUT with empty action returns 422."""
         story = self._create_story(client, test_profile.id)
         response = client.put(
@@ -1183,9 +1166,7 @@ class TestStarStoryUpdateValidation:
         )
         assert response.status_code == 422
 
-    def test_update_empty_result_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_update_empty_result_422(self, client: TestClient, test_profile: Profile):
         """PUT with empty result returns 422."""
         story = self._create_story(client, test_profile.id)
         response = client.put(
@@ -1195,9 +1176,7 @@ class TestStarStoryUpdateValidation:
         )
         assert response.status_code == 422
 
-    def test_update_empty_title_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_update_empty_title_422(self, client: TestClient, test_profile: Profile):
         """PUT with empty title returns 422."""
         story = self._create_story(client, test_profile.id)
         response = client.put(
@@ -1207,9 +1186,7 @@ class TestStarStoryUpdateValidation:
         )
         assert response.status_code == 422
 
-    def test_update_null_fields_allowed(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_update_null_fields_allowed(self, client: TestClient, test_profile: Profile):
         """PUT with null/missing fields is OK (no change)."""
         story = self._create_story(client, test_profile.id)
         response = client.put(
@@ -1220,9 +1197,7 @@ class TestStarStoryUpdateValidation:
         assert response.status_code == 200
         assert "Go" in response.json()["skill_tags"]
 
-    def test_update_non_empty_fields_ok(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_update_non_empty_fields_ok(self, client: TestClient, test_profile: Profile):
         """PUT with valid non-empty fields succeeds."""
         story = self._create_story(client, test_profile.id)
         response = client.put(

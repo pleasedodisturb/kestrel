@@ -51,6 +51,7 @@ class ResearchError(Exception):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 # Known ATS platforms to detect from company career pages
 def _persist_research_report(
     db: Session,
@@ -170,7 +171,7 @@ Return a JSON object with the following structure:
    - work_life_balance: numeric rating 0-5
 
 4. values_alignment: numeric score 1-10 representing alignment with user's values:
-   {json.dumps(profile_context['values'], indent=2)}
+   {json.dumps(profile_context["values"], indent=2)}
    Include a rationale referencing specific user values.
 
 5. ats_platform: detected ATS platform (Greenhouse, Lever, Ashby, Workday, etc.) or null
@@ -294,9 +295,7 @@ def _parse_ai_result(
         else:
             values_score = float(va)
     except Exception as exc:
-        logger.warning(
-            "Failed to parse values alignment for %s: %s", company_name, exc
-        )
+        logger.warning("Failed to parse values alignment for %s: %s", company_name, exc)
         warnings.append(SourceWarning(source="values_alignment", error=str(exc)))
 
     # ATS platform
@@ -304,20 +303,14 @@ def _parse_ai_result(
 
     # Hiring patterns
     try:
-        hp_data = (
-            result.hiring_patterns
-            if isinstance(result.hiring_patterns, dict)
-            else {}
-        )
+        hp_data = result.hiring_patterns if isinstance(result.hiring_patterns, dict) else {}
         hiring_patterns = HiringPatternsReport(
             active_postings=hp_data.get("active_postings"),
             posting_velocity=hp_data.get("posting_velocity"),
             top_departments=hp_data.get("top_departments", []),
         )
     except Exception as exc:
-        logger.warning(
-            "Failed to parse hiring patterns for %s: %s", company_name, exc
-        )
+        logger.warning("Failed to parse hiring patterns for %s: %s", company_name, exc)
         hiring_patterns = HiringPatternsReport()
         warnings.append(SourceWarning(source="hiring_patterns", error=str(exc)))
 

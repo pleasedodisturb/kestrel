@@ -23,12 +23,8 @@ class PrepTopic(BaseModel):
     """A topic from the personalized topic list (VAL-PREP-001)."""
 
     topic: str = Field(..., description="Topic name/title")
-    relevance: str = Field(
-        ..., description="Relevance level: high, medium, low"
-    )
-    difficulty: str = Field(
-        ..., description="Difficulty level: high, medium, low"
-    )
+    relevance: str = Field(..., description="Relevance level: high, medium, low")
+    difficulty: str = Field(..., description="Difficulty level: high, medium, low")
     source: str | None = Field(
         default=None,
         description="Where this topic was derived from (JD requirement, skill gap, company style)",
@@ -63,9 +59,7 @@ class PrepChecklistItem(BaseModel):
     time_minutes: int = Field(..., ge=0, description="Estimated time in minutes")
     priority: str = Field(..., description="Priority: high, medium, low")
     completed: bool = Field(default=False, description="Completion state")
-    completed_at: datetime | None = Field(
-        default=None, description="When the item was completed"
-    )
+    completed_at: datetime | None = Field(default=None, description="When the item was completed")
 
 
 class PrepItemUpdate(BaseModel):
@@ -89,9 +83,7 @@ class InterviewPrepResponse(BaseModel):
     application_id: int = Field(..., description="Application this prep is for")
     company: str = Field(..., description="Company name")
     role: str = Field(..., description="Role title")
-    company_researched: bool = Field(
-        ..., description="Whether the company has been researched"
-    )
+    company_researched: bool = Field(..., description="Whether the company has been researched")
     research_prompt: str | None = Field(
         default=None,
         description="Prompt to research the company first (if not yet researched)",
@@ -111,18 +103,12 @@ class InterviewPrepResponse(BaseModel):
     total_prep_minutes: int = Field(
         default=0, description="Total estimated preparation time in minutes"
     )
-    total_prep_hours: float = Field(
-        default=0.0, description="Total estimated preparation hours"
-    )
+    total_prep_hours: float = Field(default=0.0, description="Total estimated preparation hours")
     progress_percentage: float = Field(
         default=0.0,
         ge=0.0,
         le=100.0,
         description="Percentage of checklist items completed (VAL-PREP-004)",
     )
-    completed_items: int = Field(
-        default=0, description="Number of completed checklist items"
-    )
-    total_items: int = Field(
-        default=0, description="Total number of checklist items"
-    )
+    completed_items: int = Field(default=0, description="Number of completed checklist items")
+    total_items: int = Field(default=0, description="Total number of checklist items")

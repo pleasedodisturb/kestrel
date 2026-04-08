@@ -51,9 +51,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -899,16 +897,36 @@ class TestSkillsAPIList:
         db: Session = next(db_gen)
 
         skills_data = [
-            {"name": "Python", "category": "technical", "proficiency": "expert",
-             "evidence_source": "cv.yaml"},
-            {"name": "JavaScript", "category": "technical", "proficiency": "intermediate",
-             "evidence_source": "cv.yaml"},
-            {"name": "Communication", "category": "soft", "proficiency": "expert",
-             "evidence_source": "assessment:cliftonstrengths"},
-            {"name": "Jira", "category": "tools", "proficiency": "advanced",
-             "evidence_source": "cv.yaml"},
-            {"name": "Program Management", "category": "domain", "proficiency": "expert",
-             "evidence_source": "profile"},
+            {
+                "name": "Python",
+                "category": "technical",
+                "proficiency": "expert",
+                "evidence_source": "cv.yaml",
+            },
+            {
+                "name": "JavaScript",
+                "category": "technical",
+                "proficiency": "intermediate",
+                "evidence_source": "cv.yaml",
+            },
+            {
+                "name": "Communication",
+                "category": "soft",
+                "proficiency": "expert",
+                "evidence_source": "assessment:cliftonstrengths",
+            },
+            {
+                "name": "Jira",
+                "category": "tools",
+                "proficiency": "advanced",
+                "evidence_source": "cv.yaml",
+            },
+            {
+                "name": "Program Management",
+                "category": "domain",
+                "proficiency": "expert",
+                "evidence_source": "profile",
+            },
         ]
         for s in skills_data:
             skill = Skill(profile_id=profile_id, **s)
@@ -1276,9 +1294,7 @@ class TestSkillsIngestionAPI:
 
         # Check that a skill present in both CV and profile has merged evidence_source
         # "Cross-functional Leadership" or "Stakeholder Management" should be in both
-        resp = client.get(
-            f"/api/skills?profile_id={test_profile.id}&q=Stakeholder"
-        )
+        resp = client.get(f"/api/skills?profile_id={test_profile.id}&q=Stakeholder")
         skills_data = resp.json()
         if skills_data["total"] > 0:
             skill = skills_data["skills"][0]
@@ -1313,9 +1329,7 @@ class TestSkillsIngestionAPI:
 
         # "Cross-functional leadership" is in CV and "Cross-functional Leadership" in profile
         # After multi-source ingestion, proficiency should be at least advanced
-        resp = client.get(
-            f"/api/skills?profile_id={test_profile.id}&q=Cross-functional"
-        )
+        resp = client.get(f"/api/skills?profile_id={test_profile.id}&q=Cross-functional")
         skills_data = resp.json()
         if skills_data["total"] > 0:
             skill = skills_data["skills"][0]

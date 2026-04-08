@@ -6,7 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -51,6 +50,7 @@ class Direction(StrEnum):
 
 class ContactRole(StrEnum):
     """Role a contact plays for a specific application."""
+
     referrer = "referrer"
     recruiter = "recruiter"
     hiring_manager = "hiring_manager"
@@ -78,6 +78,7 @@ def _ensure_utc(v: Any) -> datetime | None:
 
 class ContactCreate(BaseModel):
     """Request body for POST /api/contacts."""
+
     profile_id: int = Field(..., description="Profile this contact belongs to")
     name: str = Field(..., min_length=1, max_length=255, description="Contact name")
     company: str | None = Field(default=None, max_length=255, description="Company")
@@ -85,9 +86,7 @@ class ContactCreate(BaseModel):
     email: str | None = Field(default=None, max_length=255, description="Email address")
     linkedin_url: str | None = Field(default=None, max_length=500, description="LinkedIn URL")
     phone: str | None = Field(default=None, max_length=50, description="Phone number")
-    relationship_type: str = Field(
-        default="other", description="Relationship type"
-    )
+    relationship_type: str = Field(default="other", description="Relationship type")
     referral_status: str | None = Field(default=None, description="Referral status")
     warmth: str = Field(default="cold", description="Connection strength")
     notes: str | None = Field(default=None, description="Free-text notes")
@@ -134,6 +133,7 @@ class ContactCreate(BaseModel):
 
 class ContactUpdate(BaseModel):
     """Request body for PATCH /api/contacts/{id}."""
+
     name: str | None = Field(default=None, min_length=1, max_length=255)
     company: str | None = Field(default=None, max_length=255)
     role: str | None = Field(default=None, max_length=255)
@@ -189,6 +189,7 @@ class ContactUpdate(BaseModel):
 
 class ContactResponse(BaseModel):
     """Response schema for a single contact."""
+
     id: int
     profile_id: int
     name: str
@@ -212,8 +213,11 @@ class ContactResponse(BaseModel):
     model_config = {"from_attributes": True}
 
     @field_validator(
-        "created_at", "updated_at", "archived_at",
-        "last_contacted_at", "next_follow_up",
+        "created_at",
+        "updated_at",
+        "archived_at",
+        "last_contacted_at",
+        "next_follow_up",
         mode="before",
     )
     @classmethod
@@ -228,6 +232,7 @@ class ContactResponse(BaseModel):
             return None
         if isinstance(v, str):
             import json
+
             try:
                 parsed = json.loads(v)
                 return parsed if isinstance(parsed, list) else None
@@ -238,6 +243,7 @@ class ContactResponse(BaseModel):
 
 class ContactListResponse(BaseModel):
     """Response schema for list of contacts."""
+
     contacts: list[ContactResponse]
     total: int
 
@@ -249,6 +255,7 @@ class ContactListResponse(BaseModel):
 
 class InteractionCreate(BaseModel):
     """Request body for POST /api/contacts/{id}/interactions."""
+
     interaction_type: str = Field(..., description="Type of interaction")
     direction: str = Field(..., description="inbound or outbound")
     subject: str | None = Field(default=None, max_length=500, description="Subject line")
@@ -279,6 +286,7 @@ class InteractionCreate(BaseModel):
 
 class InteractionResponse(BaseModel):
     """Response schema for a single interaction."""
+
     id: int
     contact_id: int
     profile_id: int
@@ -299,6 +307,7 @@ class InteractionResponse(BaseModel):
 
 class InteractionListResponse(BaseModel):
     """Response schema for list of interactions."""
+
     interactions: list[InteractionResponse]
     total: int
 
@@ -310,6 +319,7 @@ class InteractionListResponse(BaseModel):
 
 class ContactApplicationCreate(BaseModel):
     """Request body for POST /api/contacts/{id}/applications."""
+
     application_id: int = Field(..., description="Application to link")
     role: str = Field(..., description="Contact's role for this application")
     notes: str | None = Field(default=None, description="Notes about the link")
@@ -327,6 +337,7 @@ class ContactApplicationCreate(BaseModel):
 
 class ContactApplicationResponse(BaseModel):
     """Response schema for a contact-application link."""
+
     id: int
     contact_id: int
     application_id: int
@@ -345,5 +356,6 @@ class ContactApplicationResponse(BaseModel):
 
 class ContactDetailResponse(ContactResponse):
     """Response schema for contact detail with related data."""
+
     interactions: list[InteractionResponse] = []
     linked_applications: list[ContactApplicationResponse] = []

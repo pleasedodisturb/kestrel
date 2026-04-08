@@ -1,10 +1,8 @@
 """Unit tests for tools/scraper.py."""
 
-from unittest.mock import patch, call
+from unittest.mock import patch
 
 import pandas as pd
-import pytest
-
 from scraper import (
     DEFAULT_HOURS_OLD,
     DEFAULT_KEYWORDS,
@@ -14,10 +12,10 @@ from scraper import (
     scrape_all,
 )
 
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
+
 
 class TestDefaults:
     def test_default_keywords_count(self):
@@ -43,6 +41,7 @@ class TestDefaults:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_jobs_df(rows):
     """Build a small DataFrame mimicking scrape_jobs output."""
     return pd.DataFrame(rows, columns=["title", "company", "location", "url"])
@@ -52,12 +51,15 @@ def _make_jobs_df(rows):
 # scrape_all
 # ---------------------------------------------------------------------------
 
+
 class TestScrapeAll:
     @patch("scraper.scrape_jobs")
     def test_uses_default_parameters(self, mock_scrape):
-        mock_scrape.return_value = _make_jobs_df([
-            ("PM", "Co", "Berlin", "http://a"),
-        ])
+        mock_scrape.return_value = _make_jobs_df(
+            [
+                ("PM", "Co", "Berlin", "http://a"),
+            ]
+        )
 
         scrape_all()
 
@@ -71,9 +73,11 @@ class TestScrapeAll:
 
     @patch("scraper.scrape_jobs")
     def test_custom_parameters_passed_through(self, mock_scrape):
-        mock_scrape.return_value = _make_jobs_df([
-            ("PM", "Co", "Berlin", "http://a"),
-        ])
+        mock_scrape.return_value = _make_jobs_df(
+            [
+                ("PM", "Co", "Berlin", "http://a"),
+            ]
+        )
 
         scrape_all(
             keywords=["Custom Role"],
@@ -94,9 +98,11 @@ class TestScrapeAll:
 
     @patch("scraper.scrape_jobs")
     def test_adds_search_keyword_column(self, mock_scrape):
-        mock_scrape.return_value = _make_jobs_df([
-            ("PM", "Co", "Berlin", "http://a"),
-        ])
+        mock_scrape.return_value = _make_jobs_df(
+            [
+                ("PM", "Co", "Berlin", "http://a"),
+            ]
+        )
 
         result = scrape_all(keywords=["My Keyword"])
 
@@ -182,9 +188,11 @@ class TestScrapeAll:
 
     @patch("scraper.scrape_jobs")
     def test_country_indeed_always_germany(self, mock_scrape):
-        mock_scrape.return_value = _make_jobs_df([
-            ("PM", "Co", "Berlin", "http://a"),
-        ])
+        mock_scrape.return_value = _make_jobs_df(
+            [
+                ("PM", "Co", "Berlin", "http://a"),
+            ]
+        )
 
         scrape_all(keywords=["kw1"])
 

@@ -73,9 +73,7 @@ def _handle_complete(prompt: str, context: dict | None) -> AIResponse:
     )
 
 
-def _compute_career_alignment(
-    base: float, prompt: str, context: dict | None
-) -> float:
+def _compute_career_alignment(base: float, prompt: str, context: dict | None) -> float:
     """Compute career_alignment incorporating active goals (VAL-SCORE-003).
 
     If profile data contains goals, we check keyword overlap between each
@@ -97,9 +95,7 @@ def _compute_career_alignment(
     matching_goals = 0
     for goal in goals:
         goal_text = f"{goal.get('title', '')} {goal.get('description', '')}".lower()
-        goal_words = {
-            w for w in goal_text.split() if len(w) > 3
-        }  # skip short words
+        goal_words = {w for w in goal_text.split() if len(w) > 3}  # skip short words
         if any(word in prompt_lower for word in goal_words):
             matching_goals += 1
 
@@ -203,8 +199,7 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
         effort_flag=effort_flag,
         prep_level=prep_level,
         prep_notes=(
-            f"Brush up on domain-specific terminology "
-            f"and prepare {(seed % 3) + 2} STAR stories."
+            f"Brush up on domain-specific terminology and prepare {(seed % 3) + 2} STAR stories."
         ),
         readiness_score=readiness,
         career_alignment=career,
@@ -381,9 +376,7 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
 
     # --- Classify gaps by resolution status ---
     unresolved_gaps = [g for g in gap_data if g.get("distance", 1) > 0]
-    unresolved_skill_names = {
-        g["skill_name"].lower() for g in unresolved_gaps
-    }
+    unresolved_skill_names = {g["skill_name"].lower() for g in unresolved_gaps}
 
     # --- Extract research details for enrichment ---
     tech_stack = research_data.get("tech_stack", {})
@@ -421,37 +414,39 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
 
     # Add research-derived topics (VAL-CROSS-009)
     if tech_list:
-        topic_pool.append({
-            "topic": f"{company} tech stack deep-dive: {', '.join(tech_list[:4])}",
-            "relevance": "high",
-            "difficulty": "medium",
-        })
+        topic_pool.append(
+            {
+                "topic": f"{company} tech stack deep-dive: {', '.join(tech_list[:4])}",
+                "relevance": "high",
+                "difficulty": "medium",
+            }
+        )
     if culture_keywords and isinstance(culture_keywords, list):
-        topic_pool.append({
-            "topic": (
-                f"{company} culture fit: "
-                f"{', '.join(culture_keywords[:3])}"
-            ),
-            "relevance": "high",
-            "difficulty": "low",
-        })
+        topic_pool.append(
+            {
+                "topic": (f"{company} culture fit: {', '.join(culture_keywords[:3])}"),
+                "relevance": "high",
+                "difficulty": "low",
+            }
+        )
     if values_score is not None:
-        topic_pool.append({
-            "topic": f"Values alignment discussion ({company}, score: {values_score}/10)",
-            "relevance": "medium",
-            "difficulty": "low",
-        })
+        topic_pool.append(
+            {
+                "topic": f"Values alignment discussion ({company}, score: {values_score}/10)",
+                "relevance": "medium",
+                "difficulty": "low",
+            }
+        )
     if hiring_patterns and hiring_patterns.get("top_departments"):
         depts = hiring_patterns["top_departments"]
         if isinstance(depts, list) and depts:
-            topic_pool.append({
-                "topic": (
-                    f"{company} hiring focus areas: "
-                    f"{', '.join(depts[:3])}"
-                ),
-                "relevance": "medium",
-                "difficulty": "low",
-            })
+            topic_pool.append(
+                {
+                    "topic": (f"{company} hiring focus areas: {', '.join(depts[:3])}"),
+                    "relevance": "medium",
+                    "difficulty": "low",
+                }
+            )
 
     # VAL-CROSS-015: Add gap-driven topics based on actual gap data
     # Only add topics for UNRESOLVED gaps (distance > 0); skip resolved ones
@@ -462,52 +457,61 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
             severity = gap.get("severity", "nice-to-have")
             relevance = "high" if severity == "critical" else "medium"
             difficulty = "high" if distance >= 2 else "medium"
-            topic_pool.append({
-                "topic": (
-                    f"Gap area: {skill} "
-                    f"(distance {distance}, {severity})"
-                ),
-                "relevance": relevance,
-                "difficulty": difficulty,
-            })
+            topic_pool.append(
+                {
+                    "topic": (f"Gap area: {skill} (distance {distance}, {severity})"),
+                    "relevance": relevance,
+                    "difficulty": difficulty,
+                }
+            )
     else:
         # Fallback: keyword-based gap topics (legacy path for no context)
         if "kubernetes" in prompt_lower:
-            topic_pool.append({
-                "topic": "Container orchestration and Kubernetes",
-                "relevance": "high",
-                "difficulty": "high",
-            })
+            topic_pool.append(
+                {
+                    "topic": "Container orchestration and Kubernetes",
+                    "relevance": "high",
+                    "difficulty": "high",
+                }
+            )
         if "python" in prompt_lower:
-            topic_pool.append({
-                "topic": "Python best practices and architecture",
-                "relevance": "medium",
-                "difficulty": "medium",
-            })
+            topic_pool.append(
+                {
+                    "topic": "Python best practices and architecture",
+                    "relevance": "medium",
+                    "difficulty": "medium",
+                }
+            )
 
     if "program management" in prompt_lower or "tpm" in role_lower:
         # Only add if not already covered by gap data or if it's unresolved
         pm_lower = "program management"
         if not gap_data or pm_lower in unresolved_skill_names:
-            topic_pool.append({
-                "topic": "Cross-functional program delivery",
+            topic_pool.append(
+                {
+                    "topic": "Cross-functional program delivery",
+                    "relevance": "high",
+                    "difficulty": "medium",
+                }
+            )
+    if "ai" in prompt_lower or "ml" in prompt_lower:
+        topic_pool.append(
+            {
+                "topic": "AI/ML lifecycle and deployment strategies",
                 "relevance": "high",
                 "difficulty": "medium",
-            })
-    if "ai" in prompt_lower or "ml" in prompt_lower:
-        topic_pool.append({
-            "topic": "AI/ML lifecycle and deployment strategies",
-            "relevance": "high",
-            "difficulty": "medium",
-        })
+            }
+        )
 
     # Ensure at least 3 topics
     if len(topic_pool) < 3:
-        topic_pool.append({
-            "topic": "Behavioral interview preparation",
-            "relevance": "medium",
-            "difficulty": "low",
-        })
+        topic_pool.append(
+            {
+                "topic": "Behavioral interview preparation",
+                "relevance": "medium",
+                "difficulty": "low",
+            }
+        )
 
     topics = topic_pool[:7]  # Cap at 7
 
@@ -545,57 +549,66 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
 
     # Add research-derived questions (VAL-CROSS-009)
     if tech_list:
-        questions.append({
-            "question": (
-                f"How would you work with {company}'s tech stack "
-                f"({', '.join(tech_list[:3])}) to deliver {role} objectives?"
-            ),
-            "category": "technical",
-            "difficulty": "medium",
-        })
+        questions.append(
+            {
+                "question": (
+                    f"How would you work with {company}'s tech stack "
+                    f"({', '.join(tech_list[:3])}) to deliver {role} objectives?"
+                ),
+                "category": "technical",
+                "difficulty": "medium",
+            }
+        )
     if culture_keywords and isinstance(culture_keywords, list):
-        questions.append({
-            "question": (
-                f"How do your working values align with {company}'s "
-                f"culture of {', '.join(culture_keywords[:2])}?"
-            ),
-            "category": "behavioral",
-            "difficulty": "low",
-        })
+        questions.append(
+            {
+                "question": (
+                    f"How do your working values align with {company}'s "
+                    f"culture of {', '.join(culture_keywords[:2])}?"
+                ),
+                "category": "behavioral",
+                "difficulty": "low",
+            }
+        )
 
     # VAL-CROSS-015: Add gap-targeted questions only for UNRESOLVED gaps
     if gap_data:
         for gap in unresolved_gaps:
             skill = gap["skill_name"]
             distance = gap.get("distance", 1)
-            questions.append({
-                "question": (
-                    f"Describe your experience with {skill} and how you "
-                    f"would close the gap to the required level for this role."
-                ),
-                "category": "technical",
-                "difficulty": "high" if distance >= 2 else "medium",
-            })
+            questions.append(
+                {
+                    "question": (
+                        f"Describe your experience with {skill} and how you "
+                        f"would close the gap to the required level for this role."
+                    ),
+                    "category": "technical",
+                    "difficulty": "high" if distance >= 2 else "medium",
+                }
+            )
     else:
         # Fallback: keyword-based gap questions (legacy path)
         if "kubernetes" in prompt_lower:
-            questions.append({
-                "question": (
-                    "Explain your experience with container "
-                    "orchestration and Kubernetes in production."
-                ),
-                "category": "technical",
-                "difficulty": "high",
-            })
+            questions.append(
+                {
+                    "question": (
+                        "Explain your experience with container "
+                        "orchestration and Kubernetes in production."
+                    ),
+                    "category": "technical",
+                    "difficulty": "high",
+                }
+            )
         if "program management" in prompt_lower:
-            questions.append({
-                "question": (
-                    "Describe a program you managed with "
-                    "multiple interdependent workstreams."
-                ),
-                "category": "behavioral",
-                "difficulty": "medium",
-            })
+            questions.append(
+                {
+                    "question": (
+                        "Describe a program you managed with multiple interdependent workstreams."
+                    ),
+                    "category": "behavioral",
+                    "difficulty": "medium",
+                }
+            )
 
     # --- Derive checklist from company/role ---
     checklist = [
@@ -615,10 +628,7 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
             "priority": "high",
         },
         {
-            "item": (
-                "Practice system design problems "
-                f"relevant to {company}'s domain"
-            ),
+            "item": (f"Practice system design problems relevant to {company}'s domain"),
             "time_minutes": 60,
             "priority": "medium",
         },
@@ -636,22 +646,26 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
 
     # Add research-derived checklist items (VAL-CROSS-009)
     if tech_list:
-        checklist.append({
-            "item": f"Review {company}'s key technologies: {', '.join(tech_list[:3])}",
-            "time_minutes": 30,
-            "priority": "high",
-        })
+        checklist.append(
+            {
+                "item": f"Review {company}'s key technologies: {', '.join(tech_list[:3])}",
+                "time_minutes": 30,
+                "priority": "high",
+            }
+        )
 
     # VAL-CROSS-015: Add gap-specific checklist items for UNRESOLVED gaps
     for gap in unresolved_gaps:
         skill = gap["skill_name"]
         severity = gap.get("severity", "nice-to-have")
         priority = "high" if severity == "critical" else "medium"
-        checklist.append({
-            "item": f"Study {skill} to close skill gap for {role}",
-            "time_minutes": 30,
-            "priority": priority,
-        })
+        checklist.append(
+            {
+                "item": f"Study {skill} to close skill gap for {role}",
+                "time_minutes": 30,
+                "priority": priority,
+            }
+        )
 
     total_minutes = sum(item["time_minutes"] for item in checklist)
     total_hours = round(total_minutes / 60, 1)
@@ -1083,8 +1097,7 @@ def _handle_interview_format(prompt: str, context: dict | None) -> AIResponse:
                     "round_number": 4,
                     "type": "Cross-functional Panel",
                     "description": (
-                        "Interviews with engineering, product, "
-                        "and design stakeholders."
+                        "Interviews with engineering, product, and design stakeholders."
                     ),
                     "duration_minutes": 60,
                 },
@@ -1171,12 +1184,14 @@ def _handle_interview_format(prompt: str, context: dict | None) -> AIResponse:
     rounds = []
     for i in range(num_rounds):
         rtype = round_types[(seed + i) % len(round_types)]
-        rounds.append({
-            "round_number": i + 1,
-            "type": rtype,
-            "description": f"Standard {rtype.lower()} covering role-relevant competencies.",
-            "duration_minutes": 30 + ((seed + i) % 4) * 15,  # 30-75 min
-        })
+        rounds.append(
+            {
+                "round_number": i + 1,
+                "type": rtype,
+                "description": f"Standard {rtype.lower()} covering role-relevant competencies.",
+                "duration_minutes": 30 + ((seed + i) % 4) * 15,  # 30-75 min
+            }
+        )
 
     weeks = f"{2 + (seed % 3)}-{3 + (seed % 4)} weeks"
     structured = InterviewFormatResult(
@@ -1220,8 +1235,7 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
                 {
                     "name": "Stakeholder Management",
                     "description": (
-                        "Questions about managing relationships "
-                        "with senior stakeholders."
+                        "Questions about managing relationships with senior stakeholders."
                     ),
                     "example_questions": [
                         "How do you handle conflicting priorities from different stakeholders?",
@@ -1249,37 +1263,30 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
                 {
                     "name": "Strategic Thinking",
                     "description": (
-                        "Ability to see the big picture and "
-                        "align programs with business goals."
+                        "Ability to see the big picture and align programs with business goals."
                     ),
                 },
                 {
                     "name": "Cross-functional Collaboration",
                     "description": (
-                        "Effectiveness in working across "
-                        "engineering, product, and design."
+                        "Effectiveness in working across engineering, product, and design."
                     ),
                 },
                 {
                     "name": "Technical Acumen",
                     "description": (
-                        "Depth of technical understanding "
-                        "for informed decision-making."
+                        "Depth of technical understanding for informed decision-making."
                     ),
                 },
                 {
                     "name": "Communication",
                     "description": (
-                        "Clarity and effectiveness in "
-                        "communicating with diverse audiences."
+                        "Clarity and effectiveness in communicating with diverse audiences."
                     ),
                 },
                 {
                     "name": "Execution & Delivery",
-                    "description": (
-                        "Track record of delivering complex "
-                        "programs on time."
-                    ),
+                    "description": ("Track record of delivering complex programs on time."),
                 },
             ],
             frequently_tested_skills=[
@@ -1335,30 +1342,20 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
                 },
                 {
                     "name": "System Design Skills",
-                    "description": (
-                        "Ability to design scalable, "
-                        "maintainable systems."
-                    ),
+                    "description": ("Ability to design scalable, maintainable systems."),
                 },
                 {
                     "name": "Product Thinking",
-                    "description": (
-                        "User-centric approach to "
-                        "feature development."
-                    ),
+                    "description": ("User-centric approach to feature development."),
                 },
                 {
                     "name": "Technical Depth",
-                    "description": (
-                        "Deep understanding of "
-                        "full-stack technologies."
-                    ),
+                    "description": ("Deep understanding of full-stack technologies."),
                 },
                 {
                     "name": "Collaboration",
                     "description": (
-                        "Working effectively with designers, "
-                        "PMs, and other engineers."
+                        "Working effectively with designers, PMs, and other engineers."
                     ),
                 },
             ],
@@ -1378,8 +1375,7 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
                 {
                     "name": "Technical Communication",
                     "description": (
-                        "Questions about explaining complex "
-                        "topics to developer audiences."
+                        "Questions about explaining complex topics to developer audiences."
                     ),
                     "example_questions": [
                         "Create a tutorial for integrating our API.",
@@ -1406,10 +1402,7 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
             assessment_criteria=[
                 {
                     "name": "Technical Credibility",
-                    "description": (
-                        "Ability to earn trust from "
-                        "developer audiences."
-                    ),
+                    "description": ("Ability to earn trust from developer audiences."),
                 },
                 {
                     "name": "Communication Skills",
@@ -1417,17 +1410,11 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
                 },
                 {
                     "name": "Community Engagement",
-                    "description": (
-                        "Track record of building "
-                        "developer communities."
-                    ),
+                    "description": ("Track record of building developer communities."),
                 },
                 {
                     "name": "Empathy",
-                    "description": (
-                        "Understanding developer pain "
-                        "points and needs."
-                    ),
+                    "description": ("Understanding developer pain points and needs."),
                 },
             ],
             frequently_tested_skills=[
@@ -1446,8 +1433,7 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
                 {
                     "name": "Behavioral",
                     "description": (
-                        "Questions about past experiences "
-                        "and behavior in work situations."
+                        "Questions about past experiences and behavior in work situations."
                     ),
                     "example_questions": [
                         "Tell me about a time you overcame a significant challenge.",
@@ -1474,10 +1460,7 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
             assessment_criteria=[
                 {
                     "name": "Problem Solving",
-                    "description": (
-                        "Analytical and creative "
-                        "problem-solving ability."
-                    ),
+                    "description": ("Analytical and creative problem-solving ability."),
                 },
                 {
                     "name": "Teamwork",
@@ -1504,9 +1487,6 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
         structured=structured,
         model="mock-v1",
     )
-
-
-
 
 
 def _handle_voice_cover_letter(prompt: str, context: dict | None) -> AIResponse:

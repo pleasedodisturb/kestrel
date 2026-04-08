@@ -38,11 +38,7 @@ def _verify_profile(db: Session, profile_id: int) -> Profile:
 
 def _get_goal(db: Session, goal_id: int, profile_id: int) -> Goal:
     """Get goal scoped by profile."""
-    goal = (
-        db.query(Goal)
-        .filter(Goal.id == goal_id, Goal.profile_id == profile_id)
-        .first()
-    )
+    goal = db.query(Goal).filter(Goal.id == goal_id, Goal.profile_id == profile_id).first()
     if not goal:
         raise GoalNotFoundError(f"Goal {goal_id} not found")
     return goal
@@ -175,9 +171,7 @@ def get_reality_map(db: Session, goal_id: int, profile_id: int) -> dict:
     # Collect skills data
     skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
     total_skills = len(skills)
-    advanced_or_expert = sum(
-        1 for s in skills if s.proficiency in ("advanced", "expert")
-    )
+    advanced_or_expert = sum(1 for s in skills if s.proficiency in ("advanced", "expert"))
 
     # Collect applications data
     applications = (
@@ -188,24 +182,15 @@ def get_reality_map(db: Session, goal_id: int, profile_id: int) -> dict:
         )
         .all()
     )
-    active_apps = sum(
-        1 for a in applications
-        if a.status in ("applied", "interviewing", "offer")
-    )
-    advanced_apps = sum(
-        1 for a in applications if a.status in ("interviewing", "offer")
-    )
+    active_apps = sum(1 for a in applications if a.status in ("applied", "interviewing", "offer"))
+    advanced_apps = sum(1 for a in applications if a.status in ("interviewing", "offer"))
 
     # Collect learning data
     learning_resources = (
-        db.query(LearningResource)
-        .filter(LearningResource.profile_id == profile_id)
-        .all()
+        db.query(LearningResource).filter(LearningResource.profile_id == profile_id).all()
     )
     total_learning = len(learning_resources)
-    completed_learning = sum(
-        1 for lr in learning_resources if lr.status == "completed"
-    )
+    completed_learning = sum(1 for lr in learning_resources if lr.status == "completed")
 
     # Skills dimension
     if goal.goal_type == "aspirational":
@@ -228,9 +213,7 @@ def get_reality_map(db: Session, goal_id: int, profile_id: int) -> dict:
         apps_target_advanced = 1
 
     apps_progress_active = min(100.0, (active_apps / max(apps_target_active, 1)) * 100)
-    apps_progress_advanced = min(
-        100.0, (advanced_apps / max(apps_target_advanced, 1)) * 100
-    )
+    apps_progress_advanced = min(100.0, (advanced_apps / max(apps_target_advanced, 1)) * 100)
     apps_progress = (apps_progress_active + apps_progress_advanced) / 2
 
     # Learning / portfolio dimension
@@ -244,13 +227,11 @@ def get_reality_map(db: Session, goal_id: int, profile_id: int) -> dict:
         {
             "dimension": "skills",
             "current_state": (
-                f"{advanced_or_expert} advanced/expert skills "
-                f"out of {total_skills} total"
+                f"{advanced_or_expert} advanced/expert skills out of {total_skills} total"
             ),
             "required_state": skills_required,
             "delta": (
-                f"Need {max(0, skills_target - advanced_or_expert)} more "
-                f"advanced/expert skills"
+                f"Need {max(0, skills_target - advanced_or_expert)} more advanced/expert skills"
                 if advanced_or_expert < skills_target
                 else "Skills target met"
             ),
@@ -259,16 +240,14 @@ def get_reality_map(db: Session, goal_id: int, profile_id: int) -> dict:
         {
             "dimension": "applications",
             "current_state": (
-                f"{active_apps} active applications, "
-                f"{advanced_apps} in interview/offer stage"
+                f"{active_apps} active applications, {advanced_apps} in interview/offer stage"
             ),
             "required_state": apps_required,
             "delta": (
                 f"Need {max(0, apps_target_active - active_apps)} more active "
                 f"applications and {max(0, apps_target_advanced - advanced_apps)} "
                 f"more in interview stage"
-                if active_apps < apps_target_active
-                or advanced_apps < apps_target_advanced
+                if active_apps < apps_target_active or advanced_apps < apps_target_advanced
                 else "Application pipeline target met"
             ),
             "progress_pct": round(apps_progress, 1),
@@ -292,9 +271,7 @@ def get_reality_map(db: Session, goal_id: int, profile_id: int) -> dict:
         },
     ]
 
-    overall = round(
-        sum(d["progress_pct"] for d in dimensions) / len(dimensions), 1
-    )
+    overall = round(sum(d["progress_pct"] for d in dimensions) / len(dimensions), 1)
 
     return {
         "goal_id": goal.id,
@@ -333,24 +310,17 @@ def get_progress(db: Session, goal_id: int, profile_id: int) -> dict:
         .all()
     )
     total_apps = len(applications)
-    active_apps = sum(
-        1 for a in applications
-        if a.status in ("applied", "interviewing", "offer")
-    )
+    active_apps = sum(1 for a in applications if a.status in ("applied", "interviewing", "offer"))
     # Target: at least 5 active apps for realistic, 10 for aspirational
     target_apps = 10 if goal.goal_type == "aspirational" else 5
     apps_pct = min(100.0, (active_apps / max(target_apps, 1)) * 100)
 
     # Learning dimension
     learning_resources = (
-        db.query(LearningResource)
-        .filter(LearningResource.profile_id == profile_id)
-        .all()
+        db.query(LearningResource).filter(LearningResource.profile_id == profile_id).all()
     )
     total_learning = len(learning_resources)
-    completed_learning = sum(
-        1 for lr in learning_resources if lr.status == "completed"
-    )
+    completed_learning = sum(1 for lr in learning_resources if lr.status == "completed")
     learning_pct = (
         min(100.0, (completed_learning / max(total_learning, 1)) * 100)
         if total_learning > 0
@@ -360,9 +330,7 @@ def get_progress(db: Session, goal_id: int, profile_id: int) -> dict:
     # Portfolio dimension (skills strength)
     skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
     total_skills = len(skills)
-    advanced_or_expert = sum(
-        1 for s in skills if s.proficiency in ("advanced", "expert")
-    )
+    advanced_or_expert = sum(1 for s in skills if s.proficiency in ("advanced", "expert"))
     target_advanced = 5 if goal.goal_type == "aspirational" else 3
     portfolio_pct = min(100.0, (advanced_or_expert / max(target_advanced, 1)) * 100)
 
@@ -406,9 +374,7 @@ def get_progress(db: Session, goal_id: int, profile_id: int) -> dict:
                 f"{round(avg_match, 1)}% skills match)"
             )
     except Exception:
-        logger.debug(
-            "Market positioning data unavailable for goal %d progress", goal_id
-        )
+        logger.debug("Market positioning data unavailable for goal %d progress", goal_id)
 
     dimensions = [
         {
@@ -440,9 +406,7 @@ def get_progress(db: Session, goal_id: int, profile_id: int) -> dict:
         },
     ]
 
-    overall = round(
-        sum(d["percentage"] for d in dimensions) / len(dimensions), 1
-    )
+    overall = round(sum(d["percentage"] for d in dimensions) / len(dimensions), 1)
 
     return {
         "goal_id": goal.id,
@@ -457,9 +421,7 @@ def get_progress(db: Session, goal_id: int, profile_id: int) -> dict:
 # ---------------------------------------------------------------------------
 
 
-async def recalibrate_goal(
-    db: Session, goal_id: int, profile_id: int
-) -> dict:
+async def recalibrate_goal(db: Session, goal_id: int, profile_id: int) -> dict:
     """AI-powered goal recalibration with market suggestions.
 
     Uses the AI provider to analyze the goal against market data
@@ -517,9 +479,7 @@ async def recalibrate_goal(
 # ---------------------------------------------------------------------------
 
 
-async def get_alternatives(
-    db: Session, goal_id: int, profile_id: int
-) -> dict:
+async def get_alternatives(db: Session, goal_id: int, profile_id: int) -> dict:
     """Generate alternative path analysis for a goal.
 
     Returns employment, freelance, consulting and other paths
@@ -586,14 +546,9 @@ def _build_alternative_paths(
     Always returns at least 3 paths: employment, freelance, consulting.
     """
     total_skills = len(skills)
-    advanced_skills = sum(
-        1 for s in skills if s.proficiency in ("advanced", "expert")
-    )
+    advanced_skills = sum(1 for s in skills if s.proficiency in ("advanced", "expert"))
     total_apps = len(applications)
-    active_apps = sum(
-        1 for a in applications
-        if a.status in ("applied", "interviewing", "offer")
-    )
+    active_apps = sum(1 for a in applications if a.status in ("applied", "interviewing", "offer"))
 
     paths = [
         {
@@ -604,11 +559,7 @@ def _build_alternative_paths(
                 f"applications ({active_apps} active). Focus on roles "
                 f"matching your {advanced_skills} advanced/expert skills."
             ),
-            "timeline": (
-                "4-8 weeks"
-                if active_apps >= 3
-                else "8-12 weeks"
-            ),
+            "timeline": ("4-8 weeks" if active_apps >= 3 else "8-12 weeks"),
             "pros": [
                 "Stable income and benefits",
                 "Career progression path",

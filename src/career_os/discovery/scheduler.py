@@ -40,8 +40,7 @@ async def _discovery_loop(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) -> N
                         result = await run_scheduled_discovery(db, profile.id)
                         if result:
                             logger.info(
-                                "Scheduled discovery for profile %d: "
-                                "%d new, %d duplicates",
+                                "Scheduled discovery for profile %d: %d new, %d duplicates",
                                 profile.id,
                                 result["new_jobs"],
                                 result["duplicates"],
@@ -78,9 +77,7 @@ async def _discovery_loop(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) -> N
             await asyncio.sleep(60)
         except Exception as exc:
             # Fatal errors (config, programming) — log and stop
-            logger.exception(
-                "Discovery scheduler fatal error — stopping: %s", exc
-            )
+            logger.exception("Discovery scheduler fatal error — stopping: %s", exc)
             break
 
 
@@ -91,9 +88,7 @@ def start_scheduler(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) -> asyncio
     """
     global _scheduler_task
     _scheduler_task = asyncio.create_task(_discovery_loop(interval_seconds))
-    logger.info(
-        "Discovery scheduler started (interval=%ds)", interval_seconds
-    )
+    logger.info("Discovery scheduler started (interval=%ds)", interval_seconds)
     return _scheduler_task
 
 

@@ -158,9 +158,7 @@ def _verify_profile(db: Session, profile_id: int) -> None:
         raise ProfileNotFoundError(f"Profile {profile_id} not found")
 
 
-def _get_application(
-    db: Session, application_id: int, profile_id: int
-) -> Application:
+def _get_application(db: Session, application_id: int, profile_id: int) -> Application:
     """Get application scoped by profile."""
     app_obj = (
         db.query(Application)
@@ -212,9 +210,7 @@ def analyze_gaps(
 
     # Load all skills for this profile (indexed by lowercase name)
     skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
-    skills_by_name: dict[str, Skill] = {
-        s.name.lower().strip(): s for s in skills
-    }
+    skills_by_name: dict[str, Skill] = {s.name.lower().strip(): s for s in skills}
 
     gaps = []
     for req in requirements:
@@ -224,13 +220,15 @@ def analyze_gaps(
         current_level = current_skill.proficiency if current_skill else None
         distance = _compute_distance(req.required_level, current_level)
 
-        gaps.append({
-            "skill_name": req.skill_name,
-            "required_level": req.required_level,
-            "current_level": current_level,
-            "severity": req.severity,
-            "distance": distance,
-        })
+        gaps.append(
+            {
+                "skill_name": req.skill_name,
+                "required_level": req.required_level,
+                "current_level": current_level,
+                "severity": req.severity,
+                "distance": distance,
+            }
+        )
 
     readiness_score = _compute_readiness_score(gaps, len(requirements))
 
@@ -267,9 +265,7 @@ def get_readiness_score(
         return None
 
     skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
-    skills_by_name: dict[str, Skill] = {
-        s.name.lower().strip(): s for s in skills
-    }
+    skills_by_name: dict[str, Skill] = {s.name.lower().strip(): s for s in skills}
 
     gaps = []
     for req in requirements:
@@ -277,10 +273,12 @@ def get_readiness_score(
         current_skill = skills_by_name.get(skill_key)
         current_level = current_skill.proficiency if current_skill else None
         distance = _compute_distance(req.required_level, current_level)
-        gaps.append({
-            "severity": req.severity,
-            "distance": distance,
-        })
+        gaps.append(
+            {
+                "severity": req.severity,
+                "distance": distance,
+            }
+        )
 
     return _compute_readiness_score(gaps, len(requirements))
 
@@ -314,9 +312,7 @@ def aggregate_gaps(
 
     # Load skills inventory
     skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
-    skills_by_name: dict[str, Skill] = {
-        s.name.lower().strip(): s for s in skills
-    }
+    skills_by_name: dict[str, Skill] = {s.name.lower().strip(): s for s in skills}
 
     # Collect gaps across all applications
     # gap_data: normalized_key → list of (app_id, severity, distance)
@@ -350,9 +346,7 @@ def aggregate_gaps(
                 if skill_key not in gap_data:
                     gap_data[skill_key] = []
                     display_names[skill_key] = req.skill_name
-                gap_data[skill_key].append(
-                    (app_obj.id, req.severity, distance)
-                )
+                gap_data[skill_key].append((app_obj.id, req.severity, distance))
 
     # Build aggregate response sorted by frequency
     aggregate_gaps = []
@@ -367,13 +361,15 @@ def aggregate_gaps(
 
         avg_distance = round(sum(distances) / len(distances), 1)
 
-        aggregate_gaps.append({
-            "skill_name": display_names[skill_key],
-            "frequency": len(app_ids),
-            "application_ids": app_ids,
-            "avg_severity": avg_severity,
-            "avg_distance": avg_distance,
-        })
+        aggregate_gaps.append(
+            {
+                "skill_name": display_names[skill_key],
+                "frequency": len(app_ids),
+                "application_ids": app_ids,
+                "avg_severity": avg_severity,
+                "avg_distance": avg_distance,
+            }
+        )
 
     # Sort by frequency descending
     aggregate_gaps.sort(key=lambda x: x["frequency"], reverse=True)
@@ -410,9 +406,7 @@ def create_job_requirements(
     created = []
     for req_data in requirements:
         # If caller supplies severity, use it as override; otherwise classify
-        severity = req_data.get("severity") or classify_severity(
-            req_data["skill_name"]
-        )
+        severity = req_data.get("severity") or classify_severity(req_data["skill_name"])
 
         req = JobRequirement(
             application_id=application_id,

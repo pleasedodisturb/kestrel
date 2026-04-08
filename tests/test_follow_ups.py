@@ -23,9 +23,7 @@ def db_session():
     Uses a single shared connection so both the test and the app see the
     same in-memory tables.
     """
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -234,8 +232,7 @@ class TestCreateFollowUp:
         detail = client.get(f"/api/applications/{app_data['id']}?profile_id=1")
         logs = detail.json()["activity_log"]
         assert any(
-            "follow" in log["action"].lower()
-            or "follow" in (log["details"] or "").lower()
+            "follow" in log["action"].lower() or "follow" in (log["details"] or "").lower()
             for log in logs
         )
 
@@ -337,8 +334,7 @@ class TestCompleteFollowUp:
         detail = client.get(f"/api/applications/{app_data['id']}?profile_id=1")
         logs = detail.json()["activity_log"]
         assert any(
-            "complet" in (log["details"] or "").lower()
-            or "complet" in log["action"].lower()
+            "complet" in (log["details"] or "").lower() or "complet" in log["action"].lower()
             for log in logs
         )
 

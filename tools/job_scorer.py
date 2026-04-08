@@ -118,8 +118,7 @@ SCORING_SYSTEM_PROMPT_BASE = (
 
 # job_scorer.py uses this directly (no review_flag)
 SCORING_SYSTEM_PROMPT = (
-    SCORING_SYSTEM_PROMPT_BASE
-    + "Return ONLY valid JSON with double quotes: "
+    SCORING_SYSTEM_PROMPT_BASE + "Return ONLY valid JSON with double quotes: "
     '{"score": int, "reasoning": "one sentence", '
     '"estimated_salary": "110-130k EUR", '
     '"effort_flag": "sweet-spot|moderate|high-intensity|unknown", '
@@ -129,12 +128,11 @@ SCORING_SYSTEM_PROMPT = (
 
 # daily_pipeline.py adds review_flag for second-pass triage
 SCORING_SYSTEM_PROMPT_WITH_REVIEW = (
-    SCORING_SYSTEM_PROMPT_BASE
-    + "SECOND-PASS FLAG:\n"
+    SCORING_SYSTEM_PROMPT_BASE + "SECOND-PASS FLAG:\n"
     "Set review_flag to true if score is 4-6 AND the role has an unusual angle "
     "that might fit (non-obvious role at a dream company, wildcard career move). "
     "For clear fits (7+) or clear misses (1-3), set review_flag to false.\n\n"
-    'Return ONLY a JSON object with double quotes: '
+    "Return ONLY a JSON object with double quotes: "
     '{"score": int, "reasoning": "one sentence", '
     '"estimated_salary": "110-130k EUR", '
     '"effort_flag": "sweet-spot|moderate|high-intensity|unknown", '
@@ -152,46 +150,99 @@ SCORING_SYSTEM_PROMPT_WITH_REVIEW = (
 # These roles have zero relevance to TPM/PM/DevRel/Product Eng/AI.
 REJECT_TITLE_PATTERNS: list[str] = [
     # Finance / Accounting
-    "accountant", "accounting", "bookkeeper", "controller",
-    "accounts payable", "accounts receivable", "payroll",
-    "financial crimes", "financial analyst", "compensation analyst",
-    "tax manager", "tax analyst", "auditor", "treasury",
+    "accountant",
+    "accounting",
+    "bookkeeper",
+    "controller",
+    "accounts payable",
+    "accounts receivable",
+    "payroll",
+    "financial crimes",
+    "financial analyst",
+    "compensation analyst",
+    "tax manager",
+    "tax analyst",
+    "auditor",
+    "treasury",
     # Sales (non-engineering)
-    "sales rep", "sales development rep", "sales associate",
-    "account executive", "business development representative",
-    "inside sales", "outside sales", "telesales",
-    "business development director", "business development manager",
+    "sales rep",
+    "sales development rep",
+    "sales associate",
+    "account executive",
+    "business development representative",
+    "inside sales",
+    "outside sales",
+    "telesales",
+    "business development director",
+    "business development manager",
     # Customer support
-    "customer support", "customer service", "customer success associate",
-    "support specialist", "support technician", "help desk",
+    "customer support",
+    "customer service",
+    "customer success associate",
+    "support specialist",
+    "support technician",
+    "help desk",
     "onboarding technician",
     # HR / People
-    "hr specialist", "hr manager", "hr generalist", "recruiter",
-    "talent acquisition", "benefits manager", "benefits administrator",
-    "employee relations", "people operations",
+    "hr specialist",
+    "hr manager",
+    "hr generalist",
+    "recruiter",
+    "talent acquisition",
+    "benefits manager",
+    "benefits administrator",
+    "employee relations",
+    "people operations",
     # Legal / Compliance
-    "paralegal", "legal counsel", "compliance officer",
-    "regulatory compliance", "ctf compliance",
+    "paralegal",
+    "legal counsel",
+    "compliance officer",
+    "regulatory compliance",
+    "ctf compliance",
     "global head of aml",
     # Healthcare / Medical
-    "nurse", "nursing", "physician", "therapist", "pharmacist",
-    "clinical trial", "pmhnp", "medical director",
+    "nurse",
+    "nursing",
+    "physician",
+    "therapist",
+    "pharmacist",
+    "clinical trial",
+    "pmhnp",
+    "medical director",
     # Trades / Physical
-    "driver", "warehouse", "mechanic", "electrician", "plumber",
-    "construction", "forklift", "welder", "machinist",
-    "technician senior", "network support technician",
+    "driver",
+    "warehouse",
+    "mechanic",
+    "electrician",
+    "plumber",
+    "construction",
+    "forklift",
+    "welder",
+    "machinist",
+    "technician senior",
+    "network support technician",
     # Marketing (non-product)
-    "affiliate marketing", "marketing operations",
-    "seo specialist", "content writer", "copywriter",
-    "social media manager", "growth manager",
+    "affiliate marketing",
+    "marketing operations",
+    "seo specialist",
+    "content writer",
+    "copywriter",
+    "social media manager",
+    "growth manager",
     # Design (non-product)
-    "graphic designer", "visual designer", "technical artist",
+    "graphic designer",
+    "visual designer",
+    "technical artist",
     # Food / Agriculture
-    "food assurance", "food safety",
+    "food assurance",
+    "food safety",
     # Other unrelated
-    "salesforce developer", "salesforce administrator",
-    "smart contract engineer", "crypto trader",
-    "qa engineer", "quality assurance engineer",
+    "salesforce developer",
+    "salesforce administrator",
+    "smart contract engineer",
+    "crypto trader",
+    "qa engineer",
+    "quality assurance engineer",
     "buyer support",
     "head of support",
 ]
@@ -211,32 +262,91 @@ REJECT_TITLE_REGEX: list[re.Pattern] = [
 
 # Blocked companies -- never score these.
 BLOCKED_COMPANIES: list[str] = [
-    "nebius", "yandex",
+    "nebius",
+    "yandex",
     # Big tech ad platforms (user preference)
-    "google ads", "meta ads",
+    "google ads",
+    "meta ads",
 ]
 
 # Locations that are US-only signals -- cap score at 3 unless remote-EU.
 US_ONLY_LOCATIONS: list[str] = [
-    "united states", "new york", "san francisco", "los angeles",
-    "chicago", "seattle", "austin", "boston", "denver",
-    "atlanta", "miami", "dallas", "houston", "phoenix",
-    "washington, dc", "san jose", "san diego",
+    "united states",
+    "new york",
+    "san francisco",
+    "los angeles",
+    "chicago",
+    "seattle",
+    "austin",
+    "boston",
+    "denver",
+    "atlanta",
+    "miami",
+    "dallas",
+    "houston",
+    "phoenix",
+    "washington, dc",
+    "san jose",
+    "san diego",
 ]
 
 # EU-compatible locations (no penalty)
 EU_LOCATIONS: list[str] = [
-    "germany", "deutschland", "frankfurt", "berlin", "munich", "hamburg",
-    "cologne", "stuttgart", "dusseldorf", "mannheim", "wiesbaden",
-    "remote", "emea", "europe", "eu",
-    "france", "paris", "netherlands", "amsterdam", "spain", "barcelona",
-    "ireland", "dublin", "portugal", "lisbon", "poland", "warsaw",
-    "austria", "vienna", "switzerland", "zurich", "geneva",
-    "uk", "london", "belgium", "brussels", "denmark", "copenhagen",
-    "sweden", "stockholm", "finland", "helsinki", "norway", "oslo",
-    "czech", "prague", "italy", "milan", "rome",
-    "estonia", "tallinn", "ukraine", "kyiv",
-    "dach", "brazil",  # some remote-ok roles list Brazil
+    "germany",
+    "deutschland",
+    "frankfurt",
+    "berlin",
+    "munich",
+    "hamburg",
+    "cologne",
+    "stuttgart",
+    "dusseldorf",
+    "mannheim",
+    "wiesbaden",
+    "remote",
+    "emea",
+    "europe",
+    "eu",
+    "france",
+    "paris",
+    "netherlands",
+    "amsterdam",
+    "spain",
+    "barcelona",
+    "ireland",
+    "dublin",
+    "portugal",
+    "lisbon",
+    "poland",
+    "warsaw",
+    "austria",
+    "vienna",
+    "switzerland",
+    "zurich",
+    "geneva",
+    "uk",
+    "london",
+    "belgium",
+    "brussels",
+    "denmark",
+    "copenhagen",
+    "sweden",
+    "stockholm",
+    "finland",
+    "helsinki",
+    "norway",
+    "oslo",
+    "czech",
+    "prague",
+    "italy",
+    "milan",
+    "rome",
+    "estonia",
+    "tallinn",
+    "ukraine",
+    "kyiv",
+    "dach",
+    "brazil",  # some remote-ok roles list Brazil
 ]
 
 
@@ -278,8 +388,13 @@ def pre_filter_job(
             return True, f"Rejected title regex: '{rx.pattern}' in '{title}'", None
 
     # 3. Junior roles
-    if any(kw in title_lower for kw in ["junior ", "intern ", "internship", "werkstudent", "working student"]):
-        if not any(kw in title_lower for kw in ["lead", "senior", "staff", "principal", "head", "director"]):
+    if any(
+        kw in title_lower
+        for kw in ["junior ", "intern ", "internship", "werkstudent", "working student"]
+    ):
+        if not any(
+            kw in title_lower for kw in ["lead", "senior", "staff", "principal", "head", "director"]
+        ):
             return True, f"Junior role: {title}", None
 
     # 4. US-only location cap (unless explicitly remote)
@@ -291,7 +406,9 @@ def pre_filter_job(
     return False, "", None
 
 
-def score_job(client, title: str, company: str, description: str) -> tuple[int, str, str, str, int, str]:
+def score_job(
+    client, title: str, company: str, description: str
+) -> tuple[int, str, str, str, int, str]:
     """Score a single job posting. Returns (score, reasoning, salary, effort, prep_level, prep_notes)."""
     if not description or pd.isna(description):
         return 0, "No description available", "unknown", "unknown", 0, ""
@@ -322,7 +439,14 @@ def score_job(client, title: str, company: str, description: str) -> tuple[int, 
         )
     except (json.JSONDecodeError, KeyError, ValueError):
         # Fallback to 2 (not 5) -- unknown jobs should not pass the filter
-        return 2, f"Parse error: {response.choices[0].message.content[:100]}", "unknown", "unknown", 0, "unknown"
+        return (
+            2,
+            f"Parse error: {response.choices[0].message.content[:100]}",
+            "unknown",
+            "unknown",
+            0,
+            "unknown",
+        )
 
 
 def main():
@@ -383,7 +507,9 @@ def main():
             print(f"  [SKIP] {title} @ {company} -- {reason}")
             continue
 
-        score, reasoning, salary, effort, prep, prep_note = score_job(client, title, company, description)
+        score, reasoning, salary, effort, prep, prep_note = score_job(
+            client, title, company, description
+        )
 
         # Apply score cap from pre-filter
         if score_cap is not None and score > score_cap:
@@ -396,7 +522,9 @@ def main():
         efforts.append(effort)
         prep_levels.append(prep)
         prep_notes_list.append(prep_note)
-        print(f"  [{score}/10] {title} @ {company} ~{salary} [{effort}] prep:{prep}/5 -- {reasoning}")
+        print(
+            f"  [{score}/10] {title} @ {company} ~{salary} [{effort}] prep:{prep}/5 -- {reasoning}"
+        )
 
     df["fit_score"] = scores
     df["fit_reasoning"] = reasonings

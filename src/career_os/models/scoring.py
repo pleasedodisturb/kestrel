@@ -95,12 +95,8 @@ class ScoredJob(Base):
     # Reasoning & details
     reasoning: Mapped[str] = mapped_column(Text, nullable=False)
     estimated_salary: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    effort_flag: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="medium"
-    )
-    prep_level: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="moderate"
-    )
+    effort_flag: Mapped[str] = mapped_column(String(50), nullable=False, default="medium")
+    prep_level: Mapped[str] = mapped_column(String(50), nullable=False, default="moderate")
     prep_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Score breakdown (JSON array of factor dicts)
@@ -121,6 +117,5 @@ class ScoredJob(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<ScoredJob(id={self.id}, fit_score={self.fit_score}, "
-            f"profile_id={self.profile_id})>"
+            f"<ScoredJob(id={self.id}, fit_score={self.fit_score}, profile_id={self.profile_id})>"
         )

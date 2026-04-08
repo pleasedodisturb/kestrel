@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class AIFeature(StrEnum):
     """Supported AI feature types."""
 
@@ -30,6 +31,7 @@ class AIFeature(StrEnum):
 # Request schemas
 # ---------------------------------------------------------------------------
 
+
 class AICompleteRequest(BaseModel):
     """Request body for POST /api/ai/complete."""
 
@@ -47,6 +49,7 @@ class AICompleteRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Sub-schemas for structured AI responses
 # ---------------------------------------------------------------------------
+
 
 class ScoreBreakdownFactor(BaseModel):
     """A single factor in the score breakdown."""
@@ -80,8 +83,7 @@ class GapAnalysisResult(BaseModel):
     gaps: list[dict] = Field(
         ...,
         description=(
-            "List of gap items with skill_name, required_level, "
-            "current_level, severity, distance"
+            "List of gap items with skill_name, required_level, current_level, severity, distance"
         ),
     )
     readiness_score: float = Field(..., ge=0, le=100, description="Overall readiness 0-100")
@@ -102,9 +104,7 @@ class GoalRecalibrationResult(BaseModel):
     """Structured goal recalibration response."""
 
     recalibration_notes: str = Field(..., description="Market-data-backed recalibration notes")
-    suggested_adjustments: list[dict] = Field(
-        ..., description="Suggested goal adjustments"
-    )
+    suggested_adjustments: list[dict] = Field(..., description="Suggested goal adjustments")
     market_reality: str = Field(..., description="Current market reality summary")
 
 
@@ -132,19 +132,11 @@ class CompanyResearchResult(BaseModel):
     values_alignment: float | dict = Field(
         ..., description="Values alignment score 0-10 or {score, rationale}"
     )
-    ats_platform: str | None = Field(
-        default=None, description="Detected ATS platform"
-    )
+    ats_platform: str | None = Field(default=None, description="Detected ATS platform")
     hiring_patterns: dict = Field(..., description="Hiring velocity and open roles data")
-    industry_segment: str | None = Field(
-        default=None, description="Industry classification"
-    )
-    employee_count: str | None = Field(
-        default=None, description="Estimated employee count"
-    )
-    news: list[dict] | None = Field(
-        default=None, description="Recent news items about the company"
-    )
+    industry_segment: str | None = Field(default=None, description="Industry classification")
+    employee_count: str | None = Field(default=None, description="Estimated employee count")
+    news: list[dict] | None = Field(default=None, description="Recent news items about the company")
 
 
 class LearningRecommendationsResult(BaseModel):
@@ -190,6 +182,7 @@ class InterviewPatternsResult(BaseModel):
 # ---------------------------------------------------------------------------
 # Response schemas
 # ---------------------------------------------------------------------------
+
 
 class AIResponse(BaseModel):
     """Response from an AI provider."""

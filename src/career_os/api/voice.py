@@ -110,9 +110,7 @@ async def send_voice_message(
     except SessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    session = get_session(
-        db, session_id=session_id, profile_id=data.profile_id
-    )
+    session = get_session(db, session_id=session_id, profile_id=data.profile_id)
 
     return VoiceSendResponse(
         user_message=VoiceMessageResponse.model_validate(user_msg),
@@ -132,9 +130,7 @@ async def complete_voice_session(
 ) -> VoiceSessionResponse:
     """Mark a voice session as completed."""
     try:
-        session = complete_session(
-            db, session_id=session_id, profile_id=profile_id
-        )
+        session = complete_session(db, session_id=session_id, profile_id=profile_id)
     except SessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -150,10 +146,7 @@ def _session_response(session) -> VoiceSessionResponse:
         mode=session.mode,
         title=session.title,
         status=session.status,
-        messages=[
-            VoiceMessageResponse.model_validate(m)
-            for m in session.messages
-        ],
+        messages=[VoiceMessageResponse.model_validate(m) for m in session.messages],
         created_at=session.created_at,
         updated_at=session.updated_at,
     )

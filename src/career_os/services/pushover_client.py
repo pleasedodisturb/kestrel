@@ -89,9 +89,7 @@ class PushoverClient:
             raise PushoverAPIError(f"HTTP error: {exc}") from exc
 
         if resp.status_code == 401:
-            raise PushoverAuthError(
-                "Invalid Pushover credentials (user key or app token)", 401
-            )
+            raise PushoverAuthError("Invalid Pushover credentials (user key or app token)", 401)
         if resp.status_code == 429:
             raise PushoverAPIError("Rate limited by Pushover API", 429)
         if resp.status_code >= 400:
@@ -110,9 +108,7 @@ class PushoverClient:
         result = resp.json()
         if result.get("status") != 1:
             errors = result.get("errors", [])
-            raise PushoverAPIError(
-                f"Pushover rejected message: {'; '.join(errors)}"
-            )
+            raise PushoverAPIError(f"Pushover rejected message: {'; '.join(errors)}")
 
         logger.info("Pushover notification sent successfully (request=%s)", result.get("request"))
         return result
@@ -136,9 +132,7 @@ class PushoverClient:
             raise PushoverAPIError(f"HTTP error: {exc}") from exc
 
         if resp.status_code == 401:
-            raise PushoverAuthError(
-                "Invalid Pushover credentials", 401
-            )
+            raise PushoverAuthError("Invalid Pushover credentials", 401)
 
         try:
             data = resp.json()
@@ -147,8 +141,6 @@ class PushoverClient:
 
         if data.get("status") != 1:
             errors = data.get("errors", [])
-            raise PushoverAuthError(
-                f"Validation failed: {'; '.join(errors)}", resp.status_code
-            )
+            raise PushoverAuthError(f"Validation failed: {'; '.join(errors)}", resp.status_code)
 
         return True

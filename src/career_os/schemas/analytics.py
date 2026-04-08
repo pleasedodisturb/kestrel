@@ -22,9 +22,7 @@ class TimeInStage(BaseModel):
     """Average days in a specific pipeline stage."""
 
     stage: str = Field(..., description="Pipeline status name")
-    avg_days: float | None = Field(
-        None, description="Average days in stage, null if no data"
-    )
+    avg_days: float | None = Field(None, description="Average days in stage, null if no data")
 
 
 class WeeklyCount(BaseModel):
@@ -80,12 +78,8 @@ class AnalyticsResponse(BaseModel):
             " to interviewing+. None if zero applied."
         ),
     )
-    time_in_stage: list[TimeInStage] = Field(
-        ..., description="Average days in each status stage"
-    )
-    applications_over_time: list[WeeklyCount] = Field(
-        ..., description="Weekly application counts"
-    )
+    time_in_stage: list[TimeInStage] = Field(..., description="Average days in each status stage")
+    applications_over_time: list[WeeklyCount] = Field(..., description="Weekly application counts")
     score_distribution: list[ScoreBucket] = Field(
         ..., description="Fit score distribution histogram"
     )

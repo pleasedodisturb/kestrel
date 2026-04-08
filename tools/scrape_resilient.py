@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import random
 import sys
 import time
@@ -32,9 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import xml.etree.ElementTree as ET
 
-import httpx
-
 import germany_jobs
+import httpx
 
 logger = logging.getLogger("scrape_resilient")
 
@@ -62,6 +60,7 @@ BACKOFF_BASE = 2.0
 @dataclass
 class ScrapedJob:
     """Normalized job record from any source."""
+
     title: str
     company: str
     location: str
@@ -98,14 +97,17 @@ def _retry_with_backoff(func, *args, **kwargs):
             return func(*args, **kwargs)
         except Exception as e:
             last_error = e
-            wait = BACKOFF_BASE ** attempt + random.uniform(0, 1)
-            logger.warning(f"Attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {wait:.1f}s")
+            wait = BACKOFF_BASE**attempt + random.uniform(0, 1)
+            logger.warning(
+                f"Attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {wait:.1f}s"
+            )
             time.sleep(wait)
     logger.error(f"All {MAX_RETRIES} retries failed: {last_error}")
     return None
 
 
 # --- Source: Germany APIs (Arbeitsagentur + Arbeitnow) ---
+
 
 def scrape_germany_apis(
     presets: list[str] | None = None,
@@ -147,23 +149,26 @@ def scrape_germany_apis(
         for j in raw_jobs:
             if germany_jobs.is_likely_german_only(j):
                 continue
-            jobs.append(ScrapedJob(
-                title=j.get("title", ""),
-                company=j.get("company", ""),
-                location=j.get("location", ""),
-                url=j.get("url", ""),
-                source=j.get("source", "germany_api"),
-                posted=j.get("posted", ""),
-                remote=j.get("remote", False),
-                tags=j.get("tags", []),
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=j.get("title", ""),
+                    company=j.get("company", ""),
+                    location=j.get("location", ""),
+                    url=j.get("url", ""),
+                    source=j.get("source", "germany_api"),
+                    posted=j.get("posted", ""),
+                    remote=j.get("remote", False),
+                    tags=j.get("tags", []),
+                    scraped_at=now,
+                )
+            )
         _random_delay()
 
     return jobs
 
 
 # --- Source: JobSpy (LinkedIn, Indeed, Glassdoor, Google) ---
+
 
 def scrape_jobspy(
     keywords: list[str] | None = None,
@@ -207,17 +212,19 @@ def scrape_jobspy(
     logger.info(f"JobSpy: {len(df)} unique jobs")
 
     for _, row in df.iterrows():
-        jobs.append(ScrapedJob(
-            title=str(row.get("title", "")),
-            company=str(row.get("company", "")),
-            location=str(row.get("location", "")),
-            url=str(row.get("job_url", row.get("link", ""))),
-            source=str(row.get("site", "jobspy")),
-            description=str(row.get("description", "")),
-            posted=str(row.get("date_posted", "")),
-            search_keyword=str(row.get("search_keyword", "")),
-            scraped_at=now,
-        ))
+        jobs.append(
+            ScrapedJob(
+                title=str(row.get("title", "")),
+                company=str(row.get("company", "")),
+                location=str(row.get("location", "")),
+                url=str(row.get("job_url", row.get("link", ""))),
+                source=str(row.get("site", "jobspy")),
+                description=str(row.get("description", "")),
+                posted=str(row.get("date_posted", "")),
+                search_keyword=str(row.get("search_keyword", "")),
+                scraped_at=now,
+            )
+        )
 
     return jobs
 
@@ -225,6 +232,7 @@ def scrape_jobspy(
 # --- Source: Remotive (free API, remote-focused) ---
 
 REMOTIVE_API = "https://remotive.com/api/remote-jobs"
+
 
 def scrape_remotive(
     search: str = "",
@@ -256,19 +264,21 @@ def scrape_remotive(
         return jobs
 
     for j in data.get("jobs", []):
-        jobs.append(ScrapedJob(
-            title=j.get("title", ""),
-            company=j.get("company_name", ""),
-            location=j.get("candidate_required_location", ""),
-            url=j.get("url", ""),
-            source="remotive",
-            description=j.get("description", "")[:MAX_DESCRIPTION_LENGTH],
-            posted=j.get("publication_date", ""),
-            remote=True,
-            salary=j.get("salary", ""),
-            tags=j.get("tags", []),
-            scraped_at=now,
-        ))
+        jobs.append(
+            ScrapedJob(
+                title=j.get("title", ""),
+                company=j.get("company_name", ""),
+                location=j.get("candidate_required_location", ""),
+                url=j.get("url", ""),
+                source="remotive",
+                description=j.get("description", "")[:MAX_DESCRIPTION_LENGTH],
+                posted=j.get("publication_date", ""),
+                remote=True,
+                salary=j.get("salary", ""),
+                tags=j.get("tags", []),
+                scraped_at=now,
+            )
+        )
 
     logger.info(f"Remotive: {len(jobs)} jobs")
     return jobs
@@ -277,6 +287,7 @@ def scrape_remotive(
 # --- Source: RemoteOK (free API, largest remote board) ---
 
 REMOTEOK_API = "https://remoteok.com/api"
+
 
 def scrape_remoteok(limit: int = 50) -> list[ScrapedJob]:
     """
@@ -303,19 +314,21 @@ def scrape_remoteok(limit: int = 50) -> list[ScrapedJob]:
         tags = j.get("tags", [])
         if isinstance(tags, str):
             tags = [tags]
-        jobs.append(ScrapedJob(
-            title=j.get("position", ""),
-            company=j.get("company", ""),
-            location=j.get("location", "Worldwide"),
-            url=j.get("url", j.get("apply_url", "")),
-            source="remoteok",
-            description=j.get("description", "")[:MAX_DESCRIPTION_LENGTH],
-            posted=j.get("date", ""),
-            remote=True,
-            salary=j.get("salary_min", ""),
-            tags=tags,
-            scraped_at=now,
-        ))
+        jobs.append(
+            ScrapedJob(
+                title=j.get("position", ""),
+                company=j.get("company", ""),
+                location=j.get("location", "Worldwide"),
+                url=j.get("url", j.get("apply_url", "")),
+                source="remoteok",
+                description=j.get("description", "")[:MAX_DESCRIPTION_LENGTH],
+                posted=j.get("date", ""),
+                remote=True,
+                salary=j.get("salary_min", ""),
+                tags=tags,
+                scraped_at=now,
+            )
+        )
 
     logger.info(f"RemoteOK: {len(jobs)} jobs")
     return jobs
@@ -324,6 +337,7 @@ def scrape_remoteok(limit: int = 50) -> list[ScrapedJob]:
 # --- Source: Jobicy (free API, remote with geo filter) ---
 
 JOBICY_API = "https://jobicy.com/api/v2/remote-jobs"
+
 
 def scrape_jobicy(
     count: int = 50,
@@ -353,19 +367,21 @@ def scrape_jobicy(
         return jobs
 
     for j in data.get("jobs", []):
-        jobs.append(ScrapedJob(
-            title=j.get("jobTitle", ""),
-            company=j.get("companyName", ""),
-            location=j.get("jobGeo", ""),
-            url=j.get("url", ""),
-            source="jobicy",
-            description=j.get("jobDescription", "")[:MAX_DESCRIPTION_LENGTH],
-            posted=j.get("pubDate", ""),
-            remote=True,
-            salary=j.get("annualSalaryMin", ""),
-            tags=j.get("jobIndustry", []) if isinstance(j.get("jobIndustry"), list) else [],
-            scraped_at=now,
-        ))
+        jobs.append(
+            ScrapedJob(
+                title=j.get("jobTitle", ""),
+                company=j.get("companyName", ""),
+                location=j.get("jobGeo", ""),
+                url=j.get("url", ""),
+                source="jobicy",
+                description=j.get("jobDescription", "")[:MAX_DESCRIPTION_LENGTH],
+                posted=j.get("pubDate", ""),
+                remote=True,
+                salary=j.get("annualSalaryMin", ""),
+                tags=j.get("jobIndustry", []) if isinstance(j.get("jobIndustry"), list) else [],
+                scraped_at=now,
+            )
+        )
 
     logger.info(f"Jobicy: {len(jobs)} jobs")
     return jobs
@@ -374,6 +390,7 @@ def scrape_jobicy(
 # --- Source: We Work Remotely (RSS feed, curated quality) ---
 
 WWR_RSS = "https://weworkremotely.com/remote-jobs.rss"
+
 
 def scrape_weworkremotely(limit: int = 50) -> list[ScrapedJob]:
     """
@@ -410,17 +427,21 @@ def scrape_weworkremotely(limit: int = 50) -> list[ScrapedJob]:
             if ": " in title_text:
                 company, role = title_text.split(": ", 1)
 
-            jobs.append(ScrapedJob(
-                title=role,
-                company=company,
-                location="Remote",
-                url=link_el.text if link_el is not None else "",
-                source="weworkremotely",
-                description=(desc_el.text or "")[:MAX_DESCRIPTION_LENGTH] if desc_el is not None else "",
-                posted=pubdate_el.text if pubdate_el is not None else "",
-                remote=True,
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=role,
+                    company=company,
+                    location="Remote",
+                    url=link_el.text if link_el is not None else "",
+                    source="weworkremotely",
+                    description=(desc_el.text or "")[:MAX_DESCRIPTION_LENGTH]
+                    if desc_el is not None
+                    else "",
+                    posted=pubdate_el.text if pubdate_el is not None else "",
+                    remote=True,
+                    scraped_at=now,
+                )
+            )
     except ET.ParseError as e:
         logger.error(f"WWR RSS parse error: {e}")
 
@@ -431,6 +452,7 @@ def scrape_weworkremotely(limit: int = 50) -> list[ScrapedJob]:
 # --- Source: GermanTechJobs (RSS feed, Germany-specific) ---
 
 GERMANTECHJOBS_RSS = "https://germantechjobs.de/job_feed.xml"
+
 
 def scrape_germantechjobs(limit: int = 50) -> list[ScrapedJob]:
     """
@@ -460,16 +482,20 @@ def scrape_germantechjobs(limit: int = 50) -> list[ScrapedJob]:
             desc_el = item.find("description")
             pubdate_el = item.find("pubDate")
 
-            jobs.append(ScrapedJob(
-                title=title_el.text if title_el is not None else "",
-                company="",  # Not always in the feed title
-                location="Germany",
-                url=link_el.text if link_el is not None else "",
-                source="germantechjobs",
-                description=(desc_el.text or "")[:MAX_DESCRIPTION_LENGTH] if desc_el is not None else "",
-                posted=pubdate_el.text if pubdate_el is not None else "",
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=title_el.text if title_el is not None else "",
+                    company="",  # Not always in the feed title
+                    location="Germany",
+                    url=link_el.text if link_el is not None else "",
+                    source="germantechjobs",
+                    description=(desc_el.text or "")[:MAX_DESCRIPTION_LENGTH]
+                    if desc_el is not None
+                    else "",
+                    posted=pubdate_el.text if pubdate_el is not None else "",
+                    scraped_at=now,
+                )
+            )
     except ET.ParseError as e:
         logger.error(f"GermanTechJobs RSS parse error: {e}")
 
@@ -480,6 +506,7 @@ def scrape_germantechjobs(limit: int = 50) -> list[ScrapedJob]:
 # --- Source: AI-Jobs.net (free JSON API, AI/ML-specific) ---
 
 AIJOBS_API = "https://ai-jobs.net/api/list-jobs/"
+
 
 def scrape_aijobs(limit: int = 100) -> list[ScrapedJob]:
     """
@@ -511,25 +538,28 @@ def scrape_aijobs(limit: int = 100) -> list[ScrapedJob]:
             currency = j.get("salary_currency", "USD")
             salary = f"{j['salary_min']}-{j['salary_max']} {currency}"
 
-        jobs.append(ScrapedJob(
-            title=j.get("title", j.get("job_title", "")),
-            company=j.get("company", j.get("company_name", "")),
-            location=j.get("location", ""),
-            url=j.get("url", j.get("apply_url", j.get("link", ""))),
-            source="aijobs",
-            description=str(j.get("description", j.get("body", "")))[:MAX_DESCRIPTION_LENGTH],
-            posted=j.get("date", j.get("published", j.get("pubDate", ""))),
-            remote="remote" in str(j.get("location", "")).lower() or j.get("remote", False),
-            salary=salary,
-            tags=j.get("tags", []) if isinstance(j.get("tags"), list) else [],
-            scraped_at=now,
-        ))
+        jobs.append(
+            ScrapedJob(
+                title=j.get("title", j.get("job_title", "")),
+                company=j.get("company", j.get("company_name", "")),
+                location=j.get("location", ""),
+                url=j.get("url", j.get("apply_url", j.get("link", ""))),
+                source="aijobs",
+                description=str(j.get("description", j.get("body", "")))[:MAX_DESCRIPTION_LENGTH],
+                posted=j.get("date", j.get("published", j.get("pubDate", ""))),
+                remote="remote" in str(j.get("location", "")).lower() or j.get("remote", False),
+                salary=salary,
+                tags=j.get("tags", []) if isinstance(j.get("tags"), list) else [],
+                scraped_at=now,
+            )
+        )
 
     logger.info(f"AI-Jobs.net: {len(jobs)} jobs")
     return jobs
 
 
 # --- Source: Headless browser (Playwright) — fallback only ---
+
 
 def scrape_with_browser(
     urls: list[str],
@@ -556,7 +586,9 @@ def scrape_with_browser(
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        logger.warning("Playwright not installed. Skipping browser scraping. Install: pip install playwright && playwright install chromium")
+        logger.warning(
+            "Playwright not installed. Skipping browser scraping. Install: pip install playwright && playwright install chromium"
+        )
         return []
 
     results = []
@@ -597,12 +629,14 @@ def scrape_with_browser(
                 content = page.query_selector(extract_selector)
                 text = content.inner_text() if content else page.content()
 
-                results.append({
-                    "url": url,
-                    "content": text,
-                    "title": page.title(),
-                    "scraped_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-                })
+                results.append(
+                    {
+                        "url": url,
+                        "content": text,
+                        "title": page.title(),
+                        "scraped_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+                    }
+                )
 
                 context.close()
                 _random_delay()
@@ -617,6 +651,7 @@ def scrape_with_browser(
 
 
 # --- Deduplication ---
+
 
 def deduplicate(jobs: list[ScrapedJob]) -> list[ScrapedJob]:
     """Remove duplicate jobs by (title, company) key."""
@@ -643,12 +678,14 @@ try:
         scrape_startupjobs,
         scrape_thehub,
     )
+
     NEW_SOURCES_AVAILABLE = True
 except ImportError:
     NEW_SOURCES_AVAILABLE = False
 
 
 # --- Main orchestrator ---
+
 
 def scrape_all_sources(
     mode: str = "api-only",
@@ -758,7 +795,9 @@ def scrape_all_sources(
 
     # 8. New sources: Himalayas, Greenhouse, Lever, Ashby, startup.jobs, TheHub
     if NEW_SOURCES_AVAILABLE:
-        logger.info("=== Source 8/9: New Market Sources (Himalayas, ATS boards, startup.jobs, TheHub) ===")
+        logger.info(
+            "=== Source 8/9: New Market Sources (Himalayas, ATS boards, startup.jobs, TheHub) ==="
+        )
         try:
             new_results = scrape_all_new_sources(keywords=keywords)
             all_jobs.extend(new_results)
@@ -777,15 +816,17 @@ def scrape_all_sources(
         raw = scrape_with_browser(browser_urls)
         for item in raw:
             if item.get("content") and not item.get("error"):
-                all_jobs.append(ScrapedJob(
-                    title=item.get("title", ""),
-                    company="",
-                    location="",
-                    url=item["url"],
-                    source="browser",
-                    description=item["content"][:MAX_DESCRIPTION_LENGTH],
-                    scraped_at=item.get("scraped_at", ""),
-                ))
+                all_jobs.append(
+                    ScrapedJob(
+                        title=item.get("title", ""),
+                        company="",
+                        location="",
+                        url=item["url"],
+                        source="browser",
+                        description=item["content"][:MAX_DESCRIPTION_LENGTH],
+                        scraped_at=item.get("scraped_at", ""),
+                    )
+                )
 
     # Deduplicate
     all_jobs = deduplicate(all_jobs)
@@ -815,13 +856,20 @@ def main():
     )
 
     parser = argparse.ArgumentParser(description="Resilient multi-source job scraper")
-    parser.add_argument("--mode", choices=["api-only", "api-plus", "all"], default="api-only",
-                        help="Scraping mode (default: api-only)")
+    parser.add_argument(
+        "--mode",
+        choices=["api-only", "api-plus", "all"],
+        default="api-only",
+        help="Scraping mode (default: api-only)",
+    )
     parser.add_argument("--keywords", nargs="+", help="Search keywords for JobSpy")
     parser.add_argument("--location", help="Location filter")
-    parser.add_argument("--hours", type=int, default=24, help="Max posting age in hours (default: 24)")
-    parser.add_argument("--germany-presets", nargs="+", default=["all"],
-                        help="Germany job presets (default: all)")
+    parser.add_argument(
+        "--hours", type=int, default=24, help="Max posting age in hours (default: 24)"
+    )
+    parser.add_argument(
+        "--germany-presets", nargs="+", default=["all"], help="Germany job presets (default: all)"
+    )
     parser.add_argument("--jobspy-sites", nargs="+", help="JobSpy sites to search")
     parser.add_argument("--browser-urls", nargs="+", help="Career page URLs for browser scraping")
     parser.add_argument("--output-dir", default="tracking", help="Output directory")

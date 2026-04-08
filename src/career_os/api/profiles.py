@@ -80,8 +80,7 @@ async def update_profile(
     # (VAL-CROSS-004)
     old_job_family = profile.job_family
     job_family_changing = (
-        "job_family" in update_data
-        and update_data["job_family"] != old_job_family
+        "job_family" in update_data and update_data["job_family"] != old_job_family
     )
 
     for field, value in update_data.items():

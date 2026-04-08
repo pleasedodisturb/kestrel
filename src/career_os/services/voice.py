@@ -17,6 +17,7 @@ from career_os.schemas.ai import AIFeature
 # Exceptions
 # ---------------------------------------------------------------------------
 
+
 class ProfileNotFoundError(Exception):
     pass
 
@@ -121,9 +122,7 @@ def create_session(
     return session
 
 
-def get_session(
-    db: Session, *, session_id: int, profile_id: int
-) -> VoiceSession:
+def get_session(db: Session, *, session_id: int, profile_id: int) -> VoiceSession:
     """Get a voice session by ID (profile-scoped)."""
     session = (
         db.query(VoiceSession)
@@ -134,15 +133,11 @@ def get_session(
         .first()
     )
     if not session:
-        raise SessionNotFoundError(
-            f"Voice session {session_id} not found for profile {profile_id}"
-        )
+        raise SessionNotFoundError(f"Voice session {session_id} not found for profile {profile_id}")
     return session
 
 
-def list_sessions(
-    db: Session, *, profile_id: int, mode: str | None = None
-) -> list[VoiceSession]:
+def list_sessions(db: Session, *, profile_id: int, mode: str | None = None) -> list[VoiceSession]:
     """List voice sessions for a profile, optionally filtered by mode."""
     query = (
         db.query(VoiceSession)
@@ -180,11 +175,7 @@ async def send_message(
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     app = None
     if session.application_id:
-        app = (
-            db.query(Application)
-            .filter(Application.id == session.application_id)
-            .first()
-        )
+        app = db.query(Application).filter(Application.id == session.application_id).first()
 
     # Get conversation history
     history = (
@@ -200,9 +191,7 @@ async def send_message(
 
     provider = get_ai_provider()
     ai_feature = _mode_to_feature(session.mode)
-    ai_response = await provider.complete(
-        prompt=prompt, feature=ai_feature, context=context
-    )
+    ai_response = await provider.complete(prompt=prompt, feature=ai_feature, context=context)
 
     # Store assistant message
     assistant_msg = VoiceMessage(
@@ -219,9 +208,7 @@ async def send_message(
     return user_msg, assistant_msg
 
 
-def complete_session(
-    db: Session, *, session_id: int, profile_id: int
-) -> VoiceSession:
+def complete_session(db: Session, *, session_id: int, profile_id: int) -> VoiceSession:
     """Mark a voice session as completed."""
     session = get_session(db, session_id=session_id, profile_id=profile_id)
     session.status = "completed"

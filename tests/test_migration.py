@@ -155,8 +155,11 @@ class TestSchema:
         inspector = inspect(engine)
         tables = set(inspector.get_table_names())
         expected = {
-            "profiles", "applications", "activity_log",
-            "follow_ups", "application_packages",
+            "profiles",
+            "applications",
+            "activity_log",
+            "follow_ups",
+            "application_packages",
         }
         assert expected.issubset(tables), f"Missing tables: {expected - tables}"
 
@@ -396,9 +399,7 @@ class TestCsvImport:
         import_csv(seeded_db, sample_csv, profile_id=1)
 
         german_app = (
-            seeded_db.query(Application)
-            .filter(Application.company == "GermanCo GmbH")
-            .first()
+            seeded_db.query(Application).filter(Application.company == "GermanCo GmbH").first()
         )
         assert german_app is not None
         assert german_app.url is None
@@ -419,9 +420,7 @@ class TestCsvImport:
         import_csv(seeded_db, sample_csv, profile_id=1)
 
         german_app = (
-            seeded_db.query(Application)
-            .filter(Application.role == "KI-Manager/in")
-            .first()
+            seeded_db.query(Application).filter(Application.role == "KI-Manager/in").first()
         )
         assert german_app is not None
         assert german_app.company == "GermanCo GmbH"
@@ -431,11 +430,7 @@ class TestCsvImport:
         """Rows with missing fit scores import with fit_score=None."""
         import_csv(seeded_db, sample_csv, profile_id=1)
 
-        us_app = (
-            seeded_db.query(Application)
-            .filter(Application.company == "USCompany")
-            .first()
-        )
+        us_app = seeded_db.query(Application).filter(Application.company == "USCompany").first()
         assert us_app is not None
         assert us_app.fit_score is None
 
@@ -459,11 +454,7 @@ class TestCsvImport:
         """Dates parsed correctly as timezone-aware datetimes."""
         import_csv(seeded_db, sample_csv, profile_id=1)
 
-        app = (
-            seeded_db.query(Application)
-            .filter(Application.company == "TestCorp")
-            .first()
-        )
+        app = seeded_db.query(Application).filter(Application.company == "TestCorp").first()
         assert app is not None
         assert app.date_applied is not None
         assert app.date_applied.year == 2026
@@ -483,9 +474,7 @@ class TestCsvImport:
         for app in apps:
             assert app.profile_id == 1
 
-    def test_import_warnings_for_empty_urls(
-        self, seeded_db: Session, sample_csv: Path
-    ) -> None:
+    def test_import_warnings_for_empty_urls(self, seeded_db: Session, sample_csv: Path) -> None:
         """Import reports warnings for empty URLs."""
         stats = import_csv(seeded_db, sample_csv, profile_id=1)
         warnings = stats["warnings"]
@@ -519,9 +508,7 @@ class TestRealCsvImport:
         count = seeded_db.query(Application).count()
         assert count == 46
 
-    def test_real_csv_status_distribution(
-        self, seeded_db: Session, real_csv_path: Path
-    ) -> None:
+    def test_real_csv_status_distribution(self, seeded_db: Session, real_csv_path: Path) -> None:
         """Status distribution matches expected mapping (all lowercase)."""
         import_csv(seeded_db, real_csv_path, profile_id=1)
 
@@ -588,17 +575,13 @@ class TestRealCsvImport:
         assert app.fit_score == 8.5
         assert app.status == "interested"
 
-    def test_real_csv_empty_urls_handled(
-        self, seeded_db: Session, real_csv_path: Path
-    ) -> None:
+    def test_real_csv_empty_urls_handled(self, seeded_db: Session, real_csv_path: Path) -> None:
         """Empty URL rows imported correctly."""
         import_csv(seeded_db, real_csv_path, profile_id=1)
 
         # FlexIT Consulting has empty URL
         app = (
-            seeded_db.query(Application)
-            .filter(Application.company == "FlexIT Consulting")
-            .first()
+            seeded_db.query(Application).filter(Application.company == "FlexIT Consulting").first()
         )
         assert app is not None
         assert app.url is None  # Empty URL stored as None
@@ -674,9 +657,7 @@ class TestPackageLinking:
         assert pkg.profile_id == 1
         assert "plain-sr-product-engineer-ai" in pkg.package_dir
 
-    def test_link_finds_cover_letter(
-        self, seeded_db: Session, mock_packages_dir: Path
-    ) -> None:
+    def test_link_finds_cover_letter(self, seeded_db: Session, mock_packages_dir: Path) -> None:
         """Package linking finds cover letter files."""
         app = Application(
             profile_id=1,
@@ -787,9 +768,7 @@ class TestProfileAPI:
         async def get_profile(
             profile_id: int, db: Session = Depends(get_test_db)
         ) -> ProfileResponse:
-            profile = (
-                db.query(ProfileModel).filter(ProfileModel.id == profile_id).first()
-            )
+            profile = db.query(ProfileModel).filter(ProfileModel.id == profile_id).first()
             if profile is None:
                 raise HTTPException(status_code=404, detail="Profile not found")
             return ProfileResponse.model_validate(profile)
@@ -852,11 +831,7 @@ class TestMultiUserIsolation:
         seeded_db.commit()
 
         # Profile 1 has apps, profile 2 does not
-        p1_apps = (
-            seeded_db.query(Application).filter(Application.profile_id == 1).count()
-        )
-        p2_apps = (
-            seeded_db.query(Application).filter(Application.profile_id == p2.id).count()
-        )
+        p1_apps = seeded_db.query(Application).filter(Application.profile_id == 1).count()
+        p2_apps = seeded_db.query(Application).filter(Application.profile_id == p2.id).count()
         assert p1_apps == 5
         assert p2_apps == 0

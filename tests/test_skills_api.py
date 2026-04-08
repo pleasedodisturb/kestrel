@@ -30,9 +30,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -178,9 +176,7 @@ class TestManualSkillCreation:
         assert get_resp.status_code == 200
         assert get_resp.json()["name"] == "React"
 
-    def test_create_manual_skill_appears_in_list(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_create_manual_skill_appears_in_list(self, client: TestClient, test_profile: Profile):
         client.post(
             "/api/skills",
             json={
@@ -219,9 +215,7 @@ class TestManualSkillCreation:
         assert "created_at" in data
         assert "updated_at" in data
 
-    def test_create_skill_records_initial_history(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_create_skill_records_initial_history(self, client: TestClient, test_profile: Profile):
         """Creating a skill should record its initial proficiency in history."""
         resp = client.post(
             "/api/skills",
@@ -234,18 +228,14 @@ class TestManualSkillCreation:
         )
         skill_id = resp.json()["id"]
 
-        history_resp = client.get(
-            f"/api/skills/{skill_id}/history?profile_id={test_profile.id}"
-        )
+        history_resp = client.get(f"/api/skills/{skill_id}/history?profile_id={test_profile.id}")
         assert history_resp.status_code == 200
         history = history_resp.json()
         assert len(history) == 1
         assert history[0]["new_proficiency"] == "beginner"
         assert history[0]["previous_proficiency"] is None
 
-    def test_create_skill_empty_name_returns_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_create_skill_empty_name_returns_422(self, client: TestClient, test_profile: Profile):
         resp = client.post(
             "/api/skills",
             json={
@@ -379,9 +369,7 @@ class TestSkillEditing:
         new_updated = resp.json()["updated_at"]
         assert new_updated >= original_updated
 
-    def test_update_nonexistent_skill_returns_404(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_update_nonexistent_skill_returns_404(self, client: TestClient, test_profile: Profile):
         resp = client.put(
             f"/api/skills/99999?profile_id={test_profile.id}",
             json={"name": "Ghost"},
@@ -427,30 +415,78 @@ class TestSearchFilterPagination:
         db: DBSession = next(db_gen)
 
         skills_data = [
-            {"name": "Python", "category": "technical", "proficiency": "expert",
-             "evidence_source": "cv.yaml"},
-            {"name": "JavaScript", "category": "technical", "proficiency": "advanced",
-             "evidence_source": "cv.yaml"},
-            {"name": "TypeScript", "category": "technical", "proficiency": "advanced",
-             "evidence_source": "manual"},
-            {"name": "Communication", "category": "soft", "proficiency": "expert",
-             "evidence_source": "assessment:cliftonstrengths"},
-            {"name": "Stakeholder Management", "category": "domain", "proficiency": "expert",
-             "evidence_source": "profile"},
-            {"name": "Jira", "category": "tools", "proficiency": "advanced",
-             "evidence_source": "cv.yaml"},
-            {"name": "Docker", "category": "tools", "proficiency": "intermediate",
-             "evidence_source": "manual"},
-            {"name": "Strategic Thinking", "category": "soft", "proficiency": "advanced",
-             "evidence_source": "assessment:cliftonstrengths"},
-            {"name": "Program Management", "category": "domain", "proficiency": "expert",
-             "evidence_source": "profile"},
-            {"name": "Kubernetes", "category": "technical", "proficiency": "beginner",
-             "evidence_source": "manual"},
-            {"name": "React", "category": "technical", "proficiency": "advanced",
-             "evidence_source": "cv.yaml"},
-            {"name": "Leadership", "category": "soft", "proficiency": "expert",
-             "evidence_source": "profile"},
+            {
+                "name": "Python",
+                "category": "technical",
+                "proficiency": "expert",
+                "evidence_source": "cv.yaml",
+            },
+            {
+                "name": "JavaScript",
+                "category": "technical",
+                "proficiency": "advanced",
+                "evidence_source": "cv.yaml",
+            },
+            {
+                "name": "TypeScript",
+                "category": "technical",
+                "proficiency": "advanced",
+                "evidence_source": "manual",
+            },
+            {
+                "name": "Communication",
+                "category": "soft",
+                "proficiency": "expert",
+                "evidence_source": "assessment:cliftonstrengths",
+            },
+            {
+                "name": "Stakeholder Management",
+                "category": "domain",
+                "proficiency": "expert",
+                "evidence_source": "profile",
+            },
+            {
+                "name": "Jira",
+                "category": "tools",
+                "proficiency": "advanced",
+                "evidence_source": "cv.yaml",
+            },
+            {
+                "name": "Docker",
+                "category": "tools",
+                "proficiency": "intermediate",
+                "evidence_source": "manual",
+            },
+            {
+                "name": "Strategic Thinking",
+                "category": "soft",
+                "proficiency": "advanced",
+                "evidence_source": "assessment:cliftonstrengths",
+            },
+            {
+                "name": "Program Management",
+                "category": "domain",
+                "proficiency": "expert",
+                "evidence_source": "profile",
+            },
+            {
+                "name": "Kubernetes",
+                "category": "technical",
+                "proficiency": "beginner",
+                "evidence_source": "manual",
+            },
+            {
+                "name": "React",
+                "category": "technical",
+                "proficiency": "advanced",
+                "evidence_source": "cv.yaml",
+            },
+            {
+                "name": "Leadership",
+                "category": "soft",
+                "proficiency": "expert",
+                "evidence_source": "profile",
+            },
         ]
         for s in skills_data:
             skill = Skill(profile_id=profile_id, **s)
@@ -495,9 +531,7 @@ class TestSearchFilterPagination:
         for s in data["skills"]:
             assert "manual" in s["evidence_source"]
 
-    def test_and_logic_category_plus_proficiency(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_and_logic_category_plus_proficiency(self, client: TestClient, test_profile: Profile):
         """AND logic: category=technical AND proficiency=expert should only return Python."""
         self._seed_many_skills(client, test_profile.id)
         resp = client.get(
@@ -510,9 +544,7 @@ class TestSearchFilterPagination:
     def test_and_logic_category_plus_q(self, client: TestClient, test_profile: Profile):
         """AND logic: category=technical AND q=script should return JavaScript, TypeScript."""
         self._seed_many_skills(client, test_profile.id)
-        resp = client.get(
-            f"/api/skills?profile_id={test_profile.id}&category=technical&q=script"
-        )
+        resp = client.get(f"/api/skills?profile_id={test_profile.id}&category=technical&q=script")
         data = resp.json()
         assert data["total"] == 2
         names = {s["name"] for s in data["skills"]}
@@ -532,9 +564,7 @@ class TestSearchFilterPagination:
     def test_pagination_page_size(self, client: TestClient, test_profile: Profile):
         """Pagination: page_size limits results."""
         self._seed_many_skills(client, test_profile.id)
-        resp = client.get(
-            f"/api/skills?profile_id={test_profile.id}&page=1&page_size=3"
-        )
+        resp = client.get(f"/api/skills?profile_id={test_profile.id}&page=1&page_size=3")
         data = resp.json()
         assert data["total"] == 12  # total count unchanged
         assert len(data["skills"]) == 3  # only 3 on this page
@@ -542,12 +572,8 @@ class TestSearchFilterPagination:
     def test_pagination_page_2(self, client: TestClient, test_profile: Profile):
         """Pagination: page 2 returns different skills."""
         self._seed_many_skills(client, test_profile.id)
-        page1 = client.get(
-            f"/api/skills?profile_id={test_profile.id}&page=1&page_size=5"
-        ).json()
-        page2 = client.get(
-            f"/api/skills?profile_id={test_profile.id}&page=2&page_size=5"
-        ).json()
+        page1 = client.get(f"/api/skills?profile_id={test_profile.id}&page=1&page_size=5").json()
+        page2 = client.get(f"/api/skills?profile_id={test_profile.id}&page=2&page_size=5").json()
 
         page1_ids = {s["id"] for s in page1["skills"]}
         page2_ids = {s["id"] for s in page2["skills"]}
@@ -556,9 +582,7 @@ class TestSearchFilterPagination:
     def test_pagination_beyond_last_page(self, client: TestClient, test_profile: Profile):
         """Requesting a page beyond data returns empty skills list."""
         self._seed_many_skills(client, test_profile.id)
-        resp = client.get(
-            f"/api/skills?profile_id={test_profile.id}&page=100&page_size=50"
-        )
+        resp = client.get(f"/api/skills?profile_id={test_profile.id}&page=100&page_size=50")
         data = resp.json()
         assert data["total"] == 12
         assert len(data["skills"]) == 0
@@ -573,9 +597,7 @@ class TestSearchFilterPagination:
     def test_no_match_returns_empty(self, client: TestClient, test_profile: Profile):
         """Search with no matches returns empty list."""
         self._seed_many_skills(client, test_profile.id)
-        resp = client.get(
-            f"/api/skills?profile_id={test_profile.id}&q=nonexistent_skill"
-        )
+        resp = client.get(f"/api/skills?profile_id={test_profile.id}&q=nonexistent_skill")
         data = resp.json()
         assert data["total"] == 0
         assert len(data["skills"]) == 0
@@ -589,9 +611,7 @@ class TestSearchFilterPagination:
 class TestTimelineTracking:
     """VAL-SKILL-009: Proficiency changes recorded with timestamps. History endpoint works."""
 
-    def test_proficiency_change_creates_history(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_proficiency_change_creates_history(self, client: TestClient, test_profile: Profile):
         skill = _create_skill(client, test_profile.id, proficiency="beginner")
 
         # Update proficiency
@@ -601,9 +621,7 @@ class TestTimelineTracking:
         )
 
         # Check history
-        resp = client.get(
-            f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}"
-        )
+        resp = client.get(f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}")
         assert resp.status_code == 200
         history = resp.json()
         assert len(history) == 2  # initial + one change
@@ -613,9 +631,7 @@ class TestTimelineTracking:
         assert history[0]["new_proficiency"] == "intermediate"
         assert history[0]["created_at"] is not None
 
-    def test_multiple_proficiency_changes_tracked(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_multiple_proficiency_changes_tracked(self, client: TestClient, test_profile: Profile):
         skill = _create_skill(client, test_profile.id, proficiency="beginner")
 
         # beginner → intermediate
@@ -634,9 +650,7 @@ class TestTimelineTracking:
             json={"proficiency": "expert"},
         )
 
-        resp = client.get(
-            f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}"
-        )
+        resp = client.get(f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}")
         history = resp.json()
         assert len(history) == 4  # initial + 3 changes
 
@@ -661,15 +675,11 @@ class TestTimelineTracking:
             json={"name": "Updated Name"},
         )
 
-        resp = client.get(
-            f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}"
-        )
+        resp = client.get(f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}")
         history = resp.json()
         assert len(history) == 1  # only initial creation
 
-    def test_same_proficiency_no_duplicate_history(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_same_proficiency_no_duplicate_history(self, client: TestClient, test_profile: Profile):
         """Updating to the same proficiency should NOT create a new history entry."""
         skill = _create_skill(client, test_profile.id, proficiency="advanced")
 
@@ -678,24 +688,18 @@ class TestTimelineTracking:
             json={"proficiency": "advanced"},
         )
 
-        resp = client.get(
-            f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}"
-        )
+        resp = client.get(f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}")
         history = resp.json()
         assert len(history) == 1  # only initial
 
-    def test_history_entries_have_timestamps(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_history_entries_have_timestamps(self, client: TestClient, test_profile: Profile):
         skill = _create_skill(client, test_profile.id, proficiency="beginner")
         client.put(
             f"/api/skills/{skill['id']}?profile_id={test_profile.id}",
             json={"proficiency": "intermediate"},
         )
 
-        resp = client.get(
-            f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}"
-        )
+        resp = client.get(f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}")
         for entry in resp.json():
             assert entry["created_at"] is not None
             assert "T" in entry["created_at"]  # ISO 8601 format
@@ -707,9 +711,7 @@ class TestTimelineTracking:
             json={"proficiency": "intermediate", "reason": "Completed online course"},
         )
 
-        resp = client.get(
-            f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}"
-        )
+        resp = client.get(f"/api/skills/{skill['id']}/history?profile_id={test_profile.id}")
         history = resp.json()
         latest = history[0]
         assert latest["reason"] == "Completed online course"
@@ -717,9 +719,7 @@ class TestTimelineTracking:
     def test_history_for_nonexistent_skill_returns_404(
         self, client: TestClient, test_profile: Profile
     ):
-        resp = client.get(
-            f"/api/skills/99999/history?profile_id={test_profile.id}"
-        )
+        resp = client.get(f"/api/skills/99999/history?profile_id={test_profile.id}")
         assert resp.status_code == 404
 
 
@@ -761,9 +761,7 @@ class TestSkillsProfileScoping:
         self, client: TestClient, test_profile: Profile, second_profile: Profile
     ):
         skill = _create_skill(client, test_profile.id, name="Python")
-        resp = client.get(
-            f"/api/skills/{skill['id']}/history?profile_id={second_profile.id}"
-        )
+        resp = client.get(f"/api/skills/{skill['id']}/history?profile_id={second_profile.id}")
         assert resp.status_code == 404
 
 
@@ -830,9 +828,7 @@ class TestEvidenceSourceForgeryPrevention:
         assert resp.status_code == 201
         assert resp.json()["evidence_source"] == "manual"
 
-    def test_explicit_manual_source_still_works(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_explicit_manual_source_still_works(self, client: TestClient, test_profile: Profile):
         """Client sends evidence_source='manual' → response shows 'manual' (unchanged)."""
         resp = client.post(
             "/api/skills",

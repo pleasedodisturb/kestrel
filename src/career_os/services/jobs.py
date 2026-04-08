@@ -133,11 +133,7 @@ def search_jobs(
     # can't natively parse "130,000-160,000 EUR" → number).  When salary
     # filter or salary sort is active we fetch all SQL-filtered rows and
     # apply salary logic in Python, then paginate in-memory.
-    need_python_salary = (
-        salary_min is not None
-        or salary_max is not None
-        or sort_field == "salary"
-    )
+    need_python_salary = salary_min is not None or salary_max is not None or sort_field == "salary"
 
     if need_python_salary:
         # Fetch all matching rows (no pagination yet)
@@ -149,21 +145,25 @@ def search_jobs(
             job_obj = row[0]
             readiness = row[1]
             mid = salary_midpoint(job_obj.salary_range)
-            enriched.append({
-                "job": job_obj,
-                "readiness_score": readiness,
-                "_salary_mid": mid,
-            })
+            enriched.append(
+                {
+                    "job": job_obj,
+                    "readiness_score": readiness,
+                    "_salary_mid": mid,
+                }
+            )
 
         # Apply salary filters using numeric comparison
         if salary_min is not None:
             enriched = [
-                r for r in enriched
+                r
+                for r in enriched
                 if r["_salary_mid"] is not None and r["_salary_mid"] >= salary_min
             ]
         if salary_max is not None:
             enriched = [
-                r for r in enriched
+                r
+                for r in enriched
                 if r["_salary_mid"] is not None and r["_salary_mid"] <= salary_max
             ]
 
@@ -194,10 +194,7 @@ def search_jobs(
         total_pages = max(1, math.ceil(total / page_size))
 
         page_items = enriched[offset : offset + page_size]
-        jobs = [
-            {"job": r["job"], "readiness_score": r["readiness_score"]}
-            for r in page_items
-        ]
+        jobs = [{"job": r["job"], "readiness_score": r["readiness_score"]} for r in page_items]
     else:
         # --- Count total before pagination ---
         total = query.count()
@@ -230,10 +227,12 @@ def search_jobs(
         for row in rows:
             job_obj = row[0]
             readiness = row[1]
-            jobs.append({
-                "job": job_obj,
-                "readiness_score": readiness,
-            })
+            jobs.append(
+                {
+                    "job": job_obj,
+                    "readiness_score": readiness,
+                }
+            )
 
     return {
         "jobs": jobs,
@@ -249,9 +248,7 @@ def search_jobs(
 # ---------------------------------------------------------------------------
 
 
-def create_saved_search(
-    db: Session, profile_id: int, data: dict
-) -> SavedSearch:
+def create_saved_search(db: Session, profile_id: int, data: dict) -> SavedSearch:
     """Create a saved search configuration."""
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if not profile:
@@ -279,9 +276,7 @@ def list_saved_searches(db: Session, profile_id: int) -> list[SavedSearch]:
     )
 
 
-def get_saved_search(
-    db: Session, search_id: int, *, profile_id: int
-) -> SavedSearch:
+def get_saved_search(db: Session, search_id: int, *, profile_id: int) -> SavedSearch:
     """Get a single saved search by ID."""
     ss = (
         db.query(SavedSearch)
@@ -296,9 +291,7 @@ def get_saved_search(
     return ss
 
 
-def update_saved_search(
-    db: Session, search_id: int, profile_id: int, data: dict
-) -> SavedSearch:
+def update_saved_search(db: Session, search_id: int, profile_id: int, data: dict) -> SavedSearch:
     """Update a saved search."""
     ss = get_saved_search(db, search_id, profile_id=profile_id)
 

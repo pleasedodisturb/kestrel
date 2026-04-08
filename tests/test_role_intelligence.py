@@ -35,9 +35,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -185,9 +183,7 @@ def client(_db_engine, test_db) -> TestClient:
 class TestInterviewFormat:
     """Test interview format endpoint returns rounds, types, duration."""
 
-    def test_interview_format_returns_all_fields(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_interview_format_returns_all_fields(self, client: TestClient, test_profile: Profile):
         """GET /api/intelligence/interview-format returns round details."""
         response = client.get(
             "/api/intelligence/interview-format",
@@ -227,9 +223,7 @@ class TestInterviewFormat:
             assert isinstance(rnd["round_number"], int)
             assert isinstance(rnd["duration_minutes"], int)
 
-    def test_interview_format_nonexistent_profile_404(
-        self, client: TestClient
-    ):
+    def test_interview_format_nonexistent_profile_404(self, client: TestClient):
         """Interview format with invalid profile_id returns 404."""
         response = client.get(
             "/api/intelligence/interview-format",
@@ -240,9 +234,7 @@ class TestInterviewFormat:
         )
         assert response.status_code == 404
 
-    def test_interview_format_missing_company_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_interview_format_missing_company_422(self, client: TestClient, test_profile: Profile):
         """Interview format without company param returns 422."""
         response = client.get(
             "/api/intelligence/interview-format",
@@ -252,9 +244,7 @@ class TestInterviewFormat:
         )
         assert response.status_code == 422
 
-    def test_interview_format_with_role_context(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_interview_format_with_role_context(self, client: TestClient, test_profile: Profile):
         """Interview format accepts optional role parameter for context."""
         response = client.get(
             "/api/intelligence/interview-format",
@@ -344,9 +334,7 @@ class TestSalaryBenchmarks:
         b = data["benchmarks"]
         assert b["low"] <= b["median"] <= b["high"]
 
-    def test_salary_benchmarks_nonexistent_profile_404(
-        self, client: TestClient
-    ):
+    def test_salary_benchmarks_nonexistent_profile_404(self, client: TestClient):
         """Salary benchmarks with invalid profile_id returns 404."""
         response = client.get(
             "/api/intelligence/salary",
@@ -459,9 +447,7 @@ class TestSalaryBenchmarks:
 class TestInterviewPatterns:
     """Test common interview patterns show distinct categories for different roles."""
 
-    def test_patterns_returns_all_fields(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_patterns_returns_all_fields(self, client: TestClient, test_profile: Profile):
         """GET /api/intelligence/patterns returns question categories and skills."""
         response = client.get(
             "/api/intelligence/patterns",
@@ -484,9 +470,7 @@ class TestInterviewPatterns:
         assert isinstance(data["frequently_tested_skills"], list)
         assert len(data["frequently_tested_skills"]) > 0
 
-    def test_patterns_question_category_fields(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_patterns_question_category_fields(self, client: TestClient, test_profile: Profile):
         """Each question category has name, description, example_questions."""
         response = client.get(
             "/api/intelligence/patterns",
@@ -502,9 +486,7 @@ class TestInterviewPatterns:
             assert "example_questions" in cat
             assert isinstance(cat["example_questions"], list)
 
-    def test_patterns_assessment_criteria_fields(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_patterns_assessment_criteria_fields(self, client: TestClient, test_profile: Profile):
         """Each assessment criterion has name and description."""
         response = client.get(
             "/api/intelligence/patterns",
@@ -518,9 +500,7 @@ class TestInterviewPatterns:
             assert "name" in crit
             assert "description" in crit
 
-    def test_patterns_nonexistent_profile_404(
-        self, client: TestClient
-    ):
+    def test_patterns_nonexistent_profile_404(self, client: TestClient):
         """Patterns with invalid profile_id returns 404."""
         response = client.get(
             "/api/intelligence/patterns",
@@ -531,9 +511,7 @@ class TestInterviewPatterns:
         )
         assert response.status_code == 404
 
-    def test_patterns_missing_role_422(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_patterns_missing_role_422(self, client: TestClient, test_profile: Profile):
         """Patterns without role param returns 422."""
         response = client.get(
             "/api/intelligence/patterns",
@@ -543,9 +521,7 @@ class TestInterviewPatterns:
         )
         assert response.status_code == 422
 
-    def test_patterns_different_roles_distinct(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_patterns_different_roles_distinct(self, client: TestClient, test_profile: Profile):
         """Different role types produce distinct patterns (VAL-ROLE-INTEL-003)."""
         resp_tpm = client.get(
             "/api/intelligence/patterns",
@@ -573,9 +549,7 @@ class TestInterviewPatterns:
             f"got: TPM={tpm_skills}, Eng={eng_skills}"
         )
 
-    def test_patterns_devrel_distinct_from_tpm(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_patterns_devrel_distinct_from_tpm(self, client: TestClient, test_profile: Profile):
         """DevRel patterns are distinct from TPM patterns."""
         resp_tpm = client.get(
             "/api/intelligence/patterns",
@@ -609,9 +583,7 @@ class TestInterviewPatterns:
 class TestProfileScoping:
     """Test profile isolation for role intelligence endpoints."""
 
-    def test_interview_format_requires_valid_profile(
-        self, client: TestClient
-    ):
+    def test_interview_format_requires_valid_profile(self, client: TestClient):
         """Interview format with nonexistent profile returns 404."""
         response = client.get(
             "/api/intelligence/interview-format",
@@ -903,18 +875,20 @@ class TestOpenRouterInterviewFeatures:
         from career_os.ai.openrouter_provider import _try_parse_structured
         from career_os.schemas.ai import InterviewFormatResult
 
-        raw = json.dumps({
-            "rounds": [
-                {
-                    "round_number": 1,
-                    "type": "Phone Screen",
-                    "description": "Initial phone screen.",
-                    "duration_minutes": 30,
-                }
-            ],
-            "total_duration": "2-3 weeks",
-            "process_description": "Standard interview process.",
-        })
+        raw = json.dumps(
+            {
+                "rounds": [
+                    {
+                        "round_number": 1,
+                        "type": "Phone Screen",
+                        "description": "Initial phone screen.",
+                        "duration_minutes": 30,
+                    }
+                ],
+                "total_duration": "2-3 weeks",
+                "process_description": "Standard interview process.",
+            }
+        )
         result = _try_parse_structured(raw, AIFeature.interview_format)
         assert isinstance(result, InterviewFormatResult)
         assert len(result.rounds) == 1
@@ -926,22 +900,24 @@ class TestOpenRouterInterviewFeatures:
         from career_os.ai.openrouter_provider import _try_parse_structured
         from career_os.schemas.ai import InterviewPatternsResult
 
-        raw = json.dumps({
-            "question_categories": [
-                {
-                    "name": "Behavioral",
-                    "description": "Past behavior questions.",
-                    "example_questions": ["Tell me about a time..."],
-                }
-            ],
-            "assessment_criteria": [
-                {
-                    "name": "Problem Solving",
-                    "description": "Analytical skills.",
-                }
-            ],
-            "frequently_tested_skills": ["Communication", "Leadership"],
-        })
+        raw = json.dumps(
+            {
+                "question_categories": [
+                    {
+                        "name": "Behavioral",
+                        "description": "Past behavior questions.",
+                        "example_questions": ["Tell me about a time..."],
+                    }
+                ],
+                "assessment_criteria": [
+                    {
+                        "name": "Problem Solving",
+                        "description": "Analytical skills.",
+                    }
+                ],
+                "frequently_tested_skills": ["Communication", "Leadership"],
+            }
+        )
         result = _try_parse_structured(raw, AIFeature.interview_patterns)
         assert isinstance(result, InterviewPatternsResult)
         assert len(result.question_categories) == 1
@@ -955,9 +931,7 @@ class TestGracefulDegradation:
         self, client: TestClient, test_profile: Profile, _db_engine
     ):
         """When AI provider fails, interview format returns partial with warning."""
-        with patch(
-            "career_os.services.role_intelligence.get_ai_provider"
-        ) as mock_factory:
+        with patch("career_os.services.role_intelligence.get_ai_provider") as mock_factory:
             mock_provider = AsyncMock()
             mock_provider.complete.side_effect = RuntimeError("AI unavailable")
             mock_factory.return_value = mock_provider
@@ -975,13 +949,9 @@ class TestGracefulDegradation:
         assert "warnings" in data
         assert len(data["warnings"]) > 0
 
-    def test_patterns_ai_failure(
-        self, client: TestClient, test_profile: Profile, _db_engine
-    ):
+    def test_patterns_ai_failure(self, client: TestClient, test_profile: Profile, _db_engine):
         """When AI provider fails, patterns returns partial with warning."""
-        with patch(
-            "career_os.services.role_intelligence.get_ai_provider"
-        ) as mock_factory:
+        with patch("career_os.services.role_intelligence.get_ai_provider") as mock_factory:
             mock_provider = AsyncMock()
             mock_provider.complete.side_effect = RuntimeError("AI unavailable")
             mock_factory.return_value = mock_provider
@@ -1008,9 +978,7 @@ class TestGracefulDegradation:
 class TestDeterministicResponses:
     """Test that mock provider returns deterministic results."""
 
-    def test_same_company_same_interview_format(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_same_company_same_interview_format(self, client: TestClient, test_profile: Profile):
         """Same company returns identical interview format."""
         resp1 = client.get(
             "/api/intelligence/interview-format",
@@ -1028,9 +996,7 @@ class TestDeterministicResponses:
         )
         assert resp1.json() == resp2.json()
 
-    def test_same_role_same_patterns(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_same_role_same_patterns(self, client: TestClient, test_profile: Profile):
         """Same role returns identical interview patterns."""
         resp1 = client.get(
             "/api/intelligence/patterns",

@@ -27,9 +27,7 @@ from career_os.models.integrations import IntegrationConfig
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -285,9 +283,7 @@ class TestStoredConfigIntegration:
         # Stored config should override env var
         assert data["default_provider"] == "openrouter"
 
-    def test_only_runtime_supported_providers_shown(
-        self, client: TestClient, db_session
-    ) -> None:
+    def test_only_runtime_supported_providers_shown(self, client: TestClient, db_session) -> None:
         """Dashboard only shows mock and openrouter, not unsupported providers."""
         resp = client.get("/api/ai/health")
         data = resp.json()

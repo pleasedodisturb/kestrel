@@ -55,16 +55,13 @@ def _get_last_refreshed_at(profile: Profile) -> str | None:
 
 def _get_discovered_jobs(db: Session, profile_id: int) -> list[DiscoveredJob]:
     """Get all discovered jobs for a profile."""
-    return (
-        db.query(DiscoveredJob)
-        .filter(DiscoveredJob.profile_id == profile_id)
-        .all()
-    )
+    return db.query(DiscoveredJob).filter(DiscoveredJob.profile_id == profile_id).all()
 
 
 # ---------------------------------------------------------------------------
 # Salary parsing
 # ---------------------------------------------------------------------------
+
 
 def _parse_salary_range(salary_str: str | None) -> tuple[float | None, float | None]:
     """Extract (low, high) salary values from a salary range string.
@@ -87,14 +84,45 @@ def _midpoint(low: float | None, high: float | None) -> float | None:
 
 # Common technical/domain skills to look for in job descriptions
 _KNOWN_SKILLS = [
-    "Python", "TypeScript", "JavaScript", "React", "Node.js", "AWS",
-    "Kubernetes", "Docker", "Agile", "Scrum", "Program Management",
-    "Stakeholder Management", "System Design", "ML", "Machine Learning",
-    "AI", "Artificial Intelligence", "SQL", "GraphQL", "APIs",
-    "Technical Writing", "Community Management", "CUDA", "TensorFlow",
-    "PyTorch", "Java", "Go", "Rust", "C++", "DevOps", "CI/CD",
-    "Terraform", "Data Engineering", "Data Science", "Product Management",
-    "Figma", "Analytics", "Monitoring", "Observability",
+    "Python",
+    "TypeScript",
+    "JavaScript",
+    "React",
+    "Node.js",
+    "AWS",
+    "Kubernetes",
+    "Docker",
+    "Agile",
+    "Scrum",
+    "Program Management",
+    "Stakeholder Management",
+    "System Design",
+    "ML",
+    "Machine Learning",
+    "AI",
+    "Artificial Intelligence",
+    "SQL",
+    "GraphQL",
+    "APIs",
+    "Technical Writing",
+    "Community Management",
+    "CUDA",
+    "TensorFlow",
+    "PyTorch",
+    "Java",
+    "Go",
+    "Rust",
+    "C++",
+    "DevOps",
+    "CI/CD",
+    "Terraform",
+    "Data Engineering",
+    "Data Science",
+    "Product Management",
+    "Figma",
+    "Analytics",
+    "Monitoring",
+    "Observability",
 ]
 
 
@@ -209,15 +237,17 @@ def get_salary_trends(
         median_idx = n // 2
         p75_idx = min(n - 1, int(n * 0.75))
 
-        trends.append({
-            "role": role_type,
-            "location": norm_loc,
-            "period": period,
-            "median": salaries[median_idx],
-            "p25": salaries[p25_idx],
-            "p75": salaries[p75_idx],
-            "sample_size": n,
-        })
+        trends.append(
+            {
+                "role": role_type,
+                "location": norm_loc,
+                "period": period,
+                "median": salaries[median_idx],
+                "p25": salaries[p25_idx],
+                "p75": salaries[p75_idx],
+                "sample_size": n,
+            }
+        )
 
     return {
         "trends": trends,
@@ -268,12 +298,14 @@ def get_skill_trends(db: Session, profile_id: int) -> dict:
         else:
             trend = "down"
 
-        skills_list.append({
-            "skill_name": skill_name,
-            "mention_count": count,
-            "trend_direction": trend,
-            "percentage_of_postings": pct,
-        })
+        skills_list.append(
+            {
+                "skill_name": skill_name,
+                "mention_count": count,
+                "trend_direction": trend,
+                "percentage_of_postings": pct,
+            }
+        )
 
     return {
         "skills": skills_list,
@@ -314,8 +346,7 @@ def get_hiring_patterns(db: Session, profile_id: int) -> dict:
         # Posting velocity: postings per week over last 30 days
         recent_cutoff = now - timedelta(days=30)
         recent_jobs = [
-            j for j in co_jobs
-            if j.posted_at and j.posted_at.replace(tzinfo=UTC) >= recent_cutoff
+            j for j in co_jobs if j.posted_at and j.posted_at.replace(tzinfo=UTC) >= recent_cutoff
         ]
         weeks = 4.0  # 30 days ≈ 4 weeks
         if recent_jobs:
@@ -326,12 +357,14 @@ def get_hiring_patterns(db: Session, profile_id: int) -> dict:
         # Unique roles
         roles = list({j.title for j in co_jobs})
 
-        companies_list.append({
-            "company": company_name,
-            "active_postings_count": len(co_jobs),
-            "posting_velocity": velocity,
-            "roles_trending": roles,
-        })
+        companies_list.append(
+            {
+                "company": company_name,
+                "active_postings_count": len(co_jobs),
+                "posting_velocity": velocity,
+                "roles_trending": roles,
+            }
+        )
 
     # Sort by active_postings_count descending
     companies_list.sort(key=lambda c: c["active_postings_count"], reverse=True)
@@ -364,11 +397,7 @@ def get_market_positioning(db: Session, profile_id: int) -> dict:
         }
 
     # Get user's skills
-    user_skills = (
-        db.query(Skill)
-        .filter(Skill.profile_id == profile_id)
-        .all()
-    )
+    user_skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
     user_skill_names = {s.name.lower() for s in user_skills}
 
     # Group jobs by role type and compute match %
@@ -394,11 +423,13 @@ def get_market_positioning(db: Session, profile_id: int) -> dict:
         else:
             match_pct = 0.0
 
-        positions.append({
-            "role_type": role_type,
-            "match_percentage": match_pct,
-            "total_roles_analyzed": len(role_jobs),
-        })
+        positions.append(
+            {
+                "role_type": role_type,
+                "match_percentage": match_pct,
+                "total_roles_analyzed": len(role_jobs),
+            }
+        )
 
     return {
         "positions": positions,
@@ -439,23 +470,23 @@ def get_opportunity_radar(
     opportunities = []
     for job in jobs:
         if job.company.strip().lower() in dream_lower:
-            opportunities.append({
-                "id": job.id,
-                "title": job.title,
-                "company": job.company,
-                "location": job.location,
-                "url": job.url,
-                "fit_score": job.fit_score,
-                "salary_range": job.salary_range,
-                "priority": "dream",
-                "alert": True,
-                "posted_at": job.posted_at.isoformat() if job.posted_at else None,
-            })
+            opportunities.append(
+                {
+                    "id": job.id,
+                    "title": job.title,
+                    "company": job.company,
+                    "location": job.location,
+                    "url": job.url,
+                    "fit_score": job.fit_score,
+                    "salary_range": job.salary_range,
+                    "priority": "dream",
+                    "alert": True,
+                    "posted_at": job.posted_at.isoformat() if job.posted_at else None,
+                }
+            )
 
     # Sort by fit_score descending (best opportunities first)
-    opportunities.sort(
-        key=lambda o: o.get("fit_score") or 0, reverse=True
-    )
+    opportunities.sort(key=lambda o: o.get("fit_score") or 0, reverse=True)
 
     return {
         "opportunities": opportunities,
@@ -483,9 +514,7 @@ def refresh_market_data(db: Session, profile_id: int) -> dict:
     jobs = _get_discovered_jobs(db, profile_id)
 
     # Count unique role types with salary data
-    salary_count = sum(
-        1 for j in jobs if _parse_salary_range(j.salary_range)[0] is not None
-    )
+    salary_count = sum(1 for j in jobs if _parse_salary_range(j.salary_range)[0] is not None)
 
     # Count unique skills extracted
     all_skills: set[str] = set()

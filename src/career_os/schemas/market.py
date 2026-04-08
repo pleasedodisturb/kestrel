@@ -56,9 +56,7 @@ class SkillTrendItem(BaseModel):
 
     skill_name: str = Field(..., description="Skill name")
     mention_count: int = Field(..., ge=0, description="Times mentioned across postings")
-    trend_direction: str = Field(
-        ..., description="Trend: up, down, or stable"
-    )
+    trend_direction: str = Field(..., description="Trend: up, down, or stable")
     percentage_of_postings: float = Field(
         ..., ge=0, le=100, description="% of postings mentioning this skill"
     )
@@ -87,9 +85,7 @@ class HiringPatternItem(BaseModel):
 
     company: str = Field(..., description="Company name")
     active_postings_count: int = Field(..., ge=0, description="Number of active postings")
-    posting_velocity: float = Field(
-        ..., description="Postings per week (recent velocity)"
-    )
+    posting_velocity: float = Field(..., description="Postings per week (recent velocity)")
     roles_trending: list[str] = Field(
         default_factory=list, description="Role titles being hired for"
     )

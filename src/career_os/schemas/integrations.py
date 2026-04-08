@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 # ---- Integration definitions ----
 
+
 class IntegrationFieldDef(BaseModel):
     """Describes a single credential field for an integration."""
 
@@ -26,6 +27,7 @@ class IntegrationDef(BaseModel):
 
 
 # ---- API request/response schemas ----
+
 
 class IntegrationConfigUpdate(BaseModel):
     """Request body for PUT /api/integrations/{name}/config."""
