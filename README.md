@@ -12,6 +12,10 @@
   <img src="https://img.shields.io/badge/No_coding_required-blue?style=flat-square" alt="No coding required">
 </p>
 
+<p align="center">
+  <a href="https://codespaces.new/pleasedodisturb/kestrel"><img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces" height="32"></a>
+</p>
+
 ---
 
 ## Install
@@ -26,6 +30,12 @@ bash setup.sh
 Open [http://localhost:8101](http://localhost:8101). Done.
 
 **Never used a terminal?** [Full step-by-step guide](docs/QUICKSTART.md) - takes 10 minutes, no coding.
+
+### Or try it instantly in your browser (no install)
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pleasedodisturb/kestrel)
+
+Click the button above. GitHub will build a complete Kestrel instance for you in about 2 minutes. Free with a GitHub account (120 hours/month included). Your own isolated environment with your own data.
 
 ---
 
