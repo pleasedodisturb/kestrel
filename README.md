@@ -68,11 +68,19 @@ http://localhost:8100/docs  - API docs (if you're curious)
 
 **Add real AI** (optional - works fine without it):
 
-1. Get an API key from [openrouter.ai](https://openrouter.ai)
-2. Edit `.env`: set `AI_PROVIDER=openrouter` and `OPENROUTER_API_KEY=your-key`
-3. Restart: `docker compose restart`
+1. Sign up at [openrouter.ai](https://openrouter.ai) and copy your API key
+2. Open the settings file in your Kestrel folder:
+   - **Mac:** Open Terminal, go to your Kestrel folder, type `open .env`
+   - **Windows:** Open the Kestrel folder, type `.env` in the address bar
+   - **Or any text editor:** the file is called `.env` (hidden file - [how to see it](docs/FAQ.md#hidden-files-on-mac))
+3. Change these two lines:
+   ```
+   AI_PROVIDER=openrouter
+   OPENROUTER_API_KEY=sk-or-paste-your-key-here
+   ```
+4. Save the file, then restart: `docker compose restart`
 
-Costs about $1-3/month for typical usage.
+Costs about $1-3/month. Full guide: [AI Provider Guide](docs/AI-PROVIDERS.md)
 
 ---
 
