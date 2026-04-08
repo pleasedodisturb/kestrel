@@ -475,7 +475,9 @@ class TestGoogleCalendar:
         assert resp.status_code == 200
         data = resp.json()
         assert "url" in data
-        assert "calendar.google.com" in data["url"]
+        from urllib.parse import urlparse
+
+        assert urlparse(data["url"]).hostname == "calendar.google.com"
         assert data["event_id"] == event_id
 
 
@@ -535,7 +537,9 @@ class TestMultiProvider:
 
         # Verify each provider has content
         assert "BEGIN:VCALENDAR" in data["providers"]["ical"]
-        assert "calendar.google.com" in data["providers"]["google"]
+        from urllib.parse import urlparse
+
+        assert urlparse(data["providers"]["google"]).hostname == "calendar.google.com"
         assert "x-fantastical3" in data["providers"]["fantastical"]
 
     def test_service_get_event_provider_urls(self, db_session, profile, application):
