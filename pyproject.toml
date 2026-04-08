@@ -6,6 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "kestrel-app"
 version = "0.1.0"
 description = "AI-powered job search platform. Self-hosted, open-source, privacy-first."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Kestrel Contributors"}]
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115.0",
@@ -21,6 +24,12 @@ dependencies = [
     "rich>=13.9.0",
     "icalendar>=7.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/pleasedodisturb/kestrel"
+Repository = "https://github.com/pleasedodisturb/kestrel"
+Documentation = "https://github.com/pleasedodisturb/kestrel/blob/main/docs/QUICKSTART.md"
+"Bug Tracker" = "https://github.com/pleasedodisturb/kestrel/issues"
 
 [project.optional-dependencies]
 dev = [

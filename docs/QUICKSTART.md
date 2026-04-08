@@ -267,7 +267,7 @@ In Demo Mode, scores are simulated and not based on your actual profile. They mi
 **What to do:**
 1. Check that your key starts with `sk-or-` (for OpenRouter)
 2. Make sure there are no extra spaces before or after the key in the settings file
-3. Restart Kestrel: `docker compose restart`
+3. Restart Kestrel: `docker compose down && docker compose up -d`
 4. Open http://localhost:8100/api/ai/health in your browser - it should say "openrouter", not "demo"
 5. If it still says "demo", double-check that AI_PROVIDER=openrouter is set (no spaces around the =)
 

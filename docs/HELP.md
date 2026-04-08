@@ -119,7 +119,7 @@ If you're in Demo Mode (the default), scores are simulated - they look real but 
    AI_PROVIDER=openrouter
    OPENROUTER_API_KEY=sk-or-your-key-here
    ```
-5. Restart: `docker compose restart backend`
+5. Restart: `docker compose down && docker compose up -d`
 
 ### "I set the API key but it still looks like demo mode"
 
@@ -165,7 +165,7 @@ Someone will help you.
 |---------------------|---------|
 | Start Kestrel | `docker compose up -d` |
 | Stop Kestrel | `docker compose down` |
-| Restart Kestrel | `docker compose restart` |
+| Restart Kestrel (after env changes) | `docker compose down && docker compose up -d` |
 | See what's happening | `docker compose logs backend` |
 | Check if it's running | `curl http://localhost:8100/health` |
 | Start completely fresh | `docker compose down -v && bash setup.sh` |

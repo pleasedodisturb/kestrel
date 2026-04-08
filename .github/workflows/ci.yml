@@ -42,14 +42,20 @@ jobs:
 
       - name: PII leak check
         run: |
-          # Fail if any personal data patterns found in source code
-          if grep -rn "vitalii\|garan\|vitalik\|[redacted]\|pm\.me\|pleasedodisturb\|abandoned\.yachts" \
-            --include="*.py" --include="*.ts" --include="*.tsx" --include="*.yaml" --include="*.yml" \
-            src/ tests/ frontend/src/ tools/ 2>/dev/null; then
-            echo "PII leak detected in source code!"
-            exit 1
+          # Check for personal data patterns defined in .github/pii-patterns.txt
+          # For forks: update that file with your own patterns
+          FAIL=0
+          if [ -f .github/pii-patterns.txt ]; then
+            while IFS= read -r pattern; do
+              [[ "$pattern" =~ ^#.*$ || -z "$pattern" ]] && continue
+              if grep -rn "$pattern" --include="*.py" --include="*.ts" --include="*.tsx" --include="*.yaml" --include="*.yml" \
+                src/ tests/ frontend/src/ tools/ 2>/dev/null; then
+                echo "PII pattern found: $pattern"
+                FAIL=1
+              fi
+            done < .github/pii-patterns.txt
           fi
-          echo "No PII found - clean."
+          [ "$FAIL" -eq 0 ] && echo "No PII found - clean." || exit 1
 
   frontend:
     name: Frontend (React)
