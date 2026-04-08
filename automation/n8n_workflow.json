@@ -1,0 +1,122 @@
+{
+  "name": "Daily Job Scan",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-cron",
+      "name": "Daily 7AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "Runs Mon-Fri at 07:00. Adjust timezone in n8n settings.",
+      "parameters_custom": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "cd /path/to/job-search-hq && ./automation/cron_runner.sh",
+        "timeout": 600
+      },
+      "id": "run-pipeline",
+      "name": "Run Pipeline",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, 0],
+      "notes": "UPDATE the path to your job-search-hq directory. Requires OPENAI_API_KEY in n8n environment."
+    },
+    {
+      "parameters": {
+        "command": "cat /path/to/job-search-hq/tracking/daily-scan-$(date +%Y-%m-%d).md"
+      },
+      "id": "read-digest",
+      "name": "Read Digest",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [440, 0],
+      "notes": "Reads today's digest file for notification."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.stdout }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-results",
+      "name": "Has Results?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "message": "=Daily Job Scan Complete!\n\n{{ $json.stdout }}",
+        "chatId": "YOUR_CHAT_ID"
+      },
+      "id": "notify-telegram",
+      "name": "Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [880, -60],
+      "notes": "OPTIONAL: Replace with your preferred notification (Slack, email, Discord, etc). Set YOUR_CHAT_ID and configure Telegram credentials in n8n.",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "subject": "=Daily Job Scan — {{ new Date().toISOString().split('T')[0] }}",
+        "text": "={{ $json.stdout }}",
+        "toEmail": "you@example.com"
+      },
+      "id": "notify-email",
+      "name": "Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [880, 60],
+      "notes": "OPTIONAL: Configure SMTP credentials in n8n. Update toEmail.",
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Daily 7AM Trigger": {
+      "main": [
+        [{ "node": "Run Pipeline", "type": "main", "index": 0 }]
+      ]
+    },
+    "Run Pipeline": {
+      "main": [
+        [{ "node": "Read Digest", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Digest": {
+      "main": [
+        [{ "node": "Has Results?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Results?": {
+      "main": [
+        [
+          { "node": "Telegram Notification", "type": "main", "index": 0 },
+          { "node": "Email Notification", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "_comment": "Import this into n8n via Settings > Import Workflow. Update all paths and credentials before enabling."
+}

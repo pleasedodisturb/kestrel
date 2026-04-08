@@ -1,0 +1,17 @@
+name = "job-search-sync"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+LINEAR_TEAM_ID = "d7d390bc-196d-45cc-bbc3-beaf69e342a6"
+LINEAR_PROJECT_ID = "164962c6-01b3-4e8e-99a5-9df574cd4529"
+
+# Secrets (set via `wrangler secret put <NAME>`):
+# LINEAR_API_KEY
+# LINEAR_WEBHOOK_SECRET
+# TICKTICK_ACCESS_TOKEN
+# TICKTICK_PROJECT_ID
+# CF_PAGES_DEPLOY_HOOK

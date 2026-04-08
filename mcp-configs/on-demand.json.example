@@ -1,0 +1,12 @@
+{
+  "_note": "Copy to .mcp.json and update paths for your system. These are optional Claude Code MCP integrations.",
+  "mcpServers": {
+    "ticktick": {
+      "command": "/path/to/your/ticktick-mcp-server",
+      "args": ["run"],
+      "env": {
+        "TICKTICK_API_TOKEN": "your-token-here"
+      }
+    }
+  }
+}

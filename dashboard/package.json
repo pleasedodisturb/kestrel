@@ -1,0 +1,15 @@
+{
+  "name": "job-search-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js && npx serve ."
+  },
+  "dependencies": {
+    "@linear/sdk": "^29.0.0"
+  },
+  "devDependencies": {
+    "serve": "^14.0.0"
+  }
+}

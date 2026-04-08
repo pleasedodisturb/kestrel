@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  macOS launchd agent for daily job scanning.
+
+  Install:
+    cp automation/com.jobsearchhq.daily-scan.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.jobsearchhq.daily-scan.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.jobsearchhq.daily-scan.plist
+    rm ~/Library/LaunchAgents/com.jobsearchhq.daily-scan.plist
+
+  Check status:
+    launchctl list | grep jobsearchhq
+
+  IMPORTANT: Update the paths below to match your setup.
+-->
+<dict>
+    <key>Label</key>
+    <string>com.jobsearchhq.daily-scan</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <!-- UPDATE THIS PATH -->
+        <string>/Users/YOU/job-search-hq/automation/cron_runner.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <!-- UPDATE THIS PATH -->
+    <string>/Users/YOU/job-search-hq/logs/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <!-- UPDATE THIS PATH -->
+    <string>/Users/YOU/job-search-hq/logs/launchd-stderr.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

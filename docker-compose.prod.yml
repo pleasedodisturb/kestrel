@@ -1,0 +1,31 @@
+# docker-compose.prod.yml — Single-container production build
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up --build
+#
+# This builds the full multi-stage Dockerfile: frontend is compiled and served
+# by FastAPI from a single container on port 8100.
+
+services:
+  careeros:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8100:8100"
+    volumes:
+      - career-data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///data/career_os.db
+      - AI_PROVIDER=mock
+      - AUTH_ENABLED=false
+      # Set these for real deployments:
+      # - AUTH_ENABLED=true
+      # - AUTH_API_KEY=your-secret-key
+      # - AI_PROVIDER=openrouter
+      # - OPENROUTER_API_KEY=your-key
+    restart: unless-stopped
+
+volumes:
+  career-data:
+    driver: local
