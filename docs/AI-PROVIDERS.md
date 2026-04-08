@@ -78,27 +78,39 @@ OPENROUTER_MODEL=anthropic/claude-sonnet-4
 
 | Model | Cost (per 1M tokens) | Quality | Speed | Notes |
 |-------|---------------------|---------|-------|-------|
-| `anthropic/claude-sonnet-4` | ~$3 in / $15 out | Excellent | Fast | Default. Best balance of quality and cost. |
-| `openai/gpt-4o` | ~$2.50 in / $10 out | Excellent | Fast | Great alternative if you prefer OpenAI. |
-| `google/gemini-2.5-flash` | ~$0.15 in / $0.60 out | Very good | Very fast | Budget option. 10x cheaper, still solid. |
-| `mistral/mistral-large` | ~$2 in / $6 out | Very good | Fast | EU-based provider (data stays in EU). |
+| `anthropic/claude-sonnet-4` | $3 in / $15 out | Excellent | Fast | Default. Best balance of quality and cost. |
+| `openai/gpt-5` | $1.25 in / $10 out | Excellent | Fast | Cheaper than Claude, 400K context. |
+| `google/gemini-2.5-flash-lite` | $0.10 in / $0.40 out | Very good | Very fast | Absurdly cheap. Best budget option. |
+| `mistral/mistral-large` | $2 in / $6 out | Very good | Fast | EU-based provider (data stays in France). |
 
-**Budget models (cheap, decent for scoring):**
+**Budget models (under $1/month for typical use):**
 
-| Model | Cost | Quality | Notes |
-|-------|------|---------|-------|
-| `google/gemini-2.5-flash` | Very cheap | Good | Best budget option. Google's fast model. |
-| `meta-llama/llama-3.3-70b` | Cheap | Good | Open source model. Hosted by various providers. |
+| Model | Cost (in/out per 1M) | Quality | Notes |
+|-------|---------------------|---------|-------|
+| `google/gemini-2.5-flash-lite` | $0.10 / $0.40 | Good | Best budget pick. Google's fast model. |
+| `deepseek/deepseek-chat` | $0.32 / $0.89 | Very good | Frontier-class cheap. See privacy note below. |
+| `meta-llama/llama-3.3-70b` | Varies by host | Good | Open source. GPT-4 level performance. |
 
 ### Free models on OpenRouter
 
-Some models on OpenRouter are free. A few caveats:
+OpenRouter offers ~30 free models. Rate-limited to 20 requests/minute and 200/day, but that's enough for personal job searching.
 
-- **Availability:** Free models go offline frequently. Don't rely on them for daily scans.
-- **Quality:** Most free models are smaller (7B-13B parameters) and produce lower quality scoring.
-- **Data concerns:** Some free models are hosted by providers with unclear data retention policies. See the privacy section below.
+**Genuinely capable free models (not toy 7B models):**
 
-If you want free AI, consider running a local model instead (see Option 5).
+| Model | Why it's good |
+|-------|---------------|
+| `qwen/qwen3.6-plus` | 1M context window, flagship quality. Alibaba model (see privacy notes). |
+| `openai/gpt-oss-120b` | OpenAI's open-weight model. Apache 2.0 license. 120B MoE. |
+| `nvidia/nemotron-3-super` | 120B hybrid architecture. Strong general reasoning. |
+| `meta-llama/llama-3.3-70b` | 70B dense model. GPT-4 level. No data concerns (Meta, open weights). |
+| `google/gemma-3-27b` | Google's open model. 27B. Solid for scoring tasks. |
+
+You can also use `openrouter/free` as the model name - OpenRouter will auto-pick the best available free model per request.
+
+**Caveats with free models:**
+- They go offline sometimes. Don't rely on them for daily automated scans.
+- Some are Chinese models (Qwen, DeepSeek) - see the privacy section below.
+- Rate limits mean you can score about 200 jobs/day maximum.
 
 ---
 
@@ -163,15 +175,35 @@ It does NOT send: your full name, email, phone number, application history, or p
 
 ### Chinese model providers (DeepSeek, Qwen, Yi)
 
-Some models on OpenRouter are from Chinese companies. Things to know:
+Some of the best and cheapest models on OpenRouter are from Chinese companies. They're genuinely capable, but there are real privacy concerns you should understand.
 
-- **DeepSeek** is required by Chinese law to store data on Chinese servers. Their privacy policy allows data use for model improvement. If you're job searching with personal career data, this is worth considering.
-- **Qwen (Alibaba)** and **Yi (01.AI)** have similar regulatory obligations.
-- These models are often very capable and cheap/free. The trade-off is data sovereignty.
+**The facts:**
+- DeepSeek's direct API sends data to servers in China. The CCP has legal authority to compel access to data stored in China. South Korea removed DeepSeek from app stores for transferring user data without consent. Italy banned it within 72 hours. 13 European jurisdictions opened investigations.
+- Qwen (Alibaba) and Yi (01.AI) have similar regulatory obligations under Chinese law.
+- Neither DeepSeek nor Qwen has a GDPR-required EU representative.
 
-**Our recommendation:** If data privacy matters to you (and it should - you're sending career-sensitive information), use Anthropic, OpenAI, Google, or Mistral through OpenRouter. The cost difference is small ($1-3/month) and your data stays with providers that have clear, enforceable privacy policies.
+**The mitigation:** When you use DeepSeek or Qwen through OpenRouter, the data doesn't necessarily go to China. OpenRouter routes requests through hosting providers like Azure, Fireworks, or Together.ai (US/EU companies). With ZDR (Zero Data Retention) enabled, your data stays with these Western providers.
 
-If you want zero data exposure, wait for local model support or use Demo Mode.
+**How to use Chinese models safely:**
+1. Enable ZDR in your OpenRouter account settings
+2. Disable prompt logging (the 1% discount isn't worth the irrevocable license it grants)
+3. Use Chinese models only through OpenRouter (never their direct APIs)
+4. OpenRouter's ZDR mode will only route to providers with zero data retention
+
+**Our recommendation:** For job search data (which includes your career history, skills, and target roles), use Anthropic, OpenAI, Google, or Mistral through OpenRouter. The cost difference is $1-3/month and your data stays with providers that have clear, enforceable privacy policies.
+
+If you want Chinese model quality at zero risk, wait for local model support (Ollama) - you can run DeepSeek and Qwen locally with zero data leaving your machine.
+
+### OpenRouter's own data policy
+
+| Setting | What's stored | Risk level |
+|---------|--------------|------------|
+| Default (no logging) | Metadata only (timestamps, model, token counts) | Low |
+| Prompt logging ON | Your prompts + responses stored on OpenRouter | Medium |
+| "May use for training" ON | Irrevocable commercial license to your data | **High - never enable this** |
+| ZDR enabled | Nothing at provider level | Lowest |
+
+**Recommended settings:** Keep prompt logging OFF. Enable ZDR for anything sensitive. Never enable "OpenRouter may use my data."
 
 ---
 
