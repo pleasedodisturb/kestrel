@@ -262,7 +262,7 @@ class TestProfileSeeding:
         profile = seed_default_profile(db)
         assert profile.id is not None
         assert profile.name == "Kestrel User"
-        assert profile.location == "Frankfurt, Germany"
+        assert profile.location == "Remote"
         assert profile.job_family is not None
 
     def test_seed_idempotent(self, db: Session) -> None:
@@ -785,7 +785,7 @@ class TestProfileAPI:
         data = response.json()
         assert data["count"] >= 1
         assert data["profiles"][0]["name"] == "Kestrel User"
-        assert data["profiles"][0]["location"] == "Frankfurt, Germany"
+        assert data["profiles"][0]["location"] == "Remote"
 
     def test_list_profiles_structure(self, api_client: TestClient) -> None:
         """GET /api/profiles returns correct response structure."""
