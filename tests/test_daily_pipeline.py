@@ -303,4 +303,7 @@ class TestStepGenerateDigest:
             step_generate_digest(config, sample_jobs, sample_jobs, sample_jobs[:1])
 
         assert summary_file.exists()
-        assert "Daily Job Scan" in summary_file.read_text()
+        content = summary_file.read_text()
+        # After security fix, only a safe reference is written (no digest content)
+        assert "Daily pipeline completed" in content
+        assert "See digest file for details" in content
