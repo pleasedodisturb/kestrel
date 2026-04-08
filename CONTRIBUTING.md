@@ -1,5 +1,7 @@
 # Contributing to Kestrel
 
+Note: The Python package is internally named `career_os` (from the original project). The PyPI package name is `kestrel-app`.
+
 Thanks for wanting to help. Here's how to get started.
 
 ## Development Setup
