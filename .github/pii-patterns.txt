@@ -1,0 +1,12 @@
+# PII patterns for CI leak detection
+# These patterns catch personal identifiers that should not appear in source code.
+# Add project-specific patterns below (one per line, blank lines and # comments are ignored).
+#
+# For forks: replace these with your own patterns or delete lines you don't need.
+vitalii
+garan
+vitalik
+[redacted]
+pm\.me
+pleasedodisturb
+abandoned\.yachts

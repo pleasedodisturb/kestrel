@@ -200,7 +200,7 @@ OpenRouter charges per AI call. Set a monthly spending limit on your OpenRouter 
 
 A few things to check:
 
-1. **Did you restart Kestrel after adding the key?** If you edited `.env` directly, you need to run `docker compose down` and then `docker compose up -d` for the change to take effect.
+1. **Did you restart Kestrel after adding the key?** If you edited `.env` directly, you need to run `docker compose down && docker compose up -d` for the change to take effect (`docker compose restart` does not reload env vars).
 2. **Is the key correct?** OpenRouter keys start with `sk-or-`. Make sure there are no extra spaces before or after the key in your `.env` file.
 3. **Does your OpenRouter account have credits?** Log into OpenRouter and check your balance. New accounts sometimes need you to add a payment method before API calls work.
 4. **Are you looking at old scores?** Jobs that were scored before you added the key still have their demo scores. Run a new discovery search or re-score existing jobs to see real results.

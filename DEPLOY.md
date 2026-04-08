@@ -1,4 +1,4 @@
-# CareerOS Deployment Guide
+# Kestrel Deployment Guide
 
 Single-container deployment: FastAPI serves both the API (`/api/*`, `/health`, `/docs`) and the React frontend (all other routes) on **one port** (8100).
 
@@ -52,7 +52,7 @@ docker compose up --build
 ```bash
 # First time
 fly launch --copy-config --no-deploy
-fly volumes create careeros_data --region fra --size 1
+fly volumes create kestrel_data --region fra --size 1
 fly deploy
 
 # Subsequent deploys
@@ -71,12 +71,12 @@ fly secrets set AI_PROVIDER=openrouter OPENROUTER_API_KEY=sk-...
 
 ```bash
 # Clone and build
-git clone <repo-url> && cd career-os
+git clone <repo-url> && cd kestrel
 docker compose -f docker-compose.prod.yml up -d --build
 
 # With reverse proxy (Caddy example)
 # Caddyfile:
-#   careeros.example.com {
+#   kestrel.example.com {
 #       reverse_proxy localhost:8100
 #   }
 ```
@@ -96,6 +96,6 @@ The FastAPI app mounts the built frontend as static files and uses a catch-all f
 
 ## Data Persistence
 
-SQLite database lives at `/app/data/career_os.db`. For any deployment, ensure this path is backed by persistent storage (Docker volume, Fly volume, Railway volume).
+SQLite database lives at `/app/data/career_os.db` (internal database name). For any deployment, ensure this path is backed by persistent storage (Docker volume, Fly volume, Railway volume).
 
 Alembic migrations run automatically on startup.
