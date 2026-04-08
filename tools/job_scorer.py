@@ -522,6 +522,8 @@ def main():
         efforts.append(effort)
         prep_levels.append(prep)
         prep_notes_list.append(prep_note)
+        # CodeQL flags this as "clear-text logging of sensitive data" but these
+        # are public job posting fields (title, company, salary range), not PII.
         print(
             f"  [{score}/10] {title} @ {company} ~{salary} [{effort}] prep:{prep}/5 -- {reasoning}"
         )
