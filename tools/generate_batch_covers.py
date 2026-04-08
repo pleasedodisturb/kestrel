@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generate cover letter markdown files from batch templates + hooks."""
 
-import yaml
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = ROOT / "cv" / "applications" / "_batch-templates"

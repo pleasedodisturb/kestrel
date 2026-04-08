@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # research_optiver_pdf has module-level httpx.get call; patch before import
 with patch("httpx.get", return_value=MagicMock(content=b"", text="")):
     from research_jobs import fetch_text
@@ -13,6 +11,7 @@ with patch("httpx.get", return_value=MagicMock(content=b"", text="")):
 # ---------------------------------------------------------------------------
 # fetch_text tests
 # ---------------------------------------------------------------------------
+
 
 class TestFetchText:
     """Tests for fetch_text(url, max_chars)."""
@@ -42,9 +41,7 @@ class TestFetchText:
 
     @patch("research_jobs.httpx.get")
     def test_strips_style_tags(self, mock_get):
-        mock_get.return_value = self._mock_response(
-            "<style>body{color:red}</style><p>Visible</p>"
-        )
+        mock_get.return_value = self._mock_response("<style>body{color:red}</style><p>Visible</p>")
         result = fetch_text("https://example.com")
         assert "color:red" not in result
         assert "Visible" in result
@@ -60,9 +57,7 @@ class TestFetchText:
 
     @patch("research_jobs.httpx.get")
     def test_strips_html_tags(self, mock_get):
-        mock_get.return_value = self._mock_response(
-            "<div><p>Hello</p><a href='#'>World</a></div>"
-        )
+        mock_get.return_value = self._mock_response("<div><p>Hello</p><a href='#'>World</a></div>")
         result = fetch_text("https://example.com")
         assert "<" not in result
         assert "Hello" in result
@@ -70,9 +65,7 @@ class TestFetchText:
 
     @patch("research_jobs.httpx.get")
     def test_collapses_whitespace(self, mock_get):
-        mock_get.return_value = self._mock_response(
-            "<p>Hello</p>   \n\n\t  <p>World</p>"
-        )
+        mock_get.return_value = self._mock_response("<p>Hello</p>   \n\n\t  <p>World</p>")
         result = fetch_text("https://example.com")
         # Multiple whitespace should collapse to single spaces
         assert "  " not in result
@@ -157,6 +150,7 @@ class TestFetchText:
 # extract_strings tests
 # ---------------------------------------------------------------------------
 
+
 class TestExtractStrings:
     """Tests for extract_strings(data, min_len).
 
@@ -190,7 +184,7 @@ class TestExtractStrings:
         assert "GHIJKLMN" in result
 
     def test_mixed_binary_and_ascii(self):
-        data = b"\x00\x01\x02Hello\x80\x90\xFFWorld!\x00\x00"
+        data = b"\x00\x01\x02Hello\x80\x90\xffWorld!\x00\x00"
         result = extract_strings(data)
         assert "Hello" in result
         assert "World!" in result
@@ -219,7 +213,7 @@ class TestExtractStrings:
 
     def test_non_printable_boundary(self):
         # DEL (127) is NOT printable in this implementation
-        data = b"ABCD\x7FEFGH\x00"
+        data = b"ABCD\x7fEFGH\x00"
         result = extract_strings(data)
         assert "ABCD" in result
         assert "EFGH" in result
@@ -247,11 +241,7 @@ class TestExtractStrings:
     def test_pdf_like_binary_data(self):
         # \x50 is 'P' (printable), so it joins with "Privacy Policy"
         # Use \x01 before Privacy to cleanly separate
-        data = (
-            b"\x00\x01%PDF-1.4\x00\x00"
-            b"\xff\xfe/Type /Catalog\x00"
-            b"\x01Privacy Policy\x00"
-        )
+        data = b"\x00\x01%PDF-1.4\x00\x00\xff\xfe/Type /Catalog\x00\x01Privacy Policy\x00"
         result = extract_strings(data, min_len=4)
         assert "%PDF-1.4" in result
         assert "/Type /Catalog" in result

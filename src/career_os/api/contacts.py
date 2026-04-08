@@ -110,11 +110,7 @@ async def get_detail(
     interactions = list_interactions(db, contact_id, profile_id=profile_id)
     from career_os.models.contacts import ContactApplication
 
-    links = (
-        db.query(ContactApplication)
-        .filter(ContactApplication.contact_id == contact_id)
-        .all()
-    )
+    links = db.query(ContactApplication).filter(ContactApplication.contact_id == contact_id).all()
 
     return ContactDetailResponse(
         **ContactResponse.model_validate(contact).model_dump(),
@@ -237,17 +233,11 @@ async def get_linked_applications(
 
     from career_os.models.contacts import ContactApplication
 
-    links = (
-        db.query(ContactApplication)
-        .filter(ContactApplication.contact_id == contact_id)
-        .all()
-    )
+    links = db.query(ContactApplication).filter(ContactApplication.contact_id == contact_id).all()
     return [ContactApplicationResponse.model_validate(l) for l in links]
 
 
-@router.delete(
-    "/contacts/{contact_id}/applications/{application_id}", status_code=204
-)
+@router.delete("/contacts/{contact_id}/applications/{application_id}", status_code=204)
 async def unlink_application(
     contact_id: int,
     application_id: int,

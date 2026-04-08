@@ -146,10 +146,7 @@ async def get_interview_format(
         )
 
     if isinstance(structured, InterviewFormatResult):
-        rounds = [
-            InterviewRound(**rnd)
-            for rnd in structured.rounds
-        ]
+        rounds = [InterviewRound(**rnd) for rnd in structured.rounds]
         return InterviewFormatResponse(
             company=company,
             rounds=rounds,
@@ -209,9 +206,7 @@ def _salary_fallback_from_market(
     (and optional location). Returns None if no market trend data is available.
     """
     try:
-        trends_response = get_salary_trends(
-            db, profile_id, role=role, location=location
-        )
+        trends_response = get_salary_trends(db, profile_id, role=role, location=location)
         trends = trends_response.get("trends", [])
         if not trends:
             return None
@@ -322,25 +317,19 @@ def get_salary_benchmarks(
     _validate_profile(db, profile_id)
 
     # Get discovered jobs for this profile
-    query = db.query(DiscoveredJob).filter(
-        DiscoveredJob.profile_id == profile_id
-    )
+    query = db.query(DiscoveredJob).filter(DiscoveredJob.profile_id == profile_id)
     jobs = query.all()
 
     # Filter by role using normalized aliases (case-insensitive)
     role_variants = _normalize_role_for_matching(role)
     matching_jobs = [
-        j for j in jobs
-        if any(variant in j.title.lower() for variant in role_variants)
+        j for j in jobs if any(variant in j.title.lower() for variant in role_variants)
     ]
 
     # Filter by location if specified
     if location:
         loc_lower = location.lower()
-        matching_jobs = [
-            j for j in matching_jobs
-            if j.location and loc_lower in j.location.lower()
-        ]
+        matching_jobs = [j for j in matching_jobs if j.location and loc_lower in j.location.lower()]
 
     # Filter by company stage if specified (match against description as heuristic)
     if company_stage:
@@ -407,9 +396,7 @@ def get_salary_benchmarks(
             role=role,
             location=location,
             company_stage=company_stage,
-            benchmarks=SalaryBenchmark(
-                low=0.0, median=0.0, high=0.0, sample_size=0
-            ),
+            benchmarks=SalaryBenchmark(low=0.0, median=0.0, high=0.0, sample_size=0),
             context=f"No salary data found for {', '.join(context_parts)}.",
         )
 
@@ -511,13 +498,9 @@ async def get_interview_patterns(
         )
 
     if isinstance(structured, InterviewPatternsResult):
-        question_categories = [
-            QuestionCategory(**cat)
-            for cat in structured.question_categories
-        ]
+        question_categories = [QuestionCategory(**cat) for cat in structured.question_categories]
         assessment_criteria = [
-            AssessmentCriterion(**crit)
-            for crit in structured.assessment_criteria
+            AssessmentCriterion(**crit) for crit in structured.assessment_criteria
         ]
         return InterviewPatternsResponse(
             role=role,

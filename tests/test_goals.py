@@ -36,9 +36,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -212,9 +210,7 @@ def sample_learning(test_db: Session, test_profile: Profile) -> list[LearningRes
 
 
 @pytest.fixture
-def sample_discovered_jobs(
-    test_db: Session, test_profile: Profile
-) -> list[DiscoveredJob]:
+def sample_discovered_jobs(test_db: Session, test_profile: Profile) -> list[DiscoveredJob]:
     """Create sample discovered jobs with descriptions containing known skills."""
     import json
 
@@ -282,9 +278,7 @@ def sample_discovered_jobs(
 class TestGoalCRUD:
     """Tests for goal CRUD operations."""
 
-    def test_create_aspirational_goal(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_create_aspirational_goal(self, api_client: TestClient, test_profile: Profile):
         """POST /api/goals creates aspirational goal."""
         resp = api_client.post(
             "/api/goals",
@@ -304,9 +298,7 @@ class TestGoalCRUD:
         assert data["description"] == "Big goal"
         assert data["id"] > 0
 
-    def test_create_realistic_goal(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_create_realistic_goal(self, api_client: TestClient, test_profile: Profile):
         """POST /api/goals creates realistic goal."""
         resp = api_client.post(
             "/api/goals",
@@ -321,9 +313,7 @@ class TestGoalCRUD:
         assert data["goal_type"] == "realistic"
         assert data["status"] == "active"
 
-    def test_create_goal_invalid_type(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_create_goal_invalid_type(self, api_client: TestClient, test_profile: Profile):
         """POST /api/goals with invalid type returns 422."""
         resp = api_client.post(
             "/api/goals",
@@ -335,9 +325,7 @@ class TestGoalCRUD:
         )
         assert resp.status_code == 422
 
-    def test_create_goal_missing_title(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_create_goal_missing_title(self, api_client: TestClient, test_profile: Profile):
         """POST /api/goals without title returns 422."""
         resp = api_client.post(
             "/api/goals",
@@ -360,25 +348,17 @@ class TestGoalCRUD:
         )
         assert resp.status_code == 404
 
-    def test_list_goals(
-        self, api_client: TestClient, test_profile: Profile, sample_goal: Goal
-    ):
+    def test_list_goals(self, api_client: TestClient, test_profile: Profile, sample_goal: Goal):
         """GET /api/goals returns goals list."""
-        resp = api_client.get(
-            "/api/goals", params={"profile_id": test_profile.id}
-        )
+        resp = api_client.get("/api/goals", params={"profile_id": test_profile.id})
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] >= 1
         assert any(g["id"] == sample_goal.id for g in data["goals"])
 
-    def test_list_goals_empty(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_list_goals_empty(self, api_client: TestClient, test_profile: Profile):
         """GET /api/goals with no goals returns empty list."""
-        resp = api_client.get(
-            "/api/goals", params={"profile_id": test_profile.id}
-        )
+        resp = api_client.get("/api/goals", params={"profile_id": test_profile.id})
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 0
@@ -413,9 +393,7 @@ class TestGoalCRUD:
         assert all(g["goal_type"] == "realistic" for g in data["goals"])
         assert data["total"] == 1
 
-    def test_get_goal(
-        self, api_client: TestClient, test_profile: Profile, sample_goal: Goal
-    ):
+    def test_get_goal(self, api_client: TestClient, test_profile: Profile, sample_goal: Goal):
         """GET /api/goals/{id} returns goal details."""
         resp = api_client.get(
             f"/api/goals/{sample_goal.id}",
@@ -427,18 +405,12 @@ class TestGoalCRUD:
         assert data["title"] == sample_goal.title
         assert data["goal_type"] == "aspirational"
 
-    def test_get_goal_not_found(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_get_goal_not_found(self, api_client: TestClient, test_profile: Profile):
         """GET /api/goals/{id} with nonexistent ID returns 404."""
-        resp = api_client.get(
-            "/api/goals/99999", params={"profile_id": test_profile.id}
-        )
+        resp = api_client.get("/api/goals/99999", params={"profile_id": test_profile.id})
         assert resp.status_code == 404
 
-    def test_update_goal(
-        self, api_client: TestClient, test_profile: Profile, sample_goal: Goal
-    ):
+    def test_update_goal(self, api_client: TestClient, test_profile: Profile, sample_goal: Goal):
         """PUT /api/goals/{id} updates fields."""
         resp = api_client.put(
             f"/api/goals/{sample_goal.id}",
@@ -465,9 +437,7 @@ class TestGoalCRUD:
         assert data["description"] == "New description"
         assert data["goal_type"] == original_type
 
-    def test_update_goal_not_found(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_update_goal_not_found(self, api_client: TestClient, test_profile: Profile):
         """PUT /api/goals/{id} with nonexistent ID returns 404."""
         resp = api_client.put(
             "/api/goals/99999",
@@ -476,9 +446,7 @@ class TestGoalCRUD:
         )
         assert resp.status_code == 404
 
-    def test_delete_goal(
-        self, api_client: TestClient, test_profile: Profile, sample_goal: Goal
-    ):
+    def test_delete_goal(self, api_client: TestClient, test_profile: Profile, sample_goal: Goal):
         """DELETE /api/goals/{id} removes goal."""
         resp = api_client.delete(
             f"/api/goals/{sample_goal.id}",
@@ -493,13 +461,9 @@ class TestGoalCRUD:
         )
         assert resp2.status_code == 404
 
-    def test_delete_goal_not_found(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_delete_goal_not_found(self, api_client: TestClient, test_profile: Profile):
         """DELETE /api/goals/{id} with nonexistent ID returns 404."""
-        resp = api_client.delete(
-            "/api/goals/99999", params={"profile_id": test_profile.id}
-        )
+        resp = api_client.delete("/api/goals/99999", params={"profile_id": test_profile.id})
         assert resp.status_code == 404
 
 
@@ -577,9 +541,7 @@ class TestRealityMap:
         data = resp.json()
         assert data["overall_progress"] == 0.0
 
-    def test_reality_map_not_found(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_reality_map_not_found(self, api_client: TestClient, test_profile: Profile):
         """Reality map for nonexistent goal returns 404."""
         resp = api_client.get(
             "/api/goals/99999/reality-map",
@@ -665,9 +627,7 @@ class TestProgressTracking:
             params={"profile_id": test_profile.id},
         )
         data = resp.json()
-        apps_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "applications"
-        )
+        apps_dim = next(d for d in data["dimensions"] if d["dimension"] == "applications")
         # We have 3 active apps (applied, interviewing, applied) out of target 10
         assert apps_dim["percentage"] == 30.0
         assert "3/10" in apps_dim["detail"]
@@ -685,9 +645,7 @@ class TestProgressTracking:
             params={"profile_id": test_profile.id},
         )
         data = resp.json()
-        learning_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "learning"
-        )
+        learning_dim = next(d for d in data["dimensions"] if d["dimension"] == "learning")
         # 1/3 completed = 33.3%
         assert abs(learning_dim["percentage"] - 33.3) < 0.1
         assert "1/3" in learning_dim["detail"]
@@ -705,9 +663,7 @@ class TestProgressTracking:
             params={"profile_id": test_profile.id},
         )
         data = resp.json()
-        portfolio_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "portfolio"
-        )
+        portfolio_dim = next(d for d in data["dimensions"] if d["dimension"] == "portfolio")
         # 3 advanced/expert skills (Python advanced, PM expert, Leadership advanced)
         # out of target 5 for aspirational = 60%
         assert portfolio_dim["percentage"] == 60.0
@@ -744,15 +700,12 @@ class TestProgressTracking:
         )
         data = resp.json()
         expected = round(
-            sum(d["percentage"] for d in data["dimensions"])
-            / len(data["dimensions"]),
+            sum(d["percentage"] for d in data["dimensions"]) / len(data["dimensions"]),
             1,
         )
         assert abs(data["overall_progress"] - expected) < 0.1
 
-    def test_progress_not_found(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_progress_not_found(self, api_client: TestClient, test_profile: Profile):
         """Progress for nonexistent goal returns 404."""
         resp = api_client.get(
             "/api/goals/99999/progress",
@@ -791,9 +744,7 @@ class TestRecalibration:
         assert "market_reality" in data
         assert len(data["market_reality"]) > 0
 
-    def test_recalibrate_not_found(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_recalibrate_not_found(self, api_client: TestClient, test_profile: Profile):
         """Recalibration for nonexistent goal returns 404."""
         resp = api_client.put(
             "/api/goals/99999/recalibrate",
@@ -922,9 +873,7 @@ class TestAlternatives:
             assert len(path["pros"]) >= 1
             assert len(path["cons"]) >= 1
 
-    def test_alternatives_not_found(
-        self, api_client: TestClient, test_profile: Profile
-    ):
+    def test_alternatives_not_found(self, api_client: TestClient, test_profile: Profile):
         """Alternatives for nonexistent goal returns 404."""
         resp = api_client.get(
             "/api/goals/99999/alternatives",
@@ -972,9 +921,7 @@ class TestCrossMilestoneTracking:
             params={"profile_id": test_profile.id},
         )
         data = resp.json()
-        portfolio_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "portfolio"
-        )
+        portfolio_dim = next(d for d in data["dimensions"] if d["dimension"] == "portfolio")
         # 3 advanced/expert out of target 3 = 100%
         assert portfolio_dim["percentage"] == 100.0
 
@@ -991,9 +938,7 @@ class TestCrossMilestoneTracking:
             params={"profile_id": test_profile.id},
         )
         data = resp.json()
-        learning_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "learning"
-        )
+        learning_dim = next(d for d in data["dimensions"] if d["dimension"] == "learning")
         # 1/3 completed
         assert learning_dim["percentage"] > 0
 
@@ -1014,9 +959,7 @@ class TestProfileScoping:
         sample_goal: Goal,
     ):
         """Profile B cannot see Profile A's goals."""
-        resp = api_client.get(
-            "/api/goals", params={"profile_id": second_profile.id}
-        )
+        resp = api_client.get("/api/goals", params={"profile_id": second_profile.id})
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 0
@@ -1130,9 +1073,7 @@ class TestProfileScoping:
 class TestGoalService:
     """Direct service layer tests."""
 
-    def test_create_and_get(
-        self, test_db: Session, test_profile: Profile
-    ):
+    def test_create_and_get(self, test_db: Session, test_profile: Profile):
         """Service creates and retrieves goal."""
         from career_os.services.goals import create_goal, get_goal
 
@@ -1147,9 +1088,7 @@ class TestGoalService:
         fetched = get_goal(test_db, goal.id, test_profile.id)
         assert fetched.id == goal.id
 
-    def test_update_preserves_unset_fields(
-        self, test_db: Session, test_profile: Profile
-    ):
+    def test_update_preserves_unset_fields(self, test_db: Session, test_profile: Profile):
         """Update only changes specified fields."""
         from career_os.services.goals import create_goal, update_goal
 
@@ -1163,16 +1102,12 @@ class TestGoalService:
             },
         )
 
-        updated = update_goal(
-            test_db, goal.id, test_profile.id, {"title": "Changed"}
-        )
+        updated = update_goal(test_db, goal.id, test_profile.id, {"title": "Changed"})
         assert updated.title == "Changed"
         assert updated.description == "Keep this"
         assert updated.goal_type == "aspirational"
 
-    def test_delete_removes_goal(
-        self, test_db: Session, test_profile: Profile
-    ):
+    def test_delete_removes_goal(self, test_db: Session, test_profile: Profile):
         """Delete physically removes the goal."""
         from career_os.services.goals import (
             GoalNotFoundError,
@@ -1191,9 +1126,7 @@ class TestGoalService:
         with pytest.raises(GoalNotFoundError):
             get_goal(test_db, goal.id, test_profile.id)
 
-    def test_list_with_filters(
-        self, test_db: Session, test_profile: Profile
-    ):
+    def test_list_with_filters(self, test_db: Session, test_profile: Profile):
         """List filters by status and type."""
         from career_os.services.goals import create_goal, list_goals
 
@@ -1262,9 +1195,7 @@ class TestMarketPositioningDimension:
             params={"profile_id": test_profile.id},
         )
         data = resp.json()
-        market_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "market_positioning"
-        )
+        market_dim = next(d for d in data["dimensions"] if d["dimension"] == "market_positioning")
         assert market_dim["percentage"] == 0.0
 
     def test_market_positioning_included_in_overall_average(
@@ -1288,8 +1219,7 @@ class TestMarketPositioningDimension:
 
         # Verify overall is average of all 4
         expected = round(
-            sum(d["percentage"] for d in data["dimensions"])
-            / len(data["dimensions"]),
+            sum(d["percentage"] for d in data["dimensions"]) / len(data["dimensions"]),
             1,
         )
         assert abs(data["overall_progress"] - expected) < 0.1
@@ -1306,9 +1236,7 @@ class TestMarketPositioningDimension:
             params={"profile_id": test_profile.id},
         )
         data = resp.json()
-        market_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "market_positioning"
-        )
+        market_dim = next(d for d in data["dimensions"] if d["dimension"] == "market_positioning")
         assert "detail" in market_dim
         assert isinstance(market_dim["detail"], str)
         assert len(market_dim["detail"]) > 0
@@ -1331,13 +1259,10 @@ class TestMarketPositioningDimension:
         )
         assert resp.status_code == 200
         data = resp.json()
-        market_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "market_positioning"
-        )
+        market_dim = next(d for d in data["dimensions"] if d["dimension"] == "market_positioning")
         # With 3 discovered jobs across 3 role types, market positioning > 0%
         assert market_dim["percentage"] > 0.0, (
-            f"Expected market_positioning > 0% after discovery, "
-            f"got {market_dim['percentage']}%"
+            f"Expected market_positioning > 0% after discovery, got {market_dim['percentage']}%"
         )
 
     def test_market_positioning_with_skills_higher(
@@ -1359,9 +1284,7 @@ class TestMarketPositioningDimension:
         )
         assert resp.status_code == 200
         data = resp.json()
-        market_dim = next(
-            d for d in data["dimensions"] if d["dimension"] == "market_positioning"
-        )
+        market_dim = next(d for d in data["dimensions"] if d["dimension"] == "market_positioning")
         # With both discovery data AND matching skills, should be significantly > 0
         assert market_dim["percentage"] > 50.0, (
             f"Expected market_positioning > 50% with skills + discovery, "

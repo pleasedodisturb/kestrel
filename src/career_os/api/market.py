@@ -36,9 +36,7 @@ router = APIRouter(tags=["market-intelligence"])
 async def salary_trends_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     role: str | None = Query(default=None, description="Filter by role substring"),
-    location: str | None = Query(
-        default=None, description="Filter by location substring"
-    ),
+    location: str | None = Query(default=None, description="Filter by location substring"),
     db: Session = Depends(get_db),
 ) -> SalaryTrendsResponse:
     """Get salary trends by role and location.
@@ -47,9 +45,7 @@ async def salary_trends_endpoint(
     normalized role type.
     """
     try:
-        result = get_salary_trends(
-            db, profile_id, role=role, location=location
-        )
+        result = get_salary_trends(db, profile_id, role=role, location=location)
     except ProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -130,9 +126,7 @@ async def positioning_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get(
-    "/api/market/opportunity-radar", response_model=OpportunityRadarResponse
-)
+@router.get("/api/market/opportunity-radar", response_model=OpportunityRadarResponse)
 async def opportunity_radar_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     dream_companies: str | None = Query(
@@ -166,9 +160,7 @@ async def opportunity_radar_endpoint(
                 companies_list = None
 
     try:
-        result = get_opportunity_radar(
-            db, profile_id, dream_companies=companies_list
-        )
+        result = get_opportunity_radar(db, profile_id, dream_companies=companies_list)
     except ProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

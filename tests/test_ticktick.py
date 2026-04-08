@@ -47,9 +47,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -159,10 +157,12 @@ def ticktick_config(db_session) -> IntegrationConfig:
         name="ticktick",
         display_name="TickTick",
         enabled=True,
-        credentials=json.dumps({
-            "api_token": "test-token-123",
-            "project_id": "test-project-id",
-        }),
+        credentials=json.dumps(
+            {
+                "api_token": "test-token-123",
+                "project_id": "test-project-id",
+            }
+        ),
         status="connected",
     )
     db_session.add(config)
@@ -384,9 +384,7 @@ class TestCompletionSync:
         db_session.add(sync_task)
         db_session.commit()
 
-        mock_ticktick_client.get_completed_tasks.return_value = [
-            {"id": "tt-lg-456", "status": 2}
-        ]
+        mock_ticktick_client.get_completed_tasks.return_value = [{"id": "tt-lg-456", "status": 2}]
 
         stats = sync_completions_from_ticktick(
             db_session,
@@ -415,9 +413,7 @@ class TestCompletionSync:
         db_session.add(sync_task)
         db_session.commit()
 
-        mock_ticktick_client.get_completed_tasks.return_value = [
-            {"id": "tt-pa-789", "status": 2}
-        ]
+        mock_ticktick_client.get_completed_tasks.return_value = [{"id": "tt-pa-789", "status": 2}]
 
         stats = sync_completions_from_ticktick(
             db_session,
@@ -455,9 +451,7 @@ class TestCompletionSync:
         db_session.add(sync_task)
         db_session.commit()
 
-        mock_ticktick_client.get_completed_tasks.return_value = [
-            {"id": "tt-done-123", "status": 2}
-        ]
+        mock_ticktick_client.get_completed_tasks.return_value = [{"id": "tt-done-123", "status": 2}]
 
         stats = sync_completions_from_ticktick(
             db_session,
@@ -790,9 +784,7 @@ class TestConnectionTest:
 
     def test_configured_and_connected(self, db_session, ticktick_config):
         """Configured integration with mocked API returns success."""
-        with patch(
-            "career_os.services.ticktick_sync.TickTickClient"
-        ) as MockClient:
+        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.test_connection.return_value = True
 
@@ -802,9 +794,7 @@ class TestConnectionTest:
 
     def test_configured_but_api_fails(self, db_session, ticktick_config):
         """Configured integration with API failure returns failure."""
-        with patch(
-            "career_os.services.ticktick_sync.TickTickClient"
-        ) as MockClient:
+        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.test_connection.return_value = False
 
@@ -868,9 +858,7 @@ class TestTickTickAPI:
         self, db_session, profile, application, follow_up, ticktick_config
     ):
         """POST /api/ticktick/push successfully syncs follow-up."""
-        with patch(
-            "career_os.services.ticktick_sync.TickTickClient"
-        ) as MockClient:
+        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.create_task.return_value = {
                 "id": "tt-api-test",
@@ -892,13 +880,9 @@ class TestTickTickAPI:
             assert data["success"] is True
             assert data["sync_task"]["entity_type"] == "follow_up"
 
-    def test_push_learning_goal_success(
-        self, db_session, profile, learning_goal, ticktick_config
-    ):
+    def test_push_learning_goal_success(self, db_session, profile, learning_goal, ticktick_config):
         """POST /api/ticktick/push successfully syncs learning goal."""
-        with patch(
-            "career_os.services.ticktick_sync.TickTickClient"
-        ) as MockClient:
+        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.create_task.return_value = {
                 "id": "tt-lg-api",
@@ -920,13 +904,9 @@ class TestTickTickAPI:
             assert data["success"] is True
             assert data["sync_task"]["entity_type"] == "learning_goal"
 
-    def test_push_pipeline_action_success(
-        self, db_session, profile, application, ticktick_config
-    ):
+    def test_push_pipeline_action_success(self, db_session, profile, application, ticktick_config):
         """POST /api/ticktick/push successfully syncs pipeline action."""
-        with patch(
-            "career_os.services.ticktick_sync.TickTickClient"
-        ) as MockClient:
+        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.create_task.return_value = {
                 "id": "tt-pa-api",
@@ -954,9 +934,7 @@ class TestTickTickAPI:
 
     def test_pull_success(self, db_session, profile, ticktick_config):
         """POST /api/ticktick/pull returns sync results."""
-        with patch(
-            "career_os.services.ticktick_sync.TickTickClient"
-        ) as MockClient:
+        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.get_completed_tasks.return_value = []
 
@@ -968,9 +946,7 @@ class TestTickTickAPI:
 
     def test_test_connection_endpoint(self, db_session, ticktick_config):
         """POST /api/ticktick/test returns connection status."""
-        with patch(
-            "career_os.services.ticktick_sync.TickTickClient"
-        ) as MockClient:
+        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.test_connection.return_value = True
 
@@ -1173,28 +1149,40 @@ class TestEdgeCases:
         assert call_kwargs.kwargs["priority"] == "none"
 
     def test_multiple_sync_tasks_for_different_entities(
-        self, db_session, profile, application, follow_up, learning_goal,
-        ticktick_config, mock_ticktick_client
+        self,
+        db_session,
+        profile,
+        application,
+        follow_up,
+        learning_goal,
+        ticktick_config,
+        mock_ticktick_client,
     ):
         """Different entity types can all be synced independently."""
         # Sync all three
         task_ids = ["tt-fu-1", "tt-lg-1", "tt-pa-1"]
         mock_ticktick_client.create_task.side_effect = [
-            {"id": tid, "projectId": "proj", "title": "T", "status": 0}
-            for tid in task_ids
+            {"id": tid, "projectId": "proj", "title": "T", "status": 0} for tid in task_ids
         ]
 
         sync_follow_up_to_ticktick(
-            db_session, follow_up,
-            client=mock_ticktick_client, project_id="test-project-id",
+            db_session,
+            follow_up,
+            client=mock_ticktick_client,
+            project_id="test-project-id",
         )
         sync_learning_goal_to_ticktick(
-            db_session, learning_goal,
-            client=mock_ticktick_client, project_id="test-project-id",
+            db_session,
+            learning_goal,
+            client=mock_ticktick_client,
+            project_id="test-project-id",
         )
         sync_pipeline_action_to_ticktick(
-            db_session, application, "Test",
-            client=mock_ticktick_client, project_id="test-project-id",
+            db_session,
+            application,
+            "Test",
+            client=mock_ticktick_client,
+            project_id="test-project-id",
         )
 
         all_tasks = db_session.query(TickTickSyncTask).all()
@@ -1238,9 +1226,7 @@ class TestPipelineCompletionUpdatesState:
         db_session.add(sync_task)
         db_session.commit()
 
-        mock_ticktick_client.get_completed_tasks.return_value = [
-            {"id": "tt-state-1", "status": 2}
-        ]
+        mock_ticktick_client.get_completed_tasks.return_value = [{"id": "tt-state-1", "status": 2}]
 
         stats = sync_completions_from_ticktick(
             db_session,
@@ -1282,9 +1268,7 @@ class TestPipelineCompletionUpdatesState:
         db_session.add(sync_task)
         db_session.commit()
 
-        mock_ticktick_client.get_completed_tasks.return_value = [
-            {"id": "tt-state-2", "status": 2}
-        ]
+        mock_ticktick_client.get_completed_tasks.return_value = [{"id": "tt-state-2", "status": 2}]
 
         stats = sync_completions_from_ticktick(
             db_session,
@@ -1374,9 +1358,7 @@ class TestGoalAutoPush:
         assert updated.title == "Learn Kubernetes Advanced"
         mock_ticktick_client.update_task.assert_called_once()
 
-    def test_create_goal_without_ticktick_config_succeeds(
-        self, db_session, profile
-    ):
+    def test_create_goal_without_ticktick_config_succeeds(self, db_session, profile):
         """Creating a goal without TickTick config still works (no error)."""
         from career_os.services.goals import create_goal
 

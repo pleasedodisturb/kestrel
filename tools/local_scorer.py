@@ -23,23 +23,84 @@ from job_scorer import pre_filter_job
 
 # --- Dream companies (AI-native, target list) ---
 DREAM_COMPANIES = {
-    "anthropic", "mistral", "cohere", "deepl", "aleph alpha", "scale ai",
-    "hugging face", "huggingface", "lovable", "databricks", "openai",
-    "n8n", "jetbrains", "qdrant", "weaviate", "langchain", "vercel",
-    "supabase", "hashicorp", "grafana", "elastic", "datadog",
-    "cloudflare", "netlify", "deno", "bun", "replit", "cursor",
-    "codeium", "tabnine", "sourcegraph", "linear", "raycast",
+    "anthropic",
+    "mistral",
+    "cohere",
+    "deepl",
+    "aleph alpha",
+    "scale ai",
+    "hugging face",
+    "huggingface",
+    "lovable",
+    "databricks",
+    "openai",
+    "n8n",
+    "jetbrains",
+    "qdrant",
+    "weaviate",
+    "langchain",
+    "vercel",
+    "supabase",
+    "hashicorp",
+    "grafana",
+    "elastic",
+    "datadog",
+    "cloudflare",
+    "netlify",
+    "deno",
+    "bun",
+    "replit",
+    "cursor",
+    "codeium",
+    "tabnine",
+    "sourcegraph",
+    "linear",
+    "raycast",
 }
 
 STRONG_COMPANIES = {
-    "nvidia", "shopware", "revolut", "stripe", "klarna", "wise",
-    "zalando", "delivery hero", "sumup", "personio", "celonis",
-    "contentful", "agora", "ashby", "attio", "plain", "notion",
-    "figma", "miro", "canva", "airtable", "retool", "postman",
-    "snyk", "sentry", "pagerduty", "clickhouse", "cockroachdb",
-    "planetscale", "neon", "timescale", "airbyte", "dbt",
-    "sword health", "pandadoc", "unity", "photoroom", "gladia",
-    "synthflow", "omnora", "cognite", "cresta",
+    "nvidia",
+    "shopware",
+    "revolut",
+    "stripe",
+    "klarna",
+    "wise",
+    "zalando",
+    "delivery hero",
+    "sumup",
+    "personio",
+    "celonis",
+    "contentful",
+    "agora",
+    "ashby",
+    "attio",
+    "plain",
+    "notion",
+    "figma",
+    "miro",
+    "canva",
+    "airtable",
+    "retool",
+    "postman",
+    "snyk",
+    "sentry",
+    "pagerduty",
+    "clickhouse",
+    "cockroachdb",
+    "planetscale",
+    "neon",
+    "timescale",
+    "airbyte",
+    "dbt",
+    "sword health",
+    "pandadoc",
+    "unity",
+    "photoroom",
+    "gladia",
+    "synthflow",
+    "omnora",
+    "cognite",
+    "cresta",
 }
 
 # --- Title patterns with scores ---
@@ -94,45 +155,110 @@ STRONG_TITLE_PATTERNS = [
 
 # --- Description signals ---
 STRONG_POSITIVE_KEYWORDS = [
-    "llm", "large language model", "agentic", "mcp", "ai-native",
-    "generative ai", "genai", "gpt", "claude", "foundational model",
-    "ml pipeline", "model training", "rag", "retrieval augmented",
-    "transformer", "embedding", "vector database",
-    "ai product", "ai strategy", "ai transformation",
+    "llm",
+    "large language model",
+    "agentic",
+    "mcp",
+    "ai-native",
+    "generative ai",
+    "genai",
+    "gpt",
+    "claude",
+    "foundational model",
+    "ml pipeline",
+    "model training",
+    "rag",
+    "retrieval augmented",
+    "transformer",
+    "embedding",
+    "vector database",
+    "ai product",
+    "ai strategy",
+    "ai transformation",
 ]
 
 POSITIVE_KEYWORDS = [
-    "artificial intelligence", "machine learning", "deep learning",
-    "natural language processing", "nlp", "computer vision",
-    "product-led", "developer experience", "developer tools",
-    "open source", "api platform", "platform engineering",
-    "cross-functional", "autonomous", "innovation mandate",
-    "startup", "scale-up", "equity", "rsu", "stock options",
-    "remote-first", "async", "4-day week", "work-life",
-    "sustainable pace", "founding team", "series a", "series b",
-    "series c", "product engineer", "full-stack",
+    "artificial intelligence",
+    "machine learning",
+    "deep learning",
+    "natural language processing",
+    "nlp",
+    "computer vision",
+    "product-led",
+    "developer experience",
+    "developer tools",
+    "open source",
+    "api platform",
+    "platform engineering",
+    "cross-functional",
+    "autonomous",
+    "innovation mandate",
+    "startup",
+    "scale-up",
+    "equity",
+    "rsu",
+    "stock options",
+    "remote-first",
+    "async",
+    "4-day week",
+    "work-life",
+    "sustainable pace",
+    "founding team",
+    "series a",
+    "series b",
+    "series c",
+    "product engineer",
+    "full-stack",
 ]
 
 NEGATIVE_KEYWORDS = [
-    "pmbok", "pmo", "coordinate meetings", "status reporting",
-    "waterfall", "prince2", "itil", "itsm",
-    "heavy process", "documentation-heavy",
-    "must have 10+ years", "must have 15+ years",
-    "rigid hierarchy", "matrix organization",
-    "on-call rotation", "24/7 support",
+    "pmbok",
+    "pmo",
+    "coordinate meetings",
+    "status reporting",
+    "waterfall",
+    "prince2",
+    "itil",
+    "itsm",
+    "heavy process",
+    "documentation-heavy",
+    "must have 10+ years",
+    "must have 15+ years",
+    "rigid hierarchy",
+    "matrix organization",
+    "on-call rotation",
+    "24/7 support",
 ]
 
 RED_FLAG_KEYWORDS = [
-    "staffing agency", "personalvermittlung", "zeitarbeit",
-    "wordpress developer", "php developer",
-    "sap consultant", "sap basis", "abap",
-    "mainframe", "cobol", "rpg developer",
+    "staffing agency",
+    "personalvermittlung",
+    "zeitarbeit",
+    "wordpress developer",
+    "php developer",
+    "sap consultant",
+    "sap basis",
+    "abap",
+    "mainframe",
+    "cobol",
+    "rpg developer",
 ]
 
 # --- Location scoring ---
 FRANKFURT_BONUS = ["frankfurt", "offenbach", "wiesbaden", "mainz", "darmstadt"]
-GERMANY_CITIES = ["berlin", "munich", "münchen", "hamburg", "cologne", "köln",
-                  "stuttgart", "düsseldorf", "dusseldorf", "mannheim", "leipzig"]
+GERMANY_CITIES = [
+    "berlin",
+    "munich",
+    "münchen",
+    "hamburg",
+    "cologne",
+    "köln",
+    "stuttgart",
+    "düsseldorf",
+    "dusseldorf",
+    "mannheim",
+    "leipzig",
+]
 
 
 def score_job_local(job: dict) -> dict:
@@ -147,8 +273,7 @@ def score_job_local(job: dict) -> dict:
 
     # Pre-filter
     should_skip, reason, score_cap = pre_filter_job(
-        job.get("title", ""), job.get("company", ""),
-        job.get("location", ""), remote
+        job.get("title", ""), job.get("company", ""), job.get("location", ""), remote
     )
     if should_skip:
         job["fit_score"] = 0
@@ -164,7 +289,7 @@ def score_job_local(job: dict) -> dict:
     reasons = []
 
     # --- Company tier ---
-    company_clean = re.sub(r'\b(gmbh|ag|se|inc|ltd|co|kg|ohg|e\.v\.)\b', '', company).strip()
+    company_clean = re.sub(r"\b(gmbh|ag|se|inc|ltd|co|kg|ohg|e\.v\.)\b", "", company).strip()
     for dc in DREAM_COMPANIES:
         if dc in company_clean:
             score += 3
@@ -218,7 +343,7 @@ def score_job_local(job: dict) -> dict:
     if any(loc in location for loc in FRANKFURT_BONUS):
         score += 1
         reasons.append("Frankfurt area")
-    elif remote or "remote" in location or "remote" in ' '.join(tags):
+    elif remote or "remote" in location or "remote" in " ".join(tags):
         score += 1
         reasons.append("remote")
     elif any(loc in location for loc in GERMANY_CITIES):
@@ -275,8 +400,12 @@ def score_job_local(job: dict) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Local job scorer (no API calls)")
     parser.add_argument("json_path", help="Path to scraped_raw JSON")
-    parser.add_argument("--min-score", type=int, default=0, help="Only show jobs at or above this score")
-    parser.add_argument("--output", help="Output path (default: tracking/scraped_scored_<date>.json)")
+    parser.add_argument(
+        "--min-score", type=int, default=0, help="Only show jobs at or above this score"
+    )
+    parser.add_argument(
+        "--output", help="Output path (default: tracking/scraped_scored_<date>.json)"
+    )
     args = parser.parse_args()
 
     data = json.loads(Path(args.json_path).read_text())
@@ -289,13 +418,16 @@ def main():
 
     # Output path
     input_name = Path(args.json_path).stem.replace("scraped_raw", "scraped_scored")
-    output_path = Path(args.output) if args.output else Path(args.json_path).parent / f"{input_name}.json"
+    output_path = (
+        Path(args.output) if args.output else Path(args.json_path).parent / f"{input_name}.json"
+    )
     output_path.write_text(json.dumps(scored, indent=2, ensure_ascii=False))
 
     # Stats
     from collections import Counter
+
     dist = Counter(j["fit_score"] for j in scored)
-    print(f"\nScore distribution:")
+    print("\nScore distribution:")
     for score in sorted(dist.keys(), reverse=True):
         count = dist[score]
         bar = "█" * min(count, 50)
@@ -303,9 +435,9 @@ def main():
 
     # Show top results
     top = [j for j in scored if j["fit_score"] >= (args.min_score or 5)]
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"Top {len(top)} jobs (score >= {args.min_score or 5}):")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     for j in top:
         s = j["fit_score"]
         title = j.get("title", "?")

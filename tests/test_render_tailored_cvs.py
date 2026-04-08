@@ -1,19 +1,16 @@
 """Tests for tools/render_tailored_cvs.py."""
 
 import copy
-import subprocess
-from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 import yaml
-
 from render_tailored_cvs import ROLES, load_base_yaml, render_variant
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def base_data():
@@ -38,6 +35,7 @@ def base_data():
 # ---------------------------------------------------------------------------
 # ROLES dict structure
 # ---------------------------------------------------------------------------
+
 
 class TestRolesDict:
     def test_roles_has_entries(self):
@@ -72,6 +70,7 @@ class TestRolesDict:
 # load_base_yaml
 # ---------------------------------------------------------------------------
 
+
 class TestLoadBaseYaml:
     @patch("builtins.open", mock_open(read_data="cv:\n  name: Test\n"))
     def test_returns_parsed_yaml(self):
@@ -87,6 +86,7 @@ class TestLoadBaseYaml:
 # ---------------------------------------------------------------------------
 # render_variant
 # ---------------------------------------------------------------------------
+
 
 class TestRenderVariant:
     """Test render_variant with mocked subprocess and filesystem."""

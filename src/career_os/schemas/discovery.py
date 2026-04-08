@@ -28,12 +28,8 @@ class DiscoverRequest(BaseModel):
     """Request body for POST /api/discover — triggers a discovery sweep."""
 
     profile_id: int = Field(..., description="Profile to discover jobs for")
-    keywords: list[str] = Field(
-        default_factory=list, description="Search keywords"
-    )
-    locations: list[str] = Field(
-        default_factory=list, description="Locations to search"
-    )
+    keywords: list[str] = Field(default_factory=list, description="Search keywords")
+    locations: list[str] = Field(default_factory=list, description="Locations to search")
     remote_only: bool = Field(default=False, description="Only remote jobs")
     sources: list[str] = Field(
         default_factory=list,

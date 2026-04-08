@@ -24,9 +24,7 @@ class Contact(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     linkedin_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    relationship_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="other"
-    )
+    relationship_type: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
     referral_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     warmth: Mapped[str] = mapped_column(String(20), nullable=False, default="cold")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -35,18 +33,14 @@ class Contact(Base):
     last_contacted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    next_follow_up: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    next_follow_up: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
-    archived_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     profile: Mapped["Profile"] = relationship()  # noqa: F821

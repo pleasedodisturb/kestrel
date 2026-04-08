@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json as json_mod
-from datetime import UTC, datetime
 
 import typer
 from rich.console import Console
@@ -26,7 +25,6 @@ from career_os.services.contacts import (
     create_interaction,
     get_contact,
     get_contacts_by_company,
-    get_contacts_for_application,
     link_contact_to_application,
     list_contacts,
     list_interactions,
@@ -97,7 +95,9 @@ def list_cmd(
     company: str | None = typer.Option(None, "--company", help="Filter by company"),
     type_: str | None = typer.Option(None, "--type", help="Filter by relationship type"),
     warmth: str | None = typer.Option(None, "--warmth", help="Filter by warmth"),
-    needs_follow_up: bool = typer.Option(False, "--needs-follow-up", help="Show overdue follow-ups"),
+    needs_follow_up: bool = typer.Option(
+        False, "--needs-follow-up", help="Show overdue follow-ups"
+    ),
     search: str | None = typer.Option(None, "--search", help="Search name/company/notes"),
     profile_id: int = typer.Option(DEFAULT_PROFILE_ID, "--profile-id", hidden=True),
 ) -> None:
@@ -163,19 +163,19 @@ def show(
                 tags = contact.tags
 
         info = f"""[bold]{contact.name}[/bold]
-Company: {contact.company or '—'}
-Role: {contact.role or '—'}
-Email: {contact.email or '—'}
-LinkedIn: {contact.linkedin_url or '—'}
-Phone: {contact.phone or '—'}
+Company: {contact.company or "—"}
+Role: {contact.role or "—"}
+Email: {contact.email or "—"}
+LinkedIn: {contact.linkedin_url or "—"}
+Phone: {contact.phone or "—"}
 Type: {contact.relationship_type}
 Warmth: {contact.warmth}
-Referral Status: {contact.referral_status or '—'}
-Source: {contact.source or '—'}
-Tags: {tags or '—'}
-Last Contacted: {contact.last_contacted_at.strftime('%Y-%m-%d %H:%M') if contact.last_contacted_at else '—'}
-Next Follow-up: {contact.next_follow_up.strftime('%Y-%m-%d') if contact.next_follow_up else '—'}
-Notes: {contact.notes or '—'}"""
+Referral Status: {contact.referral_status or "—"}
+Source: {contact.source or "—"}
+Tags: {tags or "—"}
+Last Contacted: {contact.last_contacted_at.strftime("%Y-%m-%d %H:%M") if contact.last_contacted_at else "—"}
+Next Follow-up: {contact.next_follow_up.strftime("%Y-%m-%d") if contact.next_follow_up else "—"}
+Notes: {contact.notes or "—"}"""
 
         console.print(Panel(info, title=f"Contact #{contact.id}"))
 
@@ -240,9 +240,7 @@ def archive_cmd(
     db = SessionLocal()
     try:
         contact = archive_contact(db, contact_id, profile_id=profile_id)
-        console.print(
-            f"[green]✓[/green] Archived contact [bold]{contact.name}[/bold]"
-        )
+        console.print(f"[green]✓[/green] Archived contact [bold]{contact.name}[/bold]")
     except ContactNotFoundError as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(code=1) from e
@@ -253,7 +251,11 @@ def archive_cmd(
 @contacts_app.command("log")
 def log_cmd(
     contact_id: int = typer.Argument(..., help="Contact ID"),
-    type_: str = typer.Option(..., "--type", help="Interaction type: email/call/coffee/linkedin_message/intro/referral_submission"),
+    type_: str = typer.Option(
+        ...,
+        "--type",
+        help="Interaction type: email/call/coffee/linkedin_message/intro/referral_submission",
+    ),
     direction: str = typer.Option("outbound", "--direction", help="inbound or outbound"),
     notes: str | None = typer.Option(None, "--notes", help="Interaction notes"),
     subject: str | None = typer.Option(None, "--subject", help="Subject line"),
@@ -324,7 +326,11 @@ def history_cmd(
 def link_cmd(
     contact_id: int = typer.Argument(..., help="Contact ID"),
     application_id: int = typer.Argument(..., help="Application ID"),
-    role: str = typer.Option("referrer", "--role", help="Contact's role: referrer/recruiter/hiring_manager/interviewer/insider"),
+    role: str = typer.Option(
+        "referrer",
+        "--role",
+        help="Contact's role: referrer/recruiter/hiring_manager/interviewer/insider",
+    ),
     notes: str | None = typer.Option(None, "--notes"),
     profile_id: int = typer.Option(DEFAULT_PROFILE_ID, "--profile-id", hidden=True),
 ) -> None:
@@ -334,9 +340,7 @@ def link_cmd(
         link = link_contact_to_application(
             db,
             contact_id,
-            ContactApplicationCreate(
-                application_id=application_id, role=role, notes=notes
-            ),
+            ContactApplicationCreate(application_id=application_id, role=role, notes=notes),
             profile_id=profile_id,
         )
         console.print(
@@ -391,9 +395,7 @@ def at_company(
         table.add_column("Warmth")
 
         for c in contacts:
-            table.add_row(
-                str(c.id), c.name, c.role or "—", c.relationship_type, c.warmth
-            )
+            table.add_row(str(c.id), c.name, c.role or "—", c.relationship_type, c.warmth)
 
         console.print(table)
     finally:
@@ -407,9 +409,7 @@ def follow_ups_cmd(
     """Show contacts with overdue follow-ups."""
     db = SessionLocal()
     try:
-        contacts, total = list_contacts(
-            db, profile_id=profile_id, needs_follow_up=True
-        )
+        contacts, total = list_contacts(db, profile_id=profile_id, needs_follow_up=True)
         if not contacts:
             console.print("[dim]No overdue follow-ups.[/dim]")
             return

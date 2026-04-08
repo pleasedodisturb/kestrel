@@ -79,11 +79,7 @@ def list_skills(
 
 def get_skill(db: Session, skill_id: int, profile_id: int) -> Skill:
     """Get a single skill by ID, scoped to profile."""
-    skill = (
-        db.query(Skill)
-        .filter(Skill.id == skill_id, Skill.profile_id == profile_id)
-        .first()
-    )
+    skill = db.query(Skill).filter(Skill.id == skill_id, Skill.profile_id == profile_id).first()
     if not skill:
         raise SkillNotFoundError(f"Skill {skill_id} not found")
     return skill

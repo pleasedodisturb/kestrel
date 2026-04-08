@@ -14,7 +14,6 @@ from pathlib import Path
 
 from jobspy import scrape_jobs
 
-
 DEFAULT_KEYWORDS = [
     "Senior Technical Program Manager AI",
     "Technical Program Manager ML",
@@ -76,7 +75,9 @@ def main():
     parser.add_argument("--keywords", nargs="+", help="Search keywords (default: predefined list)")
     parser.add_argument("--location", default=DEFAULT_LOCATION, help="Location to search")
     parser.add_argument("--hours", type=int, default=DEFAULT_HOURS_OLD, help="Max age in hours")
-    parser.add_argument("--results", type=int, default=DEFAULT_RESULTS_PER_KEYWORD, help="Results per keyword")
+    parser.add_argument(
+        "--results", type=int, default=DEFAULT_RESULTS_PER_KEYWORD, help="Results per keyword"
+    )
     parser.add_argument("--sites", nargs="+", default=DEFAULT_SITES, help="Sites to scrape")
     args = parser.parse_args()
 

@@ -33,9 +33,7 @@ from career_os.services.gap_analysis import get_readiness_score
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
 
-def _enrich_with_readiness(
-    app_response: ApplicationResponse, db: Session
-) -> ApplicationResponse:
+def _enrich_with_readiness(app_response: ApplicationResponse, db: Session) -> ApplicationResponse:
     """Add readiness_score to an ApplicationResponse if job requirements exist."""
     score = get_readiness_score(db, app_response.id, app_response.profile_id)
     if score is not None:
@@ -65,14 +63,10 @@ async def list_apps(
     profile_id: int = Query(..., description="Profile to list applications for"),
     status: str | None = Query(default=None, description="Filter by status"),
     search: str | None = Query(default=None, description="Search by company name"),
-    sort: str | None = Query(
-        default=None, description="Sort field: 'score' or 'date'"
-    ),
+    sort: str | None = Query(default=None, description="Sort field: 'score' or 'date'"),
     order: str = Query(default="desc", description="Sort order: 'asc' or 'desc'"),
     ghost_alert: bool = Query(default=False, description="Filter to ghost candidates only"),
-    applied_threshold: int = Query(
-        default=14, description="Applied ghost threshold (days)"
-    ),
+    applied_threshold: int = Query(default=14, description="Applied ghost threshold (days)"),
     interviewing_threshold: int = Query(
         default=7, description="Interviewing ghost threshold (days)"
     ),
@@ -148,14 +142,10 @@ async def get_detail(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     # Build activity log in reverse chronological order
-    activity_log_sorted = sorted(
-        app_obj.activity_logs, key=lambda x: x.created_at, reverse=True
-    )
+    activity_log_sorted = sorted(app_obj.activity_logs, key=lambda x: x.created_at, reverse=True)
 
     # Include follow-ups sorted by due date
-    follow_ups_sorted = sorted(
-        app_obj.follow_ups, key=lambda x: x.due_date
-    )
+    follow_ups_sorted = sorted(app_obj.follow_ups, key=lambda x: x.due_date)
 
     # Build packages list with derived fields
     packages_list = []

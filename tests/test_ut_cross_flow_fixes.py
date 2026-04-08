@@ -32,9 +32,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -96,9 +94,7 @@ def client(test_db: Session) -> TestClient:
 class TestCoachingFeedback:
     """Coaching mock returns feedback when user answers questions."""
 
-    def test_coaching_gives_feedback_on_answer(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_coaching_gives_feedback_on_answer(self, client: TestClient, profile: Profile):
         """After asking a question and user answering, coaching returns feedback."""
         # Start coaching session
         resp = client.post(
@@ -142,9 +138,7 @@ class TestCoachingFeedback:
             for keyword in ["feedback", "strength", "improvement", "suggest"]
         ), f"Expected feedback keywords in response, got: {feedback[:200]}"
 
-    def test_coaching_first_turn_always_asks_question(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_coaching_first_turn_always_asks_question(self, client: TestClient, profile: Profile):
         """First turn returns a coaching question regardless of user content."""
         resp = client.post(
             "/api/voice/sessions",
@@ -177,9 +171,7 @@ class TestCoachingFeedback:
 class TestGhostAlertFollowUp:
     """Ghost alert trigger auto-creates follow-up for ghost applications."""
 
-    def test_ghost_alert_creates_follow_up(
-        self, test_db: Session, profile: Profile
-    ):
+    def test_ghost_alert_creates_follow_up(self, test_db: Session, profile: Profile):
         """When ghost alert fires, a follow-up is created for the application."""
         # Create an old "applied" application that will trigger ghost detection
         ghost_app = Application(
@@ -222,9 +214,7 @@ class TestGhostAlertFollowUp:
         assert len(follow_ups) == 1
         assert "ghost alert" in follow_ups[0].notes.lower()
 
-    def test_ghost_alert_no_duplicate_follow_up(
-        self, test_db: Session, profile: Profile
-    ):
+    def test_ghost_alert_no_duplicate_follow_up(self, test_db: Session, profile: Profile):
         """Repeated ghost alert triggers don't create duplicate follow-ups."""
         ghost_app = Application(
             profile_id=profile.id,
@@ -265,9 +255,7 @@ class TestGhostAlertFollowUp:
 class TestAnalyticsPrepNotificationMetrics:
     """Analytics endpoint includes prep completion rate and notification counts."""
 
-    def test_analytics_has_prep_metrics(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_analytics_has_prep_metrics(self, client: TestClient, profile: Profile):
         """Analytics response includes prep_metrics field."""
         resp = client.get("/api/analytics", params={"profile_id": profile.id})
         assert resp.status_code == 200
@@ -279,9 +267,7 @@ class TestAnalyticsPrepNotificationMetrics:
         assert "completed_items" in prep
         assert "total_items" in prep
 
-    def test_analytics_has_notification_metrics(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_analytics_has_notification_metrics(self, client: TestClient, profile: Profile):
         """Analytics response includes notification_metrics field."""
         resp = client.get("/api/analytics", params={"profile_id": profile.id})
         assert resp.status_code == 200
@@ -292,9 +278,7 @@ class TestAnalyticsPrepNotificationMetrics:
         assert "total_failed" in notif
         assert "by_category" in notif
 
-    def test_analytics_empty_prep_metrics(
-        self, client: TestClient, profile: Profile
-    ):
+    def test_analytics_empty_prep_metrics(self, client: TestClient, profile: Profile):
         """With no prep sessions, metrics show zeros."""
         resp = client.get("/api/analytics", params={"profile_id": profile.id})
         data = resp.json()
@@ -312,7 +296,10 @@ class TestArchiveHidesOrphans:
     """Archiving an application hides its follow-ups from list APIs."""
 
     def test_archived_app_follow_ups_hidden(
-        self, test_db: Session, client: TestClient, profile: Profile,
+        self,
+        test_db: Session,
+        client: TestClient,
+        profile: Profile,
         application: Application,
     ):
         """Follow-ups for archived app don't appear in list."""
@@ -330,9 +317,7 @@ class TestArchiveHidesOrphans:
         assert resp.status_code == 201
 
         # Verify follow-up appears in list
-        resp = client.get(
-            "/api/follow-ups", params={"profile_id": profile.id}
-        )
+        resp = client.get("/api/follow-ups", params={"profile_id": profile.id})
         assert resp.status_code == 200
         assert resp.json()["total"] >= 1
 
@@ -344,16 +329,17 @@ class TestArchiveHidesOrphans:
         assert resp.status_code == 200
 
         # Follow-ups for archived app should now be hidden
-        resp = client.get(
-            "/api/follow-ups", params={"profile_id": profile.id}
-        )
+        resp = client.get("/api/follow-ups", params={"profile_id": profile.id})
         assert resp.status_code == 200
         # The follow-up should be excluded
         for fu in resp.json()["follow_ups"]:
             assert fu["application_id"] != application.id
 
     def test_archived_app_requirements_hidden(
-        self, client: TestClient, profile: Profile, application: Application,
+        self,
+        client: TestClient,
+        profile: Profile,
+        application: Application,
     ):
         """Requirements for archived apps are not returned by GET endpoint."""
         # Create requirements for the application
@@ -397,7 +383,10 @@ class TestArchiveHidesOrphans:
         assert len(resp.json()) == 0
 
     def test_archived_app_overdue_count_excludes(
-        self, test_db: Session, profile: Profile, application: Application,
+        self,
+        test_db: Session,
+        profile: Profile,
+        application: Application,
     ):
         """Overdue count excludes follow-ups for archived applications."""
         from career_os.services.follow_ups import get_overdue_count
@@ -474,9 +463,7 @@ class TestDiscoveryScorePropagation:
         # Score the discovered job
         from career_os.services.scoring import batch_score_discovery
 
-        result = await batch_score_discovery(
-            test_db, profile.id, discovered_job_ids=[dj.id]
-        )
+        result = await batch_score_discovery(test_db, profile.id, discovered_job_ids=[dj.id])
         assert result["scored_count"] == 1
 
         # Refresh and verify score propagated to application

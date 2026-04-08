@@ -36,13 +36,10 @@ async def _ticktick_sync_loop(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) 
                 profiles = db.query(Profile).all()
                 for profile in profiles:
                     try:
-                        stats = sync_completions_from_ticktick(
-                            db, profile_id=profile.id
-                        )
+                        stats = sync_completions_from_ticktick(db, profile_id=profile.id)
                         if stats["synced"] > 0 or stats["errors"] > 0:
                             logger.info(
-                                "TickTick sync for profile %d: "
-                                "%d synced, %d errors, %d skipped",
+                                "TickTick sync for profile %d: %d synced, %d errors, %d skipped",
                                 profile.id,
                                 stats["synced"],
                                 stats["errors"],
@@ -77,12 +74,8 @@ def start_ticktick_scheduler(
     Returns the asyncio task for cancellation during shutdown.
     """
     global _ticktick_scheduler_task
-    _ticktick_scheduler_task = asyncio.create_task(
-        _ticktick_sync_loop(interval_seconds)
-    )
-    logger.info(
-        "TickTick sync scheduler started (interval=%ds)", interval_seconds
-    )
+    _ticktick_scheduler_task = asyncio.create_task(_ticktick_sync_loop(interval_seconds))
+    logger.info("TickTick sync scheduler started (interval=%ds)", interval_seconds)
     return _ticktick_scheduler_task
 
 

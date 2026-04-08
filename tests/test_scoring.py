@@ -40,9 +40,7 @@ from career_os.models.skills import Goal, Skill
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -58,12 +56,18 @@ def db_session():
 
     # Seed two profiles for scoping tests
     profile_a = Profile(
-        id=1, name="Profile A", email="a@test.com",
-        location="Frankfurt", job_family="TPM",
+        id=1,
+        name="Profile A",
+        email="a@test.com",
+        location="Frankfurt",
+        job_family="TPM",
     )
     profile_b = Profile(
-        id=2, name="Profile B", email="b@test.com",
-        location="Berlin", job_family="SWE",
+        id=2,
+        name="Profile B",
+        email="b@test.com",
+        location="Berlin",
+        job_family="SWE",
     )
     session.add_all([profile_a, profile_b])
     session.commit()
@@ -188,8 +192,8 @@ def _seed_discovered_jobs(session, profile_id: int = 1) -> list[int]:
             company="StartupXYZ",
             location="Berlin",
             description="Looking for ML Engineer with PyTorch and TensorFlow experience. "
-                        "Must have strong Python skills and ML pipeline knowledge. "
-                        "Remote EU. 120-150k EUR.",
+            "Must have strong Python skills and ML pipeline knowledge. "
+            "Remote EU. 120-150k EUR.",
             title_normalized="ml engineer",
             company_normalized="startupxyz",
             location_normalized="berlin",
@@ -228,12 +232,15 @@ class TestScoreEndpoint:
         _seed_skills(db_session)
         _seed_goals(db_session)
 
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-            "job_title": "Senior TPM",
-            "job_company": "TechCorp",
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "job_title": "Senior TPM",
+                "job_company": "TechCorp",
+            },
+        )
         assert resp.status_code == 201
         data = resp.json()
 
@@ -258,10 +265,13 @@ class TestScoreEndpoint:
 
     def test_score_persists_in_database(self, client, db_session):
         """Score is persisted in scored_jobs table."""
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
 
         # Verify in DB
@@ -271,29 +281,38 @@ class TestScoreEndpoint:
 
     def test_score_nonexistent_profile_returns_404(self, client):
         """Scoring with non-existent profile returns 404."""
-        resp = client.post("/api/score", json={
-            "profile_id": 999,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 999,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 404
 
     def test_score_empty_description_returns_422(self, client):
         """Empty job description returns validation error."""
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": "",
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": "",
+            },
+        )
         assert resp.status_code == 422
 
     def test_score_with_discovered_job_id(self, client, db_session):
         """Score linked to a discovered job updates its fit_score."""
         job_ids = _seed_discovered_jobs(db_session)
 
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-            "discovered_job_id": job_ids[0],
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "discovered_job_id": job_ids[0],
+            },
+        )
         assert resp.status_code == 201
         data = resp.json()
         assert data["discovered_job_id"] == job_ids[0]
@@ -314,11 +333,14 @@ class TestScoreEndpoint:
         db_session.add(app)
         db_session.commit()
 
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-            "application_id": app.id,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "application_id": app.id,
+            },
+        )
         assert resp.status_code == 201
         data = resp.json()
         assert data["application_id"] == app.id
@@ -329,11 +351,14 @@ class TestScoreEndpoint:
 
     def test_score_invalid_discovered_job_returns_404(self, client, db_session):
         """Scoring with non-existent discovered_job_id returns 404."""
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-            "discovered_job_id": 9999,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "discovered_job_id": 9999,
+            },
+        )
         assert resp.status_code == 404
 
 
@@ -349,10 +374,13 @@ class TestScoringSkillsGaps:
         """Score includes readiness_score component."""
         _seed_skills(db_session)
 
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         data = resp.json()
         assert "readiness_score" in data
@@ -368,17 +396,23 @@ class TestScoringSkillsGaps:
         _seed_skills(db_session)
 
         # Score with skills
-        resp1 = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp1 = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp1.status_code == 201
 
         # Profile B has no skills — different profile data leads to different prompt
-        resp2 = client.post("/api/score", json={
-            "profile_id": 2,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp2 = client.post(
+            "/api/score",
+            json={
+                "profile_id": 2,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp2.status_code == 201
 
         # Both return valid readiness scores
@@ -398,10 +432,13 @@ class TestScoringCareerGoals:
         """Score includes career_alignment component."""
         _seed_goals(db_session)
 
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         data = resp.json()
         assert "career_alignment" in data
@@ -414,14 +451,20 @@ class TestScoringCareerGoals:
         """
         _seed_goals(db_session)
 
-        resp1 = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
-        resp2 = client.post("/api/score", json={
-            "profile_id": 2,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp1 = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        resp2 = client.post(
+            "/api/score",
+            json={
+                "profile_id": 2,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp1.status_code == 201
         assert resp2.status_code == 201
 
@@ -440,20 +483,26 @@ class TestScoringExplanation:
 
     def test_reasoning_at_least_100_chars(self, client, db_session):
         """Explanation must be ≥100 characters."""
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         reasoning = resp.json()["reasoning"]
         assert len(reasoning) >= 100
 
     def test_reasoning_contains_at_least_3_factors(self, client, db_session):
         """Explanation must contain ≥3 specific factors."""
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         reasoning = resp.json()["reasoning"]
 
@@ -461,20 +510,24 @@ class TestScoringExplanation:
         positive_factors = reasoning.count("(+")
         negative_factors = reasoning.count("(−") + reasoning.count("(-")
         total_factors = positive_factors + negative_factors
-        assert total_factors >= 3, (
-            f"Expected ≥3 factors but found {total_factors} in: {reasoning}"
-        )
+        assert total_factors >= 3, f"Expected ≥3 factors but found {total_factors} in: {reasoning}"
 
     def test_reasoning_is_not_generic(self, client, db_session):
         """Different jobs produce different reasoning strings."""
-        resp_a = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
-        resp_b = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_B,
-        })
+        resp_a = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        resp_b = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_B,
+            },
+        )
         assert resp_a.status_code == 201
         assert resp_b.status_code == 201
 
@@ -528,10 +581,13 @@ class TestScoringWeights:
     def test_weight_change_produces_different_score(self, client, db_session):
         """Same job scored differently after weight change (VAL-SCORE-005)."""
         # Score with default weights
-        resp1 = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp1 = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp1.status_code == 201
         score1 = resp1.json()["fit_score"]
 
@@ -549,10 +605,13 @@ class TestScoringWeights:
 
         # Re-score — different result expected because weights are passed
         # in the scoring prompt and change the mock seed
-        resp2 = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp2 = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp2.status_code == 201
         score2 = resp2.json()["fit_score"]
 
@@ -565,10 +624,13 @@ class TestScoringWeights:
     def test_weight_change_marks_old_scores_stale(self, client, db_session):
         """Changing weights marks existing scores as stale."""
         # Create a score
-        client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
 
         # Verify not stale
         scored = db_session.query(ScoredJob).filter(ScoredJob.profile_id == 1).first()
@@ -609,11 +671,7 @@ class TestWeightsPersistence:
         )
 
         # Verify in DB
-        weights = (
-            db_session.query(ScoringWeights)
-            .filter(ScoringWeights.profile_id == 1)
-            .first()
-        )
+        weights = db_session.query(ScoringWeights).filter(ScoringWeights.profile_id == 1).first()
         assert weights is not None
         assert weights.skills_match == 0.80
         assert weights.career_alignment == 0.10
@@ -644,9 +702,12 @@ class TestBatchScoring:
         """Batch scoring scores all unscored discovered jobs."""
         job_ids = _seed_discovered_jobs(db_session)
 
-        resp = client.post("/api/score/batch", json={
-            "profile_id": 1,
-        })
+        resp = client.post(
+            "/api/score/batch",
+            json={
+                "profile_id": 1,
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
 
@@ -663,10 +724,13 @@ class TestBatchScoring:
         """Batch scoring with specific IDs only scores those."""
         job_ids = _seed_discovered_jobs(db_session)
 
-        resp = client.post("/api/score/batch", json={
-            "profile_id": 1,
-            "discovered_job_ids": [job_ids[0]],
-        })
+        resp = client.post(
+            "/api/score/batch",
+            json={
+                "profile_id": 1,
+                "discovered_job_ids": [job_ids[0]],
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["scored_count"] == 1
@@ -699,10 +763,13 @@ class TestBatchScoring:
         )
 
         # Batch with rescore_stale — should rescore 3
-        resp = client.post("/api/score/batch", json={
-            "profile_id": 1,
-            "rescore_stale": True,
-        })
+        resp = client.post(
+            "/api/score/batch",
+            json={
+                "profile_id": 1,
+                "rescore_stale": True,
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["scored_count"] == 3
@@ -731,10 +798,13 @@ class TestMockScoring:
 
     def test_mock_returns_valid_schema(self, client, db_session):
         """Mock scoring returns all required fields with valid types."""
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         data = resp.json()
 
@@ -750,14 +820,20 @@ class TestMockScoring:
 
     def test_mock_is_deterministic(self, client, db_session):
         """Same job description produces same score across calls."""
-        resp1 = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
-        resp2 = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp1 = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        resp2 = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp1.status_code == 201
         assert resp2.status_code == 201
 
@@ -767,14 +843,20 @@ class TestMockScoring:
 
     def test_mock_different_jobs_different_scores(self, client, db_session):
         """Different job descriptions produce different scores."""
-        resp_a = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
-        resp_b = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_B,
-        })
+        resp_a = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        resp_b = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_B,
+            },
+        )
         assert resp_a.status_code == 201
         assert resp_b.status_code == 201
 
@@ -787,19 +869,25 @@ class TestMockScoring:
 
     def test_mock_effort_flag_valid_values(self, client, db_session):
         """effort_flag is one of low/medium/high."""
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         assert resp.json()["effort_flag"] in ["low", "medium", "high"]
 
     def test_mock_prep_level_valid_values(self, client, db_session):
         """prep_level is one of light/moderate/intensive."""
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         assert resp.json()["prep_level"] in ["light", "moderate", "intensive"]
 
@@ -815,14 +903,20 @@ class TestProfileSwitchStaleScores:
     def test_flag_stale_endpoint(self, client, db_session):
         """POST /api/scoring/flag-stale marks all scores as stale."""
         # Create scores for profile 1
-        client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
-        client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_B,
-        })
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_B,
+            },
+        )
 
         # Flag stale
         resp = client.post("/api/scoring/flag-stale", params={"profile_id": 1})
@@ -830,11 +924,7 @@ class TestProfileSwitchStaleScores:
         assert resp.json()["stale_count"] == 2
 
         # Verify all stale
-        scores = (
-            db_session.query(ScoredJob)
-            .filter(ScoredJob.profile_id == 1)
-            .all()
-        )
+        scores = db_session.query(ScoredJob).filter(ScoredJob.profile_id == 1).all()
         assert all(s.is_stale for s in scores)
 
     def test_stale_scores_do_not_appear_in_retrieval(self, client, db_session):
@@ -842,11 +932,14 @@ class TestProfileSwitchStaleScores:
         job_ids = _seed_discovered_jobs(db_session)
 
         # Score a job
-        client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-            "discovered_job_id": job_ids[0],
-        })
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "discovered_job_id": job_ids[0],
+            },
+        )
 
         # Score exists
         resp = client.get(
@@ -878,10 +971,13 @@ class TestSkillsInformScoring:
         """Scoring prompt includes profile skills data."""
         _seed_skills(db_session)
 
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
 
         # Score is recorded with a weights snapshot
@@ -903,10 +999,13 @@ class TestGoalsInformScoring:
         """Scoring with goals returns career_alignment component."""
         _seed_goals(db_session)
 
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         data = resp.json()
         assert "career_alignment" in data
@@ -940,11 +1039,14 @@ class TestProfileScoping:
         db_session.commit()
 
         # Profile B tries to score profile A's job
-        resp = client.post("/api/score", json={
-            "profile_id": 2,
-            "job_description": "A job description for testing",
-            "discovered_job_id": dj.id,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 2,
+                "job_description": "A job description for testing",
+                "discovered_job_id": dj.id,
+            },
+        )
         assert resp.status_code == 404
 
     def test_cannot_access_other_profile_score(self, client, db_session):
@@ -952,11 +1054,14 @@ class TestProfileScoping:
         job_ids = _seed_discovered_jobs(db_session)
 
         # Score for profile A
-        client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-            "discovered_job_id": job_ids[0],
-        })
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "discovered_job_id": job_ids[0],
+            },
+        )
 
         # Profile B tries to read
         resp = client.get(
@@ -991,15 +1096,21 @@ class TestProfileScoping:
     def test_flag_stale_only_affects_own_scores(self, client, db_session):
         """Flagging stale only affects the requesting profile's scores."""
         # Score for profile A
-        client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         # Score for profile B
-        client.post("/api/score", json={
-            "profile_id": 2,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 2,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
 
         # Flag stale for profile A
         resp = client.post("/api/scoring/flag-stale", params={"profile_id": 1})
@@ -1026,11 +1137,14 @@ class TestScoreRetrieval:
         """GET /api/score/job/{id} returns latest score."""
         job_ids = _seed_discovered_jobs(db_session)
 
-        client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-            "discovered_job_id": job_ids[0],
-        })
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "discovered_job_id": job_ids[0],
+            },
+        )
 
         resp = client.get(
             f"/api/score/job/{job_ids[0]}",
@@ -1050,11 +1164,14 @@ class TestScoreRetrieval:
         db_session.add(app)
         db_session.commit()
 
-        client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-            "application_id": app.id,
-        })
+        client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "application_id": app.id,
+            },
+        )
 
         resp = client.get(
             f"/api/score/application/{app.id}",
@@ -1092,14 +1209,20 @@ class TestMockProviderGoalAlignment:
 
         # Profile 2 has NO goals
         # Score the same job for both profiles
-        resp_with_goals = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
-        resp_without_goals = client.post("/api/score", json={
-            "profile_id": 2,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp_with_goals = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        resp_without_goals = client.post(
+            "/api/score",
+            json={
+                "profile_id": 2,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp_with_goals.status_code == 201
         assert resp_without_goals.status_code == 201
 
@@ -1134,10 +1257,13 @@ class TestMockProviderGoalAlignment:
         db_session.add_all(unrelated_goals)
         db_session.commit()
 
-        resp_unrelated = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp_unrelated = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp_unrelated.status_code == 201
         alignment_unrelated = resp_unrelated.json()["career_alignment"]
 
@@ -1146,10 +1272,13 @@ class TestMockProviderGoalAlignment:
         db_session.commit()
         _seed_goals(db_session, profile_id=1)
 
-        resp_aligned = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp_aligned = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp_aligned.status_code == 201
         alignment_aligned = resp_aligned.json()["career_alignment"]
 
@@ -1171,10 +1300,13 @@ class TestJobFamilyChangeInvalidatesScores:
     def test_job_family_change_flags_scores_stale(self, client, db_session):
         """Updating job_family on a profile marks all its scores as stale."""
         # Score a job for profile A
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         score_id = resp.json()["id"]
 
@@ -1195,10 +1327,13 @@ class TestJobFamilyChangeInvalidatesScores:
     def test_non_job_family_change_does_not_invalidate(self, client, db_session):
         """Updating non-job_family fields does NOT invalidate scores."""
         # Score a job for profile A
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         score_id = resp.json()["id"]
 
@@ -1213,10 +1348,13 @@ class TestJobFamilyChangeInvalidatesScores:
     def test_same_job_family_no_invalidation(self, client, db_session):
         """Setting job_family to the same value does NOT invalidate scores."""
         # Score a job
-        resp = client.post("/api/score", json={
-            "profile_id": 1,
-            "job_description": JOB_DESCRIPTION_A,
-        })
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
         assert resp.status_code == 201
         score_id = resp.json()["id"]
 

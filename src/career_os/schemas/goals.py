@@ -114,9 +114,7 @@ class RealityMapDimension(BaseModel):
     current_state: str = Field(..., description="Current state description")
     required_state: str = Field(..., description="Required state description")
     delta: str = Field(..., description="What's needed to close the gap")
-    progress_pct: float = Field(
-        ge=0, le=100, description="Progress percentage in this dimension"
-    )
+    progress_pct: float = Field(ge=0, le=100, description="Progress percentage in this dimension")
 
 
 class RealityMapResponse(BaseModel):
@@ -126,9 +124,7 @@ class RealityMapResponse(BaseModel):
     title: str
     goal_type: str
     dimensions: list[RealityMapDimension]
-    overall_progress: float = Field(
-        ge=0, le=100, description="Overall progress percentage"
-    )
+    overall_progress: float = Field(ge=0, le=100, description="Overall progress percentage")
 
 
 # ---------------------------------------------------------------------------
@@ -176,9 +172,7 @@ class RecalibrationResponse(BaseModel):
 class AlternativePath(BaseModel):
     """A single alternative path."""
 
-    path_type: str = Field(
-        ..., description="employment, freelance, consulting, etc."
-    )
+    path_type: str = Field(..., description="employment, freelance, consulting, etc.")
     title: str = Field(..., description="Path title")
     description: str = Field(..., description="Path description")
     timeline: str = Field(..., description="Estimated timeline")

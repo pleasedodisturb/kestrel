@@ -30,9 +30,7 @@ from career_os.models.skills import (
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -224,9 +222,7 @@ class TestDeleteProfile:
         assert resp.status_code == 204
         assert db_session.get(Skill, skill_id) is None
 
-    def test_delete_cascades_skill_history(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_delete_cascades_skill_history(self, client: TestClient, db_session: Session):
         """Deleting a profile cascades to skill history records."""
         create_resp = client.post("/api/profiles", json={"name": "HistOwner"})
         pid = create_resp.json()["id"]
@@ -253,9 +249,7 @@ class TestDeleteProfile:
         assert resp.status_code == 204
         assert db_session.get(SkillHistory, history_id) is None
 
-    def test_delete_cascades_learning_resources(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_delete_cascades_learning_resources(self, client: TestClient, db_session: Session):
         """Deleting a profile cascades to learning resources."""
         create_resp = client.post("/api/profiles", json={"name": "LearnOwner"})
         pid = create_resp.json()["id"]
@@ -289,9 +283,7 @@ class TestDeleteProfile:
         assert resp.status_code == 204
         assert db_session.get(Goal, goal_id) is None
 
-    def test_delete_cascades_job_requirements(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_delete_cascades_job_requirements(self, client: TestClient, db_session: Session):
         """Deleting a profile cascades to job requirements."""
         create_resp = client.post("/api/profiles", json={"name": "ReqOwner"})
         pid = create_resp.json()["id"]
@@ -319,9 +311,7 @@ class TestDeleteProfile:
         assert resp.status_code == 204
         assert db_session.get(JobRequirement, req_id) is None
 
-    def test_delete_cascades_coaching_suggestions(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_delete_cascades_coaching_suggestions(self, client: TestClient, db_session: Session):
         """Deleting a profile cascades to coaching suggestions."""
         create_resp = client.post("/api/profiles", json={"name": "CoachOwner"})
         pid = create_resp.json()["id"]
@@ -338,9 +328,7 @@ class TestDeleteProfile:
         assert resp.status_code == 204
         assert db_session.get(CoachingSuggestion, suggestion_id) is None
 
-    def test_delete_with_all_m2_children_no_500(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_delete_with_all_m2_children_no_500(self, client: TestClient, db_session: Session):
         """Profile with ALL M2 child record types deletes cleanly (no 500)."""
         create_resp = client.post("/api/profiles", json={"name": "FullM2"})
         pid = create_resp.json()["id"]
@@ -451,9 +439,7 @@ class TestApplicationDetailPackages:
         assert "packages" in data
         assert data["packages"] == []
 
-    def test_detail_includes_linked_packages(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_detail_includes_linked_packages(self, client: TestClient, db_session: Session):
         """Detail response includes packages with correct derived fields."""
         # Create an application
         create_resp = client.post(
@@ -502,9 +488,7 @@ class TestApplicationDetailPackages:
         data = resp.json()
         assert data["packages"][0]["package_type"] == "cv"
 
-    def test_package_type_cover_letter_only(
-        self, client: TestClient, db_session: Session
-    ):
+    def test_package_type_cover_letter_only(self, client: TestClient, db_session: Session):
         """Package with only cover_letter_path → type 'cover_letter'."""
         create_resp = client.post(
             "/api/applications",

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Convert markdown cover letters to clean PDF format."""
+
 import re
-import sys
 from pathlib import Path
+
 from fpdf import FPDF
 
 
@@ -80,7 +81,10 @@ def render_cover_letter(md_path: Path, pdf_path: Path):
             continue
 
         # Date line
-        if re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d", line):
+        if re.match(
+            r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d",
+            line,
+        ):
             pdf.set_font(*date_font)
             pdf.set_text_color(60, 60, 60)
             pdf.cell(0, 5, line, new_x="LMARGIN", new_y="NEXT")
@@ -170,7 +174,13 @@ def render_cover_letter(md_path: Path, pdf_path: Path):
 
                     if overflow_words:
                         pdf.set_x(indent + bullet_w)
-                        pdf.multi_cell(page_w - bullet_w, 5.5, " ".join(overflow_words), new_x="LMARGIN", new_y="NEXT")
+                        pdf.multi_cell(
+                            page_w - bullet_w,
+                            5.5,
+                            " ".join(overflow_words),
+                            new_x="LMARGIN",
+                            new_y="NEXT",
+                        )
                 else:
                     # Label only, no rest
                     pdf.set_x(indent)
@@ -190,7 +200,9 @@ def render_cover_letter(md_path: Path, pdf_path: Path):
             clean = re.sub(r"\*\*(.+?)\*\*", r"\1", line)
             clean = re.sub(r"\(already applied: ", "(applied: ", clean)
             pdf.set_x(30)
-            pdf.multi_cell(pdf.w - pdf.r_margin - 30, 5.5, clean, new_x="LMARGIN", new_y="NEXT", align="L")
+            pdf.multi_cell(
+                pdf.w - pdf.r_margin - 30, 5.5, clean, new_x="LMARGIN", new_y="NEXT", align="L"
+            )
             pdf.ln(0.5)
             i += 1
             continue
@@ -204,7 +216,9 @@ def render_cover_letter(md_path: Path, pdf_path: Path):
         bold_line_match = re.match(r"^\*\*(.+?)\*\*$", clean)
         if bold_line_match:
             pdf.set_font(*bold_font)
-            pdf.multi_cell(0, 5.5, bold_line_match.group(1), new_x="LMARGIN", new_y="NEXT", align="L")
+            pdf.multi_cell(
+                0, 5.5, bold_line_match.group(1), new_x="LMARGIN", new_y="NEXT", align="L"
+            )
             i += 1
             continue
 

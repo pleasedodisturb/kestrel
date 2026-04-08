@@ -2,10 +2,8 @@
 
 import platform
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
-
 from md_to_pdf_cover_letter import CoverLetterPDF, render_cover_letter
 
 # macOS system fonts required by render_cover_letter
@@ -102,7 +100,7 @@ class TestRenderCoverLetterFull:
 
         render_cover_letter(md_file, pdf_file)
 
-        content = pdf_file.read_bytes()
+        _content = pdf_file.read_bytes()  # noqa: F841
         # Basic structural check: PDF should have at least one page
         assert b"/Type /Page" in content
 
@@ -139,7 +137,7 @@ class TestRenderCoverLetterFull:
 
         render_cover_letter(md_file, pdf_file)
 
-        content = pdf_file.read_bytes()
+        _content = pdf_file.read_bytes()  # noqa: F841
         # The pipe character should appear somewhere in the PDF stream
         # (the dot should have been replaced)
         assert pdf_file.stat().st_size > 0
@@ -168,11 +166,7 @@ class TestRenderCoverLetterFull:
 
     def test_bullet_label_only(self, tmp_path):
         """Bullet with bold label but no rest text."""
-        md = (
-            "Jane Y\njane@example.com\n\n"
-            "**Re: Some Role**\n\n---\n\n"
-            "- **LabelOnly**\n\nEnd.\n"
-        )
+        md = "Jane Y\njane@example.com\n\n**Re: Some Role**\n\n---\n\n- **LabelOnly**\n\nEnd.\n"
         md_file = tmp_path / "bullet_label.md"
         pdf_file = tmp_path / "bullet_label.pdf"
         md_file.write_text(md, encoding="utf-8")
@@ -182,10 +176,7 @@ class TestRenderCoverLetterFull:
 
     def test_subject_line_strips_bold_markers(self, tmp_path):
         """The **Re: ...** subject should have markers stripped in the PDF."""
-        md = (
-            "Jane Z\njane@example.com\n\n"
-            "**Re: Test Position — Company**\n\n---\n\nBody.\n"
-        )
+        md = "Jane Z\njane@example.com\n\n**Re: Test Position — Company**\n\n---\n\nBody.\n"
         md_file = tmp_path / "subj.md"
         pdf_file = tmp_path / "subj.pdf"
         md_file.write_text(md, encoding="utf-8")

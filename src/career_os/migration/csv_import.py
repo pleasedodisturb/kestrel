@@ -192,9 +192,7 @@ def import_csv(
                 role = row.get("role", "").strip()
 
                 if not company or not role:
-                    warnings_list.append(
-                        f"Row {row_num}: Missing company or role — skipping"
-                    )
+                    warnings_list.append(f"Row {row_num}: Missing company or role — skipping")
                     stats["skipped"] = int(stats["skipped"]) + 1
                     continue
 
@@ -222,8 +220,7 @@ def import_csv(
                     application_id=application.id,
                     action="imported",
                     details=(
-                        f"Imported from CSV (row {row_num}): "
-                        f"status '{raw_status}' → '{status}'"
+                        f"Imported from CSV (row {row_num}): status '{raw_status}' → '{status}'"
                     ),
                     source="csv_migration",
                 )
@@ -233,13 +230,9 @@ def import_csv(
 
                 # Log edge cases
                 if url is None:
-                    warnings_list.append(
-                        f"Row {row_num}: Empty URL for {company} / {role}"
-                    )
+                    warnings_list.append(f"Row {row_num}: Empty URL for {company} / {role}")
                 if salary_range and any(c in salary_range for c in ("$", "£", "€", "/hr")):
-                    logger.info(
-                        "Row %d: Non-standard salary format: %s", row_num, salary_range
-                    )
+                    logger.info("Row %d: Non-standard salary format: %s", row_num, salary_range)
 
             except Exception as e:
                 logger.error("Row %d: Import error: %s", row_num, e)

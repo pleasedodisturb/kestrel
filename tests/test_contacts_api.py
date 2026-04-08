@@ -11,7 +11,6 @@ from career_os.database import Base, get_db
 from career_os.main import app
 from career_os.models.models import Application, Profile
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -19,9 +18,7 @@ from career_os.models.models import Application, Profile
 
 @pytest.fixture(autouse=True)
 def db_session():
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def _pragma(dbapi_conn, connection_record):

@@ -82,24 +82,17 @@ def _passes_sp_filters(merged: dict, sp_filters: dict) -> bool:
 
     # Company substring filter
     company_filter = sp_filters.get("company")
-    if company_filter and (
-        company_filter.lower() not in (merged.get("company") or "").lower()
-    ):
+    if company_filter and (company_filter.lower() not in (merged.get("company") or "").lower()):
         return False
 
     # Location substring filter
     location_filter = sp_filters.get("location")
-    if location_filter and (
-        location_filter.lower()
-        not in (merged.get("location") or "").lower()
-    ):
+    if location_filter and (location_filter.lower() not in (merged.get("location") or "").lower()):
         return False
 
     # Source filter
     source_filter = sp_filters.get("source")
-    return not (
-        source_filter and source_filter not in (merged.get("sources") or [])
-    )
+    return not (source_filter and source_filter not in (merged.get("sources") or []))
 
 
 # ---------------------------------------------------------------------------
@@ -142,9 +135,7 @@ async def run_discovery(
             .first()
         )
         if not sp:
-            raise SearchProfileNotFoundError(
-                f"Search profile {search_profile_id} not found"
-            )
+            raise SearchProfileNotFoundError(f"Search profile {search_profile_id} not found")
         sp_keywords = json.loads(sp.keywords) if sp.keywords else []
         sp_locations = json.loads(sp.locations) if sp.locations else []
         sp_sources = json.loads(sp.sources) if sp.sources else []
@@ -190,18 +181,14 @@ async def run_discovery(
             jobs = await adapter.scrape(params)
             all_raw_jobs.extend(jobs)
             sources_queried.append(adapter.source_name)
-            logger.info(
-                "Source '%s' returned %d results", adapter.source_name, len(jobs)
-            )
+            logger.info("Source '%s' returned %d results", adapter.source_name, len(jobs))
         except Exception as exc:
             warning = {
                 "source": adapter.source_name,
                 "error": str(exc),
             }
             warnings.append(warning)
-            logger.warning(
-                "Source '%s' failed: %s", adapter.source_name, exc
-            )
+            logger.warning("Source '%s' failed: %s", adapter.source_name, exc)
 
     # Dedup raw results within this sweep
     dedup_groups: dict[tuple[str, str, str], list[RawJobResult]] = {}
@@ -328,15 +315,15 @@ async def run_discovery(
             # Propagate scores to linked applications (VAL-CROSS-002)
             propagated = propagate_discovery_scores(db, profile_id)
             if propagated:
-                logger.info(
-                    "Propagated scores to %d linked applications", propagated
-                )
+                logger.info("Propagated scores to %d linked applications", propagated)
         except Exception as exc:
             logger.warning("Auto-scoring failed: %s", exc)
-            warnings.append({
-                "source": "auto_scoring",
-                "error": str(exc),
-            })
+            warnings.append(
+                {
+                    "source": "auto_scoring",
+                    "error": str(exc),
+                }
+            )
 
     # Auto-refresh market intelligence (VAL-MARKET-006)
     try:
@@ -376,11 +363,7 @@ def propagate_discovery_scores(db: Session, profile_id: int) -> int:
         .all()
     )
     for dj in jobs:
-        app = (
-            db.query(Application)
-            .filter(Application.id == dj.application_id)
-            .first()
-        )
+        app = db.query(Application).filter(Application.id == dj.application_id).first()
         if app and app.fit_score != dj.fit_score:
             app.fit_score = dj.fit_score
             updated += 1
@@ -410,9 +393,7 @@ def _merge_raw_jobs(group: list[RawJobResult]) -> dict:
             best_url = job.url
         if job.posted_at and (earliest_posted is None or job.posted_at < earliest_posted):
             earliest_posted = job.posted_at
-        if job.salary_range and (
-            not salary_range or len(job.salary_range) > len(salary_range)
-        ):
+        if job.salary_range and (not salary_range or len(job.salary_range) > len(salary_range)):
             salary_range = job.salary_range
         if job.remote:
             remote = True
@@ -460,8 +441,7 @@ def _update_existing_job(existing: DiscoveredJob, merged: dict) -> None:
 
     # Keep richest salary
     if merged["salary_range"] and (
-        not existing.salary_range
-        or len(merged["salary_range"]) > len(existing.salary_range or "")
+        not existing.salary_range or len(merged["salary_range"]) > len(existing.salary_range or "")
     ):
         existing.salary_range = merged["salary_range"]
 
@@ -508,9 +488,7 @@ def list_search_profiles(
     return query.order_by(SearchProfile.created_at.desc()).all()
 
 
-def get_search_profile(
-    db: Session, sp_id: int, *, profile_id: int | None = None
-) -> SearchProfile:
+def get_search_profile(db: Session, sp_id: int, *, profile_id: int | None = None) -> SearchProfile:
     """Get a search profile by ID."""
     filters = [SearchProfile.id == sp_id]
     if profile_id is not None:
@@ -521,9 +499,7 @@ def get_search_profile(
     return sp
 
 
-def update_search_profile(
-    db: Session, sp_id: int, profile_id: int, data: dict
-) -> SearchProfile:
+def update_search_profile(db: Session, sp_id: int, profile_id: int, data: dict) -> SearchProfile:
     """Update a search profile."""
     sp = get_search_profile(db, sp_id, profile_id=profile_id)
 
@@ -559,9 +535,7 @@ def delete_search_profile(db: Session, sp_id: int, profile_id: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-def list_discovery_runs(
-    db: Session, profile_id: int, *, limit: int = 20
-) -> list[DiscoveryRun]:
+def list_discovery_runs(db: Session, profile_id: int, *, limit: int = 20) -> list[DiscoveryRun]:
     """List discovery runs for a profile, most recent first."""
     return (
         db.query(DiscoveryRun)
@@ -610,7 +584,8 @@ async def run_scheduled_discovery(db: Session, profile_id: int) -> dict | None:
         if sp.cadence is None:
             logger.info(
                 "Skipping search profile %d (%s): no cadence configured",
-                sp.id, sp.name,
+                sp.id,
+                sp.name,
             )
             continue
 
@@ -622,7 +597,10 @@ async def run_scheduled_discovery(db: Session, profile_id: int) -> dict | None:
             if next_run > now:
                 logger.info(
                     "Skipping search profile %d (%s): next_run %s > now %s",
-                    sp.id, sp.name, next_run.isoformat(), now.isoformat(),
+                    sp.id,
+                    sp.name,
+                    next_run.isoformat(),
+                    now.isoformat(),
                 )
                 continue
 

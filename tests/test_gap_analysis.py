@@ -41,9 +41,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -431,9 +429,7 @@ class TestMissingRequirements:
 class TestAggregateGaps:
     """VAL-GAP-006: Aggregate gap analysis."""
 
-    def test_aggregate_across_applications(
-        self, test_db: Session, test_profile: Profile
-    ):
+    def test_aggregate_across_applications(self, test_db: Session, test_profile: Profile):
         """Aggregate shows gaps ranked by frequency across applications."""
         # Create 2 applications with overlapping requirements
         app1 = Application(
@@ -501,9 +497,7 @@ class TestAggregateGaps:
         assert len(result["gaps"]) >= 1
 
         # Kubernetes should appear with frequency 2
-        k8s_gap = next(
-            (g for g in result["gaps"] if g["skill_name"] == "Kubernetes"), None
-        )
+        k8s_gap = next((g for g in result["gaps"] if g["skill_name"] == "Kubernetes"), None)
         assert k8s_gap is not None
         assert k8s_gap["frequency"] == 2
         assert set(k8s_gap["application_ids"]) == {app1.id, app2.id}
@@ -514,9 +508,7 @@ class TestAggregateGaps:
         assert result["gaps"] == []
         assert result["total_applications_analyzed"] == 0
 
-    def test_aggregate_normalizes_case_variants(
-        self, test_db: Session, test_profile: Profile
-    ):
+    def test_aggregate_normalizes_case_variants(self, test_db: Session, test_profile: Profile):
         """Case variants like 'Kubernetes' and 'kubernetes' merge into one row."""
         app1 = Application(
             profile_id=test_profile.id,
@@ -561,9 +553,7 @@ class TestAggregateGaps:
         assert k8s_gaps[0]["frequency"] == 2
         assert set(k8s_gaps[0]["application_ids"]) == {app1.id, app2.id}
 
-    def test_aggregate_preserves_display_name(
-        self, test_db: Session, test_profile: Profile
-    ):
+    def test_aggregate_preserves_display_name(self, test_db: Session, test_profile: Profile):
         """Aggregated gap uses the first-seen display name (not lowercased)."""
         app1 = Application(
             profile_id=test_profile.id,
@@ -686,9 +676,7 @@ class TestGapAnalysisAPI:
         assert "not yet parsed" in detail
         assert "Run requirement extraction first" in detail
 
-    def test_nonexistent_application_returns_404(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_nonexistent_application_returns_404(self, client: TestClient, test_profile: Profile):
         """404 for non-existent application."""
         resp = client.get(
             "/api/applications/99999/gaps",
@@ -751,9 +739,7 @@ class TestAggregateGapsAPI:
             assert "avg_severity" in gap
             assert "avg_distance" in gap
 
-    def test_aggregate_empty_profile(
-        self, client: TestClient, second_profile: Profile
-    ):
+    def test_aggregate_empty_profile(self, client: TestClient, second_profile: Profile):
         """Aggregate for empty profile returns empty list."""
         resp = client.get(
             "/api/gaps/aggregate",
@@ -903,15 +889,11 @@ class TestReadinessScoreInApplications:
 
         # Verify our scoring produces values in expected ranges
         # All met → 100 (green)
-        all_met = _compute_readiness_score(
-            [{"severity": "critical", "distance": 0}], 1
-        )
+        all_met = _compute_readiness_score([{"severity": "critical", "distance": 0}], 1)
         assert all_met >= 80
 
         # All missing → 0 (red)
-        all_missing = _compute_readiness_score(
-            [{"severity": "critical", "distance": 3}], 1
-        )
+        all_missing = _compute_readiness_score([{"severity": "critical", "distance": 3}], 1)
         assert all_missing < 50
 
 
@@ -1173,8 +1155,8 @@ class TestSeverityAutoClassificationAPI:
         data = resp.json()
 
         # Auto-classified from text
-        assert data[0]["severity"] == "critical"       # "must have" signal
-        assert data[1]["severity"] == "nice-to-have"    # "nice to have" signal
-        assert data[2]["severity"] == "bonus"           # "plus" signal
+        assert data[0]["severity"] == "critical"  # "must have" signal
+        assert data[1]["severity"] == "nice-to-have"  # "nice to have" signal
+        assert data[2]["severity"] == "bonus"  # "plus" signal
         # Caller-supplied override: "Go required" would be critical but caller said nice-to-have
         assert data[3]["severity"] == "nice-to-have"

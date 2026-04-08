@@ -1,10 +1,7 @@
 """Tests for tools/job_scorer.py -- AI-based job scoring with pre-filters."""
 
 import json
-from unittest.mock import MagicMock, patch
-
-import pandas as pd
-import pytest
+from unittest.mock import MagicMock
 
 from job_scorer import (
     BLOCKED_COMPANIES,
@@ -15,7 +12,6 @@ from job_scorer import (
     pre_filter_job,
     score_job,
 )
-
 
 # ==================== PROFILE_CRITERIA ====================
 
@@ -59,8 +55,12 @@ class TestFilterConstants:
     def test_critical_reject_patterns_present(self):
         """Ensure the most important reject patterns are in the list."""
         critical = [
-            "accountant", "sales rep", "customer support",
-            "hr specialist", "nurse", "recruiter",
+            "accountant",
+            "sales rep",
+            "customer support",
+            "hr specialist",
+            "nurse",
+            "recruiter",
         ]
         for pattern in critical:
             assert pattern in REJECT_TITLE_PATTERNS, f"Missing critical pattern: {pattern}"
@@ -110,7 +110,9 @@ class TestPreFilterJob:
         assert skip is True
 
     def test_rejects_nurse_pmhnp(self):
-        skip, reason, _ = pre_filter_job("PMHNP Clinical Autonomy", "Seasoned Recruitment", "Remote")
+        skip, reason, _ = pre_filter_job(
+            "PMHNP Clinical Autonomy", "Seasoned Recruitment", "Remote"
+        )
         assert skip is True
 
     def test_rejects_hr_specialist(self):
@@ -119,8 +121,7 @@ class TestPreFilterJob:
 
     def test_rejects_clinical_trial_manager(self):
         skip, reason, _ = pre_filter_job(
-            "Senior Manager, Clinical Trial Management",
-            "Precision Medicine Group", "Spain"
+            "Senior Manager, Clinical Trial Management", "Precision Medicine Group", "Spain"
         )
         assert skip is True
 
@@ -137,15 +138,11 @@ class TestPreFilterJob:
         assert skip is True
 
     def test_rejects_account_executive(self):
-        skip, reason, _ = pre_filter_job(
-            "Account Executive, Mid-Market | DACH", "Deel", "Europe"
-        )
+        skip, reason, _ = pre_filter_job("Account Executive, Mid-Market | DACH", "Deel", "Europe")
         assert skip is True
 
     def test_rejects_food_assurance(self):
-        skip, reason, _ = pre_filter_job(
-            "Head of Food Assurance Services", "SGS", "UK"
-        )
+        skip, reason, _ = pre_filter_job("Head of Food Assurance Services", "SGS", "UK")
         assert skip is True
 
     def test_rejects_salesforce_developer(self):
@@ -199,9 +196,7 @@ class TestPreFilterJob:
         assert skip is False
 
     def test_passes_engineering_manager(self):
-        skip, _, _ = pre_filter_job(
-            "Senior Engineering Manager, Design", "GitLab", "Germany"
-        )
+        skip, _, _ = pre_filter_job("Senior Engineering Manager, Design", "GitLab", "Germany")
         assert skip is False
 
     def test_passes_head_of_engineering(self):
@@ -209,21 +204,15 @@ class TestPreFilterJob:
         assert skip is False
 
     def test_passes_ai_solutions_architect(self):
-        skip, _, _ = pre_filter_job(
-            "AI Agents Solutions Architect", "Kraken", "UK"
-        )
+        skip, _, _ = pre_filter_job("AI Agents Solutions Architect", "Kraken", "UK")
         assert skip is False
 
     def test_passes_ai_solutions_engineer(self):
-        skip, _, _ = pre_filter_job(
-            "(Senior) AI Solutions Engineer", "Aktor AI", "Remote"
-        )
+        skip, _, _ = pre_filter_job("(Senior) AI Solutions Engineer", "Aktor AI", "Remote")
         assert skip is False
 
     def test_passes_senior_product_ops(self):
-        skip, _, _ = pre_filter_job(
-            "Senior Product Operations Manager", "Clickhouse", "UK"
-        )
+        skip, _, _ = pre_filter_job("Senior Product Operations Manager", "Clickhouse", "UK")
         assert skip is False
 
     # --- Blocked companies ---
@@ -244,9 +233,7 @@ class TestPreFilterJob:
     # --- Junior roles ---
 
     def test_rejects_junior_developer(self):
-        skip, reason, _ = pre_filter_job(
-            "Junior Full-Stack Developer", "LeadUp AI", "Remote"
-        )
+        skip, reason, _ = pre_filter_job("Junior Full-Stack Developer", "LeadUp AI", "Remote")
         assert skip is True
         assert "Junior" in reason
 
@@ -266,22 +253,16 @@ class TestPreFilterJob:
     # --- US-only location cap ---
 
     def test_caps_us_only_san_francisco(self):
-        skip, reason, cap = pre_filter_job(
-            "Senior TPM", "Faire", "San Francisco, CA", remote=False
-        )
+        skip, reason, cap = pre_filter_job("Senior TPM", "Faire", "San Francisco, CA", remote=False)
         assert skip is False
         assert cap == 3
 
     def test_caps_us_only_new_york(self):
-        _, _, cap = pre_filter_job(
-            "Product Manager", "Stripe", "New York", remote=False
-        )
+        _, _, cap = pre_filter_job("Product Manager", "Stripe", "New York", remote=False)
         assert cap == 3
 
     def test_no_cap_us_if_remote(self):
-        _, _, cap = pre_filter_job(
-            "Senior TPM", "Faire", "San Francisco, CA", remote=True
-        )
+        _, _, cap = pre_filter_job("Senior TPM", "Faire", "San Francisco, CA", remote=True)
         assert cap is None
 
     def test_no_cap_for_eu_location(self):
@@ -325,14 +306,16 @@ class TestScoreJob:
         return client
 
     def test_parses_valid_response(self):
-        client = self._make_client({
-            "score": 8,
-            "reasoning": "Strong AI focus",
-            "estimated_salary": "130-150k EUR",
-            "effort_flag": "sweet-spot",
-            "prep_level": 2,
-            "prep_notes": "Brush up on MLOps",
-        })
+        client = self._make_client(
+            {
+                "score": 8,
+                "reasoning": "Strong AI focus",
+                "estimated_salary": "130-150k EUR",
+                "effort_flag": "sweet-spot",
+                "prep_level": 2,
+                "prep_notes": "Brush up on MLOps",
+            }
+        )
 
         score, reasoning, salary, effort, prep, notes = score_job(
             client, "AI PM", "Mistral", "Build AI products"
@@ -347,9 +330,7 @@ class TestScoreJob:
 
     def test_handles_missing_description(self):
         client = MagicMock()
-        score, reasoning, salary, effort, prep, notes = score_job(
-            client, "Test", "Co", None
-        )
+        score, reasoning, salary, effort, prep, notes = score_job(client, "Test", "Co", None)
         assert score == 0
         assert "No description" in reasoning
         # Should not call OpenAI
@@ -378,10 +359,12 @@ class TestScoreJob:
         assert "Parse error" in reasoning
 
     def test_handles_missing_optional_fields(self):
-        client = self._make_client({
-            "score": 6,
-            "reasoning": "Okay fit",
-        })
+        client = self._make_client(
+            {
+                "score": 6,
+                "reasoning": "Okay fit",
+            }
+        )
 
         score, reasoning, salary, effort, prep, notes = score_job(
             client, "PM", "Co", "Product work"
@@ -394,14 +377,16 @@ class TestScoreJob:
         assert notes == "unknown"
 
     def test_truncates_long_description(self):
-        client = self._make_client({
-            "score": 5,
-            "reasoning": "Average",
-            "estimated_salary": "unknown",
-            "effort_flag": "unknown",
-            "prep_level": 3,
-            "prep_notes": "Study domain",
-        })
+        client = self._make_client(
+            {
+                "score": 5,
+                "reasoning": "Average",
+                "estimated_salary": "unknown",
+                "effort_flag": "unknown",
+                "prep_level": 3,
+                "prep_notes": "Study domain",
+            }
+        )
 
         long_desc = "x" * 10000
         score_job(client, "Test", "Co", long_desc)
@@ -414,14 +399,16 @@ class TestScoreJob:
         assert "x" * 3000 in user_msg
 
     def test_returns_correct_types(self):
-        client = self._make_client({
-            "score": "7",  # string instead of int
-            "reasoning": "Good fit",
-            "estimated_salary": "100k",
-            "effort_flag": "moderate",
-            "prep_level": "3",  # string instead of int
-            "prep_notes": "Some prep",
-        })
+        client = self._make_client(
+            {
+                "score": "7",  # string instead of int
+                "reasoning": "Good fit",
+                "estimated_salary": "100k",
+                "effort_flag": "moderate",
+                "prep_level": "3",  # string instead of int
+                "prep_notes": "Some prep",
+            }
+        )
 
         score, reasoning, salary, effort, prep, notes = score_job(
             client, "Test", "Co", "Description"
@@ -510,9 +497,7 @@ class TestScoringIntegration:
 
     def test_senior_pm_core_infra_passes(self):
         """Senior Product Manager Core Infrastructure at Mesh -- should pass."""
-        skip, _, _ = pre_filter_job(
-            "Senior Product Manager Core Infrastructure", "Mesh", "Remote"
-        )
+        skip, _, _ = pre_filter_job("Senior Product Manager Core Infrastructure", "Mesh", "Remote")
         assert skip is False
 
     def test_founding_sw_eng_agentic_passes(self):
@@ -524,9 +509,7 @@ class TestScoringIntegration:
 
     def test_ai_solutions_architect_passes(self):
         """AI Agents Solutions Architect at Kraken -- should pass."""
-        skip, _, _ = pre_filter_job(
-            "AI Agents Solutions Architect - Finance", "Kraken", "UK"
-        )
+        skip, _, _ = pre_filter_job("AI Agents Solutions Architect - Finance", "Kraken", "UK")
         assert skip is False
 
     def test_product_manager_ai_wing_passes(self):
@@ -577,13 +560,9 @@ class TestBatchScanSample:
         for title, company, location, should_pass in self.SAMPLE_JOBS:
             skip, reason, _ = pre_filter_job(title, company, location)
             if should_pass:
-                assert skip is False, (
-                    f"WRONGLY REJECTED: {title} @ {company} -- {reason}"
-                )
+                assert skip is False, f"WRONGLY REJECTED: {title} @ {company} -- {reason}"
             else:
-                assert skip is True, (
-                    f"WRONGLY PASSED: {title} @ {company} should be rejected"
-                )
+                assert skip is True, f"WRONGLY PASSED: {title} @ {company} should be rejected"
 
     def test_at_least_60pct_rejected(self):
         """From a mixed sample, at least 60% of obviously bad roles are caught."""

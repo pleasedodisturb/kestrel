@@ -117,12 +117,8 @@ class LearningResource(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self) -> str:
         return f"<LearningResource(id={self.id}, title='{self.title}')>"
@@ -138,12 +134,8 @@ class Goal(Base):
         Integer, ForeignKey("profiles.id"), nullable=False, index=True
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    goal_type: Mapped[str] = mapped_column(
-        String(50), nullable=False
-    )  # realistic, aspirational
-    target_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    goal_type: Mapped[str] = mapped_column(String(50), nullable=False)  # realistic, aspirational
+    target_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="active"
     )  # active, completed, paused, abandoned
@@ -184,8 +176,7 @@ class JobRequirement(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<JobRequirement(id={self.id}, skill='{self.skill_name}', "
-            f"severity='{self.severity}')>"
+            f"<JobRequirement(id={self.id}, skill='{self.skill_name}', severity='{self.severity}')>"
         )
 
 

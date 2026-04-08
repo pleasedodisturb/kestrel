@@ -33,9 +33,7 @@ def db_session():
     Uses a single shared connection so both the test and the app see the
     same in-memory tables.
     """
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -242,25 +240,15 @@ class TestConversionFunnel:
 
         total = 22
         # discovered: count/total
-        assert stage_map["discovered"]["percentage"] == pytest.approx(
-            10 / total * 100, abs=0.1
-        )
+        assert stage_map["discovered"]["percentage"] == pytest.approx(10 / total * 100, abs=0.1)
         # interested / discovered
-        assert stage_map["interested"]["percentage"] == pytest.approx(
-            5 / 10 * 100, abs=0.1
-        )
+        assert stage_map["interested"]["percentage"] == pytest.approx(5 / 10 * 100, abs=0.1)
         # applied / interested
-        assert stage_map["applied"]["percentage"] == pytest.approx(
-            4 / 5 * 100, abs=0.1
-        )
+        assert stage_map["applied"]["percentage"] == pytest.approx(4 / 5 * 100, abs=0.1)
         # interviewing / applied
-        assert stage_map["interviewing"]["percentage"] == pytest.approx(
-            2 / 4 * 100, abs=0.1
-        )
+        assert stage_map["interviewing"]["percentage"] == pytest.approx(2 / 4 * 100, abs=0.1)
         # offer / interviewing
-        assert stage_map["offer"]["percentage"] == pytest.approx(
-            1 / 2 * 100, abs=0.1
-        )
+        assert stage_map["offer"]["percentage"] == pytest.approx(1 / 2 * 100, abs=0.1)
 
     def test_funnel_percentage_zero_when_previous_empty(self, client, db_session):
         """Stage-to-stage % is 0 when previous stage has 0 applications.
@@ -290,9 +278,7 @@ class TestConversionFunnel:
         stage_map = {s["stage"]: s for s in funnel}
 
         total = 5
-        assert stage_map["ghosted"]["percentage"] == pytest.approx(
-            2 / total * 100, abs=0.1
-        )
+        assert stage_map["ghosted"]["percentage"] == pytest.approx(2 / total * 100, abs=0.1)
 
     def test_funnel_rejected_relative_to_offer(self, client, db_session):
         """Rejected percentage is relative to offer stage (rejected comes from offer)."""
@@ -306,9 +292,7 @@ class TestConversionFunnel:
         stage_map = {s["stage"]: s for s in funnel}
 
         # rejected / offer = 2 / 3
-        assert stage_map["rejected"]["percentage"] == pytest.approx(
-            2 / 3 * 100, abs=0.1
-        )
+        assert stage_map["rejected"]["percentage"] == pytest.approx(2 / 3 * 100, abs=0.1)
 
     def test_funnel_includes_all_stages(self, client, db_session):
         """Funnel includes all pipeline stages even if empty."""
@@ -317,8 +301,14 @@ class TestConversionFunnel:
         funnel = data["conversion_funnel"]
         stage_names = [s["stage"] for s in funnel]
         expected_stages = [
-            "discovered", "interested", "applied", "interviewing",
-            "offer", "accepted", "rejected", "ghosted",
+            "discovered",
+            "interested",
+            "applied",
+            "interviewing",
+            "offer",
+            "accepted",
+            "rejected",
+            "ghosted",
         ]
         for expected in expected_stages:
             assert expected in stage_names
@@ -438,8 +428,14 @@ class TestTimeInStage:
         stages = data["time_in_stage"]
         stage_names = [s["stage"] for s in stages]
         expected_stages = [
-            "discovered", "interested", "applied", "interviewing",
-            "offer", "accepted", "rejected", "ghosted",
+            "discovered",
+            "interested",
+            "applied",
+            "interviewing",
+            "offer",
+            "accepted",
+            "rejected",
+            "ghosted",
         ]
         for expected in expected_stages:
             assert expected in stage_names

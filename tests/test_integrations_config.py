@@ -29,9 +29,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):

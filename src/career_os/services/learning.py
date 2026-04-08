@@ -29,9 +29,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-def _verify_gap_ownership(
-    db: Session, gap_id: int, profile_id: int
-) -> JobRequirement:
+def _verify_gap_ownership(db: Session, gap_id: int, profile_id: int) -> JobRequirement:
     """Verify the gap (job requirement) exists and belongs to the profile.
 
     Returns the JobRequirement if valid.
@@ -49,9 +47,7 @@ def _verify_gap_ownership(
     return gap
 
 
-def _generate_template_recommendations(
-    skill_name: str, required_level: str
-) -> list[dict]:
+def _generate_template_recommendations(skill_name: str, required_level: str) -> list[dict]:
     """Generate template-based recommendations for a fresh gap.
 
     Returns 3 suggestions: free_course, paid_course, hands_on_project.
@@ -63,9 +59,7 @@ def _generate_template_recommendations(
         "advanced": (30.0, 40.0, 20.0),
         "expert": (50.0, 60.0, 30.0),
     }
-    free_h, paid_h, project_h = level_hours.get(
-        required_level, level_hours["intermediate"]
-    )
+    free_h, paid_h, project_h = level_hours.get(required_level, level_hours["intermediate"])
     difficulty = required_level if required_level in level_hours else "intermediate"
 
     return [
@@ -99,9 +93,7 @@ def _generate_template_recommendations(
     ]
 
 
-def get_gap_recommendations(
-    db: Session, gap_id: int, profile_id: int
-) -> dict:
+def get_gap_recommendations(db: Session, gap_id: int, profile_id: int) -> dict:
     """Get learning recommendations for a specific gap.
 
     Returns dict with gap_id, skill_name, recommendations list.
@@ -229,9 +221,7 @@ def update_learning_status(
         .first()
     )
     if not resource:
-        raise LearningResourceNotFoundError(
-            f"Learning resource {resource_id} not found"
-        )
+        raise LearningResourceNotFoundError(f"Learning resource {resource_id} not found")
 
     current_status = resource.status
 
@@ -273,9 +263,7 @@ def update_learning_status(
     return resource
 
 
-def _upgrade_skill_on_completion(
-    db: Session, resource: LearningResource
-) -> None:
+def _upgrade_skill_on_completion(db: Session, resource: LearningResource) -> None:
     """When learning is completed, create or upgrade the associated skill.
 
     If the gap's skill doesn't exist in inventory, create it at beginner level.

@@ -63,9 +63,7 @@ async def research_company_endpoint(
     except ProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ResearchError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Research failed: {exc}"
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"Research failed: {exc}") from exc
     except Exception as exc:
         logger.exception("Unexpected error during company research")
         raise HTTPException(

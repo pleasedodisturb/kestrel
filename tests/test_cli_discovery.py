@@ -338,9 +338,13 @@ class TestDiscoverSchedule:
         result = runner.invoke(
             app,
             [
-                "discover", "--schedule", "weekly",
-                "--keywords", "AI TPM",
-                "--location", "Frankfurt",
+                "discover",
+                "--schedule",
+                "weekly",
+                "--keywords",
+                "AI TPM",
+                "--location",
+                "Frankfurt",
             ],
         )
         assert result.exit_code == 0
@@ -357,9 +361,13 @@ class TestDiscoverSchedule:
         result = runner.invoke(
             app,
             [
-                "discover", "--schedule", "weekly",
-                "--keywords", "TPM",
-                "--location", "Berlin",
+                "discover",
+                "--schedule",
+                "weekly",
+                "--keywords",
+                "TPM",
+                "--location",
+                "Berlin",
             ],
         )
         assert result.exit_code == 0
@@ -384,8 +392,7 @@ class TestScoreCommand:
             readiness_score=75.0,
             career_alignment=8.0,
             reasoning=(
-                "Strong match. +Python expertise. +Agile mastery. "
-                "-Missing Kubernetes experience."
+                "Strong match. +Python expertise. +Agile mastery. -Missing Kubernetes experience."
             ),
             estimated_salary="130,000 - 160,000 EUR",
             effort_flag="medium",
@@ -397,7 +404,8 @@ class TestScoreCommand:
             return_value=mock_scored,
         ):
             result = runner.invoke(
-                app, ["score", "https://example.com/job"],
+                app,
+                ["score", "https://example.com/job"],
             )
         assert result.exit_code == 0
         assert "8.5" in result.output
@@ -412,8 +420,7 @@ class TestScoreCommand:
             readiness_score=75.0,
             career_alignment=8.0,
             reasoning=(
-                "Strong match. +Python expertise. +Agile mastery. "
-                "-Missing Kubernetes experience."
+                "Strong match. +Python expertise. +Agile mastery. -Missing Kubernetes experience."
             ),
             estimated_salary="130,000 - 160,000 EUR",
             effort_flag="medium",
@@ -425,7 +432,8 @@ class TestScoreCommand:
             return_value=mock_scored,
         ):
             result = runner.invoke(
-                app, ["score", "https://example.com/job"],
+                app,
+                ["score", "https://example.com/job"],
             )
         assert result.exit_code == 0
         # Check key fields present
@@ -459,7 +467,8 @@ class TestScoreCommand:
             return_value=mock_scored,
         ):
             result = runner.invoke(
-                app, ["score", "https://example.com/job", "--output", "json"],
+                app,
+                ["score", "https://example.com/job", "--output", "json"],
             )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -485,7 +494,8 @@ class TestScoreCommand:
             return_value=mock_scored,
         ):
             result = runner.invoke(
-                app, ["score", "https://example.com/job", "--output", "table"],
+                app,
+                ["score", "https://example.com/job", "--output", "table"],
             )
         assert result.exit_code == 0
         assert "8.5" in result.output

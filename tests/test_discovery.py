@@ -51,9 +51,7 @@ from career_os.services.discovery import (
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -347,10 +345,14 @@ class TestDiscoveryService:
         assert result["new_jobs"] == 1
 
         # Verify pipeline entry created
-        apps = db_session.query(Application).filter(
-            Application.profile_id == 1,
-            Application.source == "discovery",
-        ).all()
+        apps = (
+            db_session.query(Application)
+            .filter(
+                Application.profile_id == 1,
+                Application.source == "discovery",
+            )
+            .all()
+        )
         assert len(apps) == 1
         assert apps[0].status == "discovered"
         assert apps[0].company == "DataCo"
@@ -417,13 +419,9 @@ class TestDiscoveryService:
             "career_os.services.discovery.get_available_adapters",
             return_value=[adapter],
         ):
-            await run_discovery(
-                db_session, 1, keywords=["test"], trigger="scheduled"
-            )
+            await run_discovery(db_session, 1, keywords=["test"], trigger="scheduled")
 
-        runs = db_session.query(DiscoveryRun).filter(
-            DiscoveryRun.profile_id == 1
-        ).all()
+        runs = db_session.query(DiscoveryRun).filter(DiscoveryRun.profile_id == 1).all()
         assert len(runs) == 1
         assert runs[0].trigger == "scheduled"
         assert runs[0].status == "completed"
@@ -471,9 +469,7 @@ class TestDiscoverAPI:
             "arbeitnow",
             [_make_job("arbeitnow", title="Eng", company="Co", location="Berlin")],
         )
-        adapter_fail = MockAdapter(
-            "arbeitsagentur", raise_error=RuntimeError("Network error")
-        )
+        adapter_fail = MockAdapter("arbeitsagentur", raise_error=RuntimeError("Network error"))
 
         with patch(
             "career_os.services.discovery.get_available_adapters",
@@ -516,10 +512,15 @@ class TestDiscoverAPI:
 
         adapter = MockAdapter(
             "arbeitnow",
-            [_make_job(
-                "arbeitnow", title="Data Eng", company="DataCo",
-                location="Berlin", remote=True,
-            )],
+            [
+                _make_job(
+                    "arbeitnow",
+                    title="Data Eng",
+                    company="DataCo",
+                    location="Berlin",
+                    remote=True,
+                )
+            ],
         )
 
         with patch(
@@ -806,9 +807,7 @@ class TestRateLimitBackoff:
             call_count += 1
             if call_count <= 2:
                 resp = httpx.Response(429, request=httpx.Request("GET", url))
-                raise httpx.HTTPStatusError(
-                    "rate limited", request=resp.request, response=resp
-                )
+                raise httpx.HTTPStatusError("rate limited", request=resp.request, response=resp)
             return httpx.Response(200, json={"data": []}, request=httpx.Request("GET", url))
 
         client = AsyncMock()
@@ -816,8 +815,11 @@ class TestRateLimitBackoff:
 
         with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             resp = await _request_with_backoff(
-                client, "GET", "https://example.com/api",
-                max_retries=3, initial_backoff=0.01,
+                client,
+                "GET",
+                "https://example.com/api",
+                max_retries=3,
+                initial_backoff=0.01,
             )
 
         assert resp.status_code == 200
@@ -832,9 +834,7 @@ class TestRateLimitBackoff:
 
         async def mock_request(method, url, **kwargs):
             resp = httpx.Response(429, request=httpx.Request("GET", url))
-            raise httpx.HTTPStatusError(
-                "rate limited", request=resp.request, response=resp
-            )
+            raise httpx.HTTPStatusError("rate limited", request=resp.request, response=resp)
 
         client = AsyncMock()
         client.request = mock_request
@@ -844,8 +844,11 @@ class TestRateLimitBackoff:
             pytest.raises(httpx.HTTPStatusError),
         ):
             await _request_with_backoff(
-                client, "GET", "https://example.com/api",
-                max_retries=2, initial_backoff=0.01,
+                client,
+                "GET",
+                "https://example.com/api",
+                max_retries=2,
+                initial_backoff=0.01,
             )
 
 
@@ -893,9 +896,7 @@ class TestScheduledDiscovery:
         assert result["new_jobs"] == 1
 
         # Verify discovery run logged with trigger="scheduled"
-        runs = db_session.query(DiscoveryRun).filter(
-            DiscoveryRun.trigger == "scheduled"
-        ).all()
+        runs = db_session.query(DiscoveryRun).filter(DiscoveryRun.trigger == "scheduled").all()
         assert len(runs) == 1
 
     @pytest.mark.asyncio
@@ -933,9 +934,7 @@ class TestEdgeCases:
 
     def test_discover_all_sources_fail(self, client, db_session):
         """When all sources fail, returns empty results with warnings."""
-        adapter = MockAdapter(
-            "arbeitsagentur", raise_error=RuntimeError("API down")
-        )
+        adapter = MockAdapter("arbeitsagentur", raise_error=RuntimeError("API down"))
 
         with patch(
             "career_os.services.discovery.get_available_adapters",
@@ -1041,9 +1040,7 @@ class TestDeleteSearchProfileWithDiscoveryRuns:
 
         # Verify discovery run still exists but search_profile_id is NULL
         db_session.expire_all()
-        updated_run = db_session.query(DiscoveryRun).filter(
-            DiscoveryRun.id == run_id
-        ).first()
+        updated_run = db_session.query(DiscoveryRun).filter(DiscoveryRun.id == run_id).first()
         assert updated_run is not None
         assert updated_run.search_profile_id is None
 
@@ -1086,9 +1083,7 @@ class TestScheduledDiscoverySkipsNullCadence:
         assert result is None
 
         # Verify no discovery runs were created
-        runs = db_session.query(DiscoveryRun).filter(
-            DiscoveryRun.trigger == "scheduled"
-        ).all()
+        runs = db_session.query(DiscoveryRun).filter(DiscoveryRun.trigger == "scheduled").all()
         assert len(runs) == 0
 
     @pytest.mark.asyncio
@@ -1168,7 +1163,5 @@ class TestScheduledDiscoverySkipsNullCadence:
         assert result is not None
         assert result["new_jobs"] == 1
 
-        runs = db_session.query(DiscoveryRun).filter(
-            DiscoveryRun.trigger == "scheduled"
-        ).all()
+        runs = db_session.query(DiscoveryRun).filter(DiscoveryRun.trigger == "scheduled").all()
         assert len(runs) == 1

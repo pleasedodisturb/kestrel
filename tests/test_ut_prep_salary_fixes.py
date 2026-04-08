@@ -38,9 +38,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -165,8 +163,7 @@ class TestPrepIncorporatesResearch:
         topics_text = " ".join(t["topic"] for t in data["topics"])
         # Should reference tech stack technologies from research
         assert any(
-            tech in topics_text
-            for tech in ["React", "TypeScript", "Ruby", "Go", "tech stack"]
+            tech in topics_text for tech in ["React", "TypeScript", "Ruby", "Go", "tech stack"]
         ), f"Expected tech stack reference in topics, got: {topics_text}"
 
     def test_prep_includes_culture_from_research(
@@ -205,8 +202,7 @@ class TestPrepIncorporatesResearch:
         topics_text = " ".join(t["topic"] for t in data["topics"])
         # Should reference culture from research
         assert any(
-            kw in topics_text.lower()
-            for kw in ["culture", "innovative", "collaborative"]
+            kw in topics_text.lower() for kw in ["culture", "innovative", "collaborative"]
         ), f"Expected culture reference in topics, got: {topics_text}"
 
     def test_prep_includes_values_alignment_from_research(
@@ -304,8 +300,7 @@ class TestPrepIncorporatesResearch:
         questions_text = " ".join(q["question"] for q in data["questions"])
         # Should reference tech stack technologies
         assert any(
-            tech in questions_text
-            for tech in ["React", "TypeScript", "Go", "Python", "tech stack"]
+            tech in questions_text for tech in ["React", "TypeScript", "Go", "Python", "tech stack"]
         ), f"Expected tech stack reference in questions, got: {questions_text}"
 
 
@@ -431,9 +426,7 @@ class TestPrepRegeneratesOnProficiencyChange:
 class TestSalaryBenchmarksFallback:
     """Test that salary benchmarks return non-zero data when no jobs match."""
 
-    def test_salary_fallback_for_unmatched_role(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_salary_fallback_for_unmatched_role(self, client: TestClient, test_profile: Profile):
         """When no discovered jobs match, fallback provides non-zero estimates."""
         response = client.get(
             "/api/intelligence/salary",
@@ -447,19 +440,13 @@ class TestSalaryBenchmarksFallback:
         benchmarks = data["benchmarks"]
 
         # Should have non-zero data from AI fallback
-        assert benchmarks["low"] > 0, (
-            f"Expected non-zero low salary, got {benchmarks['low']}"
-        )
+        assert benchmarks["low"] > 0, f"Expected non-zero low salary, got {benchmarks['low']}"
         assert benchmarks["median"] > 0, (
             f"Expected non-zero median salary, got {benchmarks['median']}"
         )
-        assert benchmarks["high"] > 0, (
-            f"Expected non-zero high salary, got {benchmarks['high']}"
-        )
+        assert benchmarks["high"] > 0, f"Expected non-zero high salary, got {benchmarks['high']}"
 
-    def test_salary_fallback_ordered(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_salary_fallback_ordered(self, client: TestClient, test_profile: Profile):
         """Fallback salary: low ≤ median ≤ high."""
         response = client.get(
             "/api/intelligence/salary",
@@ -587,9 +574,7 @@ class TestSalaryBenchmarksFallback:
 class TestSimulatePartialResearch:
     """Test that simulate_partial=true returns partial data with source_warnings."""
 
-    def test_simulate_partial_returns_200(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_simulate_partial_returns_200(self, client: TestClient, test_profile: Profile):
         """POST /api/research/company?simulate_partial=true returns 200."""
         response = client.post(
             "/api/research/company?simulate_partial=true",
@@ -600,9 +585,7 @@ class TestSimulatePartialResearch:
         )
         assert response.status_code == 200
 
-    def test_simulate_partial_has_source_warnings(
-        self, client: TestClient, test_profile: Profile
-    ):
+    def test_simulate_partial_has_source_warnings(self, client: TestClient, test_profile: Profile):
         """Partial response includes source_warnings array."""
         response = client.post(
             "/api/research/company?simulate_partial=true",
@@ -634,11 +617,7 @@ class TestSimulatePartialResearch:
         # Should have some frontend data but missing others
         assert len(tech["frontend"]) > 0 or len(tech["backend"]) > 0 or True
         # At least some sections should be empty
-        has_empty = (
-            not tech["backend"]
-            or not tech["infrastructure"]
-            or not tech["analytics"]
-        )
+        has_empty = not tech["backend"] or not tech["infrastructure"] or not tech["analytics"]
         assert has_empty, "Expected some empty tech stack sections in partial mode"
 
     def test_simulate_partial_has_missing_glassdoor(

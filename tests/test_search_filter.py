@@ -33,9 +33,7 @@ from career_os.models.scoring import ScoredJob
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -257,9 +255,7 @@ class TestEmptySearch:
         assert data["page_size"] == 20
 
     def test_empty_search_pagination(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "page": 1, "page_size": 2}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "page": 1, "page_size": 2})
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 5
@@ -269,9 +265,7 @@ class TestEmptySearch:
         assert data["total_pages"] == 3
 
     def test_pagination_second_page(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "page": 2, "page_size": 2}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "page": 2, "page_size": 2})
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["jobs"]) == 2
@@ -302,41 +296,31 @@ class TestFullTextSearch:
         assert data["jobs"][0]["title"] == "Senior TPM - AI Platform"
 
     def test_search_by_company(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "q": "Stripe"}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "q": "Stripe"})
         data = resp.json()
         assert data["total"] == 2
         companies = {j["company"] for j in data["jobs"]}
         assert companies == {"Stripe"}
 
     def test_search_by_description(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "q": "developer tools"}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "q": "developer tools"})
         data = resp.json()
         assert data["total"] == 1
         assert data["jobs"][0]["company"] == "Vercel"
 
     def test_search_by_location(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "q": "Frankfurt"}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "q": "Frankfurt"})
         data = resp.json()
         assert data["total"] == 1
         assert data["jobs"][0]["company"] == "SAP"
 
     def test_search_case_insensitive(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "q": "stripe"}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "q": "stripe"})
         data = resp.json()
         assert data["total"] == 2
 
     def test_search_no_results(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "q": "nonexistent"}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "q": "nonexistent"})
         data = resp.json()
         assert data["total"] == 0
         assert data["jobs"] == []
@@ -344,9 +328,7 @@ class TestFullTextSearch:
     def test_search_results_less_than_total(self, client, seed_jobs):
         """Search returns fewer results than total jobs."""
         resp_all = client.get("/api/jobs", params={"profile_id": 1})
-        resp_filtered = client.get(
-            "/api/jobs", params={"profile_id": 1, "q": "AI"}
-        )
+        resp_filtered = client.get("/api/jobs", params={"profile_id": 1, "q": "AI"})
         assert resp_filtered.json()["total"] < resp_all.json()["total"]
 
 
@@ -359,45 +341,35 @@ class TestMultiFacetFiltering:
     """Filter by source, remote, salary range, score range, date, company, location."""
 
     def test_filter_by_remote_true(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "remote": True}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "remote": True})
         data = resp.json()
         assert data["total"] == 2
         for job in data["jobs"]:
             assert job["remote"] is True
 
     def test_filter_by_remote_false(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "remote": False}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "remote": False})
         data = resp.json()
         assert data["total"] == 3
         for job in data["jobs"]:
             assert job["remote"] is False
 
     def test_filter_by_source(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "source": "linkedin"}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "source": "linkedin"})
         data = resp.json()
         assert data["total"] == 2
         for job in data["jobs"]:
             assert "linkedin" in job["sources"]
 
     def test_filter_by_company(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "company": "Stripe"}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "company": "Stripe"})
         data = resp.json()
         assert data["total"] == 2
         for job in data["jobs"]:
             assert "stripe" in job["company"].lower()
 
     def test_filter_by_location(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "location": "Berlin"}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "location": "Berlin"})
         data = resp.json()
         assert data["total"] == 2  # Berlin & Berlin, Germany
         for job in data["jobs"]:
@@ -414,9 +386,7 @@ class TestMultiFacetFiltering:
             assert 7.0 <= job["fit_score"] <= 9.0
 
     def test_filter_by_score_min(self, client, seed_jobs):
-        resp = client.get(
-            "/api/jobs", params={"profile_id": 1, "score_min": 8.0}
-        )
+        resp = client.get("/api/jobs", params={"profile_id": 1, "score_min": 8.0})
         data = resp.json()
         assert data["total"] == 2  # 8.5 and 9.0
         for job in data["jobs"]:
@@ -457,10 +427,7 @@ class TestMultiFacetFiltering:
         data = resp.json()
         for job in data["jobs"]:
             text = (
-                job["title"]
-                + job["company"]
-                + (job["description"] or "")
-                + job["location"]
+                job["title"] + job["company"] + (job["description"] or "") + job["location"]
             ).lower()
             assert "ai" in text
             assert job["fit_score"] >= 8.0
@@ -518,9 +485,7 @@ class TestSorting:
         )
         data = resp.json()
         readiness_vals = [
-            j["readiness_score"]
-            for j in data["jobs"]
-            if j["readiness_score"] is not None
+            j["readiness_score"] for j in data["jobs"] if j["readiness_score"] is not None
         ]
         assert readiness_vals == sorted(readiness_vals, reverse=True)
 
@@ -531,9 +496,7 @@ class TestSorting:
         )
         data = resp.json()
         readiness_vals = [
-            j["readiness_score"]
-            for j in data["jobs"]
-            if j["readiness_score"] is not None
+            j["readiness_score"] for j in data["jobs"] if j["readiness_score"] is not None
         ]
         assert readiness_vals == sorted(readiness_vals)
 
@@ -620,9 +583,7 @@ class TestSavedSearches:
         )
         search_id = create_resp.json()["id"]
 
-        resp = client.get(
-            f"/api/saved-searches/{search_id}", params={"profile_id": 1}
-        )
+        resp = client.get(f"/api/saved-searches/{search_id}", params={"profile_id": 1})
         assert resp.status_code == 200
         assert resp.json()["name"] == "Test Search"
 
@@ -657,14 +618,10 @@ class TestSavedSearches:
         )
         search_id = create_resp.json()["id"]
 
-        del_resp = client.delete(
-            f"/api/saved-searches/{search_id}", params={"profile_id": 1}
-        )
+        del_resp = client.delete(f"/api/saved-searches/{search_id}", params={"profile_id": 1})
         assert del_resp.status_code == 204
 
-        get_resp = client.get(
-            f"/api/saved-searches/{search_id}", params={"profile_id": 1}
-        )
+        get_resp = client.get(f"/api/saved-searches/{search_id}", params={"profile_id": 1})
         assert get_resp.status_code == 404
 
     def test_saved_search_reexecute_matches(self, client, seed_jobs):
@@ -685,9 +642,7 @@ class TestSavedSearches:
         )
 
         # Load saved search, apply its config
-        list_resp = client.get(
-            "/api/saved-searches", params={"profile_id": 1}
-        )
+        list_resp = client.get("/api/saved-searches", params={"profile_id": 1})
         saved = list_resp.json()["searches"][0]
         config = saved["config"]
         reexecute_params = {"profile_id": 1}
@@ -745,9 +700,7 @@ class TestProfileScoping:
         )
         search_id = create_resp.json()["id"]
 
-        resp = client.get(
-            f"/api/saved-searches/{search_id}", params={"profile_id": 2}
-        )
+        resp = client.get(f"/api/saved-searches/{search_id}", params={"profile_id": 2})
         assert resp.status_code == 404
 
     def test_profile_b_cannot_delete_profile_a_saved_search(self, client, seed_jobs):
@@ -761,9 +714,7 @@ class TestProfileScoping:
         )
         search_id = create_resp.json()["id"]
 
-        resp = client.delete(
-            f"/api/saved-searches/{search_id}", params={"profile_id": 2}
-        )
+        resp = client.delete(f"/api/saved-searches/{search_id}", params={"profile_id": 2})
         assert resp.status_code == 404
 
     def test_nonexistent_profile_returns_404(self, client):
@@ -782,9 +733,7 @@ class TestErrorHandling:
         assert resp.status_code == 422
 
     def test_saved_search_not_found(self, client):
-        resp = client.get(
-            "/api/saved-searches/9999", params={"profile_id": 1}
-        )
+        resp = client.get("/api/saved-searches/9999", params={"profile_id": 1})
         assert resp.status_code == 404
 
     def test_saved_search_empty_name(self, client):

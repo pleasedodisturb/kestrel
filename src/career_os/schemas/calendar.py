@@ -45,7 +45,9 @@ class CalendarEventCreate(BaseModel):
 
     # Reminder config
     reminder_minutes_before: int = Field(
-        default=1440, ge=0, le=10080,
+        default=1440,
+        ge=0,
+        le=10080,
         description="Minutes before event for prep reminder (default 24h)",
     )
 
@@ -61,9 +63,7 @@ class CalendarEventUpdate(BaseModel):
     interview_type: str | None = None
     meeting_link: str | None = None
     prep_notes: str | None = None
-    reminder_minutes_before: int | None = Field(
-        default=None, ge=0, le=10080
-    )
+    reminder_minutes_before: int | None = Field(default=None, ge=0, le=10080)
 
 
 class CalendarEventResponse(BaseModel):

@@ -72,7 +72,8 @@ def update_pipeline_tab(sh):
 
     conn = sqlite3.connect(str(DB_PATH))
     c = conn.cursor()
-    rows = list(c.execute('''
+    rows = list(
+        c.execute("""
         SELECT id, company, role, fit_score, status, salary_range, source, url,
                created_at, updated_at, notes
         FROM applications
@@ -87,41 +88,62 @@ def update_pipeline_tab(sh):
                 ELSE 7
             END,
             COALESCE(fit_score, 0) DESC
-    '''))
+    """)
+    )
     conn.close()
 
     ws = sh.sheet1
-    headers = ["ID", "Company", "Role", "Score", "Status", "Location",
-               "Salary", "Source", "URL", "Date Added", "Last Updated", "Notes"]
+    headers = [
+        "ID",
+        "Company",
+        "Role",
+        "Score",
+        "Status",
+        "Location",
+        "Salary",
+        "Source",
+        "URL",
+        "Date Added",
+        "Last Updated",
+        "Notes",
+    ]
 
     data = [headers]
     for r in rows:
         rid, company, role, score, status, salary, source, url, created, updated, notes = r
-        data.append([
-            rid,
-            company or "",
-            role or "",
-            score if score else "",
-            status or "",
-            "",  # location not in DB schema
-            salary or "",
-            source or "",
-            url or "",
-            (created or "")[:10],
-            (updated or "")[:10],
-            (notes or "")[:150]
-        ])
+        data.append(
+            [
+                rid,
+                company or "",
+                role or "",
+                score if score else "",
+                status or "",
+                "",  # location not in DB schema
+                salary or "",
+                source or "",
+                url or "",
+                (created or "")[:10],
+                (updated or "")[:10],
+                (notes or "")[:150],
+            ]
+        )
 
     # Clear old data and write fresh
     ws.clear()
     ws.update(values=data, range_name=f"A1:L{len(data)}")
 
     # Format header
-    ws.format("A1:L1", {
-        "textFormat": {"bold": True, "foregroundColorStyle": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}},
-        "backgroundColor": {"red": 0.15, "green": 0.35, "blue": 0.75},
-        "horizontalAlignment": "CENTER"
-    })
+    ws.format(
+        "A1:L1",
+        {
+            "textFormat": {
+                "bold": True,
+                "foregroundColorStyle": {"rgbColor": {"red": 1, "green": 1, "blue": 1}},
+            },
+            "backgroundColor": {"red": 0.15, "green": 0.35, "blue": 0.75},
+            "horizontalAlignment": "CENTER",
+        },
+    )
     ws.freeze(rows=1)
 
     return len(data) - 1  # exclude header
@@ -133,13 +155,31 @@ def update_daily_log(sh, entry: dict):
         ws = sh.worksheet("Daily Log")
     except gspread.exceptions.WorksheetNotFound:
         ws = sh.add_worksheet("Daily Log", rows=500, cols=10)
-        ws.update(values=[["Date", "Scraped", "Scored", "New (above threshold)",
-                          "Top Score", "Top Role", "Top Company", "CI Run URL"]],
-                  range_name="A1:H1")
-        ws.format("A1:H1", {
-            "textFormat": {"bold": True, "foregroundColorStyle": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}},
-            "backgroundColor": {"red": 0.15, "green": 0.35, "blue": 0.75},
-        })
+        ws.update(
+            values=[
+                [
+                    "Date",
+                    "Scraped",
+                    "Scored",
+                    "New (above threshold)",
+                    "Top Score",
+                    "Top Role",
+                    "Top Company",
+                    "CI Run URL",
+                ]
+            ],
+            range_name="A1:H1",
+        )
+        ws.format(
+            "A1:H1",
+            {
+                "textFormat": {
+                    "bold": True,
+                    "foregroundColorStyle": {"rgbColor": {"red": 1, "green": 1, "blue": 1}},
+                },
+                "backgroundColor": {"red": 0.15, "green": 0.35, "blue": 0.75},
+            },
+        )
         ws.freeze(rows=1)
 
     row = [
@@ -163,6 +203,7 @@ def update_review_queue(sh, scored_path: Path):
         return 0
 
     import json as _json
+
     jobs = _json.loads(scored_path.read_text())
     flagged = [j for j in jobs if j.get("review_flag")]
 
@@ -175,8 +216,17 @@ def update_review_queue(sh, scored_path: Path):
     except gspread.exceptions.WorksheetNotFound:
         ws = sh.add_worksheet("Review Queue", rows=500, cols=10)
 
-    headers = ["Date", "Company", "Role", "Score", "Review Reason",
-               "Location", "Salary", "Source", "URL"]
+    headers = [
+        "Date",
+        "Company",
+        "Role",
+        "Score",
+        "Review Reason",
+        "Location",
+        "Salary",
+        "Source",
+        "URL",
+    ]
 
     # Clear and rewrite (keep as rolling list, newest on top)
     existing = ws.get_all_values()
@@ -185,27 +235,35 @@ def update_review_queue(sh, scored_path: Path):
     today = datetime.now().strftime("%Y-%m-%d")
     new_rows = []
     for j in flagged:
-        new_rows.append([
-            today,
-            j.get("company", "")[:30],
-            j.get("title", "")[:50],
-            j.get("fit_score", ""),
-            j.get("review_reason", "")[:100],
-            j.get("location", ""),
-            j.get("estimated_salary", ""),
-            j.get("source", ""),
-            j.get("url", ""),
-        ])
+        new_rows.append(
+            [
+                today,
+                j.get("company", "")[:30],
+                j.get("title", "")[:50],
+                j.get("fit_score", ""),
+                j.get("review_reason", "")[:100],
+                j.get("location", ""),
+                j.get("estimated_salary", ""),
+                j.get("source", ""),
+                j.get("url", ""),
+            ]
+        )
 
     # New items on top, then existing
     all_data = [headers] + new_rows + existing_rows
     ws.clear()
     ws.update(values=all_data, range_name=f"A1:I{len(all_data)}")
-    ws.format("A1:I1", {
-        "textFormat": {"bold": True, "foregroundColorStyle": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}},
-        "backgroundColor": {"red": 0.6, "green": 0.3, "blue": 0.1},
-        "horizontalAlignment": "CENTER"
-    })
+    ws.format(
+        "A1:I1",
+        {
+            "textFormat": {
+                "bold": True,
+                "foregroundColorStyle": {"rgbColor": {"red": 1, "green": 1, "blue": 1}},
+            },
+            "backgroundColor": {"red": 0.6, "green": 0.3, "blue": 0.1},
+            "horizontalAlignment": "CENTER",
+        },
+    )
     ws.freeze(rows=1)
 
     print(f"Review Queue updated: {len(new_rows)} new flagged, {len(existing_rows)} existing")

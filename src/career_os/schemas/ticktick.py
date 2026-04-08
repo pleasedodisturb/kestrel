@@ -34,9 +34,7 @@ class TickTickSyncStatusResponse(BaseModel):
 class TickTickPushRequest(BaseModel):
     """Request to push a specific entity to TickTick."""
 
-    entity_type: str = Field(
-        ..., description="Type: follow_up | learning_goal | pipeline_action"
-    )
+    entity_type: str = Field(..., description="Type: follow_up | learning_goal | pipeline_action")
     entity_id: int = Field(..., description="ID of the entity to sync")
     profile_id: int = Field(..., description="Profile ID")
 

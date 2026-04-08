@@ -60,9 +60,7 @@ def db_session(monkeypatch, tmp_path):
 
     session = TestingSession()
     # Seed a default profile
-    profile = Profile(
-        id=1, name="Test User", email="test@test.com", location="Frankfurt"
-    )
+    profile = Profile(id=1, name="Test User", email="test@test.com", location="Frankfurt")
     session.add(profile)
     session.commit()
 
@@ -109,53 +107,57 @@ def app_with_prep(db_session: Session):
     session = InterviewPrepSession(
         application_id=1,
         profile_id=1,
-        topics=json.dumps([
-            {
-                "topic": "System Design at Scale",
-                "relevance": "high",
-                "difficulty": "high",
-                "source": "JD requirement",
-            },
-            {
-                "topic": "Payment Processing Architecture",
-                "relevance": "high",
-                "difficulty": "medium",
-                "source": "company style",
-            },
-            {
-                "topic": "Cross-functional Leadership",
-                "relevance": "medium",
-                "difficulty": "low",
-                "source": "skill gap",
-            },
-        ]),
-        questions=json.dumps([
-            {
-                "question": "Describe a time you led a cross-team initiative at scale.",
-                "category": "behavioral",
-                "difficulty": "medium",
-            },
-            {
-                "question": "How would you design a global payment processing system?",
-                "category": "system_design",
-                "difficulty": "high",
-            },
-            {
-                "question": "Tell me about a project where you handled conflicting priorities.",
-                "category": "behavioral",
-                "difficulty": "medium",
-            },
-            {
-                "question": "How do you ensure reliability in distributed systems?",
-                "category": "technical",
-                "difficulty": "high",
-            },
-            {
-                "question": "Walk me through your approach to incident management.",
-                "category": "technical",
-                "difficulty": "medium",
-            },
-        ]),
+        topics=json.dumps(
+            [
+                {
+                    "topic": "System Design at Scale",
+                    "relevance": "high",
+                    "difficulty": "high",
+                    "source": "JD requirement",
+                },
+                {
+                    "topic": "Payment Processing Architecture",
+                    "relevance": "high",
+                    "difficulty": "medium",
+                    "source": "company style",
+                },
+                {
+                    "topic": "Cross-functional Leadership",
+                    "relevance": "medium",
+                    "difficulty": "low",
+                    "source": "skill gap",
+                },
+            ]
+        ),
+        questions=json.dumps(
+            [
+                {
+                    "question": "Describe a time you led a cross-team initiative at scale.",
+                    "category": "behavioral",
+                    "difficulty": "medium",
+                },
+                {
+                    "question": "How would you design a global payment processing system?",
+                    "category": "system_design",
+                    "difficulty": "high",
+                },
+                {
+                    "question": "Tell me about a project where you handled conflicting priorities.",
+                    "category": "behavioral",
+                    "difficulty": "medium",
+                },
+                {
+                    "question": "How do you ensure reliability in distributed systems?",
+                    "category": "technical",
+                    "difficulty": "high",
+                },
+                {
+                    "question": "Walk me through your approach to incident management.",
+                    "category": "technical",
+                    "difficulty": "medium",
+                },
+            ]
+        ),
         total_prep_hours=4.5,
         company_researched=True,
     )
@@ -314,18 +316,14 @@ class TestResearchCommand:
         assert "React" in result.output
         assert "Python" in result.output
 
-    def test_research_partial_report_for_obscure_company(
-        self, db_session: Session
-    ) -> None:
+    def test_research_partial_report_for_obscure_company(self, db_session: Session) -> None:
         """Obscure companies get partial report without crashing."""
         mock_report = CompanyResearchReport(
             company_name="TinyStartup",
             tech_stack=TechStackReport(),
             funding=FundingReport(),
             glassdoor=GlassdoorReport(),
-            values_alignment=ValuesAlignmentReport(
-                score=5.0, rationale="No data available."
-            ),
+            values_alignment=ValuesAlignmentReport(score=5.0, rationale="No data available."),
             hiring_patterns=HiringPatternsReport(),
             warnings=[
                 SourceWarning(source="glassdoor", error="No data found"),
@@ -371,9 +369,7 @@ class TestResearchCommand:
 class TestInterviewPrepCommand:
     """Tests for `career interview-prep <id>` command."""
 
-    def test_prep_outputs_topics_questions_checklist(
-        self, app_with_prep: Session
-    ) -> None:
+    def test_prep_outputs_topics_questions_checklist(self, app_with_prep: Session) -> None:
         """career interview-prep <id> outputs topics, questions, checklist."""
         result = runner.invoke(app, ["interview-prep", "1"])
 
@@ -420,9 +416,7 @@ class TestInterviewPrepCommand:
         db_session.add(app_obj)
         db_session.commit()
 
-        with patch(
-            "career_os.cli.main._run_interview_prep_async"
-        ) as mock_prep:
+        with patch("career_os.cli.main._run_interview_prep_async") as mock_prep:
             from career_os.schemas.interview_prep import (
                 InterviewPrepResponse,
                 PrepChecklistItem,
@@ -546,9 +540,7 @@ class TestStoriesCommand:
     def test_stories_view(self, stories_db: Session) -> None:
         """career interview-prep stories view <id> shows full story."""
         story = stories_db.query(StarStory).filter(StarStory.profile_id == 1).first()
-        result = runner.invoke(
-            app, ["interview-prep", "stories", "view", str(story.id)]
-        )
+        result = runner.invoke(app, ["interview-prep", "stories", "view", str(story.id)])
 
         assert result.exit_code == 0
         assert story.title in result.output
@@ -559,9 +551,7 @@ class TestStoriesCommand:
 
     def test_stories_view_invalid_id(self, db_session: Session) -> None:
         """View nonexistent story shows error, no traceback."""
-        result = runner.invoke(
-            app, ["interview-prep", "stories", "view", "999"]
-        )
+        result = runner.invoke(app, ["interview-prep", "stories", "view", "999"])
 
         assert result.exit_code == 1
         assert "not found" in result.output.lower() or "Error" in result.output
@@ -636,9 +626,7 @@ class TestStoriesUsageCount:
         assert result.exit_code == 0
         assert "Used" in result.output
 
-    def test_usage_count_zero_with_no_requirements(
-        self, stories_db: Session
-    ) -> None:
+    def test_usage_count_zero_with_no_requirements(self, stories_db: Session) -> None:
         """Usage count is 0 when no job requirements exist."""
         result = runner.invoke(app, ["interview-prep", "stories"])
 
@@ -651,9 +639,7 @@ class TestStoriesUsageCount:
             if "Led Cross-Team" in line or "Scaled AI" in line:
                 assert "0" in line
 
-    def test_usage_count_matches_requirements(
-        self, stories_db: Session
-    ) -> None:
+    def test_usage_count_matches_requirements(self, stories_db: Session) -> None:
         """Usage count reflects how many applications match story skills."""
         from career_os.models.models import Application
         from career_os.models.skills import JobRequirement

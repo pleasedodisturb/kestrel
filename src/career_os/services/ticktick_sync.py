@@ -41,11 +41,7 @@ def _get_ticktick_credentials(db: Session) -> tuple[str, str]:
     Returns (api_token, project_id).
     Raises TickTickNotConfiguredError if not configured or disabled.
     """
-    row = (
-        db.query(IntegrationConfig)
-        .filter(IntegrationConfig.name == "ticktick")
-        .first()
-    )
+    row = db.query(IntegrationConfig).filter(IntegrationConfig.name == "ticktick").first()
     if row is None or not row.enabled:
         raise TickTickNotConfiguredError("TickTick integration is not enabled")
 
@@ -104,11 +100,7 @@ def sync_follow_up_to_ticktick(
     )
 
     # Build title with application context
-    app_obj = (
-        db.query(Application)
-        .filter(Application.id == follow_up.application_id)
-        .first()
-    )
+    app_obj = db.query(Application).filter(Application.id == follow_up.application_id).first()
     app_context = f"{app_obj.company} — {app_obj.role}" if app_obj else "Unknown"
     title = f"[Follow-up] {app_context} ({follow_up.follow_up_type})"
     content = follow_up.notes or f"Follow-up for {app_context}"
@@ -379,9 +371,7 @@ def sync_completions_from_ticktick(
 
         # Find the sync mapping
         sync_task = (
-            db.query(TickTickSyncTask)
-            .filter(TickTickSyncTask.ticktick_task_id == task_id)
-            .first()
+            db.query(TickTickSyncTask).filter(TickTickSyncTask.ticktick_task_id == task_id).first()
         )
         if not sync_task:
             stats["skipped"] += 1
@@ -445,11 +435,7 @@ def _apply_completion(db: Session, sync_task: TickTickSyncTask) -> None:
     elif sync_task.entity_type == "pipeline_action":
         # Completing a pipeline action task updates the Career OS
         # application state (marks the action as done) and logs activity.
-        app_obj = (
-            db.query(Application)
-            .filter(Application.id == sync_task.entity_id)
-            .first()
-        )
+        app_obj = db.query(Application).filter(Application.id == sync_task.entity_id).first()
         if app_obj:
             # Update application's next_step to reflect the action is done
             if app_obj.next_step:
@@ -484,9 +470,7 @@ def try_auto_push_follow_up(db: Session, follow_up: FollowUp) -> None:
         logger.debug("Auto-push follow-up %d to TickTick failed", follow_up.id, exc_info=True)
 
 
-def try_auto_push_pipeline_action(
-    db: Session, application: Application, action: str
-) -> None:
+def try_auto_push_pipeline_action(db: Session, application: Application, action: str) -> None:
     """Attempt to auto-push a pipeline action to TickTick.
 
     Silently does nothing if TickTick is not configured.
@@ -521,9 +505,7 @@ def try_auto_push_learning_goal(db: Session, goal: Goal) -> None:
 # ---------------------------------------------------------------------------
 
 
-def get_sync_status(
-    db: Session, *, profile_id: int
-) -> dict:
+def get_sync_status(db: Session, *, profile_id: int) -> dict:
     """Get overall TickTick sync status for a profile.
 
     Excludes tasks linked to archived applications (VAL-CROSS-019).
@@ -594,11 +576,7 @@ def check_ticktick_connection(db: Session) -> tuple[bool, str]:
         ok = client.test_connection()
         if ok:
             # Update integration status
-            row = (
-                db.query(IntegrationConfig)
-                .filter(IntegrationConfig.name == "ticktick")
-                .first()
-            )
+            row = db.query(IntegrationConfig).filter(IntegrationConfig.name == "ticktick").first()
             if row:
                 row.status = "connected"
                 row.status_message = "TickTick API connection successful"

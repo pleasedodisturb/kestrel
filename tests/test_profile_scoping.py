@@ -32,9 +32,7 @@ PROFILE_B_ID = 2
 @pytest.fixture(autouse=True)
 def db_session():
     """Create a fresh in-memory database with two profiles for each test."""
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_conn, connection_record):
@@ -137,18 +135,14 @@ class TestApplicationGetScoping:
     def test_owner_can_read_own_application(self, client: TestClient):
         """Profile A can read its own application."""
         app_data = _create_app_for_profile(client, PROFILE_A_ID, company="AliceCo")
-        resp = client.get(
-            f"/api/applications/{app_data['id']}?profile_id={PROFILE_A_ID}"
-        )
+        resp = client.get(f"/api/applications/{app_data['id']}?profile_id={PROFILE_A_ID}")
         assert resp.status_code == 200
         assert resp.json()["company"] == "AliceCo"
 
     def test_other_profile_cannot_read_application(self, client: TestClient):
         """Profile B cannot read profile A's application (returns 404)."""
         app_data = _create_app_for_profile(client, PROFILE_A_ID, company="AliceCo")
-        resp = client.get(
-            f"/api/applications/{app_data['id']}?profile_id={PROFILE_B_ID}"
-        )
+        resp = client.get(f"/api/applications/{app_data['id']}?profile_id={PROFILE_B_ID}")
         assert resp.status_code == 404
 
     def test_list_excludes_other_profiles_apps(self, client: TestClient):
@@ -206,32 +200,22 @@ class TestApplicationDeleteScoping:
     def test_owner_can_delete_own_application(self, client: TestClient):
         """Profile A can archive its own application."""
         app_data = _create_app_for_profile(client, PROFILE_A_ID)
-        resp = client.delete(
-            f"/api/applications/{app_data['id']}?profile_id={PROFILE_A_ID}"
-        )
+        resp = client.delete(f"/api/applications/{app_data['id']}?profile_id={PROFILE_A_ID}")
         assert resp.status_code == 200
 
     def test_other_profile_cannot_delete_application(self, client: TestClient):
         """Profile B cannot archive profile A's application (returns 404)."""
         app_data = _create_app_for_profile(client, PROFILE_A_ID)
-        resp = client.delete(
-            f"/api/applications/{app_data['id']}?profile_id={PROFILE_B_ID}"
-        )
+        resp = client.delete(f"/api/applications/{app_data['id']}?profile_id={PROFILE_B_ID}")
         assert resp.status_code == 404
 
-    def test_application_still_exists_after_failed_delete(
-        self, client: TestClient
-    ):
+    def test_application_still_exists_after_failed_delete(self, client: TestClient):
         """Profile A's application persists after profile B's failed delete attempt."""
         app_data = _create_app_for_profile(client, PROFILE_A_ID)
         # Profile B tries to delete — should fail
-        client.delete(
-            f"/api/applications/{app_data['id']}?profile_id={PROFILE_B_ID}"
-        )
+        client.delete(f"/api/applications/{app_data['id']}?profile_id={PROFILE_B_ID}")
         # Profile A can still see it
-        resp = client.get(
-            f"/api/applications/{app_data['id']}?profile_id={PROFILE_A_ID}"
-        )
+        resp = client.get(f"/api/applications/{app_data['id']}?profile_id={PROFILE_A_ID}")
         assert resp.status_code == 200
 
 
@@ -391,19 +375,11 @@ class TestGhostDetectionScoping:
         db_session.add_all([ghost_a, ghost_b])
         db_session.commit()
 
-        resp_a = client.get(
-            f"/api/applications?profile_id={PROFILE_A_ID}&ghost_alert=true"
-        )
-        resp_b = client.get(
-            f"/api/applications?profile_id={PROFILE_B_ID}&ghost_alert=true"
-        )
+        resp_a = client.get(f"/api/applications?profile_id={PROFILE_A_ID}&ghost_alert=true")
+        resp_b = client.get(f"/api/applications?profile_id={PROFILE_B_ID}&ghost_alert=true")
 
-        ghost_companies_a = [
-            a["company"] for a in resp_a.json()["applications"]
-        ]
-        ghost_companies_b = [
-            a["company"] for a in resp_b.json()["applications"]
-        ]
+        ghost_companies_a = [a["company"] for a in resp_a.json()["applications"]]
+        ghost_companies_b = [a["company"] for a in resp_b.json()["applications"]]
 
         assert "Ghost A Co" in ghost_companies_a
         assert "Ghost B Co" not in ghost_companies_a
@@ -453,7 +429,9 @@ class TestFollowUpLegacyProfileMismatch:
     """
 
     def test_complete_follow_up_with_mismatched_profile_id(
-        self, client: TestClient, db_session: Session,
+        self,
+        client: TestClient,
+        db_session: Session,
     ):
         """Follow-up whose profile_id differs from its application's profile_id
         can still be completed by the application's owner.
@@ -488,7 +466,9 @@ class TestFollowUpLegacyProfileMismatch:
         assert resp.json()["completed_at"] is not None
 
     def test_non_owner_cannot_complete_legacy_follow_up(
-        self, client: TestClient, db_session: Session,
+        self,
+        client: TestClient,
+        db_session: Session,
     ):
         """Profile B cannot complete a legacy follow-up on profile A's application,
         even if the follow-up's profile_id happens to match profile B.

@@ -39,9 +39,7 @@ def _db_engine():
         tmp_name = tmp.name
     url = f"sqlite:///{tmp_name}"
     engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(
-        engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON")
-    )
+    event.listen(engine, "connect", lambda c, _: c.cursor().execute("PRAGMA foreign_keys=ON"))
     Base.metadata.create_all(engine)
     yield engine
     engine.dispose()
@@ -816,9 +814,7 @@ class TestCoachingDistanceRecalculation:
 class TestCoachingService:
     """Direct service layer tests."""
 
-    def test_get_suggestions_empty_profile(
-        self, test_db: Session, test_profile: Profile
-    ):
+    def test_get_suggestions_empty_profile(self, test_db: Session, test_profile: Profile):
         """Service returns suggestions for empty profile (pipeline starter)."""
         from career_os.services.coaching import get_coaching_suggestions
 

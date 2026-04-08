@@ -24,7 +24,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import httpx
-
 from scrape_resilient import (
     MAX_DESCRIPTION_LENGTH,
     ScrapedJob,
@@ -45,73 +44,73 @@ logger = logging.getLogger("scrape_new_sources")
 # Greenhouse companies: slug is from their careers URL
 # e.g. https://boards.greenhouse.io/{slug}
 GREENHOUSE_COMPANIES: list[str] = [
-    "mistral",              # Mistral AI
-    "huggingface",          # Hugging Face
-    "cohere",               # Cohere
-    "anthropic",            # Anthropic
-    "deepmind",             # Google DeepMind
-    "figma",                # Figma
-    "linear",               # Linear
-    "vercel",               # Vercel
-    "notion",               # Notion
-    "airtable",             # Airtable
-    "hashicorp",            # HashiCorp
-    "grafana",              # Grafana Labs
-    "postman",              # Postman
-    "snyk",                 # Snyk
-    "miro",                 # Miro
-    "contentful",           # Contentful (Berlin)
-    "datadog",              # Datadog
-    "sourcegraph",          # Sourcegraph
-    "gitlabinc",            # GitLab
-    "anyscale",             # Anyscale (Ray)
-    "replit",               # Replit
-    "together",             # Together AI
-    "modal",                # Modal
-    "weights-and-biases",   # Weights & Biases
-    "deepl",                # DeepL (Cologne)
-    "celonis",              # Celonis (Munich)
-    "personio",             # Personio (Munich)
-    "scalableai",           # Scalable Capital
-    "tldraw",               # tldraw
-    "sentry",               # Sentry
-    "supabase",             # Supabase
+    "mistral",  # Mistral AI
+    "huggingface",  # Hugging Face
+    "cohere",  # Cohere
+    "anthropic",  # Anthropic
+    "deepmind",  # Google DeepMind
+    "figma",  # Figma
+    "linear",  # Linear
+    "vercel",  # Vercel
+    "notion",  # Notion
+    "airtable",  # Airtable
+    "hashicorp",  # HashiCorp
+    "grafana",  # Grafana Labs
+    "postman",  # Postman
+    "snyk",  # Snyk
+    "miro",  # Miro
+    "contentful",  # Contentful (Berlin)
+    "datadog",  # Datadog
+    "sourcegraph",  # Sourcegraph
+    "gitlabinc",  # GitLab
+    "anyscale",  # Anyscale (Ray)
+    "replit",  # Replit
+    "together",  # Together AI
+    "modal",  # Modal
+    "weights-and-biases",  # Weights & Biases
+    "deepl",  # DeepL (Cologne)
+    "celonis",  # Celonis (Munich)
+    "personio",  # Personio (Munich)
+    "scalableai",  # Scalable Capital
+    "tldraw",  # tldraw
+    "sentry",  # Sentry
+    "supabase",  # Supabase
 ]
 
 # Lever companies: slug from https://jobs.lever.co/{slug}
 LEVER_COMPANIES: list[str] = [
-    "proton",               # Proton (privacy, Switzerland)
-    "tuta",                 # Tuta (Tutanota, Germany)
-    "lovable",              # Lovable (AI coding)
-    "oxide",                # Oxide Computer
-    "fly",                  # Fly.io
-    "railway",              # Railway
-    "retool",               # Retool
-    "render",               # Render
-    "webflow",              # Webflow
-    "cal-com",              # Cal.com
-    "descript",             # Descript
-    "livekit",              # LiveKit
-    "langchain",            # LangChain
-    "prefect",              # Prefect
-    "zed-industries",       # Zed
-    "netlify",              # Netlify
-    "prisma",               # Prisma (Berlin)
-    "commercetools",        # commercetools (Munich)
+    "proton",  # Proton (privacy, Switzerland)
+    "tuta",  # Tuta (Tutanota, Germany)
+    "lovable",  # Lovable (AI coding)
+    "oxide",  # Oxide Computer
+    "fly",  # Fly.io
+    "railway",  # Railway
+    "retool",  # Retool
+    "render",  # Render
+    "webflow",  # Webflow
+    "cal-com",  # Cal.com
+    "descript",  # Descript
+    "livekit",  # LiveKit
+    "langchain",  # LangChain
+    "prefect",  # Prefect
+    "zed-industries",  # Zed
+    "netlify",  # Netlify
+    "prisma",  # Prisma (Berlin)
+    "commercetools",  # commercetools (Munich)
 ]
 
 # Ashby companies: slug from their job board URL
 ASHBY_COMPANIES: list[str] = [
-    "linear",               # Linear
-    "vercel",               # Vercel
-    "resend",               # Resend
-    "clerk",                # Clerk
-    "deno",                 # Deno
-    "neon",                 # Neon (serverless Postgres)
-    "turso",                # Turso
-    "unkey",                # Unkey
-    "inngest",              # Inngest
-    "val-town",             # Val Town
+    "linear",  # Linear
+    "vercel",  # Vercel
+    "resend",  # Resend
+    "clerk",  # Clerk
+    "deno",  # Deno
+    "neon",  # Neon (serverless Postgres)
+    "turso",  # Turso
+    "unkey",  # Unkey
+    "inngest",  # Inngest
+    "val-town",  # Val Town
 ]
 
 
@@ -120,6 +119,7 @@ ASHBY_COMPANIES: list[str] = [
 # ---------------------------------------------------------------------------
 
 HIMALAYAS_API = "https://himalayas.app/jobs/api"
+
 
 def scrape_himalayas(
     keywords: list[str] | None = None,
@@ -133,9 +133,15 @@ def scrape_himalayas(
     """
     jobs: list[ScrapedJob] = []
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    search_terms = keywords or ["product manager", "program manager", "AI engineer", "developer relations"]
+    search_terms = keywords or [
+        "product manager",
+        "program manager",
+        "AI engineer",
+        "developer relations",
+    ]
 
     for term in search_terms:
+
         def _fetch(search=term):
             with httpx.Client(timeout=30, headers={"User-Agent": _get_user_agent()}) as client:
                 r = client.get(
@@ -151,19 +157,21 @@ def scrape_himalayas(
 
         for j in data.get("jobs", []):
             location = j.get("location", "")
-            jobs.append(ScrapedJob(
-                title=j.get("title", ""),
-                company=j.get("companyName", j.get("company_name", "")),
-                location=location,
-                url=j.get("applicationUrl", j.get("url", "")),
-                source="himalayas",
-                description=str(j.get("description", ""))[:MAX_DESCRIPTION_LENGTH],
-                posted=j.get("pubDate", j.get("published_at", "")),
-                remote=True,
-                salary=j.get("salary", ""),
-                tags=j.get("categories", []) if isinstance(j.get("categories"), list) else [],
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=j.get("title", ""),
+                    company=j.get("companyName", j.get("company_name", "")),
+                    location=location,
+                    url=j.get("applicationUrl", j.get("url", "")),
+                    source="himalayas",
+                    description=str(j.get("description", ""))[:MAX_DESCRIPTION_LENGTH],
+                    posted=j.get("pubDate", j.get("published_at", "")),
+                    remote=True,
+                    salary=j.get("salary", ""),
+                    tags=j.get("categories", []) if isinstance(j.get("categories"), list) else [],
+                    scraped_at=now,
+                )
+            )
 
         _random_delay()
 
@@ -177,6 +185,7 @@ def scrape_himalayas(
 # ---------------------------------------------------------------------------
 
 GREENHOUSE_API = "https://boards-api.greenhouse.io/v1/boards/{slug}/jobs"
+
 
 def scrape_greenhouse(
     companies: list[str] | None = None,
@@ -224,18 +233,20 @@ def scrape_greenhouse(
 
             job_url = j.get("absolute_url", "")
 
-            jobs.append(ScrapedJob(
-                title=title,
-                company=slug.replace("-", " ").title(),
-                location=location,
-                url=job_url,
-                source="greenhouse",
-                description=desc,
-                posted=j.get("updated_at", ""),
-                remote="remote" in location.lower(),
-                tags=dept_names,
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=title,
+                    company=slug.replace("-", " ").title(),
+                    location=location,
+                    url=job_url,
+                    source="greenhouse",
+                    description=desc,
+                    posted=j.get("updated_at", ""),
+                    remote="remote" in location.lower(),
+                    tags=dept_names,
+                    scraped_at=now,
+                )
+            )
 
         _random_delay()
 
@@ -249,6 +260,7 @@ def scrape_greenhouse(
 # ---------------------------------------------------------------------------
 
 LEVER_API = "https://api.lever.co/v0/postings/{slug}?mode=json"
+
 
 def scrape_lever(
     companies: list[str] | None = None,
@@ -296,18 +308,20 @@ def scrape_lever(
 
             tags = [t for t in [team, commitment] if t]
 
-            jobs.append(ScrapedJob(
-                title=title,
-                company=slug.replace("-", " ").title(),
-                location=location,
-                url=j.get("hostedUrl", j.get("applyUrl", "")),
-                source="lever",
-                description=desc,
-                posted=str(j.get("createdAt", "")),
-                remote="remote" in location.lower(),
-                tags=tags,
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=title,
+                    company=slug.replace("-", " ").title(),
+                    location=location,
+                    url=j.get("hostedUrl", j.get("applyUrl", "")),
+                    source="lever",
+                    description=desc,
+                    posted=str(j.get("createdAt", "")),
+                    remote="remote" in location.lower(),
+                    tags=tags,
+                    scraped_at=now,
+                )
+            )
 
         _random_delay()
 
@@ -321,6 +335,7 @@ def scrape_lever(
 # ---------------------------------------------------------------------------
 
 ASHBY_API = "https://api.ashbyhq.com/posting-api/job-board/{slug}"
+
 
 def scrape_ashby(
     companies: list[str] | None = None,
@@ -383,19 +398,21 @@ def scrape_ashby(
             job_url = j.get("jobUrl", j.get("publishedUrl", j.get("applyUrl", "")))
             tags = [department] if department else []
 
-            jobs.append(ScrapedJob(
-                title=title,
-                company=slug.replace("-", " ").title(),
-                location=str(location),
-                url=job_url,
-                source="ashby",
-                description=desc or "",
-                posted=j.get("publishedAt", j.get("updatedAt", "")),
-                remote="remote" in str(location).lower(),
-                salary=salary,
-                tags=tags,
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=title,
+                    company=slug.replace("-", " ").title(),
+                    location=str(location),
+                    url=job_url,
+                    source="ashby",
+                    description=desc or "",
+                    posted=j.get("publishedAt", j.get("updatedAt", "")),
+                    remote="remote" in str(location).lower(),
+                    salary=salary,
+                    tags=tags,
+                    scraped_at=now,
+                )
+            )
 
         _random_delay()
 
@@ -411,6 +428,7 @@ STARTUPJOBS_ALGOLIA_APP = "45BWZJ1SGC"
 STARTUPJOBS_ALGOLIA_KEY = "Zjk5YTMwNmRhYjk4MDlmNWJlZGUyMmIxZjY3ZGRlYTg1ZTRiNGIzOGI1MWY2ZDYzOWEyMWI1NDM5YmFlNzQ0OXRhZ0ZpbHRlcnM9"
 STARTUPJOBS_INDEX = "jobs"
 
+
 def scrape_startupjobs(
     keywords: list[str] | None = None,
     limit: int = 50,
@@ -424,6 +442,7 @@ def scrape_startupjobs(
     search_terms = keywords or ["product manager", "program manager", "AI", "developer relations"]
 
     for term in search_terms:
+
         def _fetch(query=term):
             with httpx.Client(timeout=20, headers={"User-Agent": _get_user_agent()}) as client:
                 # Use the Algolia REST search endpoint
@@ -455,18 +474,20 @@ def scrape_startupjobs(
             if not job_url and hit.get("slug"):
                 job_url = f"https://startup.jobs/{hit['slug']}"
 
-            jobs.append(ScrapedJob(
-                title=title,
-                company=company if isinstance(company, str) else str(company),
-                location=location if isinstance(location, str) else str(location),
-                url=job_url,
-                source="startupjobs",
-                description=str(hit.get("description", ""))[:MAX_DESCRIPTION_LENGTH],
-                posted=hit.get("published_at", hit.get("created_at", "")),
-                remote=hit.get("remote", False),
-                tags=hit.get("tags", []) if isinstance(hit.get("tags"), list) else [],
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=title,
+                    company=company if isinstance(company, str) else str(company),
+                    location=location if isinstance(location, str) else str(location),
+                    url=job_url,
+                    source="startupjobs",
+                    description=str(hit.get("description", ""))[:MAX_DESCRIPTION_LENGTH],
+                    posted=hit.get("published_at", hit.get("created_at", "")),
+                    remote=hit.get("remote", False),
+                    tags=hit.get("tags", []) if isinstance(hit.get("tags"), list) else [],
+                    scraped_at=now,
+                )
+            )
 
         _random_delay()
 
@@ -479,6 +500,7 @@ def scrape_startupjobs(
 # ---------------------------------------------------------------------------
 
 THEHUB_API = "https://thehub.io/api/jobs"
+
 
 def scrape_thehub(
     keywords: list[str] | None = None,
@@ -495,11 +517,15 @@ def scrape_thehub(
     search_terms = keywords or ["product manager", "engineer"]
 
     for term in search_terms:
+
         def _fetch(query=term):
-            with httpx.Client(timeout=20, headers={
-                "User-Agent": _get_user_agent(),
-                "Accept": "application/json",
-            }) as client:
+            with httpx.Client(
+                timeout=20,
+                headers={
+                    "User-Agent": _get_user_agent(),
+                    "Accept": "application/json",
+                },
+            ) as client:
                 # Try the internal API endpoint
                 r = client.get(
                     "https://thehub.io/jobs",
@@ -533,18 +559,20 @@ def scrape_thehub(
             if isinstance(company, dict):
                 company = company.get("name", "")
 
-            jobs.append(ScrapedJob(
-                title=title,
-                company=str(company),
-                location=j.get("location", location),
-                url=j.get("url", j.get("link", "")),
-                source="thehub",
-                description=str(j.get("description", ""))[:MAX_DESCRIPTION_LENGTH],
-                posted=j.get("published_at", j.get("created_at", "")),
-                remote=j.get("remote", False),
-                tags=j.get("tags", []) if isinstance(j.get("tags"), list) else [],
-                scraped_at=now,
-            ))
+            jobs.append(
+                ScrapedJob(
+                    title=title,
+                    company=str(company),
+                    location=j.get("location", location),
+                    url=j.get("url", j.get("link", "")),
+                    source="thehub",
+                    description=str(j.get("description", ""))[:MAX_DESCRIPTION_LENGTH],
+                    posted=j.get("published_at", j.get("created_at", "")),
+                    remote=j.get("remote", False),
+                    tags=j.get("tags", []) if isinstance(j.get("tags"), list) else [],
+                    scraped_at=now,
+                )
+            )
 
         _random_delay()
 
@@ -555,6 +583,7 @@ def scrape_thehub(
 # ---------------------------------------------------------------------------
 # Convenience: scrape all new sources at once
 # ---------------------------------------------------------------------------
+
 
 def scrape_all_new_sources(
     keywords: list[str] | None = None,
@@ -578,10 +607,12 @@ def scrape_all_new_sources(
     # Greenhouse
     logger.info("=== New Source: Greenhouse ATS ===")
     try:
-        all_jobs.extend(scrape_greenhouse(
-            companies=greenhouse_companies,
-            keyword_filter=ats_keyword_filter,
-        ))
+        all_jobs.extend(
+            scrape_greenhouse(
+                companies=greenhouse_companies,
+                keyword_filter=ats_keyword_filter,
+            )
+        )
     except Exception as e:
         logger.error(f"Greenhouse failed: {e}")
 
@@ -590,10 +621,12 @@ def scrape_all_new_sources(
     # Lever
     logger.info("=== New Source: Lever ATS ===")
     try:
-        all_jobs.extend(scrape_lever(
-            companies=lever_companies,
-            keyword_filter=ats_keyword_filter,
-        ))
+        all_jobs.extend(
+            scrape_lever(
+                companies=lever_companies,
+                keyword_filter=ats_keyword_filter,
+            )
+        )
     except Exception as e:
         logger.error(f"Lever failed: {e}")
 
@@ -602,10 +635,12 @@ def scrape_all_new_sources(
     # Ashby
     logger.info("=== New Source: Ashby ATS ===")
     try:
-        all_jobs.extend(scrape_ashby(
-            companies=ashby_companies,
-            keyword_filter=ats_keyword_filter,
-        ))
+        all_jobs.extend(
+            scrape_ashby(
+                companies=ashby_companies,
+                keyword_filter=ats_keyword_filter,
+            )
+        )
     except Exception as e:
         logger.error(f"Ashby failed: {e}")
 

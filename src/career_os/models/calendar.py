@@ -34,9 +34,7 @@ class CalendarEvent(Base):
     application_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("applications.id"), nullable=True, index=True
     )
-    follow_up_id: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, index=True
-    )
+    follow_up_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     parent_event_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("calendar_events.id", ondelete="CASCADE"), nullable=True, index=True
     )

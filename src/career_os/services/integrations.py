@@ -22,11 +22,7 @@ logger = logging.getLogger(__name__)
 
 def _ensure_row(db: Session, integration: IntegrationDef) -> IntegrationConfig:
     """Get or create the DB row for a known integration."""
-    row = (
-        db.query(IntegrationConfig)
-        .filter(IntegrationConfig.name == integration.name)
-        .first()
-    )
+    row = db.query(IntegrationConfig).filter(IntegrationConfig.name == integration.name).first()
     if row is None:
         row = IntegrationConfig(
             name=integration.name,
@@ -49,9 +45,7 @@ def _credentials_set(row: IntegrationConfig, defn: IntegrationDef) -> dict[str, 
             creds = json.loads(row.credentials)
         except (json.JSONDecodeError, TypeError):
             creds = {}
-    return {
-        f.key: bool(creds.get(f.key, "").strip()) for f in defn.credential_fields
-    }
+    return {f.key: bool(creds.get(f.key, "").strip()) for f in defn.credential_fields}
 
 
 def _build_response(row: IntegrationConfig, defn: IntegrationDef) -> IntegrationConfigResponse:
@@ -129,9 +123,7 @@ def update_integration(
         # Update status: if required fields are present, mark as not_configured
         # (will become 'connected' after a successful test)
         has_required = all(
-            bool(existing.get(f.key, "").strip())
-            for f in defn.credential_fields
-            if f.required
+            bool(existing.get(f.key, "").strip()) for f in defn.credential_fields if f.required
         )
         if has_required and row.enabled:
             if row.status in ("not_configured", "disabled"):
@@ -154,9 +146,7 @@ def update_integration(
                 creds_parsed = {}
 
         has_required = all(
-            bool(creds_parsed.get(f.key, "").strip())
-            for f in defn.credential_fields
-            if f.required
+            bool(creds_parsed.get(f.key, "").strip()) for f in defn.credential_fields if f.required
         )
         if has_required:
             # Run the connection test and include result in response
@@ -175,9 +165,7 @@ def update_integration(
     return response
 
 
-def test_integration_connection(
-    db: Session, name: str
-) -> IntegrationTestResponse | None:
+def test_integration_connection(db: Session, name: str) -> IntegrationTestResponse | None:
     """Test an integration's connection using stored credentials.
 
     Returns None if the integration name is unknown.
@@ -201,9 +189,7 @@ def test_integration_connection(
 
     # Check required fields are present
     missing = [
-        f.label
-        for f in defn.credential_fields
-        if f.required and not creds.get(f.key, "").strip()
+        f.label for f in defn.credential_fields if f.required and not creds.get(f.key, "").strip()
     ]
     if missing:
         row.status = "error"
