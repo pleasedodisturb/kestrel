@@ -59,7 +59,15 @@ async def ticktick_sync_status(
     )
 
 
-@router.post("/push")
+@router.post(
+    "/push",
+    responses={
+        400: {"description": "Bad request"},
+        404: {"description": "Not found"},
+        422: {"description": "Validation error"},
+        502: {"description": "Bad gateway"},
+    },
+)
 async def ticktick_push(
     payload: TickTickPushRequest,
     db: Session = Depends(get_db),
@@ -136,7 +144,7 @@ async def ticktick_push(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@router.post("/pull")
+@router.post("/pull", responses={400: {"description": "Bad request"}})
 async def ticktick_pull(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),

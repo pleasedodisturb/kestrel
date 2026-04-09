@@ -27,7 +27,11 @@ from career_os.services.voice import (
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 
-@router.post("/sessions", status_code=201)
+@router.post(
+    "/sessions",
+    status_code=201,
+    responses={404: {"description": "Not found"}, 422: {"description": "Validation error"}},
+)
 async def create_voice_session(
     data: VoiceSessionCreate,
     db: Session = Depends(get_db),
@@ -71,7 +75,7 @@ async def list_voice_sessions(
     )
 
 
-@router.get("/sessions/{session_id}")
+@router.get("/sessions/{session_id}", responses={404: {"description": "Not found"}})
 async def get_voice_session(
     session_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -88,6 +92,7 @@ async def get_voice_session(
 
 @router.post(
     "/sessions/{session_id}/messages",
+    responses={404: {"description": "Not found"}},
 )
 async def send_voice_message(
     session_id: int,
@@ -120,6 +125,7 @@ async def send_voice_message(
 
 @router.post(
     "/sessions/{session_id}/complete",
+    responses={404: {"description": "Not found"}},
 )
 async def complete_voice_session(
     session_id: int,

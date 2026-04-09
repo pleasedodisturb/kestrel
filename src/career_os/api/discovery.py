@@ -35,7 +35,7 @@ router = APIRouter(tags=["discovery"])
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/discover")
+@router.post("/api/discover", responses={404: {"description": "Not found"}})
 async def discover(
     payload: DiscoverRequest,
     db: Session = Depends(get_db),
@@ -80,6 +80,7 @@ async def discover(
 @router.post(
     "/api/search-profiles",
     status_code=201,
+    responses={404: {"description": "Not found"}},
 )
 async def create_search_profile_endpoint(
     payload: SearchProfileCreate,
@@ -116,6 +117,7 @@ async def list_search_profiles_endpoint(
 
 @router.get(
     "/api/search-profiles/{sp_id}",
+    responses={404: {"description": "Not found"}},
 )
 async def get_search_profile_endpoint(
     sp_id: int,
@@ -132,6 +134,7 @@ async def get_search_profile_endpoint(
 
 @router.put(
     "/api/search-profiles/{sp_id}",
+    responses={404: {"description": "Not found"}},
 )
 async def update_search_profile_endpoint(
     sp_id: int,
@@ -155,6 +158,7 @@ async def update_search_profile_endpoint(
 @router.delete(
     "/api/search-profiles/{sp_id}",
     status_code=204,
+    responses={404: {"description": "Not found"}},
 )
 async def delete_search_profile_endpoint(
     sp_id: int,

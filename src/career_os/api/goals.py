@@ -49,7 +49,7 @@ async def list_goals_endpoint(
     )
 
 
-@router.get("/{goal_id}")
+@router.get("/{goal_id}", responses={404: {"description": "Not found"}})
 async def get_goal_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -63,7 +63,7 @@ async def get_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, responses={404: {"description": "Not found"}})
 async def create_goal_endpoint(
     payload: GoalCreate,
     db: Session = Depends(get_db),
@@ -86,7 +86,7 @@ async def create_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.put("/{goal_id}")
+@router.put("/{goal_id}", responses={404: {"description": "Not found"}})
 async def update_goal_endpoint(
     goal_id: int,
     payload: GoalUpdate,
@@ -107,7 +107,7 @@ async def update_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.delete("/{goal_id}", status_code=204)
+@router.delete("/{goal_id}", status_code=204, responses={404: {"description": "Not found"}})
 async def delete_goal_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -120,7 +120,7 @@ async def delete_goal_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{goal_id}/reality-map")
+@router.get("/{goal_id}/reality-map", responses={404: {"description": "Not found"}})
 async def get_reality_map_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -145,7 +145,7 @@ async def get_reality_map_endpoint(
     )
 
 
-@router.get("/{goal_id}/progress")
+@router.get("/{goal_id}/progress", responses={404: {"description": "Not found"}})
 async def get_progress_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -165,7 +165,7 @@ async def get_progress_endpoint(
     )
 
 
-@router.put("/{goal_id}/recalibrate")
+@router.put("/{goal_id}/recalibrate", responses={404: {"description": "Not found"}})
 async def recalibrate_goal_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -186,7 +186,7 @@ async def recalibrate_goal_endpoint(
     )
 
 
-@router.get("/{goal_id}/alternatives")
+@router.get("/{goal_id}/alternatives", responses={404: {"description": "Not found"}})
 async def get_alternatives_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
