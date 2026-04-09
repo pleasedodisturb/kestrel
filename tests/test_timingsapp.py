@@ -1138,3 +1138,27 @@ class TestConnectionTest:
 
             success, msg = check_timingsapp_connection(db_session)
             assert success is False
+
+
+# ===========================================================================
+# Security: loop bounds clamping (SonarCloud fix)
+# ===========================================================================
+
+
+class TestWeeksLoopBounds:
+    """Verify that get_time_analytics clamps the weeks parameter."""
+
+    def test_weeks_clamped_to_max(self, db_session, profile):
+        """Extremely large weeks value is clamped, no hang or OOM."""
+        analytics = get_time_analytics(db_session, profile_id=profile.id, weeks=999_999)
+        # Should succeed (clamped to 1000) and return a result
+        assert analytics.total_hours == 0.0
+        assert len(analytics.weekly_trend) == 1000
+
+    def test_weeks_clamped_to_min(self, db_session, profile):
+        """Zero or negative weeks is clamped to 1."""
+        analytics = get_time_analytics(db_session, profile_id=profile.id, weeks=0)
+        assert len(analytics.weekly_trend) == 1
+
+        analytics_neg = get_time_analytics(db_session, profile_id=profile.id, weeks=-5)
+        assert len(analytics_neg.weekly_trend) == 1

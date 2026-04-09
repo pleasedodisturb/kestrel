@@ -33,7 +33,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 interface Props {
-  data: TimeInStageData[];
+  readonly data: TimeInStageData[];
 }
 
 export function TimeInStage({ data }: Props) {

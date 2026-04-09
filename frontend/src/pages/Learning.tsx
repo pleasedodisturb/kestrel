@@ -78,10 +78,10 @@ const ALL_DIFFICULTIES: Difficulty[] = [
 function AddResourceDialog({
   gapId,
   onClose,
-}: {
+}: Readonly<{
   gapId: number;
   onClose: () => void;
-}) {
+}>) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -111,6 +111,8 @@ function AddResourceDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
@@ -135,10 +137,11 @@ function AddResourceDialog({
           className="mt-4 space-y-4"
         >
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="add-resource-title" className="block text-sm font-medium text-gray-700">
               Title *
             </label>
             <input
+              id="add-resource-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -148,10 +151,11 @@ function AddResourceDialog({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="add-resource-url" className="block text-sm font-medium text-gray-700">
               URL
             </label>
             <input
+              id="add-resource-url"
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -161,10 +165,11 @@ function AddResourceDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="add-resource-type" className="block text-sm font-medium text-gray-700">
                 Type
               </label>
               <select
+                id="add-resource-type"
                 value={resourceType}
                 onChange={(e) => setResourceType(e.target.value as ResourceType)}
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -177,10 +182,11 @@ function AddResourceDialog({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="add-resource-difficulty" className="block text-sm font-medium text-gray-700">
                 Difficulty
               </label>
               <select
+                id="add-resource-difficulty"
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value as Difficulty)}
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -195,10 +201,11 @@ function AddResourceDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="add-resource-hours" className="block text-sm font-medium text-gray-700">
                 Estimated Hours
               </label>
               <input
+                id="add-resource-hours"
                 type="number"
                 value={estimatedHours}
                 onChange={(e) => setEstimatedHours(e.target.value)}
@@ -209,10 +216,11 @@ function AddResourceDialog({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="add-resource-provider" className="block text-sm font-medium text-gray-700">
                 Provider
               </label>
               <input
+                id="add-resource-provider"
                 type="text"
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
@@ -259,10 +267,10 @@ function AddResourceDialog({
 function ResourceCard({
   resource,
   onStatusChange,
-}: {
+}: Readonly<{
   resource: LearningResource;
   onStatusChange: (id: number, status: LearningStatus) => void;
-}) {
+}>) {
   const nextStatus: LearningStatus | null =
     resource.status === "not_started"
       ? "in_progress"
@@ -359,10 +367,10 @@ function ResourceCard({
 function GapSection({
   gap,
   applicationId,
-}: {
+}: Readonly<{
   gap: GapItem & { id: number };
   applicationId: number;
-}) {
+}>) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -655,10 +663,11 @@ export function Learning() {
 
       {/* Application selector */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <label className="block text-sm font-medium text-gray-700">
+        <label htmlFor="learning-application-select" className="block text-sm font-medium text-gray-700">
           Select an application to view skill gaps and learning recommendations
         </label>
         <select
+          id="learning-application-select"
           value={applicationId ?? ""}
           onChange={(e) =>
             setApplicationId(e.target.value ? parseInt(e.target.value) : null)
