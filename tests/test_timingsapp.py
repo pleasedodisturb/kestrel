@@ -618,7 +618,7 @@ class TestTimeAnalytics:
 # ===========================================================================
 
 
-class test_session_clsCRUD:
+class TestSessionCRUD:
     """Session listing, retrieval, updating."""
 
     def test_list_sessions(self, db_session, profile, sample_sessions):
