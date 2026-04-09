@@ -28,7 +28,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/research", tags=["research"])
 
 
-@router.post("/company")
+@router.post(
+    "/company",
+    responses={
+        404: {"description": "Not found"},
+        500: {"description": "Internal server error"},
+        502: {"description": "Bad gateway"},
+    },
+)
 async def research_company_endpoint(
     request: CompanyResearchRequest,
     db: Annotated[Session, Depends(get_db)],

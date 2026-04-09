@@ -43,7 +43,7 @@ def _enrich_with_readiness(app_response: ApplicationResponse, db: Session) -> Ap
     return app_response
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, responses={404: {"description": "Not found"}})
 async def create(
     payload: ApplicationCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -128,7 +128,7 @@ async def list_apps(
     )
 
 
-@router.get("/{application_id}")
+@router.get("/{application_id}", responses={404: {"description": "Not found"}})
 async def get_detail(
     application_id: int,
     profile_id: Annotated[int, Query(description="Active profile ID")],
@@ -188,7 +188,10 @@ async def get_detail(
     )
 
 
-@router.patch("/{application_id}")
+@router.patch(
+    "/{application_id}",
+    responses={404: {"description": "Not found"}, 422: {"description": "Validation error"}},
+)
 async def update(
     application_id: int,
     payload: ApplicationUpdate,
@@ -214,7 +217,7 @@ async def update(
     return ApplicationResponse.model_validate(app_obj)
 
 
-@router.delete("/{application_id}")
+@router.delete("/{application_id}", responses={404: {"description": "Not found"}})
 async def delete(
     application_id: int,
     profile_id: Annotated[int, Query(description="Active profile ID")],
