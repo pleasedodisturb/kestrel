@@ -29,7 +29,7 @@ async def list_profiles(db: Session = Depends(get_db)) -> ProfileListResponse:
     )
 
 
-@router.get("/{profile_id}")
+@router.get("/{profile_id}", responses={404: {"description": "Not found"}})
 async def get_profile(profile_id: int, db: Session = Depends(get_db)) -> ProfileResponse:
     """Get a specific profile by ID."""
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
@@ -60,7 +60,7 @@ async def create_profile(
     return ProfileResponse.model_validate(profile)
 
 
-@router.patch("/{profile_id}")
+@router.patch("/{profile_id}", responses={404: {"description": "Not found"}})
 async def update_profile(
     profile_id: int,
     payload: ProfileUpdate,
@@ -99,7 +99,11 @@ async def update_profile(
     return ProfileResponse.model_validate(profile)
 
 
-@router.delete("/{profile_id}", status_code=204)
+@router.delete(
+    "/{profile_id}",
+    status_code=204,
+    responses={404: {"description": "Not found"}, 409: {"description": "Conflict"}},
+)
 async def delete_profile(
     profile_id: int,
     db: Session = Depends(get_db),

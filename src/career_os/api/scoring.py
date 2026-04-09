@@ -39,7 +39,16 @@ router = APIRouter(tags=["scoring"])
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/score", status_code=201)
+@router.post(
+    "/api/score",
+    status_code=201,
+    responses={
+        402: {"description": "Payment required"},
+        404: {"description": "Not found"},
+        500: {"description": "Internal server error"},
+        502: {"description": "Bad gateway"},
+    },
+)
 async def score_endpoint(
     payload: ScoreRequest,
     db: Session = Depends(get_db),
@@ -83,7 +92,7 @@ async def score_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/scoring-weights")
+@router.get("/api/scoring-weights", responses={404: {"description": "Not found"}})
 async def get_weights_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -97,7 +106,7 @@ async def get_weights_endpoint(
     return ScoringWeightsResponse.model_validate(weights)
 
 
-@router.put("/api/scoring-weights")
+@router.put("/api/scoring-weights", responses={404: {"description": "Not found"}})
 async def update_weights_endpoint(
     payload: ScoringWeightsUpdate,
     profile_id: int = Query(..., description="Profile ID"),
@@ -124,7 +133,10 @@ async def update_weights_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/score/batch")
+@router.post(
+    "/api/score/batch",
+    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+)
 async def batch_score_endpoint(
     payload: BatchScoreRequest,
     db: Session = Depends(get_db),
@@ -172,7 +184,7 @@ async def batch_score_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/score/job/{discovered_job_id}")
+@router.get("/api/score/job/{discovered_job_id}", responses={404: {"description": "Not found"}})
 async def get_job_score_endpoint(
     discovered_job_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -187,6 +199,7 @@ async def get_job_score_endpoint(
 
 @router.get(
     "/api/score/application/{application_id}",
+    responses={404: {"description": "Not found"}},
 )
 async def get_application_score_endpoint(
     application_id: int,

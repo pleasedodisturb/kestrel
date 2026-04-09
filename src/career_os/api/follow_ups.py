@@ -24,7 +24,7 @@ from career_os.services.follow_ups import (
 router = APIRouter(prefix="/api/follow-ups", tags=["follow-ups"])
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, responses={404: {"description": "Not found"}})
 async def create(
     payload: FollowUpCreate,
     db: Session = Depends(get_db),
@@ -93,7 +93,7 @@ async def list_all(
     )
 
 
-@router.patch("/{follow_up_id}")
+@router.patch("/{follow_up_id}", responses={404: {"description": "Not found"}})
 async def complete(
     follow_up_id: int,
     payload: FollowUpComplete,

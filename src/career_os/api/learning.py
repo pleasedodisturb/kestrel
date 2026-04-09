@@ -26,6 +26,7 @@ router = APIRouter(tags=["learning"])
 
 @router.get(
     "/api/gaps/{gap_id}/recommendations",
+    responses={404: {"description": "Not found"}},
 )
 async def get_recommendations(
     gap_id: int,
@@ -69,6 +70,7 @@ async def get_recommendations(
 @router.post(
     "/api/gaps/{gap_id}/recommendations",
     status_code=201,
+    responses={404: {"description": "Not found"}},
 )
 async def add_recommendation(
     gap_id: int,
@@ -104,6 +106,7 @@ async def add_recommendation(
 
 @router.patch(
     "/api/learning/{resource_id}/status",
+    responses={404: {"description": "Not found"}, 422: {"description": "Validation error"}},
 )
 async def update_status(
     resource_id: int,
