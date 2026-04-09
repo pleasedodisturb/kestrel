@@ -1013,3 +1013,40 @@ class TestDeterministicResponses:
             },
         )
         assert resp1.json() == resp2.json()
+
+
+# ===========================================================================
+# Security: log injection sanitization (SonarCloud fix)
+# ===========================================================================
+
+
+class TestSanitizeForLog:
+    """Verify _sanitize_for_log strips newlines and truncates."""
+
+    def test_strips_newlines(self):
+        from career_os.services.role_intelligence import _sanitize_for_log
+
+        result = _sanitize_for_log("line1\nline2\rline3")
+        assert "\n" not in result
+        assert "\r" not in result
+        assert result == "line1\\nline2\\rline3"
+
+    def test_truncates_long_input(self):
+        from career_os.services.role_intelligence import _sanitize_for_log
+
+        long_input = "A" * 500
+        result = _sanitize_for_log(long_input)
+        assert len(result) <= 215  # 200 + len("...[truncated]")
+        assert result.endswith("...[truncated]")
+
+    def test_passes_safe_input_through(self):
+        from career_os.services.role_intelligence import _sanitize_for_log
+
+        assert _sanitize_for_log("Stripe") == "Stripe"
+
+    def test_handles_non_string(self):
+        from career_os.services.role_intelligence import _sanitize_for_log
+
+        result = _sanitize_for_log(RuntimeError("boom\ninjected"))
+        assert "\n" not in result
+        assert "boom\\ninjected" in result
