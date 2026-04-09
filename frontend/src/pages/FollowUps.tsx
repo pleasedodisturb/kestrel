@@ -40,6 +40,12 @@ function getDaysUntilDue(dueDateStr: string): number {
   return Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+function getBorderColor(daysDiff: number): string {
+  if (daysDiff < 0) return "border-red-200";
+  if (daysDiff === 0) return "border-amber-200";
+  return "border-gray-200";
+}
+
 function getStatusInfo(daysDiff: number): {
   label: string;
   className: string;
@@ -92,7 +98,7 @@ export function FollowUps() {
     return (
       <div data-testid="follow-ups-error" className="py-20 text-center">
         <p className="text-lg font-medium text-red-700">
-          {(error as Error).message}
+          {error instanceof Error ? error.message : String(error)}
         </p>
       </div>
     );
@@ -114,14 +120,14 @@ export function FollowUps() {
   ).length;
 
   return (
-    <div data-testid="follow-ups-page" className="space-y-6">
+    <section data-testid="follow-ups-page" className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-gray-700" />
           <h1 className="text-2xl font-bold text-gray-900">Follow-Ups</h1>
         </div>
-      </div>
+      </header>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -172,11 +178,7 @@ export function FollowUps() {
                 data-testid={`follow-up-row-${fu.id}`}
                 className={cn(
                   "flex items-center gap-4 rounded-lg border bg-white px-4 py-3 shadow-sm transition-colors",
-                  daysDiff < 0
-                    ? "border-red-200"
-                    : daysDiff === 0
-                      ? "border-amber-200"
-                      : "border-gray-200",
+                  getBorderColor(daysDiff),
                 )}
               >
                 {/* Complete button */}
@@ -240,6 +242,6 @@ export function FollowUps() {
           })}
         </div>
       )}
-    </div>
+    </section>
   );
 }

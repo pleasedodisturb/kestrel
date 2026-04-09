@@ -111,11 +111,13 @@ function AddResourceDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="presentation"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -271,12 +273,14 @@ function ResourceCard({
   resource: LearningResource;
   onStatusChange: (id: number, status: LearningStatus) => void;
 }>) {
-  const nextStatus: LearningStatus | null =
-    resource.status === "not_started"
-      ? "in_progress"
-      : resource.status === "in_progress"
-        ? "completed"
-        : null;
+  let nextStatus: LearningStatus | null;
+  if (resource.status === "not_started") {
+    nextStatus = "in_progress";
+  } else if (resource.status === "in_progress") {
+    nextStatus = "completed";
+  } else {
+    nextStatus = null;
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -361,6 +365,22 @@ function ResourceCard({
 }
 
 // ---------------------------------------------------------------------------
+// Gap Recommendations Section – helpers
+// ---------------------------------------------------------------------------
+
+function getDistanceBarColor(distance: number): string {
+  if (distance >= 3) return "bg-red-400";
+  if (distance >= 2) return "bg-yellow-400";
+  return "bg-blue-400";
+}
+
+function getReadinessStyle(score: number): string {
+  if (score >= 80) return "bg-green-100 text-green-800";
+  if (score >= 50) return "bg-yellow-100 text-yellow-800";
+  return "bg-red-100 text-red-800";
+}
+
+// ---------------------------------------------------------------------------
 // Gap Recommendations Section
 // ---------------------------------------------------------------------------
 
@@ -404,12 +424,11 @@ function GapSection({
     },
   });
 
-  const severityColor =
-    gap.severity === "critical"
-      ? "text-red-600 bg-red-50"
-      : gap.severity === "nice-to-have"
-        ? "text-yellow-600 bg-yellow-50"
-        : "text-gray-600 bg-gray-50";
+  const severityColorMap: Record<string, string> = {
+    critical: "text-red-600 bg-red-50",
+    "nice-to-have": "text-yellow-600 bg-yellow-50",
+  };
+  const severityColor = severityColorMap[gap.severity] ?? "text-gray-600 bg-gray-50";
 
   const distanceBar = (
     <div className="flex items-center gap-1">
@@ -418,11 +437,7 @@ function GapSection({
           key={level}
           className={`h-2 w-4 rounded-sm ${
             level <= gap.distance
-              ? gap.distance >= 3
-                ? "bg-red-400"
-                : gap.distance >= 2
-                  ? "bg-yellow-400"
-                  : "bg-blue-400"
+              ? getDistanceBarColor(gap.distance)
               : "bg-gray-200"
           }`}
         />
@@ -458,7 +473,7 @@ function GapSection({
           </div>
         </div>
         <span className="text-xs text-gray-400">
-          {(data?.recommendations?.length || data?.template_recommendations?.length) ?? 0} resources
+          {(data?.recommendations?.length ?? 0) + (data?.template_recommendations?.length ?? 0)} resources
         </span>
       </button>
 
@@ -468,7 +483,7 @@ function GapSection({
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
             </div>
-          ) : data?.recommendations && data.recommendations.length > 0 ? (
+          ) : (data?.recommendations?.length ?? 0) > 0 ? (
             <div className="space-y-3">
               {data.recommendations.map((resource) => (
                 <ResourceCard
@@ -656,10 +671,10 @@ export function Learning() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <section className="space-y-6">
+      <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Learning Paths</h1>
-      </div>
+      </header>
 
       {/* Application selector */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -723,13 +738,7 @@ export function Learning() {
               const rounded = Math.round(gapData.readiness_score);
               return (
                 <div
-                  className={`rounded-lg px-4 py-2 text-center ${
-                    rounded >= 80
-                      ? "bg-green-100 text-green-800"
-                      : rounded >= 50
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                  }`}
+                  className={`rounded-lg px-4 py-2 text-center ${getReadinessStyle(rounded)}`}
                 >
                   <div className="text-2xl font-bold">
                     {rounded}
@@ -785,6 +794,6 @@ export function Learning() {
           </p>
         </div>
       )}
-    </div>
+    </section>
   );
 }

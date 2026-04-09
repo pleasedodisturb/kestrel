@@ -268,7 +268,7 @@ export function IntegrationPanel({
           </div>
 
           {/* Error/status message */}
-          {integration.status_message && integration.status === "error" && (
+          {integration.status_message != null && integration.status === "error" && (
             <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
               {integration.status_message}
             </div>
