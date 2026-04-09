@@ -8,15 +8,15 @@ import { Search, ArrowUpDown, Filter } from "lucide-react";
 import { APPLICATION_STATUSES, STATUS_LABELS, type ApplicationStatus } from "@/api/types";
 
 export interface FilterState {
-  status: string;
-  search: string;
-  sort: string;
-  order: string;
+  readonly status: string;
+  readonly search: string;
+  readonly sort: string;
+  readonly order: string;
 }
 
 interface PipelineFiltersProps {
-  filters: FilterState;
-  onChange: (filters: FilterState) => void;
+  readonly filters: FilterState;
+  readonly onChange: (filters: FilterState) => void;
 }
 
 export function PipelineFilters({ filters, onChange }: PipelineFiltersProps) {

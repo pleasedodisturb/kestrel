@@ -10,7 +10,7 @@ import {
 import type { WeeklyCount } from "@/api/analytics";
 
 interface Props {
-  data: WeeklyCount[];
+  readonly data: WeeklyCount[];
 }
 
 export function ApplicationsOverTime({ data }: Props) {

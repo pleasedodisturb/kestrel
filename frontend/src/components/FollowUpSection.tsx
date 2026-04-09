@@ -10,8 +10,8 @@ import { Clock, Plus, Check, Bell, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FollowUpSectionProps {
-  applicationId: number;
-  followUps: FollowUpSummary[];
+  readonly applicationId: number;
+  readonly followUps: FollowUpSummary[];
 }
 
 const FOLLOW_UP_TYPES = [
@@ -117,10 +117,11 @@ export function FollowUpSection({
         >
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label htmlFor="follow-up-due-date" className="block text-xs font-medium text-gray-600 mb-1">
                 Due Date *
               </label>
               <input
+                id="follow-up-due-date"
                 data-testid="follow-up-due-date"
                 type="date"
                 value={dueDate}
@@ -129,10 +130,11 @@ export function FollowUpSection({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label htmlFor="follow-up-type" className="block text-xs font-medium text-gray-600 mb-1">
                 Type *
               </label>
               <select
+                id="follow-up-type"
                 data-testid="follow-up-type"
                 value={followUpType}
                 onChange={(e) => setFollowUpType(e.target.value)}
@@ -147,10 +149,11 @@ export function FollowUpSection({
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label htmlFor="follow-up-notes" className="block text-xs font-medium text-gray-600 mb-1">
               Notes
             </label>
             <textarea
+              id="follow-up-notes"
               data-testid="follow-up-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

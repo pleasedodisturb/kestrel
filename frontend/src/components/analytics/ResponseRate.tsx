@@ -1,5 +1,5 @@
 interface Props {
-  rate: number | null;
+  readonly rate: number | null;
 }
 
 export function ResponseRate({ rate }: Props) {

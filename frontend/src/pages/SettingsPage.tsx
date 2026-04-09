@@ -453,22 +453,23 @@ function ProfileForm({
   onCancel,
   isSaving,
   testIdPrefix,
-}: {
+}: Readonly<{
   formData: ProfileCreate;
   onChange: (field: keyof ProfileCreate, value: string) => void;
   onSave: () => void;
   onCancel: () => void;
   isSaving: boolean;
   testIdPrefix: string;
-}) {
+}>) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label htmlFor={`${testIdPrefix}-name-input`} className="block text-sm font-medium text-gray-700">
             Name <span className="text-red-500">*</span>
           </label>
           <input
+            id={`${testIdPrefix}-name-input`}
             data-testid={`${testIdPrefix}-name-input`}
             type="text"
             value={formData.name}
@@ -478,10 +479,11 @@ function ProfileForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label htmlFor={`${testIdPrefix}-email-input`} className="block text-sm font-medium text-gray-700">
             Email
           </label>
           <input
+            id={`${testIdPrefix}-email-input`}
             data-testid={`${testIdPrefix}-email-input`}
             type="email"
             value={formData.email ?? ""}
@@ -491,10 +493,11 @@ function ProfileForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label htmlFor={`${testIdPrefix}-location-input`} className="block text-sm font-medium text-gray-700">
             Location
           </label>
           <input
+            id={`${testIdPrefix}-location-input`}
             data-testid={`${testIdPrefix}-location-input`}
             type="text"
             value={formData.location ?? ""}
@@ -504,10 +507,11 @@ function ProfileForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label htmlFor={`${testIdPrefix}-job-family-input`} className="block text-sm font-medium text-gray-700">
             Job Family
           </label>
           <input
+            id={`${testIdPrefix}-job-family-input`}
             data-testid={`${testIdPrefix}-job-family-input`}
             type="text"
             value={formData.job_family ?? ""}

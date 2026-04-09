@@ -19,7 +19,7 @@ const BUCKET_COLORS = [
 ];
 
 interface Props {
-  data: ScoreBucket[];
+  readonly data: ScoreBucket[];
 }
 
 export function ScoreDistribution({ data }: Props) {

@@ -29,10 +29,10 @@ import {
 import { cn } from "@/lib/utils";
 
 interface CalendarSectionProps {
-  applicationId: number;
-  profileId: number;
-  company: string;
-  role: string;
+  readonly applicationId: number;
+  readonly profileId: number;
+  readonly company: string;
+  readonly role: string;
 }
 
 type EventFormType = "interview" | "follow_up" | "prep_reminder";
@@ -165,10 +165,11 @@ export function CalendarSection({
         >
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="calendar-event-type" className="mb-1 block text-xs font-medium text-gray-600">
                 Event Type
               </label>
               <select
+                id="calendar-event-type"
                 data-testid="calendar-event-type"
                 value={formType}
                 onChange={(e) => setFormType(e.target.value as EventFormType)}
@@ -180,10 +181,11 @@ export function CalendarSection({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="calendar-event-title" className="mb-1 block text-xs font-medium text-gray-600">
                 Title *
               </label>
               <input
+                id="calendar-event-title"
                 data-testid="calendar-event-title"
                 type="text"
                 value={formTitle}
@@ -195,10 +197,11 @@ export function CalendarSection({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="calendar-event-start" className="mb-1 block text-xs font-medium text-gray-600">
                 Start Time *
               </label>
               <input
+                id="calendar-event-start"
                 data-testid="calendar-event-start"
                 type="datetime-local"
                 value={formStartTime}
@@ -207,10 +210,11 @@ export function CalendarSection({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="calendar-event-end" className="mb-1 block text-xs font-medium text-gray-600">
                 End Time *
               </label>
               <input
+                id="calendar-event-end"
                 data-testid="calendar-event-end"
                 type="datetime-local"
                 value={formEndTime}
@@ -221,10 +225,11 @@ export function CalendarSection({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="calendar-event-location" className="mb-1 block text-xs font-medium text-gray-600">
                 Location
               </label>
               <input
+                id="calendar-event-location"
                 type="text"
                 value={formLocation}
                 onChange={(e) => setFormLocation(e.target.value)}
@@ -233,10 +238,11 @@ export function CalendarSection({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="calendar-event-meeting-link" className="mb-1 block text-xs font-medium text-gray-600">
                 Meeting Link
               </label>
               <input
+                id="calendar-event-meeting-link"
                 type="url"
                 value={formMeetingLink}
                 onChange={(e) => setFormMeetingLink(e.target.value)}
@@ -246,10 +252,11 @@ export function CalendarSection({
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
+            <label htmlFor="calendar-event-prep-notes" className="mb-1 block text-xs font-medium text-gray-600">
               Prep Notes
             </label>
             <textarea
+              id="calendar-event-prep-notes"
               value={formPrepNotes}
               onChange={(e) => setFormPrepNotes(e.target.value)}
               rows={2}
@@ -344,11 +351,11 @@ function CalendarEventCard({
   event,
   profileId,
   onDelete,
-}: {
+}: Readonly<{
   event: CalendarEventResponse;
   profileId: number;
   onDelete: (id: number) => void;
-}) {
+}>) {
   const [showExport, setShowExport] = useState(false);
 
   const eventTypeColors: Record<string, string> = {
