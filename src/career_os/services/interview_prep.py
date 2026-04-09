@@ -181,6 +181,44 @@ def _check_company_researched(db: Session, company_name: str, profile_id: int) -
         return bool(company_name and company_name.strip())
 
 
+def _extract_tech_stack(report_data: dict) -> object | None:
+    """Extract tech_stack from a parsed research report dict."""
+    return report_data.get("tech_stack")
+
+
+def _extract_culture_keywords(report_data: dict) -> object | None:
+    """Extract culture/culture_keywords from a parsed research report dict.
+
+    Checks ``culture``, ``culture_keywords``, and ``glassdoor.culture_keywords``
+    in priority order (last match wins, matching original behaviour).
+    """
+    culture = report_data.get("culture")
+    if "culture_keywords" in report_data:
+        culture = report_data["culture_keywords"]
+    glass = report_data.get("glassdoor")
+    if isinstance(glass, dict) and "culture_keywords" in glass:
+        culture = glass["culture_keywords"]
+    return culture
+
+
+def _extract_values_alignment(report_data: dict, current_score: object | None) -> tuple:
+    """Extract values-alignment score and rationale from report data.
+
+    Returns ``(score, rationale)`` – either may be ``None``.
+    """
+    va = report_data.get("values_alignment")
+    if not isinstance(va, dict):
+        return current_score, None
+    score = va.get("score", current_score)
+    rationale = va.get("rationale")
+    return score, rationale
+
+
+def _extract_hiring_patterns(report_data: dict) -> object | None:
+    """Extract hiring_patterns from a parsed research report dict."""
+    return report_data.get("hiring_patterns")
+
+
 def _get_company_research_data(db: Session, company_name: str, profile_id: int) -> dict | None:
     """Fetch persisted company research data for inclusion in prep prompt.
 
@@ -211,32 +249,35 @@ def _get_company_research_data(db: Session, company_name: str, profile_id: int) 
             "industry_segment": report.industry_segment,
         }
 
-        # Parse full report JSON for tech_stack, culture, hiring_patterns
-        if report.report_json:
-            try:
-                full_report = json.loads(report.report_json)
-                if isinstance(full_report, dict):
-                    if "tech_stack" in full_report:
-                        research_data["tech_stack"] = full_report["tech_stack"]
-                    if "culture" in full_report:
-                        research_data["culture"] = full_report["culture"]
-                    if "culture_keywords" in full_report:
-                        research_data["culture"] = full_report["culture_keywords"]
-                    if "glassdoor" in full_report:
-                        glass = full_report["glassdoor"]
-                        if isinstance(glass, dict) and "culture_keywords" in glass:
-                            research_data["culture"] = glass["culture_keywords"]
-                    if "values_alignment" in full_report:
-                        va = full_report["values_alignment"]
-                        if isinstance(va, dict):
-                            research_data["values_alignment_score"] = va.get(
-                                "score", research_data.get("values_alignment_score")
-                            )
-                            research_data["values_rationale"] = va.get("rationale")
-                    if "hiring_patterns" in full_report:
-                        research_data["hiring_patterns"] = full_report["hiring_patterns"]
-            except (json.JSONDecodeError, TypeError):
-                pass
+        if not report.report_json:
+            return research_data
+
+        try:
+            full_report = json.loads(report.report_json)
+        except (json.JSONDecodeError, TypeError):
+            return research_data
+
+        if not isinstance(full_report, dict):
+            return research_data
+
+        tech_stack = _extract_tech_stack(full_report)
+        if tech_stack is not None:
+            research_data["tech_stack"] = tech_stack
+
+        culture = _extract_culture_keywords(full_report)
+        if culture is not None:
+            research_data["culture"] = culture
+
+        score, rationale = _extract_values_alignment(
+            full_report, research_data.get("values_alignment_score")
+        )
+        research_data["values_alignment_score"] = score
+        if rationale is not None:
+            research_data["values_rationale"] = rationale
+
+        hiring = _extract_hiring_patterns(full_report)
+        if hiring is not None:
+            research_data["hiring_patterns"] = hiring
 
         return research_data
     except Exception:
@@ -358,6 +399,119 @@ def _delete_stale_session(db: Session, session: InterviewPrepSession) -> None:
     db.flush()
 
 
+def _format_gap_section(gaps: list[dict]) -> str:
+    """Format unresolved and resolved skill gaps into a prompt section."""
+    unresolved_gaps = [g for g in gaps if g.get("distance", 1) > 0]
+    resolved_gaps = [g for g in gaps if g.get("distance", 1) == 0]
+
+    section = ""
+    if unresolved_gaps:
+        gap_lines = [
+            f"  - {g['skill_name']} (required: {g['required_level']}, "
+            f"current: {g['current_level'] or 'missing'}, "
+            f"distance: {g.get('distance', '?')})"
+            for g in unresolved_gaps
+        ]
+        section = (
+            "\n\nUser's UNRESOLVED skill gaps for this role "
+            "(focus prep on these):\n" + "\n".join(gap_lines)
+        )
+    if resolved_gaps:
+        resolved_lines = [
+            f"  - {g['skill_name']} (met — current: {g['current_level']}, "
+            f"required: {g['required_level']})"
+            for g in resolved_gaps
+        ]
+        section += "\n\nSkills already meeting requirements (de-emphasize in prep):\n" + "\n".join(
+            resolved_lines
+        )
+    return section
+
+
+def _format_requirements_section(gaps: list[dict]) -> str:
+    """Format role requirements into a prompt section."""
+    if not gaps:
+        return ""
+    req_lines = [
+        f"  - {g['skill_name']} ({g['severity']}, {g['required_level']}, "
+        f"distance: {g.get('distance', '?')})"
+        for g in gaps
+    ]
+    return "\n\nRole requirements:\n" + "\n".join(req_lines)
+
+
+def _format_tech_stack_lines(tech_stack: object) -> list[str]:
+    """Format tech stack data into prompt lines."""
+    lines: list[str] = []
+    if isinstance(tech_stack, dict):
+        for category, techs in tech_stack.items():
+            if techs:
+                tech_list = ", ".join(techs) if isinstance(techs, list) else str(techs)
+                lines.append(f"  - Tech stack ({category}): {tech_list}")
+    elif isinstance(tech_stack, list):
+        lines.append(f"  - Tech stack: {', '.join(tech_stack)}")
+    return lines
+
+
+def _format_culture_lines(culture: object) -> list[str]:
+    """Format culture data into prompt lines."""
+    if not culture:
+        return []
+    if isinstance(culture, list):
+        return [f"  - Culture keywords: {', '.join(culture)}"]
+    return [f"  - Culture: {culture}"]
+
+
+def _format_values_lines(research_data: dict) -> list[str]:
+    """Format values-alignment data into prompt lines."""
+    lines: list[str] = []
+    va_score = research_data.get("values_alignment_score")
+    if va_score is not None:
+        lines.append(f"  - Values alignment score: {va_score}/10")
+    va_rationale = research_data.get("values_rationale")
+    if va_rationale:
+        lines.append(f"  - Values alignment: {va_rationale}")
+    return lines
+
+
+def _format_hiring_lines(hiring: object) -> list[str]:
+    """Format hiring pattern data into prompt lines."""
+    if not hiring or not isinstance(hiring, dict):
+        return []
+    lines: list[str] = []
+    if hiring.get("active_postings"):
+        lines.append(f"  - Active postings: {hiring['active_postings']}")
+    if hiring.get("posting_velocity"):
+        lines.append(f"  - Posting velocity: {hiring['posting_velocity']}")
+    if hiring.get("top_departments"):
+        lines.append(f"  - Top departments: {', '.join(hiring['top_departments'])}")
+    return lines
+
+
+def _format_research_section(research_data: dict | None) -> str:
+    """Format company research data into a prompt section."""
+    if not research_data:
+        return ""
+
+    research_lines = ["\n\nCompany research data:"]
+
+    tech_stack = research_data.get("tech_stack")
+    if tech_stack:
+        research_lines.extend(_format_tech_stack_lines(tech_stack))
+
+    research_lines.extend(_format_culture_lines(research_data.get("culture")))
+    research_lines.extend(_format_values_lines(research_data))
+    research_lines.extend(_format_hiring_lines(research_data.get("hiring_patterns")))
+
+    industry = research_data.get("industry_segment")
+    if industry:
+        research_lines.append(f"  - Industry segment: {industry}")
+
+    if len(research_lines) <= 1:
+        return ""
+    return "\n".join(research_lines)
+
+
 def _build_prep_prompt(
     app_obj: Application,
     profile: Profile,
@@ -373,83 +527,9 @@ def _build_prep_prompt(
     hiring patterns so topics/questions reflect company-specific data
     (VAL-CROSS-009).
     """
-    # Separate unresolved gaps (distance > 0) from resolved ones (distance 0)
-    unresolved_gaps = [g for g in gaps if g.get("distance", 1) > 0]
-    resolved_gaps = [g for g in gaps if g.get("distance", 1) == 0]
-
-    gap_section = ""
-    if unresolved_gaps:
-        gap_lines = [
-            f"  - {g['skill_name']} (required: {g['required_level']}, "
-            f"current: {g['current_level'] or 'missing'}, "
-            f"distance: {g.get('distance', '?')})"
-            for g in unresolved_gaps
-        ]
-        gap_section = (
-            "\n\nUser's UNRESOLVED skill gaps for this role "
-            "(focus prep on these):\n" + "\n".join(gap_lines)
-        )
-    if resolved_gaps:
-        resolved_lines = [
-            f"  - {g['skill_name']} (met — current: {g['current_level']}, "
-            f"required: {g['required_level']})"
-            for g in resolved_gaps
-        ]
-        gap_section += (
-            "\n\nSkills already meeting requirements (de-emphasize in prep):\n"
-            + "\n".join(resolved_lines)
-        )
-
-    requirements_section = ""
-    if gaps:
-        req_lines = [
-            f"  - {g['skill_name']} ({g['severity']}, {g['required_level']}, "
-            f"distance: {g.get('distance', '?')})"
-            for g in gaps
-        ]
-        requirements_section = "\n\nRole requirements:\n" + "\n".join(req_lines)
-
-    # Build company research section from persisted research data
-    research_section = ""
-    if research_data:
-        research_lines = ["\n\nCompany research data:"]
-        tech_stack = research_data.get("tech_stack")
-        if tech_stack:
-            if isinstance(tech_stack, dict):
-                for category, techs in tech_stack.items():
-                    if techs:
-                        tech_list = ", ".join(techs) if isinstance(techs, list) else str(techs)
-                        research_lines.append(f"  - Tech stack ({category}): {tech_list}")
-            elif isinstance(tech_stack, list):
-                research_lines.append(f"  - Tech stack: {', '.join(tech_stack)}")
-        culture = research_data.get("culture")
-        if culture:
-            if isinstance(culture, list):
-                research_lines.append(f"  - Culture keywords: {', '.join(culture)}")
-            else:
-                research_lines.append(f"  - Culture: {culture}")
-        va_score = research_data.get("values_alignment_score")
-        if va_score is not None:
-            research_lines.append(f"  - Values alignment score: {va_score}/10")
-        va_rationale = research_data.get("values_rationale")
-        if va_rationale:
-            research_lines.append(f"  - Values alignment: {va_rationale}")
-        hiring = research_data.get("hiring_patterns")
-        if hiring and isinstance(hiring, dict):
-            if hiring.get("active_postings"):
-                research_lines.append(f"  - Active postings: {hiring['active_postings']}")
-            if hiring.get("posting_velocity"):
-                research_lines.append(f"  - Posting velocity: {hiring['posting_velocity']}")
-            if hiring.get("top_departments"):
-                research_lines.append(
-                    f"  - Top departments: {', '.join(hiring['top_departments'])}"
-                )
-        industry = research_data.get("industry_segment")
-        if industry:
-            research_lines.append(f"  - Industry segment: {industry}")
-
-        if len(research_lines) > 1:  # More than just the header
-            research_section = "\n".join(research_lines)
+    gap_section = _format_gap_section(gaps)
+    requirements_section = _format_requirements_section(gaps)
+    research_section = _format_research_section(research_data)
 
     return f"""Generate personalized interview preparation for the following application.
 

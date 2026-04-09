@@ -83,6 +83,67 @@ def get_integration(db: Session, name: str) -> IntegrationConfigResponse | None:
     return _build_response(row, defn)
 
 
+def _parse_creds_json(raw: str | None) -> dict[str, str]:
+    """Parse a JSON credentials string, returning empty dict on failure."""
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
+def _merge_credentials(
+    existing_raw: str | None,
+    new_creds: dict[str, str],
+) -> str:
+    """Merge new credential values into existing JSON credentials string."""
+    existing = _parse_creds_json(existing_raw)
+    for key, value in new_creds.items():
+        existing[key] = value
+    return json.dumps(existing)
+
+
+def _determine_new_status(
+    current_status: str,
+    enabled: bool,
+    has_required: bool,
+) -> str:
+    """Determine the new status after a credentials update."""
+    if has_required and enabled:
+        if current_status in ("not_configured", "disabled"):
+            return "not_configured"
+        return current_status
+    if not has_required and current_status == "connected":
+        return "not_configured"
+    return current_status
+
+
+def _has_required_fields(creds: dict[str, str], defn: IntegrationDef) -> bool:
+    """Check whether all required credential fields are present and non-empty."""
+    return all(bool(creds.get(f.key, "").strip()) for f in defn.credential_fields if f.required)
+
+
+def _run_integration_test(
+    db: Session,
+    name: str,
+    creds_raw: str | None,
+    defn: IntegrationDef,
+) -> IntegrationConnectionTestResult | None:
+    """Run a connection test if required fields are present, return result."""
+    creds = _parse_creds_json(creds_raw)
+    if not _has_required_fields(creds, defn):
+        return None
+    test_resp = test_integration_connection(db, name)
+    if test_resp is None:
+        return None
+    return IntegrationConnectionTestResult(
+        success=test_resp.success,
+        message=test_resp.message,
+        tested_at=test_resp.tested_at,
+    )
+
+
 def update_integration(
     db: Session, name: str, payload: IntegrationConfigUpdate
 ) -> IntegrationConfigResponse | None:
@@ -102,34 +163,14 @@ def update_integration(
         if not payload.enabled:
             row.status = "disabled"
         elif row.status == "disabled":
-            # Re-enabling: set to not_configured or connected based on creds
             row.status = "not_configured"
 
     # Update credentials (merge, don't replace)
     if payload.credentials is not None:
-        existing: dict[str, str] = {}
-        if row.credentials:
-            try:
-                existing = json.loads(row.credentials)
-            except (json.JSONDecodeError, TypeError):
-                existing = {}
-
-        # Merge: only update provided keys, keep existing ones
-        for key, value in payload.credentials.items():
-            existing[key] = value
-
-        row.credentials = json.dumps(existing)
-
-        # Update status: if required fields are present, mark as not_configured
-        # (will become 'connected' after a successful test)
-        has_required = all(
-            bool(existing.get(f.key, "").strip()) for f in defn.credential_fields if f.required
-        )
-        if has_required and row.enabled:
-            if row.status in ("not_configured", "disabled"):
-                row.status = "not_configured"
-        elif not has_required and row.status == "connected":
-            row.status = "not_configured"
+        row.credentials = _merge_credentials(row.credentials, payload.credentials)
+        merged_creds = _parse_creds_json(row.credentials)
+        has_required = _has_required_fields(merged_creds, defn)
+        row.status = _determine_new_status(row.status, row.enabled, has_required)
 
     db.commit()
     db.refresh(row)
@@ -137,27 +178,8 @@ def update_integration(
     # Auto-trigger connection test when credentials are provided and integration is enabled
     test_result: IntegrationConnectionTestResult | None = None
     if row.enabled and payload.credentials is not None:
-        # Check if required fields are present
-        creds_parsed: dict[str, str] = {}
-        if row.credentials:
-            try:
-                creds_parsed = json.loads(row.credentials)
-            except (json.JSONDecodeError, TypeError):
-                creds_parsed = {}
-
-        has_required = all(
-            bool(creds_parsed.get(f.key, "").strip()) for f in defn.credential_fields if f.required
-        )
-        if has_required:
-            # Run the connection test and include result in response
-            test_resp = test_integration_connection(db, name)
-            if test_resp is not None:
-                test_result = IntegrationConnectionTestResult(
-                    success=test_resp.success,
-                    message=test_resp.message,
-                    tested_at=test_resp.tested_at,
-                )
-            # Re-read row after test updated it
+        test_result = _run_integration_test(db, name, row.credentials, defn)
+        if test_result is not None:
             db.refresh(row)
 
     response = _build_response(row, defn)

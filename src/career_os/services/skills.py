@@ -165,6 +165,88 @@ def get_skill_history(db: Session, skill_id: int, profile_id: int) -> list[Skill
     )
 
 
+def _update_existing_skill(
+    db: Session,
+    existing: Skill,
+    parsed: Skill,
+    profile_id: int,
+) -> bool:
+    """Merge evidence sources and upgrade proficiency on an existing skill.
+
+    Returns True if the skill was changed.
+    """
+    from career_os.services.skills_parsing import (
+        _evidence_sources_set,
+        _higher_proficiency,
+        _proficiency_from_source_count,
+    )
+
+    existing_sources = _evidence_sources_set(existing.evidence_source)
+    new_sources = _evidence_sources_set(parsed.evidence_source)
+    all_sources = existing_sources | new_sources
+    merged_source_str = ", ".join(sorted(all_sources))
+
+    source_prof = _proficiency_from_source_count(len(all_sources))
+    new_prof = _higher_proficiency(
+        existing.proficiency,
+        _higher_proficiency(parsed.proficiency, source_prof),
+    )
+
+    changed = False
+
+    if new_prof != existing.proficiency:
+        old_prof = existing.proficiency
+        existing.proficiency = new_prof
+        history = SkillHistory(
+            skill_id=existing.id,
+            profile_id=profile_id,
+            previous_proficiency=old_prof,
+            new_proficiency=new_prof,
+            reason=f"Ingestion from {parsed.evidence_source}",
+        )
+        db.add(history)
+        changed = True
+
+    if new_sources - existing_sources:
+        existing.evidence_source = merged_source_str
+        if parsed.evidence_detail:
+            if existing.evidence_detail:
+                existing.evidence_detail += f" | {parsed.evidence_detail}"
+            else:
+                existing.evidence_detail = parsed.evidence_detail
+        changed = True
+
+    return changed
+
+
+def _create_new_skill(
+    db: Session,
+    parsed: Skill,
+    profile_id: int,
+) -> Skill:
+    """Persist a brand-new skill with initial history record."""
+    skill = Skill(
+        profile_id=profile_id,
+        name=parsed.name,
+        category=parsed.category,
+        proficiency=parsed.proficiency,
+        evidence_source=parsed.evidence_source,
+        evidence_detail=parsed.evidence_detail,
+    )
+    db.add(skill)
+    db.flush()
+
+    history = SkillHistory(
+        skill_id=skill.id,
+        profile_id=profile_id,
+        previous_proficiency=None,
+        new_proficiency=parsed.proficiency,
+        reason=f"Ingested from {parsed.evidence_source}",
+    )
+    db.add(history)
+    return skill
+
+
 def ingest_skills(
     db: Session,
     profile_id: int,
@@ -202,79 +284,15 @@ def ingest_skills(
 
     for parsed in merged:
         key = parsed.name.lower().strip()
+
         if key in existing_by_name:
-            # Update existing skill — merge evidence sources and upgrade proficiency
-            existing = existing_by_name[key]
-            from career_os.services.skills_parsing import (
-                _evidence_sources_set,
-                _higher_proficiency,
-                _proficiency_from_source_count,
-            )
-
-            # Merge evidence sources (track all distinct sources)
-            existing_sources = _evidence_sources_set(existing.evidence_source)
-            new_sources = _evidence_sources_set(parsed.evidence_source)
-            all_sources = existing_sources | new_sources
-            merged_source_str = ", ".join(sorted(all_sources))
-
-            # Compute new proficiency: max of existing, parsed, and source-count-based
-            source_prof = _proficiency_from_source_count(len(all_sources))
-            new_prof = _higher_proficiency(
-                existing.proficiency,
-                _higher_proficiency(parsed.proficiency, source_prof),
-            )
-
-            changed = False
-            if new_prof != existing.proficiency:
-                old_prof = existing.proficiency
-                existing.proficiency = new_prof
-                # Record history
-                history = SkillHistory(
-                    skill_id=existing.id,
-                    profile_id=profile_id,
-                    previous_proficiency=old_prof,
-                    new_proficiency=new_prof,
-                    reason=f"Ingestion from {parsed.evidence_source}",
-                )
-                db.add(history)
-                changed = True
-
-            # Always update evidence source and detail when new sources are added
-            if new_sources - existing_sources:
-                existing.evidence_source = merged_source_str
-                if parsed.evidence_detail:
-                    if existing.evidence_detail:
-                        existing.evidence_detail += f" | {parsed.evidence_detail}"
-                    else:
-                        existing.evidence_detail = parsed.evidence_detail
-                changed = True
-
-            if changed:
+            if _update_existing_skill(db, existing_by_name[key], parsed, profile_id):
                 skills_updated += 1
-        else:
-            # Create new skill
-            skill = Skill(
-                profile_id=profile_id,
-                name=parsed.name,
-                category=parsed.category,
-                proficiency=parsed.proficiency,
-                evidence_source=parsed.evidence_source,
-                evidence_detail=parsed.evidence_detail,
-            )
-            db.add(skill)
-            db.flush()
+            continue
 
-            # Record initial history
-            history = SkillHistory(
-                skill_id=skill.id,
-                profile_id=profile_id,
-                previous_proficiency=None,
-                new_proficiency=parsed.proficiency,
-                reason=f"Ingested from {parsed.evidence_source}",
-            )
-            db.add(history)
-            skills_created += 1
-            existing_by_name[skill.name.lower().strip()] = skill
+        skill = _create_new_skill(db, parsed, profile_id)
+        skills_created += 1
+        existing_by_name[skill.name.lower().strip()] = skill
 
     db.commit()
 

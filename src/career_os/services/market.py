@@ -177,6 +177,65 @@ def _normalize_role_type(title: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _filter_jobs_by_role_location(
+    jobs: list[DiscoveredJob],
+    role: str | None,
+    location: str | None,
+) -> list[DiscoveredJob]:
+    """Filter discovered jobs by optional role and location substrings."""
+    if role:
+        role_lower = role.lower()
+        jobs = [j for j in jobs if role_lower in j.title.lower()]
+
+    if location:
+        loc_lower = location.lower()
+        jobs = [j for j in jobs if loc_lower in j.location.lower()]
+
+    return jobs
+
+
+def _group_by_period(
+    jobs: list[DiscoveredJob],
+) -> dict[tuple[str, str, str], list[float]]:
+    """Group jobs by (role_type, normalized_location, period_month) with salary midpoints.
+
+    Uses posted_at if available, otherwise created_at for the period bucket.
+    Jobs without a parseable salary range are skipped.
+    """
+    role_loc_period_salaries: dict[tuple[str, str, str], list[float]] = defaultdict(list)
+    for job in jobs:
+        low, high = _parse_salary_range(job.salary_range)
+        mid = _midpoint(low, high)
+        if mid is None:
+            continue
+        role_type = _normalize_role_type(job.title)
+        norm_location = (job.location or "").strip() or "Unknown"
+        ts = job.posted_at or job.created_at
+        if ts and ts.tzinfo is None:
+            ts = ts.replace(tzinfo=UTC)
+        period = ts.strftime("%Y-%m") if ts else datetime.now(UTC).strftime("%Y-%m")
+        role_loc_period_salaries[(role_type, norm_location, period)].append(mid)
+    return role_loc_period_salaries
+
+
+def _compute_period_stats(salaries: list[float]) -> dict:
+    """Compute p25, median, and p75 percentiles for a list of salary values.
+
+    Assumes *salaries* is non-empty.
+    """
+    salaries.sort()
+    n = len(salaries)
+    p25_idx = max(0, int(n * 0.25) - 1)
+    median_idx = n // 2
+    p75_idx = min(n - 1, int(n * 0.75))
+    return {
+        "median": salaries[median_idx],
+        "p25": salaries[p25_idx],
+        "p75": salaries[p75_idx],
+        "sample_size": n,
+    }
+
+
 def get_salary_trends(
     db: Session,
     profile_id: int,
@@ -197,55 +256,23 @@ def get_salary_trends(
     if not jobs:
         return {"trends": [], "last_refreshed_at": refreshed_at}
 
-    # Filter by role substring if given
-    if role:
-        role_lower = role.lower()
-        jobs = [j for j in jobs if role_lower in j.title.lower()]
-
-    # Filter by location substring if given
-    if location:
-        loc_lower = location.lower()
-        jobs = [j for j in jobs if loc_lower in j.location.lower()]
-
+    jobs = _filter_jobs_by_role_location(jobs, role, location)
     if not jobs:
         return {"trends": [], "last_refreshed_at": refreshed_at}
 
-    # Group by (role_type, normalized_location, period_month)
-    # Use posted_at if available, otherwise created_at for the period bucket
-    role_loc_period_salaries: dict[tuple[str, str, str], list[float]] = defaultdict(list)
-    for job in jobs:
-        low, high = _parse_salary_range(job.salary_range)
-        mid = _midpoint(low, high)
-        if mid is not None:
-            role_type = _normalize_role_type(job.title)
-            norm_location = (job.location or "").strip() or "Unknown"
-            # Determine the month bucket
-            ts = job.posted_at or job.created_at
-            if ts and ts.tzinfo is None:
-                ts = ts.replace(tzinfo=UTC)
-            period = ts.strftime("%Y-%m") if ts else datetime.now(UTC).strftime("%Y-%m")
-            role_loc_period_salaries[(role_type, norm_location, period)].append(mid)
+    role_loc_period_salaries = _group_by_period(jobs)
 
-    # Compute percentiles per (role, location, period) bucket
     trends = []
     for (role_type, norm_loc, period), salaries in sorted(role_loc_period_salaries.items()):
         if not salaries:
             continue
-        salaries.sort()
-        n = len(salaries)
-        p25_idx = max(0, int(n * 0.25) - 1)
-        median_idx = n // 2
-        p75_idx = min(n - 1, int(n * 0.75))
-
+        stats = _compute_period_stats(salaries)
         trends.append(
             {
                 "role": role_type,
                 "location": norm_loc,
                 "period": period,
-                "median": salaries[median_idx],
-                "p25": salaries[p25_idx],
-                "p75": salaries[p75_idx],
-                "sample_size": n,
+                **stats,
             }
         )
 
@@ -380,6 +407,30 @@ def get_hiring_patterns(db: Session, profile_id: int) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _compute_role_match(
+    role_jobs: list[DiscoveredJob],
+    user_skills: set[str],
+) -> float:
+    """Compute the skill-match percentage for a set of jobs against user skills.
+
+    *user_skills* should be a set of **lowercased** skill names.
+    Returns 0.0 when no skills are required across the jobs.
+    """
+    total_skills_required = 0
+    skills_matched = 0
+
+    for job in role_jobs:
+        job_skills = _extract_skills_from_text(job.description)
+        total_skills_required += len(job_skills)
+        for skill_name in job_skills:
+            if skill_name.lower() in user_skills:
+                skills_matched += 1
+
+    if total_skills_required == 0:
+        return 0.0
+    return round((skills_matched / total_skills_required) * 100, 1)
+
+
 def get_market_positioning(db: Session, profile_id: int) -> dict:
     """Compute profile match percentages by role type.
 
@@ -397,10 +448,10 @@ def get_market_positioning(db: Session, profile_id: int) -> dict:
         }
 
     # Get user's skills
-    user_skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
-    user_skill_names = {s.name.lower() for s in user_skills}
+    user_skills_rows = db.query(Skill).filter(Skill.profile_id == profile_id).all()
+    user_skill_names = {s.name.lower() for s in user_skills_rows}
 
-    # Group jobs by role type and compute match %
+    # Group jobs by role type
     role_groups: dict[str, list[DiscoveredJob]] = defaultdict(list)
     for job in jobs:
         role_type = _normalize_role_type(job.title)
@@ -408,21 +459,7 @@ def get_market_positioning(db: Session, profile_id: int) -> dict:
 
     positions = []
     for role_type, role_jobs in sorted(role_groups.items()):
-        total_skills_required = 0
-        skills_matched = 0
-
-        for job in role_jobs:
-            job_skills = _extract_skills_from_text(job.description)
-            total_skills_required += len(job_skills)
-            for skill_name in job_skills:
-                if skill_name.lower() in user_skill_names:
-                    skills_matched += 1
-
-        if total_skills_required > 0:
-            match_pct = round((skills_matched / total_skills_required) * 100, 1)
-        else:
-            match_pct = 0.0
-
+        match_pct = _compute_role_match(role_jobs, user_skill_names)
         positions.append(
             {
                 "role_type": role_type,

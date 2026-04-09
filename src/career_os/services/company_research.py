@@ -1,4 +1,4 @@
-"""Company research service — AI-powered one-click company deep-dive.
+"""Company research service -- AI-powered one-click company deep-dive.
 
 Produces a structured report with tech stack (categorized), funding data,
 Glassdoor ratings + culture signals, values alignment score, ATS detection,
@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from sqlalchemy.orm import Session
 
@@ -32,6 +34,8 @@ from career_os.schemas.research import (
 )
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +171,7 @@ Return a JSON object with the following structure:
 3. glassdoor: Object with:
    - overall_rating: numeric rating 0-5
    - ceo_approval: CEO approval percentage (0-100)
-   - culture_keywords: list of ≥3 culture signal keywords from review sentiment
+   - culture_keywords: list of >=3 culture signal keywords from review sentiment
    - work_life_balance: numeric rating 0-5
 
 4. values_alignment: numeric score 1-10 representing alignment with user's values:
@@ -191,6 +195,99 @@ If data is unavailable for any section, use null or empty values. Do not fabrica
 User profile context:
 {json.dumps(profile_context, indent=2)}
 """
+
+
+# ---------------------------------------------------------------------------
+# Section parsers for _parse_ai_result
+# ---------------------------------------------------------------------------
+
+
+def _parse_section(  # noqa: UP047
+    result: Any,
+    key: str,
+    parser_fn: Callable[[Any], T],
+    default: T,
+    company_name: str,
+    warnings: list[SourceWarning],
+) -> T:
+    """Parse a single section from the AI result with graceful fallback.
+
+    Calls ``parser_fn(getattr(result, key))`` and returns the parsed value.
+    On failure, logs a warning, appends to *warnings*, and returns *default*.
+    """
+    try:
+        return parser_fn(getattr(result, key))
+    except Exception as exc:
+        logger.warning("Failed to parse %s for %s: %s", key, company_name, exc)
+        warnings.append(SourceWarning(source=key, error=str(exc)))
+        return default
+
+
+def _parse_tech_stack(raw: Any) -> TechStackReport:
+    tech_data = raw if isinstance(raw, dict) else {}
+    return TechStackReport(
+        frontend=tech_data.get("frontend", []),
+        backend=tech_data.get("backend", []),
+        infrastructure=tech_data.get("infrastructure", []),
+        analytics=tech_data.get("analytics", []),
+    )
+
+
+def _parse_funding(raw: Any) -> FundingReport:
+    funding_data = raw if isinstance(raw, dict) else {}
+    return FundingReport(
+        stage=funding_data.get("stage"),
+        total_raised=funding_data.get("total_raised"),
+        lead_investor=funding_data.get("lead_investor"),
+        last_round_date=funding_data.get("last_round_date"),
+    )
+
+
+def _parse_glassdoor(raw: Any) -> GlassdoorReport:
+    glass_data = raw if isinstance(raw, dict) else {}
+    return GlassdoorReport(
+        overall_rating=glass_data.get("overall_rating"),
+        ceo_approval=glass_data.get("ceo_approval"),
+        culture_keywords=glass_data.get("culture_keywords", []),
+        work_life_balance=glass_data.get("work_life_balance"),
+    )
+
+
+def _parse_values_alignment(raw: Any) -> tuple[float, str]:
+    """Return (score, rationale) from the AI values_alignment field."""
+    if isinstance(raw, (int, float)):
+        return float(raw), "Score derived from AI analysis of company data."
+    if isinstance(raw, dict):
+        score = float(raw.get("score", 5.0))
+        rationale = raw.get("rationale", "Score derived from AI analysis of company data.")
+        return score, rationale
+    return float(raw), "No data found"
+
+
+def _parse_hiring_patterns(raw: Any) -> HiringPatternsReport:
+    hp_data = raw if isinstance(raw, dict) else {}
+    return HiringPatternsReport(
+        active_postings=hp_data.get("active_postings"),
+        posting_velocity=hp_data.get("posting_velocity"),
+        top_departments=hp_data.get("top_departments", []),
+    )
+
+
+def _parse_news_items(
+    raw_news: Any,
+    company_name: str,
+) -> list[NewsItem]:
+    """Parse a list of news item dicts into NewsItem objects."""
+    if not raw_news:
+        return []
+    news: list[NewsItem] = []
+    for item in raw_news:
+        try:
+            if isinstance(item, dict):
+                news.append(NewsItem(**item))
+        except Exception as exc:
+            logger.warning("Failed to parse news item for %s: %s", company_name, exc)
+    return news
 
 
 def _parse_ai_result(
@@ -237,98 +334,39 @@ def _parse_ai_result(
             warnings,
         )
 
-    # Parse tech stack
-    try:
-        tech_data = result.tech_stack if isinstance(result.tech_stack, dict) else {}
-        tech_stack = TechStackReport(
-            frontend=tech_data.get("frontend", []),
-            backend=tech_data.get("backend", []),
-            infrastructure=tech_data.get("infrastructure", []),
-            analytics=tech_data.get("analytics", []),
-        )
-    except Exception as exc:
-        logger.warning("Failed to parse tech stack for %s: %s", company_name, exc)
-        tech_stack = TechStackReport()
-        warnings.append(SourceWarning(source="tech_stack", error=str(exc)))
+    tech_stack = _parse_section(
+        result, "tech_stack", _parse_tech_stack, TechStackReport(), company_name, warnings
+    )
+    funding = _parse_section(
+        result, "funding", _parse_funding, FundingReport(), company_name, warnings
+    )
+    glassdoor = _parse_section(
+        result, "glassdoor", _parse_glassdoor, GlassdoorReport(), company_name, warnings
+    )
 
-    # Parse funding
-    try:
-        funding_data = result.funding if isinstance(result.funding, dict) else {}
-        funding = FundingReport(
-            stage=funding_data.get("stage"),
-            total_raised=funding_data.get("total_raised"),
-            lead_investor=funding_data.get("lead_investor"),
-            last_round_date=funding_data.get("last_round_date"),
-        )
-    except Exception as exc:
-        logger.warning("Failed to parse funding for %s: %s", company_name, exc)
-        funding = FundingReport()
-        warnings.append(SourceWarning(source="funding", error=str(exc)))
-
-    # Parse glassdoor
-    try:
-        glass_data = result.glassdoor if isinstance(result.glassdoor, dict) else {}
-        glassdoor = GlassdoorReport(
-            overall_rating=glass_data.get("overall_rating"),
-            ceo_approval=glass_data.get("ceo_approval"),
-            culture_keywords=glass_data.get("culture_keywords", []),
-            work_life_balance=glass_data.get("work_life_balance"),
-        )
-    except Exception as exc:
-        logger.warning("Failed to parse glassdoor for %s: %s", company_name, exc)
-        glassdoor = GlassdoorReport()
-        warnings.append(SourceWarning(source="glassdoor", error=str(exc)))
-
-    # Parse values alignment
+    # Values alignment needs special handling (returns a tuple)
     values_score = 5.0
     values_rationale = "No data found"
     try:
-        va = result.values_alignment
-        if isinstance(va, (int, float)):
-            values_score = float(va)
-            values_rationale = "Score derived from AI analysis of company data."
-        elif isinstance(va, dict):
-            values_score = float(va.get("score", 5.0))
-            values_rationale = va.get(
-                "rationale", "Score derived from AI analysis of company data."
-            )
-        else:
-            values_score = float(va)
+        values_score, values_rationale = _parse_values_alignment(result.values_alignment)
     except Exception as exc:
         logger.warning("Failed to parse values alignment for %s: %s", company_name, exc)
         warnings.append(SourceWarning(source="values_alignment", error=str(exc)))
 
-    # ATS platform
     ats_platform = result.ats_platform if result.ats_platform else None
 
-    # Hiring patterns
-    try:
-        hp_data = result.hiring_patterns if isinstance(result.hiring_patterns, dict) else {}
-        hiring_patterns = HiringPatternsReport(
-            active_postings=hp_data.get("active_postings"),
-            posting_velocity=hp_data.get("posting_velocity"),
-            top_departments=hp_data.get("top_departments", []),
-        )
-    except Exception as exc:
-        logger.warning("Failed to parse hiring patterns for %s: %s", company_name, exc)
-        hiring_patterns = HiringPatternsReport()
-        warnings.append(SourceWarning(source="hiring_patterns", error=str(exc)))
+    hiring_patterns = _parse_section(
+        result,
+        "hiring_patterns",
+        _parse_hiring_patterns,
+        HiringPatternsReport(),
+        company_name,
+        warnings,
+    )
 
-    # Industry segment
     industry_segment = result.industry_segment if result.industry_segment else None
-
-    # Employee count
     employee_count = result.employee_count if result.employee_count else None
-
-    # News items
-    news: list[NewsItem] = []
-    if result.news:
-        for item in result.news:
-            try:
-                if isinstance(item, dict):
-                    news.append(NewsItem(**item))
-            except Exception as exc:
-                logger.warning("Failed to parse news item for %s: %s", company_name, exc)
+    news = _parse_news_items(result.news, company_name)
 
     return (
         tech_stack,
@@ -343,6 +381,27 @@ def _parse_ai_result(
         news,
         warnings,
     )
+
+
+def _detect_partial_warnings(
+    glassdoor, hiring_patterns, industry_segment, employee_count, ats_platform
+) -> list[SourceWarning]:
+    """Detect missing sections for partial simulation mode (VAL-RESEARCH-009)."""
+    checks = [
+        ("glassdoor", not glassdoor.overall_rating and not glassdoor.culture_keywords),
+        (
+            "hiring_patterns",
+            not hiring_patterns.active_postings and not hiring_patterns.top_departments,
+        ),
+        ("industry_segment", not industry_segment),
+        ("employee_count", not employee_count),
+        ("ats_platform", ats_platform is None),
+    ]
+    return [
+        SourceWarning(source=section, error=f"Data unavailable for {section} (partial simulation)")
+        for section, missing in checks
+        if missing
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -439,24 +498,11 @@ async def research_company(
 
     # VAL-RESEARCH-009: Add source_warnings for missing sections in partial mode
     if simulate_partial:
-        partial_sections = []
-        if not glassdoor.overall_rating and not glassdoor.culture_keywords:
-            partial_sections.append("glassdoor")
-        if not hiring_patterns.active_postings and not hiring_patterns.top_departments:
-            partial_sections.append("hiring_patterns")
-        if not industry_segment:
-            partial_sections.append("industry_segment")
-        if not employee_count:
-            partial_sections.append("employee_count")
-        if ats_platform is None:
-            partial_sections.append("ats_platform")
-        for section in partial_sections:
-            warnings.append(
-                SourceWarning(
-                    source=section,
-                    error=f"Data unavailable for {section} (partial simulation)",
-                )
+        warnings.extend(
+            _detect_partial_warnings(
+                glassdoor, hiring_patterns, industry_segment, employee_count, ats_platform
             )
+        )
 
     # Build report JSON for persistence (VAL-CROSS-009: prep uses research data)
     report_json_data = {

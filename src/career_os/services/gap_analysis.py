@@ -283,6 +283,47 @@ def get_readiness_score(
     return _compute_readiness_score(gaps, len(requirements))
 
 
+def _extract_app_gaps(
+    db: Session,
+    app: Application,
+    profile_id: int,
+    skills_by_name: dict[str, Skill],
+    gap_data: dict[str, list[tuple[int, str, int]]],
+    display_names: dict[str, str],
+) -> bool:
+    """Process gaps for a single application, updating *gap_data* and *display_names*.
+
+    Returns True if the application had requirements, False otherwise.
+    """
+    requirements = (
+        db.query(JobRequirement)
+        .filter(
+            JobRequirement.application_id == app.id,
+            JobRequirement.profile_id == profile_id,
+        )
+        .all()
+    )
+
+    if not requirements:
+        return False
+
+    for req in requirements:
+        skill_key = req.skill_name.lower().strip()
+        current_skill = skills_by_name.get(skill_key)
+        current_level = current_skill.proficiency if current_skill else None
+        distance = _compute_distance(req.required_level, current_level)
+
+        if distance <= 0:
+            continue
+
+        if skill_key not in gap_data:
+            gap_data[skill_key] = []
+            display_names[skill_key] = req.skill_name
+        gap_data[skill_key].append((app.id, req.severity, distance))
+
+    return True
+
+
 def aggregate_gaps(
     db: Session,
     profile_id: int,
@@ -322,31 +363,11 @@ def aggregate_gaps(
     apps_with_requirements = 0
 
     for app_obj in applications:
-        requirements = (
-            db.query(JobRequirement)
-            .filter(
-                JobRequirement.application_id == app_obj.id,
-                JobRequirement.profile_id == profile_id,
-            )
-            .all()
+        had_reqs = _extract_app_gaps(
+            db, app_obj, profile_id, skills_by_name, gap_data, display_names
         )
-
-        if not requirements:
-            continue
-
-        apps_with_requirements += 1
-
-        for req in requirements:
-            skill_key = req.skill_name.lower().strip()
-            current_skill = skills_by_name.get(skill_key)
-            current_level = current_skill.proficiency if current_skill else None
-            distance = _compute_distance(req.required_level, current_level)
-
-            if distance > 0:  # only include actual gaps
-                if skill_key not in gap_data:
-                    gap_data[skill_key] = []
-                    display_names[skill_key] = req.skill_name
-                gap_data[skill_key].append((app_obj.id, req.severity, distance))
+        if had_reqs:
+            apps_with_requirements += 1
 
     # Build aggregate response sorted by frequency
     aggregate_gaps = []

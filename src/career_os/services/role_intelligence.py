@@ -293,6 +293,80 @@ def _salary_fallback_from_ai(
     )
 
 
+def _filter_salary_jobs(
+    jobs: list[DiscoveredJob],
+    role: str,
+    location: str | None,
+    company_stage: str | None,
+) -> list[DiscoveredJob]:
+    """Filter discovered jobs by role, location, and company stage."""
+    role_variants = _normalize_role_for_matching(role)
+    matching = [j for j in jobs if any(variant in j.title.lower() for variant in role_variants)]
+
+    if location:
+        loc_lower = location.lower()
+        matching = [j for j in matching if j.location and loc_lower in j.location.lower()]
+
+    if not company_stage:
+        return matching
+
+    stage_lower = company_stage.lower()
+    stage_matching = [
+        j
+        for j in matching
+        if stage_lower in (j.description or "").lower() or stage_lower in (j.company or "").lower()
+    ]
+    # Only apply filter if it yields results; otherwise keep all for context
+    return stage_matching if stage_matching else matching
+
+
+def _compute_percentiles(salaries: list[float]) -> SalaryBenchmark:
+    """Compute p25/median/p75 from a sorted list of salary values."""
+    salaries.sort()
+    n = len(salaries)
+    p25_idx = max(0, int(n * 0.25) - 1)
+    median_idx = n // 2
+    p75_idx = min(n - 1, int(n * 0.75))
+    return SalaryBenchmark(
+        low=salaries[p25_idx],
+        median=salaries[median_idx],
+        high=salaries[p75_idx],
+        sample_size=n,
+    )
+
+
+def _build_salary_context(
+    jobs_used: list[DiscoveredJob],
+    n: int,
+    company_stage: str | None,
+) -> str:
+    """Build a human-readable context string for salary benchmarks."""
+    locations = {j.location for j in jobs_used if j.location}
+    companies = {j.company for j in jobs_used}
+    context_parts = [f"Based on {n} data point(s)"]
+    if locations:
+        context_parts.append(f"from {', '.join(sorted(locations))}")
+    if companies:
+        context_parts.append(f"at {', '.join(sorted(companies))}")
+    if company_stage:
+        context_parts.append(f"for {company_stage} stage companies")
+    return ". ".join(context_parts) + "."
+
+
+def _build_context_parts(
+    role: str,
+    location: str | None,
+    company_stage: str | None,
+) -> list[str]:
+    """Build context filter parts for 'no data' messages."""
+    parts = [f"role='{role}'"]
+    if location:
+        parts.append(f"location='{location}'")
+    if company_stage:
+        parts.append(f"stage='{company_stage}'")
+    return parts
+
+
 def get_salary_benchmarks(
     db: Session,
     role: str,
@@ -324,34 +398,8 @@ def get_salary_benchmarks(
     """
     _validate_profile(db, profile_id)
 
-    # Get discovered jobs for this profile
-    query = db.query(DiscoveredJob).filter(DiscoveredJob.profile_id == profile_id)
-    jobs = query.all()
-
-    # Filter by role using normalized aliases (case-insensitive)
-    role_variants = _normalize_role_for_matching(role)
-    matching_jobs = [
-        j for j in jobs if any(variant in j.title.lower() for variant in role_variants)
-    ]
-
-    # Filter by location if specified
-    if location:
-        loc_lower = location.lower()
-        matching_jobs = [j for j in matching_jobs if j.location and loc_lower in j.location.lower()]
-
-    # Filter by company stage if specified (match against description as heuristic)
-    if company_stage:
-        stage_lower = company_stage.lower()
-        stage_matching: list[DiscoveredJob] = []
-        for j in matching_jobs:
-            desc = (j.description or "").lower()
-            company_lower = (j.company or "").lower()
-            # Simple heuristic: check if stage keyword appears in description or company
-            if stage_lower in desc or stage_lower in company_lower:
-                stage_matching.append(j)
-        # Only apply filter if it yields results; otherwise keep all for context
-        if stage_matching:
-            matching_jobs = stage_matching
+    jobs = db.query(DiscoveredJob).filter(DiscoveredJob.profile_id == profile_id).all()
+    matching_jobs = _filter_salary_jobs(jobs, role, location, company_stage)
 
     # Extract salary midpoints
     salaries: list[float] = []
@@ -361,88 +409,65 @@ def get_salary_benchmarks(
             salaries.append((low + high) / 2)
 
     if not salaries:
-        # VAL-ROLE-INTEL-002: Fall back to market intelligence salary trends
-        fallback = _salary_fallback_from_market(db, role, profile_id, location)
-        if fallback:
-            context_parts = [f"role='{role}'"]
-            if location:
-                context_parts.append(f"location='{location}'")
-            if company_stage:
-                context_parts.append(f"stage='{company_stage}'")
-            return SalaryBenchmarkResponse(
-                role=role,
-                location=location,
-                company_stage=company_stage,
-                benchmarks=fallback,
-                context=(
-                    f"Based on market intelligence salary trends for "
-                    f"{', '.join(context_parts)}. "
-                    f"No exact job matches found; using aggregated market data."
-                ),
-            )
+        return _salary_benchmarks_fallback(db, role, profile_id, location, company_stage)
 
-        # Final fallback: AI-based estimates via mock provider
-        ai_fallback = _salary_fallback_from_ai(role, location, company_stage)
-        if ai_fallback:
-            return SalaryBenchmarkResponse(
-                role=role,
-                location=location,
-                company_stage=company_stage,
-                benchmarks=ai_fallback,
-                context=(
-                    f"AI-estimated salary range for '{role}'. "
-                    f"No discovered jobs or market trend data matched."
-                ),
-            )
-
-        context_parts = [f"role='{role}'"]
-        if location:
-            context_parts.append(f"location='{location}'")
-        if company_stage:
-            context_parts.append(f"stage='{company_stage}'")
-        return SalaryBenchmarkResponse(
-            role=role,
-            location=location,
-            company_stage=company_stage,
-            benchmarks=SalaryBenchmark(low=0.0, median=0.0, high=0.0, sample_size=0),
-            context=f"No salary data found for {', '.join(context_parts)}.",
-        )
-
-    salaries.sort()
-    n = len(salaries)
-
-    # Compute percentiles
-    p25_idx = max(0, int(n * 0.25) - 1)
-    median_idx = n // 2
-    p75_idx = min(n - 1, int(n * 0.75))
-
-    p25 = salaries[p25_idx]
-    median = salaries[median_idx]
-    p75 = salaries[p75_idx]
-
-    # Build context string
-    locations = {j.location for j in matching_jobs if j.location}
-    companies = {j.company for j in matching_jobs}
-    context_parts = [f"Based on {n} data point(s)"]
-    if locations:
-        context_parts.append(f"from {', '.join(sorted(locations))}")
-    if companies:
-        context_parts.append(f"at {', '.join(sorted(companies))}")
-    if company_stage:
-        context_parts.append(f"for {company_stage} stage companies")
-    context = ". ".join(context_parts) + "."
+    benchmarks = _compute_percentiles(salaries)
+    context = _build_salary_context(matching_jobs, benchmarks.sample_size, company_stage)
 
     return SalaryBenchmarkResponse(
         role=role,
         location=location,
         company_stage=company_stage,
-        benchmarks=SalaryBenchmark(
-            low=p25,
-            median=median,
-            high=p75,
-            sample_size=n,
-        ),
+        benchmarks=benchmarks,
         context=context,
+    )
+
+
+def _salary_benchmarks_fallback(
+    db: Session,
+    role: str,
+    profile_id: int,
+    location: str | None,
+    company_stage: str | None,
+) -> SalaryBenchmarkResponse:
+    """Handle fallback logic when no discovered-job salaries match."""
+    # VAL-ROLE-INTEL-002: Fall back to market intelligence salary trends
+    fallback = _salary_fallback_from_market(db, role, profile_id, location)
+    if fallback:
+        context_parts = _build_context_parts(role, location, company_stage)
+        return SalaryBenchmarkResponse(
+            role=role,
+            location=location,
+            company_stage=company_stage,
+            benchmarks=fallback,
+            context=(
+                f"Based on market intelligence salary trends for "
+                f"{', '.join(context_parts)}. "
+                f"No exact job matches found; using aggregated market data."
+            ),
+        )
+
+    # Final fallback: AI-based estimates via mock provider
+    ai_fallback = _salary_fallback_from_ai(role, location, company_stage)
+    if ai_fallback:
+        return SalaryBenchmarkResponse(
+            role=role,
+            location=location,
+            company_stage=company_stage,
+            benchmarks=ai_fallback,
+            context=(
+                f"AI-estimated salary range for '{role}'. "
+                f"No discovered jobs or market trend data matched."
+            ),
+        )
+
+    context_parts = _build_context_parts(role, location, company_stage)
+    return SalaryBenchmarkResponse(
+        role=role,
+        location=location,
+        company_stage=company_stage,
+        benchmarks=SalaryBenchmark(low=0.0, median=0.0, high=0.0, sample_size=0),
+        context=f"No salary data found for {', '.join(context_parts)}.",
     )
 
 

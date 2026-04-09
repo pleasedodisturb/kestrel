@@ -38,6 +38,144 @@ class SavedSearchNotFoundError(Exception):
 SORTABLE_FIELDS = {"score", "date", "salary", "readiness"}
 SORT_ORDERS = {"asc", "desc"}
 
+# Lookup dict mapping sort field names to in-memory value extractors.
+# Each callable takes an enriched row dict and returns the sortable value.
+_SORT_KEY_EXTRACTORS: dict = {
+    "salary": lambda r: r["_salary_mid"],
+    "score": lambda r: r["job"].fit_score,
+    "readiness": lambda r: r["readiness_score"],
+    "date": lambda r: r["job"].created_at,
+}
+
+# Lookup dict mapping sort field names to SQL columns.
+_SQL_SORT_COLUMNS: dict = {
+    "score": lambda: DiscoveredJob.fit_score,
+    "readiness": lambda: ScoredJob.readiness_score,
+    "date": lambda: DiscoveredJob.created_at,
+}
+
+
+def _build_job_filters(
+    query,
+    q,
+    source,
+    remote,
+    company_filter,
+    location_filter,
+    min_score,
+    max_score,
+    date_from,
+    date_to,
+):
+    """Apply all SQL-level WHERE filters to *query* and return it."""
+    if q:
+        term = f"%{q}%"
+        query = query.filter(
+            or_(
+                DiscoveredJob.title.ilike(term),
+                DiscoveredJob.company.ilike(term),
+                DiscoveredJob.description.ilike(term),
+                DiscoveredJob.location.ilike(term),
+            )
+        )
+
+    if source:
+        query = query.filter(DiscoveredJob.sources.ilike(f'%"{source}"%'))
+
+    if remote is not None:
+        query = query.filter(DiscoveredJob.remote == remote)
+
+    if company_filter:
+        query = query.filter(DiscoveredJob.company.ilike(f"%{company_filter}%"))
+
+    if location_filter:
+        query = query.filter(DiscoveredJob.location.ilike(f"%{location_filter}%"))
+
+    if min_score is not None:
+        query = query.filter(DiscoveredJob.fit_score >= min_score)
+
+    if max_score is not None:
+        query = query.filter(DiscoveredJob.fit_score <= max_score)
+
+    if date_from:
+        try:
+            dt_from = datetime.fromisoformat(date_from).replace(tzinfo=UTC)
+            query = query.filter(DiscoveredJob.created_at >= dt_from)
+        except ValueError:
+            pass  # ignore invalid date
+
+    if date_to:
+        try:
+            dt_to = datetime.fromisoformat(date_to).replace(tzinfo=UTC)
+            query = query.filter(DiscoveredJob.created_at <= dt_to)
+        except ValueError:
+            pass
+
+    return query
+
+
+def _apply_salary_sorting(query, sort_field, sort_order, salary_min, salary_max, page, page_size):
+    """Fetch all rows, apply salary filter/sort in Python, paginate in-memory.
+
+    Returns ``(jobs, total, page, page_size, total_pages)``.
+    """
+    all_rows = query.all()
+
+    enriched = [
+        {
+            "job": row[0],
+            "readiness_score": row[1],
+            "_salary_mid": salary_midpoint(row[0].salary_range),
+        }
+        for row in all_rows
+    ]
+
+    if salary_min is not None:
+        enriched = [
+            r for r in enriched if r["_salary_mid"] is not None and r["_salary_mid"] >= salary_min
+        ]
+    if salary_max is not None:
+        enriched = [
+            r for r in enriched if r["_salary_mid"] is not None and r["_salary_mid"] <= salary_max
+        ]
+
+    extractor = _SORT_KEY_EXTRACTORS.get(sort_field, _SORT_KEY_EXTRACTORS["date"])
+    enriched = _sort_nulls_last(enriched, key=extractor, reverse=(sort_order == "desc"))
+
+    jobs, total, page, page_size, total_pages = _paginate_results(enriched, page, page_size)
+    jobs = [{"job": r["job"], "readiness_score": r["readiness_score"]} for r in jobs]
+    return jobs, total, page, page_size, total_pages
+
+
+def _apply_sql_sorting(query, sort_field, sort_order):
+    """Apply ORDER BY to the query using SQL columns. Returns the updated query."""
+    col_factory = _SQL_SORT_COLUMNS.get(sort_field, _SQL_SORT_COLUMNS["date"])
+    sort_col = col_factory()
+
+    # SQLite doesn't support NULLS LAST natively, so use a CASE expression
+    null_sort = case((sort_col.is_(None), 1), else_=0)
+    if sort_order == "asc":
+        return query.order_by(null_sort, sort_col.asc())
+    return query.order_by(null_sort, sort_col.desc())
+
+
+def _sort_nulls_last(items, *, key, reverse):
+    """Sort *items* by *key* with ``None`` values always last."""
+    with_val = [r for r in items if key(r) is not None]
+    without_val = [r for r in items if key(r) is None]
+    with_val.sort(key=key, reverse=reverse)
+    return with_val + without_val
+
+
+def _paginate_results(items, page, page_size):
+    """Return ``(page_items, total, page, page_size, total_pages)`` for an in-memory list."""
+    total = len(items)
+    page = max(1, page)
+    page_size = max(1, min(page_size, 100))
+    offset = (page - 1) * page_size
+    total_pages = max(1, math.ceil(total / page_size))
+    return items[offset : offset + page_size], total, page, page_size, total_pages
+
 
 def search_jobs(
     db: Session,
@@ -63,7 +201,6 @@ def search_jobs(
 
     Returns dict with keys: jobs, total, page, page_size, total_pages.
     """
-    # Validate profile exists
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if not profile:
         raise ProfileNotFoundError(f"Profile {profile_id} not found")
@@ -79,160 +216,47 @@ def search_jobs(
         .filter(DiscoveredJob.profile_id == profile_id)
     )
 
-    # --- Full-text search across title, company, description, location ---
-    if q:
-        term = f"%{q}%"
-        query = query.filter(
-            or_(
-                DiscoveredJob.title.ilike(term),
-                DiscoveredJob.company.ilike(term),
-                DiscoveredJob.description.ilike(term),
-                DiscoveredJob.location.ilike(term),
-            )
-        )
+    query = _build_job_filters(
+        query,
+        q,
+        source,
+        remote,
+        company,
+        location,
+        score_min,
+        score_max,
+        date_from,
+        date_to,
+    )
 
-    # --- Facet filters (AND logic) ---
-    if source:
-        # sources is a JSON array stored as text
-        query = query.filter(DiscoveredJob.sources.ilike(f'%"{source}"%'))
-
-    if remote is not None:
-        query = query.filter(DiscoveredJob.remote == remote)
-
-    if company:
-        query = query.filter(DiscoveredJob.company.ilike(f"%{company}%"))
-
-    if location:
-        query = query.filter(DiscoveredJob.location.ilike(f"%{location}%"))
-
-    if score_min is not None:
-        query = query.filter(DiscoveredJob.fit_score >= score_min)
-
-    if score_max is not None:
-        query = query.filter(DiscoveredJob.fit_score <= score_max)
-
-    if date_from:
-        try:
-            dt_from = datetime.fromisoformat(date_from).replace(tzinfo=UTC)
-            query = query.filter(DiscoveredJob.created_at >= dt_from)
-        except ValueError:
-            pass  # ignore invalid date
-
-    if date_to:
-        try:
-            dt_to = datetime.fromisoformat(date_to).replace(tzinfo=UTC)
-            query = query.filter(DiscoveredJob.created_at <= dt_to)
-        except ValueError:
-            pass
-
-    # --- Determine sort ---
     sort_field = sort if sort in SORTABLE_FIELDS else "date"
     sort_order = order if order in SORT_ORDERS else "desc"
 
-    # For salary filtering and sorting we need numeric parsing (SQLite
-    # can't natively parse "130,000-160,000 EUR" → number).  When salary
-    # filter or salary sort is active we fetch all SQL-filtered rows and
-    # apply salary logic in Python, then paginate in-memory.
+    # When salary filter or salary sort is active we must parse salary strings
+    # in Python (SQLite can't natively parse "130,000-160,000 EUR" → number).
     need_python_salary = salary_min is not None or salary_max is not None or sort_field == "salary"
 
     if need_python_salary:
-        # Fetch all matching rows (no pagination yet)
-        all_rows = query.all()
-
-        # Enrich with parsed salary midpoint
-        enriched = []
-        for row in all_rows:
-            job_obj = row[0]
-            readiness = row[1]
-            mid = salary_midpoint(job_obj.salary_range)
-            enriched.append(
-                {
-                    "job": job_obj,
-                    "readiness_score": readiness,
-                    "_salary_mid": mid,
-                }
-            )
-
-        # Apply salary filters using numeric comparison
-        if salary_min is not None:
-            enriched = [
-                r
-                for r in enriched
-                if r["_salary_mid"] is not None and r["_salary_mid"] >= salary_min
-            ]
-        if salary_max is not None:
-            enriched = [
-                r
-                for r in enriched
-                if r["_salary_mid"] is not None and r["_salary_mid"] <= salary_max
-            ]
-
-        # Sort: nulls always last, non-null values sorted by direction.
-        reverse = sort_order == "desc"
-
-        def _get_sort_val(item: dict):
-            if sort_field == "salary":
-                return item["_salary_mid"]
-            elif sort_field == "score":
-                return item["job"].fit_score
-            elif sort_field == "readiness":
-                return item["readiness_score"]
-            else:
-                return item["job"].created_at
-
-        # Split into non-null and null groups so nulls always appear last
-        with_val = [r for r in enriched if _get_sort_val(r) is not None]
-        without_val = [r for r in enriched if _get_sort_val(r) is None]
-        with_val.sort(key=lambda r: _get_sort_val(r), reverse=reverse)
-        enriched = with_val + without_val
-
-        # Paginate in-memory
-        total = len(enriched)
-        page = max(1, page)
-        page_size = max(1, min(page_size, 100))
-        offset = (page - 1) * page_size
-        total_pages = max(1, math.ceil(total / page_size))
-
-        page_items = enriched[offset : offset + page_size]
-        jobs = [{"job": r["job"], "readiness_score": r["readiness_score"]} for r in page_items]
+        jobs, total, page, page_size, total_pages = _apply_salary_sorting(
+            query,
+            sort_field,
+            sort_order,
+            salary_min,
+            salary_max,
+            page,
+            page_size,
+        )
     else:
-        # --- Count total before pagination ---
         total = query.count()
+        query = _apply_sql_sorting(query, sort_field, sort_order)
 
-        # --- SQL Sorting ---
-        if sort_field == "score":
-            sort_col = DiscoveredJob.fit_score
-        elif sort_field == "readiness":
-            sort_col = ScoredJob.readiness_score
-        else:  # date
-            sort_col = DiscoveredJob.created_at
-
-        # SQLite doesn't support NULLS LAST natively, so use a CASE expression
-        null_sort = case((sort_col.is_(None), 1), else_=0)
-        if sort_order == "asc":
-            query = query.order_by(null_sort, sort_col.asc())
-        else:
-            query = query.order_by(null_sort, sort_col.desc())
-
-        # --- Pagination ---
         page = max(1, page)
         page_size = max(1, min(page_size, 100))
         offset = (page - 1) * page_size
         total_pages = max(1, math.ceil(total / page_size))
 
         rows = query.offset(offset).limit(page_size).all()
-
-        # Map rows to result dicts
-        jobs = []
-        for row in rows:
-            job_obj = row[0]
-            readiness = row[1]
-            jobs.append(
-                {
-                    "job": job_obj,
-                    "readiness_score": readiness,
-                }
-            )
+        jobs = [{"job": row[0], "readiness_score": row[1]} for row in rows]
 
     return {
         "jobs": jobs,
