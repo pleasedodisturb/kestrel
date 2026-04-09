@@ -71,7 +71,10 @@ export function VoiceDiscussion() {
   // Fetch active session
   const { data: activeSession } = useQuery({
     queryKey: ["voice-session", activeSessionId],
-    queryFn: () => fetchVoiceSession(activeSessionId!),
+    queryFn: () => {
+      if (activeSessionId === null) throw new Error("No active session");
+      return fetchVoiceSession(activeSessionId);
+    },
     enabled: !!activeSessionId,
   });
 
@@ -90,8 +93,10 @@ export function VoiceDiscussion() {
 
   // Send message mutation with optimistic input clear
   const sendMutation = useMutation({
-    mutationFn: (content: string) =>
-      sendVoiceMessage(activeSessionId!, content),
+    mutationFn: (content: string) => {
+      if (activeSessionId === null) throw new Error("No active session");
+      return sendVoiceMessage(activeSessionId, content);
+    },
     onMutate: () => {
       // Clear input immediately for responsive feel
       setInputText("");
@@ -109,7 +114,10 @@ export function VoiceDiscussion() {
 
   // Complete session mutation
   const completeMutation = useMutation({
-    mutationFn: () => completeVoiceSession(activeSessionId!),
+    mutationFn: () => {
+      if (activeSessionId === null) throw new Error("No active session");
+      return completeVoiceSession(activeSessionId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["voice-sessions"] });
       queryClient.invalidateQueries({
@@ -151,7 +159,7 @@ export function VoiceDiscussion() {
   const sessions = sessionsData?.sessions ?? [];
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-4">
+    <section className="flex h-[calc(100vh-8rem)] gap-4">
       {/* Sidebar: Session list */}
       <div className="w-72 flex-shrink-0 overflow-y-auto rounded-lg border bg-white p-3">
         <div className="mb-3 flex items-center justify-between">
@@ -397,7 +405,7 @@ export function VoiceDiscussion() {
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 

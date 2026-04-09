@@ -100,11 +100,13 @@ function AddSkillDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="presentation"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -265,11 +267,13 @@ function EditSkillDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="presentation"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -402,11 +406,13 @@ function SkillHistoryPanel({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="presentation"
     >
       <div
         className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -554,7 +560,7 @@ export function Skills() {
   // Empty state with CTAs
   if (isEmpty) {
     return (
-      <div className="space-y-6">
+      <section className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">Skills Inventory</h1>
         <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center">
           <Sparkles className="mx-auto h-12 w-12 text-gray-400" />
@@ -609,14 +615,14 @@ export function Skills() {
             profileId={profileId}
           />
         )}
-      </div>
+      </section>
     );
   }
 
   // Skills inventory view
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <section className="space-y-6">
+      <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
           Skills Inventory ({data?.total ?? 0})
         </h1>
@@ -643,7 +649,7 @@ export function Skills() {
             Re-ingest All
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
@@ -693,7 +699,7 @@ export function Skills() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {skills.map((skill) => (
-            <div
+            <article
               key={skill.id}
               className="group rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
             >
@@ -736,7 +742,7 @@ export function Skills() {
               <p className="mt-2 text-xs text-gray-400">
                 Source: {skill.evidence_source}
               </p>
-            </div>
+            </article>
           ))}
         </div>
       )}
@@ -762,6 +768,6 @@ export function Skills() {
           profileId={profileId}
         />
       )}
-    </div>
+    </section>
   );
 }

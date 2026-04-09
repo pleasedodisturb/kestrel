@@ -49,6 +49,11 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZE = 20;
 
+function remoteFilterValue(remote: boolean | undefined): string {
+  if (remote === undefined) return "";
+  return remote ? "true" : "false";
+}
+
 function scoreColor(score: number | null): string {
   if (score === null) return "text-gray-400";
   if (score >= 8) return "text-green-600";
@@ -86,12 +91,12 @@ function FilterPanel({
   );
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <fieldset className="rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <legend className="flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-gray-500" />
-          <h3 className="text-sm font-medium text-gray-700">Filters</h3>
-        </div>
+          <span className="text-sm font-medium text-gray-700">Filters</span>
+        </legend>
         {hasFilters && (
           <button
             onClick={onClear}
@@ -123,13 +128,7 @@ function FilterPanel({
           <label htmlFor="filter-remote" className="block text-xs font-medium text-gray-500">Remote</label>
           <select
             id="filter-remote"
-            value={
-              filters.remote === undefined
-                ? ""
-                : filters.remote
-                  ? "true"
-                  : "false"
-            }
+            value={remoteFilterValue(filters.remote)}
             onChange={(e) =>
               onFiltersChange({
                 ...filters,
@@ -283,7 +282,7 @@ function FilterPanel({
           />
         </div>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -293,7 +292,7 @@ function FilterPanel({
 
 function JobCard({ job }: Readonly<{ job: DiscoveredJob }>) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
+    <article className="rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-medium text-gray-900">{job.title}</h3>
@@ -370,7 +369,7 @@ function JobCard({ job }: Readonly<{ job: DiscoveredJob }>) {
           </a>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -405,11 +404,13 @@ function SaveSearchDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="presentation"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -648,9 +649,9 @@ export function Discovery() {
   const totalPages = jobsData?.total_pages ?? 1;
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
           Discovered Jobs
           {total > 0 && (
@@ -659,7 +660,7 @@ export function Discovery() {
             </span>
           )}
         </h1>
-      </div>
+      </header>
 
       {/* Saved searches bar */}
       {savedSearches.length > 0 && (
@@ -901,7 +902,7 @@ export function Discovery() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+            <nav className="flex items-center justify-between border-t border-gray-200 pt-4" aria-label="Pagination">
               <p className="text-sm text-gray-500">
                 Showing{" "}
                 {Math.min((page - 1) * PAGE_SIZE + 1, total)}–
@@ -928,7 +929,7 @@ export function Discovery() {
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
-            </div>
+            </nav>
           )}
         </>
       )}
@@ -940,6 +941,6 @@ export function Discovery() {
           onClose={() => setShowSaveDialog(false)}
         />
       )}
-    </div>
+    </section>
   );
 }

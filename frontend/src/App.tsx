@@ -39,7 +39,7 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <main className="flex min-h-screen items-center justify-center bg-gray-50">
           <div className="max-w-md rounded-lg border border-red-200 bg-white p-8 text-center shadow-sm">
             <h1 className="text-lg font-semibold text-gray-900">
               Something went wrong
@@ -57,10 +57,11 @@ class ErrorBoundary extends Component<
               Return to Dashboard
             </button>
           </div>
-        </div>
+        </main>
       );
     }
-    return this.props.children;
+    const { children } = this.props;
+    return children;
   }
 }
 
