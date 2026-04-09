@@ -86,83 +86,83 @@ class TestPreFilterJob:
         assert "compensation analyst" in reason.lower()
 
     def test_rejects_customer_support_specialist(self):
-        skip, reason, _ = pre_filter_job("Customer Support Specialist", "HighLevel", "Remote")
+        skip, _reason, _ = pre_filter_job("Customer Support Specialist", "HighLevel", "Remote")
         assert skip is True
 
     def test_rejects_senior_accountant(self):
-        skip, reason, _ = pre_filter_job("Senior Accountant", "Blink Health", "United States")
+        skip, _reason, _ = pre_filter_job("Senior Accountant", "Blink Health", "United States")
         assert skip is True
 
     def test_rejects_financial_crimes_analyst(self):
-        skip, reason, _ = pre_filter_job("Financial Crimes Analyst I", "Dave", "Remote")
+        skip, _reason, _ = pre_filter_job("Financial Crimes Analyst I", "Dave", "Remote")
         assert skip is True
 
     def test_rejects_sales_development_rep(self):
-        skip, reason, _ = pre_filter_job("Sales Development Representative", "Ping Identity", "UK")
+        skip, _reason, _ = pre_filter_job("Sales Development Representative", "Ping Identity", "UK")
         assert skip is True
 
     def test_rejects_benefits_manager(self):
-        skip, reason, _ = pre_filter_job("Benefits Manager", "Deel", "EMEA")
+        skip, _reason, _ = pre_filter_job("Benefits Manager", "Deel", "EMEA")
         assert skip is True
 
     def test_rejects_employee_relations(self):
-        skip, reason, _ = pre_filter_job("Manager, Employee Relations", "Remote", "Europe")
+        skip, _reason, _ = pre_filter_job("Manager, Employee Relations", "Remote", "Europe")
         assert skip is True
 
     def test_rejects_nurse_pmhnp(self):
-        skip, reason, _ = pre_filter_job(
+        skip, _reason, _ = pre_filter_job(
             "PMHNP Clinical Autonomy", "Seasoned Recruitment", "Remote"
         )
         assert skip is True
 
     def test_rejects_hr_specialist(self):
-        skip, reason, _ = pre_filter_job("HR Specialist", "Automat-it", "Ukraine")
+        skip, _reason, _ = pre_filter_job("HR Specialist", "Automat-it", "Ukraine")
         assert skip is True
 
     def test_rejects_clinical_trial_manager(self):
-        skip, reason, _ = pre_filter_job(
+        skip, _reason, _ = pre_filter_job(
             "Senior Manager, Clinical Trial Management", "Precision Medicine Group", "Spain"
         )
         assert skip is True
 
     def test_rejects_affiliate_marketing(self):
-        skip, reason, _ = pre_filter_job(
+        skip, _reason, _ = pre_filter_job(
             "Affiliate Marketing Manager", "Hello There Collective", "Remote"
         )
         assert skip is True
 
     def test_rejects_head_of_aml(self):
-        skip, reason, _ = pre_filter_job(
+        skip, _reason, _ = pre_filter_job(
             "Global Head of AML & Regulatory Compliance", "Kraken", "UK"
         )
         assert skip is True
 
     def test_rejects_account_executive(self):
-        skip, reason, _ = pre_filter_job("Account Executive, Mid-Market | DACH", "Deel", "Europe")
+        skip, _reason, _ = pre_filter_job("Account Executive, Mid-Market | DACH", "Deel", "Europe")
         assert skip is True
 
     def test_rejects_food_assurance(self):
-        skip, reason, _ = pre_filter_job("Head of Food Assurance Services", "SGS", "UK")
+        skip, _reason, _ = pre_filter_job("Head of Food Assurance Services", "SGS", "UK")
         assert skip is True
 
     def test_rejects_salesforce_developer(self):
-        skip, reason, _ = pre_filter_job("Salesforce Developer", "UCAS", "UK")
+        skip, _reason, _ = pre_filter_job("Salesforce Developer", "UCAS", "UK")
         assert skip is True
 
     def test_rejects_onboarding_technician(self):
-        skip, reason, _ = pre_filter_job("Onboarding Technician", "Nextiva", "Ukraine")
+        skip, _reason, _ = pre_filter_job("Onboarding Technician", "Nextiva", "Ukraine")
         assert skip is True
 
     def test_rejects_crypto_trader(self):
-        skip, reason, _ = pre_filter_job("Crypto Trader", "ELEMENTAL TERRA", "Remote")
+        skip, _reason, _ = pre_filter_job("Crypto Trader", "ELEMENTAL TERRA", "Remote")
         assert skip is True
 
     def test_rejects_technical_artist(self):
-        skip, reason, _ = pre_filter_job("Sr. Technical Artist", "Fortis Games", "UK")
+        skip, _reason, _ = pre_filter_job("Sr. Technical Artist", "Fortis Games", "UK")
         assert skip is True
 
     def test_rejects_network_support_technician(self):
-        skip, reason, _ = pre_filter_job(
+        skip, _reason, _ = pre_filter_job(
             "Network Support Technician Senior", "General Dynamics", "Wiesbaden"
         )
         assert skip is True
@@ -223,7 +223,7 @@ class TestPreFilterJob:
         assert "Blocked company" in reason
 
     def test_blocks_yandex(self):
-        skip, reason, _ = pre_filter_job("Product Manager", "Yandex", "Moscow")
+        skip, _reason, _ = pre_filter_job("Product Manager", "Yandex", "Moscow")
         assert skip is True
 
     def test_does_not_block_mistral(self):
@@ -330,7 +330,7 @@ class TestScoreJob:
 
     def test_handles_missing_description(self):
         client = MagicMock()
-        score, reasoning, salary, effort, prep, notes = score_job(client, "Test", "Co", None)
+        score, reasoning, _salary, _effort, _prep, _notes = score_job(client, "Test", "Co", None)
         assert score == 0
         assert "No description" in reasoning
         # Should not call OpenAI
@@ -338,7 +338,7 @@ class TestScoreJob:
 
     def test_handles_nan_description(self):
         client = MagicMock()
-        score, reasoning, salary, effort, prep, notes = score_job(
+        score, _reasoning, _salary, _effort, _prep, _notes = score_job(
             client, "Test", "Co", float("nan")
         )
         assert score == 0
@@ -350,7 +350,7 @@ class TestScoreJob:
         mock_response.choices[0].message.content = "not json at all"
         client.chat.completions.create.return_value = mock_response
 
-        score, reasoning, salary, effort, prep, notes = score_job(
+        score, reasoning, _salary, _effort, _prep, _notes = score_job(
             client, "Test", "Co", "Some description"
         )
 
@@ -366,7 +366,7 @@ class TestScoreJob:
             }
         )
 
-        score, reasoning, salary, effort, prep, notes = score_job(
+        score, _reasoning, salary, effort, prep, notes = score_job(
             client, "PM", "Co", "Product work"
         )
 

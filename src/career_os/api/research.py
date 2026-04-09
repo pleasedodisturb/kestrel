@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/research", tags=["research"])
 
 
-@router.post("/company", response_model=CompanyResearchReport)
+@router.post("/company")
 async def research_company_endpoint(
     request: CompanyResearchRequest,
     simulate_partial: bool = Query(

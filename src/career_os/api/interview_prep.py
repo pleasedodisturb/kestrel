@@ -39,7 +39,6 @@ router = APIRouter(prefix="/api/applications", tags=["interview-prep"])
 
 @router.get(
     "/{application_id}/interview-prep",
-    response_model=InterviewPrepResponse,
 )
 async def get_interview_prep_endpoint(
     application_id: int,
@@ -79,7 +78,6 @@ async def get_interview_prep_endpoint(
 
 @router.patch(
     "/interview-prep/items/{item_id}",
-    response_model=PrepChecklistItem,
 )
 async def update_prep_item_endpoint(
     item_id: int,

@@ -19,7 +19,7 @@ from career_os.services.scoring import flag_stale_scores, regenerate_weights_for
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
 
-@router.get("", response_model=ProfileListResponse)
+@router.get("")
 async def list_profiles(db: Session = Depends(get_db)) -> ProfileListResponse:
     """List all profiles."""
     profiles = db.query(Profile).all()
@@ -29,7 +29,7 @@ async def list_profiles(db: Session = Depends(get_db)) -> ProfileListResponse:
     )
 
 
-@router.get("/{profile_id}", response_model=ProfileResponse)
+@router.get("/{profile_id}")
 async def get_profile(profile_id: int, db: Session = Depends(get_db)) -> ProfileResponse:
     """Get a specific profile by ID."""
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
@@ -38,7 +38,7 @@ async def get_profile(profile_id: int, db: Session = Depends(get_db)) -> Profile
     return ProfileResponse.model_validate(profile)
 
 
-@router.post("", response_model=ProfileResponse, status_code=201)
+@router.post("", status_code=201)
 async def create_profile(
     payload: ProfileCreate,
     db: Session = Depends(get_db),
@@ -60,7 +60,7 @@ async def create_profile(
     return ProfileResponse.model_validate(profile)
 
 
-@router.patch("/{profile_id}", response_model=ProfileResponse)
+@router.patch("/{profile_id}")
 async def update_profile(
     profile_id: int,
     payload: ProfileUpdate,

@@ -10,7 +10,7 @@ from career_os.services.analytics import get_analytics
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 
-@router.get("", response_model=AnalyticsResponse)
+@router.get("")
 async def analytics(
     profile_id: int = Query(..., description="Profile to show analytics for"),
     db: Session = Depends(get_db),
