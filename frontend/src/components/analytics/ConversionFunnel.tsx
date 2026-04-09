@@ -33,7 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 interface Props {
-  data: FunnelStage[];
+  readonly data: FunnelStage[];
 }
 
 export function ConversionFunnel({ data }: Props) {

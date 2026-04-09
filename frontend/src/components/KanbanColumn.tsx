@@ -15,8 +15,8 @@ import { KanbanCard } from "@/components/KanbanCard";
 import { cn } from "@/lib/utils";
 
 interface KanbanColumnProps {
-  status: ApplicationStatus;
-  applications: Application[];
+  readonly status: ApplicationStatus;
+  readonly applications: Application[];
 }
 
 export function KanbanColumn({ status, applications }: KanbanColumnProps) {

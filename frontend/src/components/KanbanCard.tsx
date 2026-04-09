@@ -13,7 +13,7 @@ import type { Application } from "@/api/types";
 import { cn } from "@/lib/utils";
 
 interface KanbanCardProps {
-  application: Application;
+  readonly application: Application;
 }
 
 export function KanbanCard({ application }: KanbanCardProps) {

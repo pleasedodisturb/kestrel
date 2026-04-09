@@ -22,20 +22,20 @@ import {
 } from "lucide-react";
 
 interface IntegrationPanelProps {
-  integration: IntegrationConfigResponse;
-  onUpdate: (name: string, data: IntegrationConfigUpdate) => Promise<void>;
-  onTest: (name: string) => Promise<{ success: boolean; message: string }>;
-  isSaving: boolean;
-  isTesting: boolean;
+  readonly integration: IntegrationConfigResponse;
+  readonly onUpdate: (name: string, data: IntegrationConfigUpdate) => Promise<void>;
+  readonly onTest: (name: string) => Promise<{ success: boolean; message: string }>;
+  readonly isSaving: boolean;
+  readonly isTesting: boolean;
 }
 
 function StatusIndicator({
   status,
   message,
-}: {
+}: Readonly<{
   status: string;
   message: string | null;
-}) {
+}>) {
   switch (status) {
     case "connected":
       return (
@@ -216,7 +216,7 @@ export function IntegrationPanel({
           <div className="space-y-3">
             {integration.credential_fields.map((field) => (
               <div key={field.key}>
-                <label className="block text-sm font-medium text-gray-700">
+                <label htmlFor={`credential-${integration.name}-${field.key}`} className="block text-sm font-medium text-gray-700">
                   {field.label}
                   {field.required && (
                     <span className="text-red-500"> *</span>
@@ -229,6 +229,7 @@ export function IntegrationPanel({
                 </label>
                 <div className="relative mt-1">
                   <input
+                    id={`credential-${integration.name}-${field.key}`}
                     data-testid={`credential-${integration.name}-${field.key}`}
                     type={
                       field.field_type === "password" &&
