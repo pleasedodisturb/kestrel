@@ -68,10 +68,7 @@ def db_session():
     session = TestSession()
 
     def override_get_db():
-        try:
-            yield session
-        finally:
-            pass
+        yield session
 
     app.dependency_overrides[get_db] = override_get_db
     yield session

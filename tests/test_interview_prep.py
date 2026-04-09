@@ -400,7 +400,7 @@ class TestProgressTracking:
             params={"profile_id": test_profile.id},
         )
         data = response.json()
-        assert data["progress_percentage"] == 0.0
+        assert data["progress_percentage"] == pytest.approx(0.0)
         assert data["completed_items"] == 0
 
     def test_mark_item_complete(
