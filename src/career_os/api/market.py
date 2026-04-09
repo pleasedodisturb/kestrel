@@ -32,7 +32,7 @@ router = APIRouter(tags=["market-intelligence"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/salary-trends", response_model=SalaryTrendsResponse)
+@router.get("/api/market/salary-trends")
 async def salary_trends_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     role: str | None = Query(default=None, description="Filter by role substring"),
@@ -57,7 +57,7 @@ async def salary_trends_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/skill-trends", response_model=SkillTrendsResponse)
+@router.get("/api/market/skill-trends")
 async def skill_trends_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -80,7 +80,7 @@ async def skill_trends_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/hiring-patterns", response_model=HiringPatternsResponse)
+@router.get("/api/market/hiring-patterns")
 async def hiring_patterns_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -103,7 +103,7 @@ async def hiring_patterns_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/positioning", response_model=PositioningResponse)
+@router.get("/api/market/positioning")
 async def positioning_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -126,7 +126,7 @@ async def positioning_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/opportunity-radar", response_model=OpportunityRadarResponse)
+@router.get("/api/market/opportunity-radar")
 async def opportunity_radar_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     dream_companies: str | None = Query(
@@ -172,7 +172,7 @@ async def opportunity_radar_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/market/refresh", response_model=MarketRefreshResponse)
+@router.post("/api/market/refresh")
 async def refresh_market_endpoint(
     payload: MarketRefreshRequest,
     db: Session = Depends(get_db),

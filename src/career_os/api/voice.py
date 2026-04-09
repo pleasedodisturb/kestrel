@@ -27,7 +27,7 @@ from career_os.services.voice import (
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 
-@router.post("/sessions", response_model=VoiceSessionResponse, status_code=201)
+@router.post("/sessions", status_code=201)
 async def create_voice_session(
     data: VoiceSessionCreate,
     db: Session = Depends(get_db),
@@ -57,7 +57,7 @@ async def create_voice_session(
     return _session_response(session)
 
 
-@router.get("/sessions", response_model=VoiceSessionListResponse)
+@router.get("/sessions")
 async def list_voice_sessions(
     profile_id: int = Query(..., description="Active profile ID"),
     mode: str | None = Query(default=None, description="Filter by mode"),
@@ -71,7 +71,7 @@ async def list_voice_sessions(
     )
 
 
-@router.get("/sessions/{session_id}", response_model=VoiceSessionResponse)
+@router.get("/sessions/{session_id}")
 async def get_voice_session(
     session_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -88,7 +88,6 @@ async def get_voice_session(
 
 @router.post(
     "/sessions/{session_id}/messages",
-    response_model=VoiceSendResponse,
 )
 async def send_voice_message(
     session_id: int,
@@ -121,7 +120,6 @@ async def send_voice_message(
 
 @router.post(
     "/sessions/{session_id}/complete",
-    response_model=VoiceSessionResponse,
 )
 async def complete_voice_session(
     session_id: int,

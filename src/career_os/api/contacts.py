@@ -42,7 +42,7 @@ router = APIRouter(prefix="/api", tags=["contacts"])
 # ---------------------------------------------------------------------------
 
 
-@router.post("/contacts", response_model=ContactResponse, status_code=201)
+@router.post("/contacts", status_code=201)
 async def create(
     payload: ContactCreate,
     db: Session = Depends(get_db),
@@ -55,7 +55,7 @@ async def create(
     return ContactResponse.model_validate(contact)
 
 
-@router.get("/contacts", response_model=ContactListResponse)
+@router.get("/contacts")
 async def list_all(
     profile_id: int = Query(..., description="Profile to list contacts for"),
     company: str | None = Query(default=None, description="Filter by company"),
@@ -81,7 +81,7 @@ async def list_all(
     )
 
 
-@router.get("/contacts/by-company/{company}", response_model=ContactListResponse)
+@router.get("/contacts/by-company/{company}")
 async def contacts_at_company(
     company: str,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -95,7 +95,7 @@ async def contacts_at_company(
     )
 
 
-@router.get("/contacts/{contact_id}", response_model=ContactDetailResponse)
+@router.get("/contacts/{contact_id}")
 async def get_detail(
     contact_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -119,7 +119,7 @@ async def get_detail(
     )
 
 
-@router.patch("/contacts/{contact_id}", response_model=ContactResponse)
+@router.patch("/contacts/{contact_id}")
 async def update(
     contact_id: int,
     payload: ContactUpdate,
@@ -154,7 +154,6 @@ async def delete(
 
 @router.post(
     "/contacts/{contact_id}/interactions",
-    response_model=InteractionResponse,
     status_code=201,
 )
 async def log_interaction(
@@ -173,7 +172,6 @@ async def log_interaction(
 
 @router.get(
     "/contacts/{contact_id}/interactions",
-    response_model=InteractionListResponse,
 )
 async def get_interactions(
     contact_id: int,
@@ -198,7 +196,6 @@ async def get_interactions(
 
 @router.post(
     "/contacts/{contact_id}/applications",
-    response_model=ContactApplicationResponse,
     status_code=201,
 )
 async def link_application(
