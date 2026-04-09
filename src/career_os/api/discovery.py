@@ -20,6 +20,7 @@ from career_os.services.discovery import (
     SearchProfileNotFoundError,
     create_search_profile,
     delete_search_profile,
+    get_latest_discovery_run,
     get_search_profile,
     list_discovery_runs,
     list_search_profiles,
@@ -184,3 +185,15 @@ async def list_discovery_runs_endpoint(
     """List discovery run history for a profile."""
     runs = list_discovery_runs(db, profile_id, limit=limit)
     return [DiscoveryRunResponse.model_validate(r) for r in runs]
+
+
+@router.get("/api/discovery-runs/latest")
+async def get_latest_discovery_run_endpoint(
+    profile_id: int = Query(..., description="Profile ID"),
+    db: Session = Depends(get_db),
+) -> DiscoveryRunResponse | None:
+    """Get the most recent completed discovery run for a profile."""
+    run = get_latest_discovery_run(db, profile_id)
+    if not run:
+        return None
+    return DiscoveryRunResponse.model_validate(run)
