@@ -17,7 +17,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 
-@router.post("/complete")
+@router.post(
+    "/complete",
+    responses={422: {"description": "Validation error"}, 502: {"description": "Bad gateway"}},
+)
 async def ai_complete(request: AICompleteRequest) -> AIResponse:
     """Generate an AI completion.
 
@@ -54,7 +57,7 @@ async def ai_complete(request: AICompleteRequest) -> AIResponse:
     return response
 
 
-@router.get("/provider")
+@router.get("/provider", responses={422: {"description": "Validation error"}})
 async def get_current_provider() -> dict[str, str]:
     """Return the currently configured AI provider name."""
     try:

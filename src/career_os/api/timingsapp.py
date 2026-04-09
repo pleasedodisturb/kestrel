@@ -39,7 +39,7 @@ from career_os.services.timingsapp import (
 router = APIRouter(prefix="/api/timingsapp", tags=["timingsapp"])
 
 
-@router.post("/sessions", status_code=201)
+@router.post("/sessions", status_code=201, responses={409: {"description": "Conflict"}})
 async def create_session(
     payload: TimeSessionCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -60,7 +60,10 @@ async def create_session(
     return TimeSessionResponse.model_validate(session_record)
 
 
-@router.put("/sessions/{session_id}/stop")
+@router.put(
+    "/sessions/{session_id}/stop",
+    responses={400: {"description": "Bad request"}, 404: {"description": "Not found"}},
+)
 async def stop_session_endpoint(
     session_id: int,
     profile_id: Annotated[int, Query(description="Profile ID")],
@@ -120,7 +123,7 @@ async def get_running_session_endpoint(
     return TimeSessionResponse.model_validate(session_record)
 
 
-@router.get("/sessions/{session_id}")
+@router.get("/sessions/{session_id}", responses={404: {"description": "Not found"}})
 async def get_session_endpoint(
     session_id: int,
     profile_id: Annotated[int, Query(description="Profile ID")],
@@ -134,7 +137,7 @@ async def get_session_endpoint(
         raise HTTPException(status_code=404, detail="Time session not found") from exc
 
 
-@router.patch("/sessions/{session_id}")
+@router.patch("/sessions/{session_id}", responses={404: {"description": "Not found"}})
 async def update_session_endpoint(
     session_id: int,
     payload: TimeSessionUpdate,
