@@ -57,8 +57,8 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     def override_get_db():
         try:
@@ -820,7 +820,7 @@ class TestEdgeCases:
             p["title"] = f"Round {i + 1} Interview"
             client.post("/api/calendar/events", json=p)
 
-        events, total = list_calendar_events(
+        _events, total = list_calendar_events(
             db_session, profile_id=profile.id, application_id=application.id
         )
         # 3 interviews + 3 prep reminders

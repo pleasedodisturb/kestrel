@@ -36,8 +36,8 @@ def db_session():
 
     # Use a single connection for tests so in-memory db is shared
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     # Seed a default profile
     profile = Profile(id=1, name="Test User", email="test@example.com", location="Frankfurt")
@@ -127,7 +127,7 @@ class TestCreateApplication:
         assert data["source"] == "linkedin"
         assert data["salary_range"] == "120k-160k EUR"
         assert data["notes"] == "Great opportunity"
-        assert data["fit_score"] == 8.5
+        assert data["fit_score"] == pytest.approx(8.5)
 
     def test_create_default_status_discovered(self, client: TestClient):
         data = _create_app(client)

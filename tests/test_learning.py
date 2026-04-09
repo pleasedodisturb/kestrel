@@ -49,8 +49,8 @@ def _db_engine():
 @pytest.fixture
 def test_db(_db_engine):
     """Create a database session for testing."""
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -100,8 +100,8 @@ def client(_db_engine, test_db: Session):
     test_app.include_router(skills_router)
 
     def override_get_db():
-        TestSession = sessionmaker(bind=_db_engine)
-        session = TestSession()
+        test_session_cls = sessionmaker(bind=_db_engine)
+        session = test_session_cls()
         try:
             yield session
         finally:
@@ -544,7 +544,7 @@ class TestEffortEstimates:
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["estimated_hours"] == 5.0
+        assert data["estimated_hours"] == pytest.approx(5.0)
 
     def test_difficulty_field_present(self, client: TestClient, test_profile: Profile, gap_id: int):
         """Created resource has difficulty rating."""
@@ -965,5 +965,5 @@ class TestTemplateRecommendations:
         # Kubernetes gap requires 'advanced' level → free_course hours should be 30.0
         templates = data["template_recommendations"]
         free = [t for t in templates if t["resource_type"] == "free_course"][0]
-        assert free["estimated_hours"] == 30.0
+        assert free["estimated_hours"] == pytest.approx(30.0)
         assert free["difficulty"] == "advanced"

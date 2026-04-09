@@ -49,8 +49,8 @@ def _db_engine():
 @pytest.fixture
 def test_db(_db_engine):
     """Create a database session for testing."""
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -80,10 +80,10 @@ def second_profile(test_db: Session) -> Profile:
 @pytest.fixture
 def api_client(_db_engine):
     """Create a FastAPI test client with overridden DB."""
-    TestSession = sessionmaker(bind=_db_engine)
+    test_session_cls = sessionmaker(bind=_db_engine)
 
     def override_get_db():
-        db = TestSession()
+        db = test_session_cls()
         try:
             yield db
         finally:
@@ -754,8 +754,8 @@ class TestCoachingDistanceRecalculation:
 
         # The effort should reflect expert distance (3), not intermediate (1)
         # distance 3 → hours = 30, weeks = 4.5, difficulty = high
-        assert k8s_suggestions[0]["hours"] == 30.0
-        assert k8s_suggestions[0]["weeks"] == 4.5
+        assert k8s_suggestions[0]["hours"] == pytest.approx(30.0)
+        assert k8s_suggestions[0]["weeks"] == pytest.approx(4.5)
         assert k8s_suggestions[0]["difficulty"] == "high"
         # The action text should mention 'expert' (highest required level)
         assert "expert" in k8s_suggestions[0]["action"]

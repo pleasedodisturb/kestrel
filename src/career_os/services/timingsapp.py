@@ -406,8 +406,8 @@ def get_time_analytics(
 
     Returns total hours, category breakdown, and weekly trend.
     """
-    _MAX_WEEKS = 1000
-    weeks = max(1, min(weeks, _MAX_WEEKS))
+    _max_weeks = 1000
+    weeks = max(1, min(weeks, _max_weeks))
     now = datetime.now(UTC)
     start_of_period = now - timedelta(weeks=weeks)
 

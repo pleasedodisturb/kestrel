@@ -51,8 +51,8 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     # Seed two profiles for scoping tests
     profile_a = Profile(
@@ -555,13 +555,13 @@ class TestScoringWeights:
 
         assert data["profile_id"] == 1
         # TPM preset: skills_match=0.20, career_alignment=0.25
-        assert data["skills_match"] == 0.20
-        assert data["career_alignment"] == 0.25
-        assert data["culture_fit"] == 0.15
-        assert data["salary_match"] == 0.15
-        assert data["location_match"] == 0.10
-        assert data["growth_potential"] == 0.10
-        assert data["remote_preference"] == 0.05
+        assert data["skills_match"] == pytest.approx(0.20)
+        assert data["career_alignment"] == pytest.approx(0.25)
+        assert data["culture_fit"] == pytest.approx(0.15)
+        assert data["salary_match"] == pytest.approx(0.15)
+        assert data["location_match"] == pytest.approx(0.10)
+        assert data["growth_potential"] == pytest.approx(0.10)
+        assert data["remote_preference"] == pytest.approx(0.05)
 
     def test_update_weights(self, client, db_session):
         """PUT /api/scoring-weights updates weight values."""
@@ -573,10 +573,10 @@ class TestScoringWeights:
         assert resp.status_code == 200
         data = resp.json()
 
-        assert data["skills_match"] == 0.50
-        assert data["career_alignment"] == 0.30
+        assert data["skills_match"] == pytest.approx(0.50)
+        assert data["career_alignment"] == pytest.approx(0.30)
         # Other weights remain default
-        assert data["culture_fit"] == 0.15
+        assert data["culture_fit"] == pytest.approx(0.15)
 
     def test_weight_change_produces_different_score(self, client, db_session):
         """Same job scored differently after weight change (VAL-SCORE-005)."""
@@ -673,8 +673,8 @@ class TestWeightsPersistence:
         # Verify in DB
         weights = db_session.query(ScoringWeights).filter(ScoringWeights.profile_id == 1).first()
         assert weights is not None
-        assert weights.skills_match == 0.80
-        assert weights.career_alignment == 0.10
+        assert weights.skills_match == pytest.approx(0.80)
+        assert weights.career_alignment == pytest.approx(0.10)
 
     def test_weights_survive_session_change(self, client, db_session):
         """Weights persist — reading them back returns the updated values."""
@@ -687,7 +687,7 @@ class TestWeightsPersistence:
         # Read back
         resp = client.get("/api/scoring-weights", params={"profile_id": 1})
         assert resp.status_code == 200
-        assert resp.json()["remote_preference"] == 0.99
+        assert resp.json()["remote_preference"] == pytest.approx(0.99)
 
 
 # ===========================================================================
@@ -1082,7 +1082,7 @@ class TestProfileScoping:
         # Profile B weights are SWE-specific defaults (job_family="SWE")
         resp = client.get("/api/scoring-weights", params={"profile_id": 2})
         assert resp.status_code == 200
-        assert resp.json()["skills_match"] == 0.35  # SWE preset
+        assert resp.json()["skills_match"] == pytest.approx(0.35)  # SWE preset
 
     def test_batch_only_scores_own_jobs(self, client, db_session):
         """Batch scoring only scores jobs owned by the requesting profile."""
@@ -1376,7 +1376,7 @@ class TestJobFamilyChangeInvalidatesScores:
         resp_before = client.get("/api/scoring-weights", params={"profile_id": 1})
         assert resp_before.status_code == 200
         weights_before = resp_before.json()
-        assert weights_before["skills_match"] == 0.20  # TPM preset
+        assert weights_before["skills_match"] == pytest.approx(0.20)  # TPM preset
 
         # Change job_family from TPM to SWE
         resp = client.patch("/api/profiles/1", json={"job_family": "SWE"})
@@ -1386,7 +1386,7 @@ class TestJobFamilyChangeInvalidatesScores:
         resp_after = client.get("/api/scoring-weights", params={"profile_id": 1})
         assert resp_after.status_code == 200
         weights_after = resp_after.json()
-        assert weights_after["skills_match"] == 0.35  # SWE preset
+        assert weights_after["skills_match"] == pytest.approx(0.35)  # SWE preset
 
         # Weights must have actually changed
         assert weights_before["skills_match"] != weights_after["skills_match"]
@@ -1396,13 +1396,13 @@ class TestJobFamilyChangeInvalidatesScores:
         """Changing to an unknown job_family falls back to generic defaults."""
         # Start with TPM weights
         resp = client.get("/api/scoring-weights", params={"profile_id": 1})
-        assert resp.json()["skills_match"] == 0.20  # TPM
+        assert resp.json()["skills_match"] == pytest.approx(0.20)  # TPM
 
         # Change to unknown family
         client.patch("/api/profiles/1", json={"job_family": "Underwater Basket Weaving"})
 
         resp = client.get("/api/scoring-weights", params={"profile_id": 1})
-        assert resp.json()["skills_match"] == 0.25  # Generic default
+        assert resp.json()["skills_match"] == pytest.approx(0.25)  # Generic default
 
     def test_multiple_family_changes_produce_correct_weights(self, client, db_session):
         """Sequential job_family changes always produce correct weights."""

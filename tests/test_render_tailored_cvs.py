@@ -156,7 +156,7 @@ class TestRenderVariant:
 
     def test_calls_rendercv_with_correct_args(self, tmp_path, base_data):
         """Verify subprocess.run is called with correct rendercv command."""
-        result, mock_run = self._run_render(tmp_path, base_data)
+        _result, mock_run = self._run_render(tmp_path, base_data)
 
         mock_run.assert_called_once()
         call_args = mock_run.call_args
@@ -260,6 +260,6 @@ class TestRenderVariant:
 
     def test_creates_destination_directory(self, tmp_path, base_data):
         """Application subfolder is created if it does not exist."""
-        result, _ = self._run_render(tmp_path, base_data)
+        _result, _ = self._run_render(tmp_path, base_data)
         dst_dir = tmp_path / "applications" / self.ROLE_KEY
         assert dst_dir.is_dir()

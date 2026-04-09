@@ -58,8 +58,8 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     def override_get_db():
         try:
@@ -784,8 +784,8 @@ class TestConnectionTest:
 
     def test_configured_and_connected(self, db_session, ticktick_config):
         """Configured integration with mocked API returns success."""
-        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.ticktick_sync.TickTickClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.test_connection.return_value = True
 
             success, msg = check_ticktick_connection(db_session)
@@ -794,11 +794,11 @@ class TestConnectionTest:
 
     def test_configured_but_api_fails(self, db_session, ticktick_config):
         """Configured integration with API failure returns failure."""
-        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.ticktick_sync.TickTickClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.test_connection.return_value = False
 
-            success, msg = check_ticktick_connection(db_session)
+            success, _msg = check_ticktick_connection(db_session)
             assert success is False
 
 
@@ -858,8 +858,8 @@ class TestTickTickAPI:
         self, db_session, profile, application, follow_up, ticktick_config
     ):
         """POST /api/ticktick/push successfully syncs follow-up."""
-        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.ticktick_sync.TickTickClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.create_task.return_value = {
                 "id": "tt-api-test",
                 "projectId": "test-project-id",
@@ -882,8 +882,8 @@ class TestTickTickAPI:
 
     def test_push_learning_goal_success(self, db_session, profile, learning_goal, ticktick_config):
         """POST /api/ticktick/push successfully syncs learning goal."""
-        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.ticktick_sync.TickTickClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.create_task.return_value = {
                 "id": "tt-lg-api",
                 "projectId": "test-project-id",
@@ -906,8 +906,8 @@ class TestTickTickAPI:
 
     def test_push_pipeline_action_success(self, db_session, profile, application, ticktick_config):
         """POST /api/ticktick/push successfully syncs pipeline action."""
-        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.ticktick_sync.TickTickClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.create_task.return_value = {
                 "id": "tt-pa-api",
                 "projectId": "test-project-id",
@@ -934,8 +934,8 @@ class TestTickTickAPI:
 
     def test_pull_success(self, db_session, profile, ticktick_config):
         """POST /api/ticktick/pull returns sync results."""
-        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.ticktick_sync.TickTickClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.get_completed_tasks.return_value = []
 
             resp = client.post(f"/api/ticktick/pull?profile_id={profile.id}")
@@ -946,8 +946,8 @@ class TestTickTickAPI:
 
     def test_test_connection_endpoint(self, db_session, ticktick_config):
         """POST /api/ticktick/test returns connection status."""
-        with patch("career_os.services.ticktick_sync.TickTickClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.ticktick_sync.TickTickClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.test_connection.return_value = True
 
             resp = client.post("/api/ticktick/test")

@@ -217,7 +217,7 @@ def test_list_contacts_search(db: Session):
     )
     create_contact(db, ContactCreate(profile_id=1, name="Charlie"))
 
-    contacts, total = list_contacts(db, profile_id=1, search="alice")
+    _contacts, total = list_contacts(db, profile_id=1, search="alice")
     assert total == 2  # matches name "Alice" and notes "alice"
 
 
@@ -262,7 +262,7 @@ def test_archive_contact(db: Session):
     assert archived.archived_at is not None
 
     # Should not appear in list
-    contacts, total = list_contacts(db, profile_id=1)
+    _contacts, total = list_contacts(db, profile_id=1)
     assert total == 0
 
 

@@ -32,14 +32,14 @@ def db_session(monkeypatch):
 
     Base.metadata.create_all(bind=engine)
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
 
-    session = TestSession()
+    session = test_session_cls()
     session.add(Profile(id=1, name="Test User", email="test@example.com"))
     session.commit()
 
     # Monkeypatch SessionLocal to return our test session
-    monkeypatch.setattr("career_os.cli.contacts.SessionLocal", TestSession)
+    monkeypatch.setattr("career_os.cli.contacts.SessionLocal", test_session_cls)
 
     yield session
     session.close()
