@@ -45,10 +45,7 @@ def db_session():
     session.commit()
 
     def override_get_db():
-        try:
-            yield session
-        finally:
-            pass  # Keep session open for test assertions
+        yield session
 
     app.dependency_overrides[get_db] = override_get_db
     yield session
@@ -127,7 +124,7 @@ class TestCreateApplication:
         assert data["source"] == "linkedin"
         assert data["salary_range"] == "120k-160k EUR"
         assert data["notes"] == "Great opportunity"
-        assert data["fit_score"] == pytest.approx(8.5)
+        assert data["fit_score"] == 8.5
 
     def test_create_default_status_discovered(self, client: TestClient):
         data = _create_app(client)

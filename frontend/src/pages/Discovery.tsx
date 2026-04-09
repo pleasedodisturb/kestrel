@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -9,6 +9,7 @@ import {
   fetchSavedSearches,
   createSavedSearch,
   deleteSavedSearch,
+  fetchLatestDiscoveryRun,
 } from "@/api/discovery";
 import { DEFAULT_PROFILE_ID } from "@/api/applications";
 import type {
@@ -514,6 +515,19 @@ export function Discovery() {
   const [profileIncomplete, setProfileIncomplete] = useState(
     () => sessionStorage.getItem("profile_incomplete") !== null,
   );
+  const [newMatchesCount, setNewMatchesCount] = useState(0);
+
+  // Check for new matches since last visit
+  useEffect(() => {
+    fetchLatestDiscoveryRun(DEFAULT_PROFILE_ID).then((run) => {
+      if (!run?.completed_at || !run.new_jobs) return;
+      const lastVisit = localStorage.getItem("lastDiscoveryVisit");
+      if (!lastVisit || new Date(run.completed_at) > new Date(lastVisit)) {
+        setNewMatchesCount(run.new_jobs);
+      }
+    });
+    localStorage.setItem("lastDiscoveryVisit", new Date().toISOString());
+  }, []);
 
   // Debounce search input
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -807,6 +821,32 @@ export function Discovery() {
                 sessionStorage.removeItem("profile_incomplete");
               }}
               className="ml-4 text-blue-400 hover:text-blue-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* New matches banner */}
+      {newMatchesCount > 0 && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex gap-3">
+              <Star className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
+              <div>
+                <h3 className="text-sm font-semibold text-green-800">
+                  New Matches Found
+                </h3>
+                <p className="mt-1 text-sm text-green-700">
+                  {newMatchesCount} new job{newMatchesCount !== 1 ? "s" : ""}{" "}
+                  discovered since your last visit.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setNewMatchesCount(0)}
+              className="ml-4 text-green-400 hover:text-green-600"
             >
               <X className="h-4 w-4" />
             </button>
