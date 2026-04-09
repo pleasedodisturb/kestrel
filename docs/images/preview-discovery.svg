@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <filter id="shadow1" x="-2%" y="-2%" width="104%" height="108%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="920" height="520" rx="12" fill="#f8fafc"/>
+  <rect width="920" height="520" rx="12" fill="none" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Top Nav Bar -->
+  <rect width="920" height="48" rx="12" fill="#ffffff"/>
+  <rect y="40" width="920" height="8" fill="#ffffff"/>
+  <line x1="0" y1="48" x2="920" y2="48" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="20" y="30" font-size="15" font-weight="700" fill="#0f172a">Kestrel</text>
+  <text x="95" y="30" font-size="11" fill="#64748b">Pipeline</text>
+  <rect x="155" y="12" width="72" height="26" rx="6" fill="#f1f5f9"/>
+  <text x="168" y="30" font-size="11" font-weight="600" fill="#3b82f6">Discovery</text>
+  <text x="242" y="30" font-size="11" fill="#64748b">Follow-Ups</text>
+  <text x="319" y="30" font-size="11" fill="#64748b">Contacts</text>
+  <text x="385" y="30" font-size="11" fill="#64748b">Analytics</text>
+  <text x="452" y="30" font-size="11" fill="#64748b">Settings</text>
+
+  <!-- Page Header -->
+  <text x="24" y="78" font-size="18" font-weight="700" fill="#0f172a">Discovered Jobs</text>
+  <text x="168" y="78" font-size="14" fill="#94a3b8">(23)</text>
+
+  <!-- Search Bar -->
+  <rect x="24" y="90" width="580" height="34" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="44" y="112" font-size="12" fill="#94a3b8">Search jobs by title, company, description...</text>
+  <!-- Search icon -->
+  <circle cx="35" cy="107" r="5" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="39" y1="111" x2="42" y2="114" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- Sort & Filter Controls -->
+  <rect x="614" y="90" width="100" height="34" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="630" y="112" font-size="11" fill="#64748b">Sort: Score</text>
+  <rect x="722" y="90" width="80" height="34" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="738" y="112" font-size="11" fill="#64748b">Filters</text>
+  <rect x="810" y="90" width="90" height="34" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="822" y="112" font-size="11" font-weight="500" fill="#3b82f6">Save Search</text>
+
+  <!-- Job Card 1 -->
+  <rect x="24" y="136" width="876" height="88" rx="8" fill="#ffffff" filter="url(#shadow1)"/>
+  <text x="40" y="162" font-size="14" font-weight="600" fill="#0f172a">Senior Backend Engineer</text>
+  <text x="40" y="180" font-size="11" fill="#64748b">Stripe</text>
+  <text x="90" y="180" font-size="11" fill="#64748b">San Francisco, CA</text>
+  <rect x="215" y="169" width="52" height="16" rx="4" fill="#dcfce7"/>
+  <text x="223" y="180" font-size="9" font-weight="500" fill="#16a34a">Remote</text>
+  <text x="40" y="198" font-size="10" fill="#94a3b8">Build and scale payment infrastructure serving millions of businesses worldwide. Design distributed systems...</text>
+  <rect x="40" y="206" width="80" height="16" rx="4" fill="#eff6ff"/>
+  <text x="48" y="217" font-size="9" fill="#3b82f6">$190k - $250k</text>
+  <rect x="126" y="206" width="52" height="16" rx="4" fill="#f1f5f9"/>
+  <text x="134" y="217" font-size="9" fill="#64748b">LinkedIn</text>
+  <rect x="184" y="206" width="44" height="16" rx="4" fill="#f1f5f9"/>
+  <text x="192" y="217" font-size="9" fill="#64748b">Indeed</text>
+  <!-- Score -->
+  <text x="830" y="160" font-size="20" font-weight="700" fill="#16a34a">9.2</text>
+  <text x="860" y="160" font-size="11" fill="#16a34a">★</text>
+  <rect x="818" y="168" width="62" height="18" rx="4" fill="#dcfce7"/>
+  <text x="826" y="181" font-size="10" font-weight="500" fill="#16a34a">88% ready</text>
+  <text x="840" y="200" font-size="9" fill="#94a3b8">2 days ago</text>
+
+  <!-- Job Card 2 -->
+  <rect x="24" y="232" width="876" height="88" rx="8" fill="#ffffff" filter="url(#shadow1)"/>
+  <text x="40" y="258" font-size="14" font-weight="600" fill="#0f172a">Staff Software Engineer</text>
+  <text x="40" y="276" font-size="11" fill="#64748b">GitHub</text>
+  <text x="88" y="276" font-size="11" fill="#64748b">Remote - US</text>
+  <rect x="170" y="265" width="52" height="16" rx="4" fill="#dcfce7"/>
+  <text x="178" y="276" font-size="9" font-weight="500" fill="#16a34a">Remote</text>
+  <text x="40" y="294" font-size="10" fill="#94a3b8">Lead architecture for developer collaboration features. Work across teams on real-time systems and APIs...</text>
+  <rect x="40" y="302" width="80" height="16" rx="4" fill="#eff6ff"/>
+  <text x="48" y="313" font-size="9" fill="#3b82f6">$200k - $280k</text>
+  <rect x="126" y="302" width="52" height="16" rx="4" fill="#f1f5f9"/>
+  <text x="134" y="313" font-size="9" fill="#64748b">LinkedIn</text>
+  <!-- Score -->
+  <text x="830" y="256" font-size="20" font-weight="700" fill="#16a34a">8.7</text>
+  <text x="860" y="256" font-size="11" fill="#16a34a">★</text>
+  <rect x="818" y="264" width="62" height="18" rx="4" fill="#dcfce7"/>
+  <text x="826" y="277" font-size="10" font-weight="500" fill="#16a34a">82% ready</text>
+  <text x="840" y="296" font-size="9" fill="#94a3b8">3 days ago</text>
+
+  <!-- Job Card 3 -->
+  <rect x="24" y="328" width="876" height="88" rx="8" fill="#ffffff" filter="url(#shadow1)"/>
+  <text x="40" y="354" font-size="14" font-weight="600" fill="#0f172a">Platform Engineer</text>
+  <text x="40" y="372" font-size="11" fill="#64748b">Datadog</text>
+  <text x="96" y="372" font-size="11" fill="#64748b">New York, NY</text>
+  <text x="40" y="390" font-size="10" fill="#94a3b8">Design and maintain cloud-native observability infrastructure. Kubernetes, Terraform, CI/CD pipelines...</text>
+  <rect x="40" y="398" width="80" height="16" rx="4" fill="#eff6ff"/>
+  <text x="48" y="409" font-size="9" fill="#3b82f6">$170k - $230k</text>
+  <rect x="126" y="398" width="60" height="16" rx="4" fill="#f1f5f9"/>
+  <text x="134" y="409" font-size="9" fill="#64748b">Glassdoor</text>
+  <!-- Score -->
+  <text x="830" y="352" font-size="20" font-weight="700" fill="#ca8a04">6.8</text>
+  <text x="860" y="352" font-size="11" fill="#ca8a04">★</text>
+  <rect x="818" y="360" width="62" height="18" rx="4" fill="#fef9c3"/>
+  <text x="826" y="373" font-size="10" font-weight="500" fill="#ca8a04">61% ready</text>
+  <text x="840" y="392" font-size="9" fill="#94a3b8">5 days ago</text>
+
+  <!-- Job Card 4 -->
+  <rect x="24" y="424" width="876" height="62" rx="8" fill="#ffffff" filter="url(#shadow1)"/>
+  <text x="40" y="452" font-size="14" font-weight="600" fill="#0f172a">DevOps Lead</text>
+  <text x="40" y="470" font-size="11" fill="#64748b">Cloudflare</text>
+  <text x="106" y="470" font-size="11" fill="#64748b">Austin, TX</text>
+  <rect x="176" y="459" width="52" height="16" rx="4" fill="#dcfce7"/>
+  <text x="184" y="470" font-size="9" font-weight="500" fill="#16a34a">Remote</text>
+  <!-- Score -->
+  <text x="830" y="448" font-size="20" font-weight="700" fill="#16a34a">8.1</text>
+  <text x="860" y="448" font-size="11" fill="#16a34a">★</text>
+  <rect x="818" y="456" width="62" height="18" rx="4" fill="#dbeafe"/>
+  <text x="826" y="469" font-size="10" font-weight="500" fill="#2563eb">75% ready</text>
+
+  <!-- Pagination -->
+  <text x="370" y="510" font-size="11" fill="#64748b">Showing 1-20 of 23 jobs</text>
+  <rect x="480" y="496" width="28" height="20" rx="4" fill="#3b82f6"/>
+  <text x="489" y="510" font-size="10" font-weight="600" fill="#ffffff">1</text>
+  <rect x="512" y="496" width="28" height="20" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="521" y="510" font-size="10" fill="#64748b">2</text>
+</svg>
