@@ -79,6 +79,44 @@ def _get_completed_skills(db: Session, profile_id: int) -> set[str]:
     return completed
 
 
+def _aggregate_requirement_gaps(requirements, skills_by_name):
+    """Aggregate skill gaps from job requirements into gap_data and display_names dicts."""
+    gap_data: dict[str, dict] = {}
+    display_names: dict[str, str] = {}
+
+    for req in requirements:
+        skill_key = req.skill_name.lower().strip()
+        current_skill = skills_by_name.get(skill_key)
+        current_level = current_skill.proficiency if current_skill else None
+
+        distance = _calculate_skill_distance(req.required_level, current_level, _PROFICIENCY_ORDER)
+        if distance <= 0:
+            continue
+
+        sw = _SEVERITY_WEIGHT.get(req.severity, 1.0)
+        if skill_key not in gap_data:
+            gap_data[skill_key] = {
+                "frequency": 0,
+                "max_severity_weight": 0.0,
+                "required_level": req.required_level,
+                "current_level": current_level,
+                "distance": distance,
+            }
+            display_names[skill_key] = req.skill_name
+
+        entry = gap_data[skill_key]
+        entry["frequency"] += 1
+        entry["max_severity_weight"] = max(entry["max_severity_weight"], sw)
+
+        if _PROFICIENCY_ORDER.get(req.required_level.lower(), 0) > _PROFICIENCY_ORDER.get(
+            entry["required_level"].lower(), 0
+        ):
+            entry["required_level"] = req.required_level
+            entry["distance"] = distance
+
+    return gap_data, display_names
+
+
 # ---------------------------------------------------------------------------
 # Core suggestion generation
 # ---------------------------------------------------------------------------
@@ -117,41 +155,7 @@ def _build_skill_gap_suggestions(db: Session, profile_id: int) -> list[dict]:
         .all()
     )
 
-    # Aggregate gaps: normalized_key → (frequency, max severity weight, required level)
-    # display_names: normalized_key → first-seen display name
-    gap_data: dict[str, dict] = {}
-    display_names: dict[str, str] = {}
-
-    for req in requirements:
-        skill_key = req.skill_name.lower().strip()
-        current_skill = skills_by_name.get(skill_key)
-        current_level = current_skill.proficiency if current_skill else None
-
-        distance = _calculate_skill_distance(req.required_level, current_level, _PROFICIENCY_ORDER)
-        if distance <= 0:
-            continue
-
-        sw = _SEVERITY_WEIGHT.get(req.severity, 1.0)
-        if skill_key not in gap_data:
-            gap_data[skill_key] = {
-                "frequency": 0,
-                "max_severity_weight": 0.0,
-                "required_level": req.required_level,
-                "current_level": current_level,
-                "distance": distance,
-            }
-            display_names[skill_key] = req.skill_name
-
-        entry = gap_data[skill_key]
-        entry["frequency"] += 1
-        entry["max_severity_weight"] = max(entry["max_severity_weight"], sw)
-
-        # Keep the highest required level and recalculate distance
-        if _PROFICIENCY_ORDER.get(req.required_level.lower(), 0) > _PROFICIENCY_ORDER.get(
-            entry["required_level"].lower(), 0
-        ):
-            entry["required_level"] = req.required_level
-            entry["distance"] = distance
+    gap_data, display_names = _aggregate_requirement_gaps(requirements, skills_by_name)
 
     # Check which gaps already have completed learning
     completed_skills = _get_completed_skills(db, profile_id)
