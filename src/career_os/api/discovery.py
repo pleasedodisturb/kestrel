@@ -1,4 +1,6 @@
-"""Discovery API routes — job discovery, search profiles, and discovery runs."""
+"""Discovery API routes - job discovery, search profiles, and discovery runs."""
+
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -38,11 +40,11 @@ router = APIRouter(tags=["discovery"])
 @router.post("/api/discover")
 async def discover(
     payload: DiscoverRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> DiscoverResponse:
     """Trigger a discovery sweep across configured sources.
 
-    Returns jobs from ≥2 sources with deduplication. Individual source
+    Returns jobs from >=2 sources with deduplication. Individual source
     failures return warnings, don't block other sources.
     """
     try:
@@ -83,7 +85,7 @@ async def discover(
 )
 async def create_search_profile_endpoint(
     payload: SearchProfileCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> SearchProfileResponse:
     """Create a saved search profile."""
     try:
@@ -102,9 +104,9 @@ async def create_search_profile_endpoint(
     "/api/search-profiles",
 )
 async def list_search_profiles_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    active_only: bool = Query(False, description="Only active profiles"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    active_only: Annotated[bool, Query(description="Only active profiles")] = False,
 ) -> SearchProfileListResponse:
     """List saved search profiles for a profile."""
     profiles = list_search_profiles(db, profile_id, active_only=active_only)
@@ -119,8 +121,8 @@ async def list_search_profiles_endpoint(
 )
 async def get_search_profile_endpoint(
     sp_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> SearchProfileResponse:
     """Get a single search profile."""
     try:
@@ -136,8 +138,8 @@ async def get_search_profile_endpoint(
 async def update_search_profile_endpoint(
     sp_id: int,
     payload: SearchProfileUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> SearchProfileResponse:
     """Update a search profile."""
     try:
@@ -158,8 +160,8 @@ async def update_search_profile_endpoint(
 )
 async def delete_search_profile_endpoint(
     sp_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a search profile."""
     try:
@@ -177,9 +179,9 @@ async def delete_search_profile_endpoint(
     "/api/discovery-runs",
 )
 async def list_discovery_runs_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    limit: int = Query(20, ge=1, le=100, description="Max results"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=100, description="Max results")] = 20,
 ) -> list[DiscoveryRunResponse]:
     """List discovery run history for a profile."""
     runs = list_discovery_runs(db, profile_id, limit=limit)

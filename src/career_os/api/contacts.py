@@ -1,4 +1,6 @@
-"""API routes for Networking CRM (M6) — contacts, interactions, linking."""
+"""API routes for Networking CRM (M6) - contacts, interactions, linking."""
+
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -45,7 +47,7 @@ router = APIRouter(prefix="/api", tags=["contacts"])
 @router.post("/contacts", status_code=201)
 async def create(
     payload: ContactCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> ContactResponse:
     """Create a new contact."""
     try:
@@ -57,13 +59,13 @@ async def create(
 
 @router.get("/contacts")
 async def list_all(
-    profile_id: int = Query(..., description="Profile to list contacts for"),
-    company: str | None = Query(default=None, description="Filter by company"),
-    relationship_type: str | None = Query(default=None, description="Filter by type"),
-    warmth: str | None = Query(default=None, description="Filter by warmth"),
-    needs_follow_up: bool = Query(default=False, description="Show overdue follow-ups only"),
-    search: str | None = Query(default=None, description="Search name/company/notes"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile to list contacts for")],
+    db: Annotated[Session, Depends(get_db)],
+    company: Annotated[str | None, Query(description="Filter by company")] = None,
+    relationship_type: Annotated[str | None, Query(description="Filter by type")] = None,
+    warmth: Annotated[str | None, Query(description="Filter by warmth")] = None,
+    needs_follow_up: Annotated[bool, Query(description="Show overdue follow-ups only")] = False,
+    search: Annotated[str | None, Query(description="Search name/company/notes")] = None,
 ) -> ContactListResponse:
     """List contacts with optional filters."""
     contacts, total = list_contacts(
@@ -84,8 +86,8 @@ async def list_all(
 @router.get("/contacts/by-company/{company}")
 async def contacts_at_company(
     company: str,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ContactListResponse:
     """Get all contacts at a company."""
     contacts = get_contacts_by_company(db, company, profile_id=profile_id)
@@ -98,8 +100,8 @@ async def contacts_at_company(
 @router.get("/contacts/{contact_id}")
 async def get_detail(
     contact_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ContactDetailResponse:
     """Get contact detail with interactions and linked applications."""
     try:
@@ -123,8 +125,8 @@ async def get_detail(
 async def update(
     contact_id: int,
     payload: ContactUpdate,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ContactResponse:
     """Update a contact."""
     try:
@@ -137,8 +139,8 @@ async def update(
 @router.delete("/contacts/{contact_id}", status_code=204)
 async def delete(
     contact_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Soft-delete a contact."""
     try:
@@ -159,8 +161,8 @@ async def delete(
 async def log_interaction(
     contact_id: int,
     payload: InteractionCreate,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> InteractionResponse:
     """Log an interaction with a contact."""
     try:
@@ -175,8 +177,8 @@ async def log_interaction(
 )
 async def get_interactions(
     contact_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> InteractionListResponse:
     """List interactions for a contact."""
     try:
@@ -201,8 +203,8 @@ async def get_interactions(
 async def link_application(
     contact_id: int,
     payload: ContactApplicationCreate,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ContactApplicationResponse:
     """Link a contact to an application."""
     try:
@@ -219,8 +221,8 @@ async def link_application(
 @router.get("/contacts/{contact_id}/applications")
 async def get_linked_applications(
     contact_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ):
     """List applications linked to a contact."""
     try:
@@ -238,8 +240,8 @@ async def get_linked_applications(
 async def unlink_application(
     contact_id: int,
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Unlink a contact from an application."""
     try:
@@ -256,8 +258,8 @@ async def unlink_application(
 @router.get("/applications/{application_id}/contacts")
 async def get_application_contacts(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ):
     """Get contacts linked to an application (reverse lookup)."""
     results = get_contacts_for_application(db, application_id, profile_id=profile_id)

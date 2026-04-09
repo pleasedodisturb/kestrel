@@ -1,5 +1,7 @@
 """Pushover notification API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -35,8 +37,8 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 @router.get("/preferences")
 async def get_notification_preferences(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> NotificationPreferenceResponse:
     """Get notification preferences for a profile."""
     pref = get_preferences(db, profile_id)
@@ -45,9 +47,9 @@ async def get_notification_preferences(
 
 @router.put("/preferences")
 async def update_notification_preferences(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
     payload: NotificationPreferenceUpdate = ...,
-    db: Session = Depends(get_db),
 ) -> NotificationPreferenceResponse:
     """Update notification preferences for a profile."""
     pref = update_preferences(db, profile_id, payload)
@@ -61,11 +63,11 @@ async def update_notification_preferences(
 
 @router.get("/log")
 async def get_notification_log(
-    profile_id: int = Query(..., description="Profile ID"),
-    category: str | None = Query(default=None, description="Filter by category"),
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> NotificationLogListResponse:
     """List notification history for a profile."""
     logs, total = list_notification_logs(
@@ -84,8 +86,8 @@ async def get_notification_log(
 
 @router.post("/trigger/follow-ups")
 async def trigger_follow_ups(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> NotificationTriggerResponse:
     """Check for due follow-ups and send Pushover notifications."""
     result = trigger_follow_up_reminders(db, profile_id)
@@ -94,8 +96,8 @@ async def trigger_follow_ups(
 
 @router.post("/trigger/ghosts")
 async def trigger_ghosts(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> NotificationTriggerResponse:
     """Check for ghost applications and send Pushover notifications."""
     result = trigger_ghost_alerts(db, profile_id)
@@ -104,13 +106,13 @@ async def trigger_ghosts(
 
 @router.post("/trigger/discovery")
 async def trigger_discovery(
-    profile_id: int = Query(..., description="Profile ID"),
-    company: str = Query(..., description="Company name"),
-    role: str = Query(..., description="Role title"),
-    score: float = Query(..., ge=0, le=10, description="Fit score"),
-    application_id: int | None = Query(default=None),
-    url: str | None = Query(default=None),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    company: Annotated[str, Query(description="Company name")],
+    role: Annotated[str, Query(description="Role title")],
+    score: Annotated[float, Query(ge=0, le=10, description="Fit score")],
+    db: Annotated[Session, Depends(get_db)],
+    application_id: Annotated[int | None, Query()] = None,
+    url: Annotated[str | None, Query()] = None,
 ) -> NotificationTriggerResponse:
     """Send notification for a high-scoring discovery."""
     result = trigger_discovery_alert(
@@ -127,8 +129,8 @@ async def trigger_discovery(
 
 @router.post("/trigger/interviews")
 async def trigger_interviews(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> NotificationTriggerResponse:
     """Check for upcoming interviews and send Pushover reminders."""
     result = trigger_interview_reminders(db, profile_id)
@@ -142,8 +144,8 @@ async def trigger_interviews(
 
 @router.post("/deliver-queued")
 async def deliver_queued(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """Deliver queued notifications that were deferred during quiet hours."""
     return deliver_queued_notifications(db, profile_id)
@@ -152,7 +154,7 @@ async def deliver_queued(
 @router.post("/send")
 async def send_notification(
     payload: SendNotificationRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """Send a manual notification via Pushover."""
     return send_test_notification(
@@ -167,7 +169,7 @@ async def send_notification(
 
 @router.post("/test-connection")
 async def test_connection(
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """Test Pushover connection by validating credentials."""
     return test_pushover_connection(db)

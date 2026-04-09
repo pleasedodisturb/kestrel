@@ -1,5 +1,7 @@
 """Gap Analysis API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -31,8 +33,8 @@ router = APIRouter(tags=["gaps"])
 )
 async def get_application_gaps(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> GapAnalysisResponse:
     """Perform gap analysis for a specific application.
 
@@ -65,8 +67,8 @@ async def get_application_gaps(
     "/api/gaps/aggregate",
 )
 async def get_aggregate_gaps(
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> AggregateGapResponse:
     """Get aggregate gap analysis across all applications.
 
@@ -90,8 +92,8 @@ async def get_aggregate_gaps(
 )
 async def get_requirements(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> list[JobRequirementResponse]:
     """Get job requirements for an application.
 
@@ -119,7 +121,7 @@ async def get_requirements(
 async def create_requirements(
     application_id: int,
     payload: JobRequirementBulkCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> list[JobRequirementResponse]:
     """Create job requirements for an application.
 

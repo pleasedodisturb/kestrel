@@ -1,4 +1,6 @@
-"""Scoring API routes — AI-powered job scoring engine."""
+"""Scoring API routes - AI-powered job scoring engine."""
+
+from typing import Annotated
 
 import logging
 
@@ -42,7 +44,7 @@ router = APIRouter(tags=["scoring"])
 @router.post("/api/score", status_code=201)
 async def score_endpoint(
     payload: ScoreRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse:
     """Score a job against a profile.
 
@@ -85,8 +87,8 @@ async def score_endpoint(
 
 @router.get("/api/scoring-weights")
 async def get_weights_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoringWeightsResponse:
     """Get scoring weights for a profile."""
     try:
@@ -100,8 +102,8 @@ async def get_weights_endpoint(
 @router.put("/api/scoring-weights")
 async def update_weights_endpoint(
     payload: ScoringWeightsUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoringWeightsResponse:
     """Update scoring weights for a profile.
 
@@ -127,7 +129,7 @@ async def update_weights_endpoint(
 @router.post("/api/score/batch")
 async def batch_score_endpoint(
     payload: BatchScoreRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> BatchScoreResponse:
     """Batch score discovered jobs for a profile.
 
@@ -175,8 +177,8 @@ async def batch_score_endpoint(
 @router.get("/api/score/job/{discovered_job_id}")
 async def get_job_score_endpoint(
     discovered_job_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
     """Get the latest score for a discovered job."""
     scored = get_score_for_job(db, profile_id, discovered_job_id)
@@ -190,8 +192,8 @@ async def get_job_score_endpoint(
 )
 async def get_application_score_endpoint(
     application_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
     """Get the latest score for an application."""
     scored = get_score_for_application(db, profile_id, application_id)
@@ -207,8 +209,8 @@ async def get_application_score_endpoint(
 
 @router.post("/api/scoring/flag-stale")
 async def flag_stale_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, int]:
     """Mark all scores for a profile as stale.
 
