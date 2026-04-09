@@ -70,10 +70,10 @@ const ALL_PROFICIENCIES: SkillProficiency[] = [
 function AddSkillDialog({
   onClose,
   profileId,
-}: {
+}: Readonly<{
   onClose: () => void;
   profileId: number;
-}) {
+}>) {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [category, setCategory] = useState<SkillCategory>("technical");
@@ -100,6 +100,8 @@ function AddSkillDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
@@ -122,10 +124,11 @@ function AddSkillDialog({
           className="mt-4 space-y-4"
         >
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="add-skill-name" className="block text-sm font-medium text-gray-700">
               Name *
             </label>
             <input
+              id="add-skill-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -135,10 +138,11 @@ function AddSkillDialog({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="add-skill-category" className="block text-sm font-medium text-gray-700">
               Category
             </label>
             <select
+              id="add-skill-category"
               value={category}
               onChange={(e) => setCategory(e.target.value as SkillCategory)}
               className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -151,10 +155,11 @@ function AddSkillDialog({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="add-skill-proficiency" className="block text-sm font-medium text-gray-700">
               Proficiency
             </label>
             <select
+              id="add-skill-proficiency"
               value={proficiency}
               onChange={(e) =>
                 setProficiency(e.target.value as SkillProficiency)
@@ -169,10 +174,11 @@ function AddSkillDialog({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="add-skill-evidence" className="block text-sm font-medium text-gray-700">
               Evidence / Notes
             </label>
             <textarea
+              id="add-skill-evidence"
               value={evidenceDetail}
               onChange={(e) => setEvidenceDetail(e.target.value)}
               placeholder="Optional: describe your experience..."
@@ -219,11 +225,11 @@ function EditSkillDialog({
   skill,
   onClose,
   profileId,
-}: {
+}: Readonly<{
   skill: Skill;
   onClose: () => void;
   profileId: number;
-}) {
+}>) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(skill.name);
   const [category, setCategory] = useState<SkillCategory>(skill.category);
@@ -259,6 +265,8 @@ function EditSkillDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
@@ -281,10 +289,11 @@ function EditSkillDialog({
           className="mt-4 space-y-4"
         >
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="edit-skill-name" className="block text-sm font-medium text-gray-700">
               Name *
             </label>
             <input
+              id="edit-skill-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -293,10 +302,11 @@ function EditSkillDialog({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="edit-skill-category" className="block text-sm font-medium text-gray-700">
               Category
             </label>
             <select
+              id="edit-skill-category"
               value={category}
               onChange={(e) => setCategory(e.target.value as SkillCategory)}
               className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -309,10 +319,11 @@ function EditSkillDialog({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="edit-skill-proficiency" className="block text-sm font-medium text-gray-700">
               Proficiency
             </label>
             <select
+              id="edit-skill-proficiency"
               value={proficiency}
               onChange={(e) =>
                 setProficiency(e.target.value as SkillProficiency)
@@ -327,10 +338,11 @@ function EditSkillDialog({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="edit-skill-evidence" className="block text-sm font-medium text-gray-700">
               Evidence / Notes
             </label>
             <textarea
+              id="edit-skill-evidence"
               value={evidenceDetail}
               onChange={(e) => setEvidenceDetail(e.target.value)}
               rows={3}
@@ -376,11 +388,11 @@ function SkillHistoryPanel({
   skill,
   onClose,
   profileId,
-}: {
+}: Readonly<{
   skill: Skill;
   onClose: () => void;
   profileId: number;
-}) {
+}>) {
   const { data: history, isLoading } = useQuery({
     queryKey: ["skill-history", skill.id, profileId],
     queryFn: () => fetchSkillHistory(skill.id, profileId),
@@ -390,6 +402,8 @@ function SkillHistoryPanel({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
     >
       <div
         className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
