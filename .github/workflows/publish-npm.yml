@@ -23,10 +23,11 @@ jobs:
       - name: Sync version from pyproject.toml
         run: |
           VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          export VERSION
           cd npm-package
           node -e "
             const pkg = require('./package.json');
-            pkg.version = '$VERSION';
+            pkg.version = process.env.VERSION;
             require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
           echo "Publishing version $VERSION"
