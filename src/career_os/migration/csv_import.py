@@ -137,6 +137,55 @@ def _normalize_salary(salary_str: str) -> str | None:
     return salary_str if salary_str else None
 
 
+def _process_csv_row(
+    row: dict[str, str],
+    row_num: int,
+    profile_id: int,
+    warnings_list: list[str],
+) -> Application | None:
+    """Process a single CSV row into an Application (not yet added to DB).
+
+    Returns an Application instance, or None if the row should be skipped.
+    Appends any warnings to *warnings_list*.
+    """
+    raw_status = row.get("status", "").strip()
+    status = _map_status(raw_status)
+    if raw_status.lower() not in STATUS_MAP:
+        warnings_list.append(f"Row {row_num}: Unmapped status '{raw_status}' → 'Discovered'")
+
+    company = row.get("company", "").strip()
+    role = row.get("role", "").strip()
+    if not company or not role:
+        warnings_list.append(f"Row {row_num}: Missing company or role — skipping")
+        return None
+
+    date_applied = _parse_date(row.get("date_applied", ""))
+    fit_score = _parse_fit_score(row.get("fit_score", ""))
+    url = _normalize_url(row.get("url", ""))
+    salary_range = _normalize_salary(row.get("salary_range", ""))
+
+    if url is None:
+        warnings_list.append(f"Row {row_num}: Empty URL for {company} / {role}")
+    if salary_range and any(c in salary_range for c in ("$", "£", "€", "/hr")):
+        # CodeQL: salary_range is from public job postings, not PII
+        logger.info("Row %d: Non-standard salary format: %s", row_num, salary_range)
+
+    return Application(
+        profile_id=profile_id,
+        company=company,
+        role=role,
+        url=url,
+        source=row.get("source", "").strip() or None,
+        status=status,
+        salary_range=salary_range,
+        contact=row.get("contact", "").strip() or None,
+        next_step=row.get("next_step", "").strip() or None,
+        notes=row.get("notes", "").strip() or None,
+        fit_score=fit_score,
+        date_applied=date_applied,
+    )
+
+
 def import_csv(
     db: Session,
     csv_path: str | Path,
@@ -174,43 +223,14 @@ def import_csv(
 
         for row_num, row in enumerate(reader, start=2):  # start=2 for 1-indexed + header
             try:
-                # Map status
-                raw_status = row.get("status", "").strip()
-                status = _map_status(raw_status)
-                if raw_status.lower() not in STATUS_MAP:
-                    warnings_list.append(
-                        f"Row {row_num}: Unmapped status '{raw_status}' → 'Discovered'"
-                    )
-
-                # Parse fields
-                date_applied = _parse_date(row.get("date_applied", ""))
-                fit_score = _parse_fit_score(row.get("fit_score", ""))
-                url = _normalize_url(row.get("url", ""))
-                salary_range = _normalize_salary(row.get("salary_range", ""))
-
-                company = row.get("company", "").strip()
-                role = row.get("role", "").strip()
-
-                if not company or not role:
-                    warnings_list.append(f"Row {row_num}: Missing company or role — skipping")
+                application = _process_csv_row(row, row_num, profile_id, warnings_list)
+                if application is None:
                     stats["skipped"] = int(stats["skipped"]) + 1
                     continue
 
-                # Create application
-                application = Application(
-                    profile_id=profile_id,
-                    company=company,
-                    role=role,
-                    url=url,
-                    source=row.get("source", "").strip() or None,
-                    status=status,
-                    salary_range=salary_range,
-                    contact=row.get("contact", "").strip() or None,
-                    next_step=row.get("next_step", "").strip() or None,
-                    notes=row.get("notes", "").strip() or None,
-                    fit_score=fit_score,
-                    date_applied=date_applied,
-                )
+                raw_status = row.get("status", "").strip()
+                status = _map_status(raw_status)
+
                 db.add(application)
                 db.flush()  # Get the ID
 
@@ -227,13 +247,6 @@ def import_csv(
                 db.add(log_entry)
 
                 stats["imported"] = int(stats["imported"]) + 1
-
-                # Log edge cases
-                if url is None:
-                    warnings_list.append(f"Row {row_num}: Empty URL for {company} / {role}")
-                if salary_range and any(c in salary_range for c in ("$", "£", "€", "/hr")):
-                    # CodeQL: salary_range is from public job postings, not PII
-                    logger.info("Row %d: Non-standard salary format: %s", row_num, salary_range)
 
             except Exception as e:
                 logger.error("Row %d: Import error: %s", row_num, e)

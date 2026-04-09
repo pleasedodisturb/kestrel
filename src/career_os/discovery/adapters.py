@@ -69,6 +69,21 @@ class ScraperAdapter(ABC):
         """
 
 
+def _should_retry(
+    exc: Exception | None,
+    attempt: int,
+    max_retries: int,
+) -> bool:
+    """Determine if a request should be retried based on the exception and attempt count."""
+    if attempt >= max_retries:
+        return False
+    if exc is None:
+        return True  # 429 from response status check
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+        return True
+    return isinstance(exc, httpx.RequestError)
+
+
 async def _request_with_backoff(
     client: httpx.AsyncClient,
     method: str,
@@ -84,61 +99,128 @@ async def _request_with_backoff(
     last_exc: Exception | None = None
 
     for attempt in range(max_retries + 1):
-        try:
-            response = await client.request(method, url, headers=headers, params=params)
-            if response.status_code == 429:
-                if attempt < max_retries:
-                    logger.warning(
-                        "Rate limited (429) from %s, retrying in %.1fs (attempt %d/%d)",
-                        url,
-                        backoff,
-                        attempt + 1,
-                        max_retries,
-                    )
-                    await asyncio.sleep(backoff)
-                    backoff *= BACKOFF_MULTIPLIER
-                    continue
-                else:
-                    logger.warning("Rate limited (429) from %s after %d retries", url, max_retries)
-                    response.raise_for_status()
-            response.raise_for_status()
+        last_exc, response, backoff = await _attempt_request(
+            client, method, url, headers, params, attempt, max_retries, backoff
+        )
+        if response is not None:
             return response
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 429 and attempt < max_retries:
-                logger.warning(
-                    "Rate limited (429), retrying in %.1fs (attempt %d/%d)",
-                    backoff,
-                    attempt + 1,
-                    max_retries,
-                )
-                await asyncio.sleep(backoff)
-                backoff *= BACKOFF_MULTIPLIER
-                last_exc = exc
-                continue
-            raise
-        except httpx.RequestError as exc:
-            if attempt < max_retries:
-                logger.warning(
-                    "Request error: %s, retrying in %.1fs (attempt %d/%d)",
-                    exc,
-                    backoff,
-                    attempt + 1,
-                    max_retries,
-                )
-                await asyncio.sleep(backoff)
-                backoff *= BACKOFF_MULTIPLIER
-                last_exc = exc
-                continue
-            raise
+        if last_exc is not None and not _should_retry(last_exc, attempt, max_retries):
+            raise last_exc
 
     if last_exc:
         raise last_exc
     raise RuntimeError("Unexpected exit from retry loop")
 
 
+async def _attempt_request(
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    headers: dict | None,
+    params: dict | None,
+    attempt: int,
+    max_retries: int,
+    backoff: float,
+) -> tuple[Exception | None, httpx.Response | None, float]:
+    """Execute a single request attempt, returning (exception, response, new_backoff)."""
+    try:
+        response = await client.request(method, url, headers=headers, params=params)
+        if response.status_code == 429 and _should_retry(None, attempt, max_retries):
+            logger.warning(
+                "Rate limited (429) from %s, retrying in %.1fs (attempt %d/%d)",
+                url,
+                backoff,
+                attempt + 1,
+                max_retries,
+            )
+            await asyncio.sleep(backoff)
+            return None, None, backoff * BACKOFF_MULTIPLIER
+        response.raise_for_status()
+        return None, response, backoff
+    except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+        if not _should_retry(exc, attempt, max_retries):
+            return exc, None, backoff
+        _log_retry(exc, url, backoff, attempt, max_retries)
+        await asyncio.sleep(backoff)
+        return exc, None, backoff * BACKOFF_MULTIPLIER
+
+
+def _log_retry(exc: Exception, url: str, backoff: float, attempt: int, max_retries: int) -> None:
+    """Log a retry warning with context about the error type."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        logger.warning(
+            "Rate limited (429), retrying in %.1fs (attempt %d/%d)",
+            backoff,
+            attempt + 1,
+            max_retries,
+        )
+    else:
+        logger.warning(
+            "Request error: %s, retrying in %.1fs (attempt %d/%d)",
+            exc,
+            backoff,
+            attempt + 1,
+            max_retries,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Arbeitsagentur adapter
 # ---------------------------------------------------------------------------
+
+
+def _build_arbeitsagentur_params(
+    keyword: str,
+    location: str,
+    remote_only: bool,
+    limit: int,
+) -> dict[str, str | int]:
+    """Build query params dict for the Arbeitsagentur API."""
+    query_params: dict[str, str | int] = {
+        "size": min(limit, 100),
+        "page": 1,
+        "veroeffentlichtseit": 30,
+        "angebotsart": 1,
+    }
+    if keyword:
+        query_params["was"] = keyword
+    if location:
+        query_params["wo"] = location
+    if remote_only:
+        query_params["arbeitszeit"] = "ho"
+    return query_params
+
+
+def _resolve_arbeitsagentur_url(job_dict: dict) -> str:
+    """Resolve the job URL from hashId, refnr, or return empty string."""
+    hash_id = job_dict.get("hashId", "")
+    if hash_id:
+        return f"https://www.arbeitsagentur.de/jobboerse/jobsuche/detail/{hash_id}"
+    refnr = job_dict.get("refnr", "")
+    if refnr:
+        return f"https://www.arbeitsagentur.de/jobsuche/suche?was={quote_plus(refnr)}"
+    return ""
+
+
+def _parse_arbeitsagentur_job(job_dict: dict, source_name: str) -> RawJobResult:
+    """Parse a single Arbeitsagentur job dict into a RawJobResult."""
+    arbeitgeber = job_dict.get("arbeitgeber", "")
+    beruf = job_dict.get("beruf", "")
+    refnr = job_dict.get("refnr", "")
+    ar = job_dict.get("arbeitsort", {}) or {}
+    ort = ar.get("ort", "") or ar.get("region", "") or ""
+    land = ar.get("land", "Deutschland")
+
+    location_str = f"{ort}, {land}".strip(", ") if ort or land else "Deutschland"
+
+    return RawJobResult(
+        source=source_name,
+        title=beruf or f"Stelle {refnr}",
+        company=arbeitgeber,
+        location=location_str,
+        url=_resolve_arbeitsagentur_url(job_dict),
+        posted_at=_parse_date(job_dict.get("aktuelleVeroeffentlichungsdatum", "")),
+    )
 
 
 class ArbeitsagenturAdapter(ScraperAdapter):
@@ -160,74 +242,80 @@ class ArbeitsagenturAdapter(ScraperAdapter):
         async with httpx.AsyncClient(timeout=30) as client:
             for kw in keyword_list:
                 for loc in locations:
-                    query_params: dict[str, str | int] = {
-                        "size": min(params.limit_per_source, 100),
-                        "page": 1,
-                        "veroeffentlichtseit": 30,
-                        "angebotsart": 1,
-                    }
-                    if kw:
-                        query_params["was"] = kw
-                    if loc:
-                        query_params["wo"] = loc
-                    if params.remote_only:
-                        query_params["arbeitszeit"] = "ho"
-
-                    url = f"{self.ARBEITSAGENTUR_BASE}/pc/v4/jobs"
-                    headers = {"X-API-Key": self.ARBEITSAGENTUR_API_KEY}
-
-                    try:
-                        response = await _request_with_backoff(
-                            client, "GET", url, headers=headers, params=query_params
-                        )
-                        data = response.json()
-                    except Exception as exc:
-                        logger.warning("Arbeitsagentur API error: %s", exc)
-                        raise
-
-                    jobs = data.get("stellenangebote", [])
-                    for j in jobs:
-                        arbeitgeber = j.get("arbeitgeber", "")
-                        beruf = j.get("beruf", "")
-                        refnr = j.get("refnr", "")
-                        ar = j.get("arbeitsort", {}) or {}
-                        ort = ar.get("ort", "") or ar.get("region", "") or ""
-                        land = ar.get("land", "Deutschland")
-                        hash_id = j.get("hashId", "")
-
-                        if hash_id:
-                            job_url = (
-                                f"https://www.arbeitsagentur.de/jobboerse/jobsuche/detail/{hash_id}"
-                            )
-                        elif refnr:
-                            job_url = (
-                                f"https://www.arbeitsagentur.de/jobsuche/suche"
-                                f"?was={quote_plus(refnr)}"
-                            )
-                        else:
-                            job_url = ""
-
-                        location_str = (
-                            f"{ort}, {land}".strip(", ") if ort or land else "Deutschland"
-                        )
-
-                        results.append(
-                            RawJobResult(
-                                source="arbeitsagentur",
-                                title=beruf or f"Stelle {refnr}",
-                                company=arbeitgeber,
-                                location=location_str,
-                                url=job_url,
-                                posted_at=_parse_date(j.get("aktuelleVeroeffentlichungsdatum", "")),
-                            )
-                        )
+                    jobs = await self._fetch_arbeitsagentur_page(
+                        client, kw, loc, params.remote_only, params.limit_per_source
+                    )
+                    results.extend(jobs)
 
         return results
+
+    async def _fetch_arbeitsagentur_page(
+        self,
+        client: httpx.AsyncClient,
+        keyword: str,
+        location: str,
+        remote_only: bool,
+        limit: int,
+    ) -> list[RawJobResult]:
+        """Fetch and parse a single keyword/location combination."""
+        query_params = _build_arbeitsagentur_params(keyword, location, remote_only, limit)
+        url = f"{self.ARBEITSAGENTUR_BASE}/pc/v4/jobs"
+        headers = {"X-API-Key": self.ARBEITSAGENTUR_API_KEY}
+
+        try:
+            response = await _request_with_backoff(
+                client, "GET", url, headers=headers, params=query_params
+            )
+            data = response.json()
+        except Exception as exc:
+            logger.warning("Arbeitsagentur API error: %s", exc)
+            raise
+
+        return [
+            _parse_arbeitsagentur_job(j, self.source_name) for j in data.get("stellenangebote", [])
+        ]
 
 
 # ---------------------------------------------------------------------------
 # Arbeitnow adapter
 # ---------------------------------------------------------------------------
+
+
+def _matches_arbeitnow_filters(
+    job: dict,
+    keywords: list[str],
+    locations: list[str],
+) -> bool:
+    """Check if a job matches the keyword and location filters."""
+    title = job.get("title", "")
+    company = job.get("company_name", "")
+    loc = job.get("location", "")
+
+    if locations and not any(lc in loc.lower() for lc in locations):
+        return False
+    return not keywords or any(k in (title + " " + company).lower() for k in keywords)
+
+
+def _parse_arbeitnow_job(job: dict, source_name: str) -> RawJobResult:
+    """Parse a single Arbeitnow job dict into a RawJobResult."""
+    posted_at = None
+    created_at = job.get("created_at")
+    if created_at:
+        with contextlib.suppress(ValueError, TypeError, OSError):
+            posted_at = datetime.fromtimestamp(created_at)
+
+    return RawJobResult(
+        source=source_name,
+        title=job.get("title", ""),
+        company=job.get("company_name", ""),
+        location=job.get("location", ""),
+        url=job.get("url", ""),
+        remote=job.get("remote", False),
+        tags=job.get("tags", []),
+        posted_at=posted_at,
+        description=job.get("description", ""),
+        salary_range=job.get("salary", ""),
+    )
 
 
 class ArbeitnowAdapter(ScraperAdapter):
@@ -241,6 +329,11 @@ class ArbeitnowAdapter(ScraperAdapter):
 
     async def scrape(self, params: ScrapeParams) -> list[RawJobResult]:
         """Scrape Arbeitnow for job listings."""
+        all_jobs = await self._fetch_arbeitnow_jobs()
+        return self._filter_arbeitnow_jobs(all_jobs, params)
+
+    async def _fetch_arbeitnow_jobs(self) -> list[dict]:
+        """Fetch raw job data from the Arbeitnow API."""
         async with httpx.AsyncClient(timeout=30) as client:
             try:
                 response = await _request_with_backoff(client, "GET", self.ARBEITNOW_API)
@@ -248,8 +341,12 @@ class ArbeitnowAdapter(ScraperAdapter):
             except Exception as exc:
                 logger.warning("Arbeitnow API error: %s", exc)
                 raise
+        return data.get("data", [])
 
-        all_jobs = data.get("data", [])
+    def _filter_arbeitnow_jobs(
+        self, all_jobs: list[dict], params: ScrapeParams
+    ) -> list[RawJobResult]:
+        """Apply filters and parse Arbeitnow jobs up to the limit."""
         kw_lower = [k.lower() for k in params.keywords] if params.keywords else []
         loc_lower = [loc.lower() for loc in params.locations] if params.locations else []
 
@@ -257,45 +354,36 @@ class ArbeitnowAdapter(ScraperAdapter):
         for j in all_jobs:
             if params.remote_only and not j.get("remote", False):
                 continue
-
-            title = j.get("title", "")
-            company = j.get("company_name", "")
-            loc = j.get("location", "")
-
-            if loc_lower and not any(lc in loc.lower() for lc in loc_lower):
+            if not _matches_arbeitnow_filters(j, kw_lower, loc_lower):
                 continue
-            if kw_lower and not any(k in (title + " " + company).lower() for k in kw_lower):
-                continue
-
-            posted_at = None
-            created_at = j.get("created_at")
-            if created_at:
-                with contextlib.suppress(ValueError, TypeError, OSError):
-                    posted_at = datetime.fromtimestamp(created_at)
-
-            results.append(
-                RawJobResult(
-                    source="arbeitnow",
-                    title=title,
-                    company=company,
-                    location=loc,
-                    url=j.get("url", ""),
-                    remote=j.get("remote", False),
-                    tags=j.get("tags", []),
-                    posted_at=posted_at,
-                    description=j.get("description", ""),
-                    salary_range=j.get("salary", ""),
-                )
-            )
+            results.append(_parse_arbeitnow_job(j, self.source_name))
             if len(results) >= params.limit_per_source:
                 break
-
         return results
 
 
 # ---------------------------------------------------------------------------
 # python-jobspy adapter (wraps jobspy library)
 # ---------------------------------------------------------------------------
+
+
+def _parse_jobspy_row(row: object, source_name: str) -> RawJobResult:
+    """Parse a single DataFrame row from python-jobspy into a RawJobResult."""
+    posted_at = None
+    if "date_posted" in row and row["date_posted"]:
+        with contextlib.suppress(ValueError, TypeError):
+            posted_at = datetime.fromisoformat(str(row["date_posted"]))
+
+    return RawJobResult(
+        source=source_name,
+        title=str(row.get("title", "")),
+        company=str(row.get("company", "")),
+        location=str(row.get("location", "")),
+        url=str(row.get("job_url", "")),
+        description=str(row.get("description", "")),
+        remote=bool(row.get("is_remote", False)),
+        posted_at=posted_at,
+    )
 
 
 class JobSpyAdapter(ScraperAdapter):
@@ -310,57 +398,54 @@ class JobSpyAdapter(ScraperAdapter):
 
         This runs synchronous jobspy code in a thread executor.
         """
+        scrape_jobs = self._import_jobspy()
+
+        keywords = params.keywords or [""]
+        location = params.locations[0] if params.locations else "Germany"
+        loop = asyncio.get_event_loop()
+
+        results: list[RawJobResult] = []
+        for kw in keywords:
+            rows = await self._scrape_keyword(
+                loop, scrape_jobs, kw, location, params.limit_per_source
+            )
+            results.extend(rows)
+        return results
+
+    @staticmethod
+    def _import_jobspy():
+        """Import and return the jobspy scrape_jobs function."""
         try:
             from jobspy import scrape_jobs
         except ImportError as exc:
             raise RuntimeError(
                 "python-jobspy is not installed. Install it with: pip install python-jobspy"
             ) from exc
+        return scrape_jobs
 
-        keywords = params.keywords or [""]
-        location = params.locations[0] if params.locations else "Germany"
+    async def _scrape_keyword(
+        self, loop, scrape_jobs, keyword: str, location: str, limit: int
+    ) -> list[RawJobResult]:
+        """Scrape a single keyword via python-jobspy and return parsed results."""
+        try:
+            jobs_df = await loop.run_in_executor(
+                None,
+                lambda k=keyword: scrape_jobs(
+                    site_name=["indeed", "glassdoor"],
+                    search_term=k,
+                    location=location,
+                    results_wanted=limit,
+                    hours_old=168,
+                    country_indeed="Germany",
+                ),
+            )
+        except Exception as exc:
+            logger.warning("JobSpy scrape error for '%s': %s", keyword, exc)
+            raise
 
-        loop = asyncio.get_event_loop()
-        results: list[RawJobResult] = []
-
-        for kw in keywords:
-            try:
-                jobs_df = await loop.run_in_executor(
-                    None,
-                    lambda k=kw: scrape_jobs(
-                        site_name=["indeed", "glassdoor"],
-                        search_term=k,
-                        location=location,
-                        results_wanted=params.limit_per_source,
-                        hours_old=168,
-                        country_indeed="Germany",
-                    ),
-                )
-            except Exception as exc:
-                logger.warning("JobSpy scrape error for '%s': %s", kw, exc)
-                raise
-
-            if jobs_df is not None and not jobs_df.empty:
-                for _, row in jobs_df.iterrows():
-                    posted_at = None
-                    if "date_posted" in row and row["date_posted"]:
-                        with contextlib.suppress(ValueError, TypeError):
-                            posted_at = datetime.fromisoformat(str(row["date_posted"]))
-
-                    results.append(
-                        RawJobResult(
-                            source="jobspy",
-                            title=str(row.get("title", "")),
-                            company=str(row.get("company", "")),
-                            location=str(row.get("location", "")),
-                            url=str(row.get("job_url", "")),
-                            description=str(row.get("description", "")),
-                            remote=bool(row.get("is_remote", False)),
-                            posted_at=posted_at,
-                        )
-                    )
-
-        return results
+        if jobs_df is None or jobs_df.empty:
+            return []
+        return [_parse_jobspy_row(row, self.source_name) for _, row in jobs_df.iterrows()]
 
 
 # ---------------------------------------------------------------------------

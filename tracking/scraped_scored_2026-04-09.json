@@ -1,0 +1,13 @@
+[
+  {
+    "title": "Test",
+    "company": "Co",
+    "description": "",
+    "fit_score": 3,
+    "fit_reasoning": "Keyword scoring: 0 positive, 0 negative signals",
+    "estimated_salary": "unknown",
+    "effort_flag": "unknown",
+    "prep_level": 0,
+    "prep_notes": ""
+  }
+]
