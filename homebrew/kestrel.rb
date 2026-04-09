@@ -4,7 +4,7 @@ class Kestrel < Formula
   desc "AI-powered job search platform — self-hosted, open-source, privacy-first"
   homepage "https://github.com/pleasedodisturb/kestrel"
   url "https://files.pythonhosted.org/packages/source/k/kestrel-app/kestrel_app-0.1.0.tar.gz"
-  sha256 "PLACEHOLDER"
+  sha256 "PLACEHOLDER" # TODO: update with actual sha256 once published to PyPI
   license "MIT"
   head "https://github.com/pleasedodisturb/kestrel.git", branch: "main"
 
