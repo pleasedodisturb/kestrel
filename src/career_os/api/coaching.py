@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.coaching import (
     CoachingSuggestionResponse,
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/api/coaching", tags=["coaching"])
 
 @router.get("/suggestions")
 async def get_suggestions(
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> CoachingSuggestionsResponse:
     """Get prioritized coaching suggestions.

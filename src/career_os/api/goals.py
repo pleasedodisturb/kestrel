@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.goals import (
     AlternativePath,
@@ -52,7 +53,7 @@ async def list_goals_endpoint(
 @router.get("/{goal_id}")
 async def get_goal_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> GoalResponse:
     """Get a single goal by ID."""
@@ -90,7 +91,7 @@ async def create_goal_endpoint(
 async def update_goal_endpoint(
     goal_id: int,
     payload: GoalUpdate,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> GoalResponse:
     """Update a goal's fields."""
@@ -110,7 +111,7 @@ async def update_goal_endpoint(
 @router.delete("/{goal_id}", status_code=204)
 async def delete_goal_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> None:
     """Delete a goal."""
@@ -123,7 +124,7 @@ async def delete_goal_endpoint(
 @router.get("/{goal_id}/reality-map")
 async def get_reality_map_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> RealityMapResponse:
     """Get goal-to-reality mapping.
@@ -148,7 +149,7 @@ async def get_reality_map_endpoint(
 @router.get("/{goal_id}/progress")
 async def get_progress_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> ProgressResponse:
     """Get progress tracking across applications, learning, portfolio."""
@@ -168,7 +169,7 @@ async def get_progress_endpoint(
 @router.put("/{goal_id}/recalibrate")
 async def recalibrate_goal_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> RecalibrationResponse:
     """AI-powered goal recalibration with market-data-backed suggestions."""
@@ -189,7 +190,7 @@ async def recalibrate_goal_endpoint(
 @router.get("/{goal_id}/alternatives")
 async def get_alternatives_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> AlternativesResponse:
     """Get alternative path analysis (employment, freelance, consulting)."""

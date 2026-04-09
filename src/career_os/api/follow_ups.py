@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.follow_ups import (
     FollowUpComplete,
@@ -97,7 +98,7 @@ async def list_all(
 async def complete(
     follow_up_id: int,
     payload: FollowUpComplete,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> FollowUpResponse:
     """Complete a follow-up (set completed_at).

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.models.models import Application, FollowUp
 from career_os.models.skills import Goal
@@ -32,7 +33,7 @@ router = APIRouter(prefix="/api/ticktick", tags=["ticktick"])
 
 @router.get("/status")
 async def ticktick_sync_status(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> TickTickSyncStatusResponse:
     """Get the current TickTick sync status for a profile."""
@@ -138,7 +139,7 @@ async def ticktick_push(
 
 @router.post("/pull")
 async def ticktick_pull(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> TickTickPullResponse:
     """Pull completed tasks from TickTick and update Career OS entities."""

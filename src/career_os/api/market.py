@@ -4,6 +4,7 @@ market positioning, and dream company opportunity radar."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.market import (
     HiringPatternsResponse,
@@ -34,7 +35,7 @@ router = APIRouter(tags=["market-intelligence"])
 
 @router.get("/api/market/salary-trends")
 async def salary_trends_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     role: str | None = Query(default=None, description="Filter by role substring"),
     location: str | None = Query(default=None, description="Filter by location substring"),
     db: Session = Depends(get_db),
@@ -59,7 +60,7 @@ async def salary_trends_endpoint(
 
 @router.get("/api/market/skill-trends")
 async def skill_trends_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> SkillTrendsResponse:
     """Get most-demanded skills ranked by mention count.
@@ -82,7 +83,7 @@ async def skill_trends_endpoint(
 
 @router.get("/api/market/hiring-patterns")
 async def hiring_patterns_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> HiringPatternsResponse:
     """Get company hiring patterns.
@@ -105,7 +106,7 @@ async def hiring_patterns_endpoint(
 
 @router.get("/api/market/positioning")
 async def positioning_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> PositioningResponse:
     """Get market positioning — profile match % by role type.
@@ -128,7 +129,7 @@ async def positioning_endpoint(
 
 @router.get("/api/market/opportunity-radar")
 async def opportunity_radar_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     dream_companies: str | None = Query(
         default=None,
         description="Comma-separated list of dream company names (overrides profile)",

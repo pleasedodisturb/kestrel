@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import PROFILE_NOT_FOUND
 from career_os.database import get_db
 from career_os.models.models import Profile
 from career_os.schemas.profiles import (
@@ -34,7 +35,7 @@ async def get_profile(profile_id: int, db: Session = Depends(get_db)) -> Profile
     """Get a specific profile by ID."""
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if profile is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise HTTPException(status_code=404, detail=PROFILE_NOT_FOUND)
     return ProfileResponse.model_validate(profile)
 
 
@@ -72,7 +73,7 @@ async def update_profile(
     """
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if profile is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise HTTPException(status_code=404, detail=PROFILE_NOT_FOUND)
 
     update_data = payload.model_dump(exclude_unset=True)
 
@@ -112,7 +113,7 @@ async def delete_profile(
     """
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if profile is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise HTTPException(status_code=404, detail=PROFILE_NOT_FOUND)
 
     try:
         db.delete(profile)

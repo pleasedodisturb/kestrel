@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.models.models import FollowUp
 from career_os.schemas.calendar import (
@@ -62,7 +63,7 @@ async def create_event(
 
 @router.get("/events")
 async def list_events(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     event_type: str | None = Query(default=None, description="Filter by event type"),
     application_id: int | None = Query(default=None, description="Filter by application"),
     db: Session = Depends(get_db),
@@ -83,7 +84,7 @@ async def list_events(
 @router.get("/events/{event_id}")
 async def get_event(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> CalendarEventResponse:
     """Get a single calendar event by ID."""
@@ -98,7 +99,7 @@ async def get_event(
 async def update_event(
     event_id: int,
     payload: CalendarEventUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> CalendarEventResponse:
     """Update a calendar event.
@@ -115,7 +116,7 @@ async def update_event(
 @router.delete("/events/{event_id}", status_code=204)
 async def delete_event(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> None:
     """Delete a calendar event."""
@@ -136,7 +137,7 @@ async def delete_event(
 )
 async def create_from_follow_up(
     follow_up_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> CalendarEventResponse:
     """Create a calendar event from a follow-up."""
@@ -162,7 +163,7 @@ async def create_from_follow_up(
 @router.get("/events/{event_id}/ical")
 async def export_ical(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> Response:
     """Export a single calendar event as .ics file.
@@ -183,7 +184,7 @@ async def export_ical(
 
 @router.get("/export/ical")
 async def export_all_ical(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     event_type: str | None = Query(default=None, description="Filter by event type"),
     application_id: int | None = Query(default=None, description="Filter by application"),
     db: Session = Depends(get_db),
@@ -213,7 +214,7 @@ async def export_all_ical(
 @router.get("/events/{event_id}/google")
 async def google_calendar_url(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> GoogleCalendarUrlResponse:
     """Get a Google Calendar 'Add Event' URL for an event."""
@@ -232,7 +233,7 @@ async def google_calendar_url(
 @router.get("/events/{event_id}/fantastical")
 async def fantastical_url(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> FantasticalUrlResponse:
     """Get a Fantastical URL scheme for adding an event."""
@@ -251,7 +252,7 @@ async def fantastical_url(
 @router.get("/events/{event_id}/providers")
 async def event_providers(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> CalendarProviderConfigResponse:
     """Get export URLs/data for all supported calendar providers."""

@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_FILTER_BY_CATEGORY, DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.pushover import (
     NotificationLogListResponse,
@@ -35,7 +36,7 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 @router.get("/preferences")
 async def get_notification_preferences(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> NotificationPreferenceResponse:
     """Get notification preferences for a profile."""
@@ -45,7 +46,7 @@ async def get_notification_preferences(
 
 @router.put("/preferences")
 async def update_notification_preferences(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     payload: NotificationPreferenceUpdate = ...,
     db: Session = Depends(get_db),
 ) -> NotificationPreferenceResponse:
@@ -61,8 +62,8 @@ async def update_notification_preferences(
 
 @router.get("/log")
 async def get_notification_log(
-    profile_id: int = Query(..., description="Profile ID"),
-    category: str | None = Query(default=None, description="Filter by category"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
+    category: str | None = Query(default=None, description=DESC_FILTER_BY_CATEGORY),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -84,7 +85,7 @@ async def get_notification_log(
 
 @router.post("/trigger/follow-ups")
 async def trigger_follow_ups(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> NotificationTriggerResponse:
     """Check for due follow-ups and send Pushover notifications."""
@@ -94,7 +95,7 @@ async def trigger_follow_ups(
 
 @router.post("/trigger/ghosts")
 async def trigger_ghosts(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> NotificationTriggerResponse:
     """Check for ghost applications and send Pushover notifications."""
@@ -104,7 +105,7 @@ async def trigger_ghosts(
 
 @router.post("/trigger/discovery")
 async def trigger_discovery(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     company: str = Query(..., description="Company name"),
     role: str = Query(..., description="Role title"),
     score: float = Query(..., ge=0, le=10, description="Fit score"),
@@ -127,7 +128,7 @@ async def trigger_discovery(
 
 @router.post("/trigger/interviews")
 async def trigger_interviews(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> NotificationTriggerResponse:
     """Check for upcoming interviews and send Pushover reminders."""
@@ -142,7 +143,7 @@ async def trigger_interviews(
 
 @router.post("/deliver-queued")
 async def deliver_queued(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> dict:
     """Deliver queued notifications that were deferred during quiet hours."""

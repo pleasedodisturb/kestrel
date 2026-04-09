@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.voice import (
     VoiceMessageCreate,
@@ -59,7 +60,7 @@ async def create_voice_session(
 
 @router.get("/sessions")
 async def list_voice_sessions(
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     mode: str | None = Query(default=None, description="Filter by mode"),
     db: Session = Depends(get_db),
 ) -> VoiceSessionListResponse:
@@ -74,7 +75,7 @@ async def list_voice_sessions(
 @router.get("/sessions/{session_id}")
 async def get_voice_session(
     session_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> VoiceSessionResponse:
     """Get a voice session with all messages."""
@@ -123,7 +124,7 @@ async def send_voice_message(
 )
 async def complete_voice_session(
     session_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> VoiceSessionResponse:
     """Mark a voice session as completed."""

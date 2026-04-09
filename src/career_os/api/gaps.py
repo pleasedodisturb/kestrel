@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 from career_os.database import get_db
 from career_os.models.models import Application
 from career_os.models.skills import JobRequirement
@@ -31,7 +32,7 @@ router = APIRouter(tags=["gaps"])
 )
 async def get_application_gaps(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> GapAnalysisResponse:
     """Perform gap analysis for a specific application.
@@ -65,7 +66,7 @@ async def get_application_gaps(
     "/api/gaps/aggregate",
 )
 async def get_aggregate_gaps(
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> AggregateGapResponse:
     """Get aggregate gap analysis across all applications.
@@ -90,7 +91,7 @@ async def get_aggregate_gaps(
 )
 async def get_requirements(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> list[JobRequirementResponse]:
     """Get job requirements for an application.

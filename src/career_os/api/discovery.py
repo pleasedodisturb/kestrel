@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.discovery import (
     DiscoveredJobResponse,
@@ -102,7 +103,7 @@ async def create_search_profile_endpoint(
     "/api/search-profiles",
 )
 async def list_search_profiles_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     active_only: bool = Query(False, description="Only active profiles"),
     db: Session = Depends(get_db),
 ) -> SearchProfileListResponse:
@@ -119,7 +120,7 @@ async def list_search_profiles_endpoint(
 )
 async def get_search_profile_endpoint(
     sp_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> SearchProfileResponse:
     """Get a single search profile."""
@@ -136,7 +137,7 @@ async def get_search_profile_endpoint(
 async def update_search_profile_endpoint(
     sp_id: int,
     payload: SearchProfileUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> SearchProfileResponse:
     """Update a search profile."""
@@ -158,7 +159,7 @@ async def update_search_profile_endpoint(
 )
 async def delete_search_profile_endpoint(
     sp_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> None:
     """Delete a search profile."""
@@ -177,7 +178,7 @@ async def delete_search_profile_endpoint(
     "/api/discovery-runs",
 )
 async def list_discovery_runs_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     limit: int = Query(20, ge=1, le=100, description="Max results"),
     db: Session = Depends(get_db),
 ) -> list[DiscoveryRunResponse]:

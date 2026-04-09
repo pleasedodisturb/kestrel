@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.jobs import (
     JobSearchResponse,
@@ -33,7 +34,7 @@ router = APIRouter(tags=["jobs"])
 
 @router.get("/api/jobs")
 async def search_jobs_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     q: str | None = Query(None, description="Full-text search query"),
     source: str | None = Query(None, description="Filter by source name"),
     remote: bool | None = Query(None, description="Filter by remote status"),
@@ -133,7 +134,7 @@ async def create_saved_search_endpoint(
     "/api/saved-searches",
 )
 async def list_saved_searches_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> SavedSearchListResponse:
     """List all saved searches for a profile."""
@@ -149,7 +150,7 @@ async def list_saved_searches_endpoint(
 )
 async def get_saved_search_endpoint(
     search_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> SavedSearchResponse:
     """Get a single saved search."""
@@ -166,7 +167,7 @@ async def get_saved_search_endpoint(
 async def update_saved_search_endpoint(
     search_id: int,
     payload: SavedSearchUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> SavedSearchResponse:
     """Update a saved search."""
@@ -190,7 +191,7 @@ async def update_saved_search_endpoint(
 )
 async def delete_saved_search_endpoint(
     search_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> None:
     """Delete a saved search."""

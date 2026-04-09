@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, DESC_FILTER_BY_CATEGORY
 from career_os.database import get_db
 from career_os.schemas.skills import (
     IngestRequest,
@@ -38,7 +39,7 @@ _DEFAULT_PROFILE_DIR = _PROJECT_ROOT / "profile"
 @router.get("")
 async def list_skills_endpoint(
     profile_id: int = Query(..., description="Profile to list skills for"),
-    category: str | None = Query(default=None, description="Filter by category"),
+    category: str | None = Query(default=None, description=DESC_FILTER_BY_CATEGORY),
     source: str | None = Query(default=None, description="Filter by evidence source"),
     proficiency: str | None = Query(default=None, description="Filter by proficiency"),
     q: str | None = Query(default=None, description="Search by name"),
@@ -74,7 +75,7 @@ async def list_skills_endpoint(
 @router.get("/{skill_id}")
 async def get_skill_endpoint(
     skill_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> SkillResponse:
     """Get a single skill by ID."""
@@ -88,7 +89,7 @@ async def get_skill_endpoint(
 @router.get("/{skill_id}/history")
 async def get_skill_history_endpoint(
     skill_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> list[SkillHistoryResponse]:
     """Get proficiency change history for a skill."""
@@ -131,7 +132,7 @@ async def create_skill_endpoint(
 async def update_skill_endpoint(
     skill_id: int,
     payload: SkillUpdate,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> SkillResponse:
     """Update a skill. Records history if proficiency changes."""

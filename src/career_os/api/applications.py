@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.applications import (
     ActivityLogResponse,
@@ -129,7 +130,7 @@ async def list_apps(
 @router.get("/{application_id}")
 async def get_detail(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> ApplicationDetailResponse:
     """Get application detail including activity log and follow-ups.
@@ -190,7 +191,7 @@ async def get_detail(
 async def update(
     application_id: int,
     payload: ApplicationUpdate,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> ApplicationResponse:
     """Update an application.
@@ -215,7 +216,7 @@ async def update(
 @router.delete("/{application_id}")
 async def delete(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
+    profile_id: int = Query(..., description=DESC_ACTIVE_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> ApplicationResponse:
     """Soft-delete (archive) an application.

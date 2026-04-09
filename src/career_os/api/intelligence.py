@@ -11,6 +11,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.role_intelligence import (
     InterviewFormatResponse,
@@ -37,7 +38,7 @@ router = APIRouter(prefix="/api/intelligence", tags=["role-intelligence"])
 @router.get("/interview-format")
 async def interview_format_endpoint(
     company: str = Query(..., min_length=1, description="Company name"),
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     role: str | None = Query(
         default=None, description="Optional role context for more specific results"
     ),
@@ -73,7 +74,7 @@ async def interview_format_endpoint(
 @router.get("/salary")
 async def salary_benchmark_endpoint(
     role: str = Query(..., min_length=1, description="Role type to benchmark"),
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     location: str | None = Query(default=None, description="Optional location filter"),
     company_stage: str | None = Query(
         default=None,
@@ -112,7 +113,7 @@ async def salary_benchmark_endpoint(
 @router.get("/patterns")
 async def interview_patterns_endpoint(
     role: str = Query(..., min_length=1, description="Role type"),
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> InterviewPatternsResponse:
     """Get common interview patterns for a role type.

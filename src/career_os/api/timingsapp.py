@@ -11,6 +11,11 @@ Provides endpoints for:
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import (
+    DESC_FILTER_BY_CATEGORY,
+    DESC_PROFILE_ID,
+    TIME_SESSION_NOT_FOUND,
+)
 from career_os.database import get_db
 from career_os.schemas.timingsapp import (
     TimeAnalyticsResponse,
@@ -62,7 +67,7 @@ async def create_session(
 async def stop_session_endpoint(
     session_id: int,
     payload: TimeSessionStop | None = None,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> TimeSessionResponse:
     """Stop a tracked time session.
@@ -79,15 +84,15 @@ async def stop_session_endpoint(
         )
         return TimeSessionResponse.model_validate(session_record)
     except TimeSessionNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Time session not found") from exc
+        raise HTTPException(status_code=404, detail=TIME_SESSION_NOT_FOUND) from exc
     except TimeSessionAlreadyStoppedError as exc:
         raise HTTPException(status_code=400, detail="Session is already stopped") from exc
 
 
 @router.get("/sessions")
 async def list_sessions_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    category: str | None = Query(default=None, description="Filter by category"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
+    category: str | None = Query(default=None, description=DESC_FILTER_BY_CATEGORY),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -108,7 +113,7 @@ async def list_sessions_endpoint(
 
 @router.get("/sessions/running")
 async def get_running_session_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> TimeSessionResponse | None:
     """Get the currently running (unstopped) time session, or null."""
@@ -121,7 +126,7 @@ async def get_running_session_endpoint(
 @router.get("/sessions/{session_id}")
 async def get_session_endpoint(
     session_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> TimeSessionResponse:
     """Get a specific time session by ID."""
@@ -129,14 +134,14 @@ async def get_session_endpoint(
         session_record = get_session(db, session_id, profile_id=profile_id)
         return TimeSessionResponse.model_validate(session_record)
     except TimeSessionNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Time session not found") from exc
+        raise HTTPException(status_code=404, detail=TIME_SESSION_NOT_FOUND) from exc
 
 
 @router.patch("/sessions/{session_id}")
 async def update_session_endpoint(
     session_id: int,
     payload: TimeSessionUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     db: Session = Depends(get_db),
 ) -> TimeSessionResponse:
     """Update a time session's details."""
@@ -144,12 +149,12 @@ async def update_session_endpoint(
         session_record = update_session(db, session_id, payload, profile_id=profile_id)
         return TimeSessionResponse.model_validate(session_record)
     except TimeSessionNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Time session not found") from exc
+        raise HTTPException(status_code=404, detail=TIME_SESSION_NOT_FOUND) from exc
 
 
 @router.get("/analytics")
 async def get_analytics(
-    profile_id: int = Query(..., description="Profile ID"),
+    profile_id: int = Query(..., description=DESC_PROFILE_ID),
     weeks: int = Query(default=4, ge=1, le=52, description="Number of weeks to analyze"),
     db: Session = Depends(get_db),
 ) -> TimeAnalyticsResponse:
