@@ -1,5 +1,7 @@
-"""Market Intelligence API routes — salary trends, skill demand, hiring patterns,
+"""Market Intelligence API routes - salary trends, skill demand, hiring patterns,
 market positioning, and dream company opportunity radar."""
+
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -34,10 +36,10 @@ router = APIRouter(tags=["market-intelligence"])
 
 @router.get("/api/market/salary-trends")
 async def salary_trends_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    role: str | None = Query(default=None, description="Filter by role substring"),
-    location: str | None = Query(default=None, description="Filter by location substring"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    role: Annotated[str | None, Query(description="Filter by role substring")] = None,
+    location: Annotated[str | None, Query(description="Filter by location substring")] = None,
 ) -> SalaryTrendsResponse:
     """Get salary trends by role and location.
 
@@ -59,8 +61,8 @@ async def salary_trends_endpoint(
 
 @router.get("/api/market/skill-trends")
 async def skill_trends_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> SkillTrendsResponse:
     """Get most-demanded skills ranked by mention count.
 
@@ -82,8 +84,8 @@ async def skill_trends_endpoint(
 
 @router.get("/api/market/hiring-patterns")
 async def hiring_patterns_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> HiringPatternsResponse:
     """Get company hiring patterns.
 
@@ -105,10 +107,10 @@ async def hiring_patterns_endpoint(
 
 @router.get("/api/market/positioning")
 async def positioning_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> PositioningResponse:
-    """Get market positioning — profile match % by role type.
+    """Get market positioning - profile match % by role type.
 
     Compares user's skills against skills extracted from discovered job
     descriptions.
@@ -128,12 +130,12 @@ async def positioning_endpoint(
 
 @router.get("/api/market/opportunity-radar")
 async def opportunity_radar_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    dream_companies: str | None = Query(
-        default=None,
-        description="Comma-separated list of dream company names (overrides profile)",
-    ),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    dream_companies: Annotated[
+        str | None,
+        Query(description="Comma-separated list of dream company names (overrides profile)"),
+    ] = None,
 ) -> OpportunityRadarResponse:
     """Get opportunity radar for dream companies.
 
@@ -175,7 +177,7 @@ async def opportunity_radar_endpoint(
 @router.post("/api/market/refresh")
 async def refresh_market_endpoint(
     payload: MarketRefreshRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> MarketRefreshResponse:
     """Trigger a refresh of market intelligence data.
 

@@ -7,6 +7,7 @@ Covers:
 """
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -36,12 +37,12 @@ router = APIRouter(prefix="/api/intelligence", tags=["role-intelligence"])
 
 @router.get("/interview-format")
 async def interview_format_endpoint(
-    company: str = Query(..., min_length=1, description="Company name"),
-    profile_id: int = Query(..., description="Profile ID"),
-    role: str | None = Query(
-        default=None, description="Optional role context for more specific results"
-    ),
-    db: Session = Depends(get_db),
+    company: Annotated[str, Query(min_length=1, description="Company name")],
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    role: Annotated[
+        str | None, Query(description="Optional role context for more specific results")
+    ] = None,
 ) -> InterviewFormatResponse:
     """Get typical interview format for a company.
 
@@ -72,14 +73,14 @@ async def interview_format_endpoint(
 
 @router.get("/salary")
 async def salary_benchmark_endpoint(
-    role: str = Query(..., min_length=1, description="Role type to benchmark"),
-    profile_id: int = Query(..., description="Profile ID"),
-    location: str | None = Query(default=None, description="Optional location filter"),
-    company_stage: str | None = Query(
-        default=None,
-        description="Optional company stage filter (e.g., 'startup', 'growth', 'public')",
-    ),
-    db: Session = Depends(get_db),
+    role: Annotated[str, Query(min_length=1, description="Role type to benchmark")],
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    location: Annotated[str | None, Query(description="Optional location filter")] = None,
+    company_stage: Annotated[
+        str | None,
+        Query(description="Optional company stage filter (e.g., 'startup', 'growth', 'public')"),
+    ] = None,
 ) -> SalaryBenchmarkResponse:
     """Get salary benchmarks for a role type, optionally filtered by location and stage.
 
@@ -111,9 +112,9 @@ async def salary_benchmark_endpoint(
 
 @router.get("/patterns")
 async def interview_patterns_endpoint(
-    role: str = Query(..., min_length=1, description="Role type"),
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    role: Annotated[str, Query(min_length=1, description="Role type")],
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> InterviewPatternsResponse:
     """Get common interview patterns for a role type.
 
