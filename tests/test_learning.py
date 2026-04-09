@@ -49,8 +49,8 @@ def _db_engine():
 @pytest.fixture
 def test_db(_db_engine):
     """Create a database session for testing."""
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -100,8 +100,8 @@ def client(_db_engine, test_db: Session):
     test_app.include_router(skills_router)
 
     def override_get_db():
-        TestSession = sessionmaker(bind=_db_engine)
-        session = TestSession()
+        test_session_cls = sessionmaker(bind=_db_engine)
+        session = test_session_cls()
         try:
             yield session
         finally:
