@@ -44,8 +44,8 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     # Seed default profile
     profile = Profile(id=1, name="Test User", email="test@example.com", location="Frankfurt")
@@ -264,7 +264,7 @@ class TestConversionFunnel:
         stage_map = {s["stage"]: s for s in funnel}
 
         # applied / interested = 1 / 0 → 0%
-        assert stage_map["applied"]["percentage"] == 0.0
+        assert stage_map["applied"]["percentage"] == pytest.approx(0.0)
 
     def test_funnel_ghosted_relative_to_total(self, client, db_session):
         """Ghosted percentage is relative to total, not a specific previous stage."""

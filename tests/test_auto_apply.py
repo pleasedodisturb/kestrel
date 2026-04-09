@@ -114,13 +114,13 @@ class TestParseLeverUrl:
 
     def test_trailing_slash(self):
         url = "https://jobs.lever.co/company/posting-id/"
-        base, site, posting = parse_lever_url(url)
+        _base, site, posting = parse_lever_url(url)
         assert site == "company"
         assert posting == "posting-id"
 
     def test_extra_path_segments_ignored(self):
         url = "https://jobs.lever.co/org/posting/extra/segment"
-        base, site, posting = parse_lever_url(url)
+        _base, site, posting = parse_lever_url(url)
         assert site == "org"
         assert posting == "posting"
 
@@ -139,7 +139,7 @@ class TestParseLeverUrl:
     def test_apply_suffix_counts_as_second_segment(self):
         # URL like /company/apply has two segments
         url = "https://jobs.lever.co/company/apply"
-        base, site, posting = parse_lever_url(url)
+        _base, site, posting = parse_lever_url(url)
         assert site == "company"
         assert posting == "apply"
 

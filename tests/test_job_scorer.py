@@ -253,7 +253,9 @@ class TestPreFilterJob:
     # --- US-only location cap ---
 
     def test_caps_us_only_san_francisco(self):
-        skip, reason, cap = pre_filter_job("Senior TPM", "Faire", "San Francisco, CA", remote=False)
+        skip, _reason, cap = pre_filter_job(
+            "Senior TPM", "Faire", "San Francisco, CA", remote=False
+        )
         assert skip is False
         assert cap == 3
 
@@ -410,7 +412,7 @@ class TestScoreJob:
             }
         )
 
-        score, reasoning, salary, effort, prep, notes = score_job(
+        score, _reasoning, _salary, _effort, prep, _notes = score_job(
             client, "Test", "Co", "Description"
         )
 

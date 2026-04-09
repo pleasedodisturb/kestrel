@@ -184,7 +184,7 @@ def _normalize_role_for_matching(role: str) -> list[str]:
     Expands abbreviations and common title variants so that, e.g.,
     "TPM" also matches "Technical Program Manager" and vice versa.
     """
-    ROLE_ALIASES: dict[str, list[str]] = {
+    role_aliases: dict[str, list[str]] = {
         "tpm": ["tpm", "technical program manager"],
         "technical program manager": ["tpm", "technical program manager"],
         "pm": ["pm", "program manager", "project manager"],
@@ -199,7 +199,7 @@ def _normalize_role_for_matching(role: str) -> list[str]:
     }
 
     role_lower = role.strip().lower()
-    return ROLE_ALIASES.get(role_lower, [role_lower])
+    return role_aliases.get(role_lower, [role_lower])
 
 
 def _salary_fallback_from_market(
@@ -255,7 +255,7 @@ def _salary_fallback_from_ai(
     when no discovered jobs or market trends are available.
     """
     # Role-based salary estimate heuristics (EUR)
-    _ROLE_SALARY_ESTIMATES: dict[str, tuple[float, float, float]] = {
+    _role_salary_estimates: dict[str, tuple[float, float, float]] = {
         "tpm": (110_000.0, 135_000.0, 165_000.0),
         "technical program manager": (110_000.0, 135_000.0, 165_000.0),
         "program manager": (95_000.0, 115_000.0, 140_000.0),
@@ -272,12 +272,12 @@ def _salary_fallback_from_ai(
     role_lower = role.strip().lower()
 
     # Try exact match first
-    if role_lower in _ROLE_SALARY_ESTIMATES:
-        low, median, high = _ROLE_SALARY_ESTIMATES[role_lower]
+    if role_lower in _role_salary_estimates:
+        low, median, high = _role_salary_estimates[role_lower]
     else:
         # Try substring match
         matched = None
-        for key, values in _ROLE_SALARY_ESTIMATES.items():
+        for key, values in _role_salary_estimates.items():
             if key in role_lower or role_lower in key:
                 matched = values
                 break

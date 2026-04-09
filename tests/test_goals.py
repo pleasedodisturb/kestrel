@@ -46,8 +46,8 @@ def _db_engine():
 @pytest.fixture
 def test_db(_db_engine):
     """Create a database session for testing."""
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -77,10 +77,10 @@ def second_profile(test_db: Session) -> Profile:
 @pytest.fixture
 def api_client(_db_engine):
     """Create a FastAPI test client with overridden DB."""
-    TestSession = sessionmaker(bind=_db_engine)
+    test_session_cls = sessionmaker(bind=_db_engine)
 
     def override_get_db():
-        db = TestSession()
+        db = test_session_cls()
         try:
             yield db
         finally:
@@ -539,7 +539,7 @@ class TestRealityMap:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["overall_progress"] == 0.0
+        assert data["overall_progress"] == pytest.approx(0.0)
 
     def test_reality_map_not_found(self, api_client: TestClient, test_profile: Profile):
         """Reality map for nonexistent goal returns 404."""
@@ -629,7 +629,7 @@ class TestProgressTracking:
         data = resp.json()
         apps_dim = next(d for d in data["dimensions"] if d["dimension"] == "applications")
         # We have 3 active apps (applied, interviewing, applied) out of target 10
-        assert apps_dim["percentage"] == 30.0
+        assert apps_dim["percentage"] == pytest.approx(30.0)
         assert "3/10" in apps_dim["detail"]
 
     def test_progress_learning_dimension(
@@ -666,7 +666,7 @@ class TestProgressTracking:
         portfolio_dim = next(d for d in data["dimensions"] if d["dimension"] == "portfolio")
         # 3 advanced/expert skills (Python advanced, PM expert, Leadership advanced)
         # out of target 5 for aspirational = 60%
-        assert portfolio_dim["percentage"] == 60.0
+        assert portfolio_dim["percentage"] == pytest.approx(60.0)
 
     def test_progress_empty_data(
         self,
@@ -680,9 +680,9 @@ class TestProgressTracking:
             params={"profile_id": test_profile.id},
         )
         data = resp.json()
-        assert data["overall_progress"] == 0.0
+        assert data["overall_progress"] == pytest.approx(0.0)
         for dim in data["dimensions"]:
-            assert dim["percentage"] == 0.0
+            assert dim["percentage"] == pytest.approx(0.0)
 
     def test_progress_overall_is_average(
         self,
@@ -906,7 +906,7 @@ class TestCrossMilestoneTracking:
         apps_dim_initial = next(
             d for d in initial["dimensions"] if d["dimension"] == "applications"
         )
-        assert apps_dim_initial["percentage"] == 0.0
+        assert apps_dim_initial["percentage"] == pytest.approx(0.0)
 
     def test_progress_reflects_skills(
         self,
@@ -923,7 +923,7 @@ class TestCrossMilestoneTracking:
         data = resp.json()
         portfolio_dim = next(d for d in data["dimensions"] if d["dimension"] == "portfolio")
         # 3 advanced/expert out of target 3 = 100%
-        assert portfolio_dim["percentage"] == 100.0
+        assert portfolio_dim["percentage"] == pytest.approx(100.0)
 
     def test_progress_reflects_learning(
         self,
@@ -1196,7 +1196,7 @@ class TestMarketPositioningDimension:
         )
         data = resp.json()
         market_dim = next(d for d in data["dimensions"] if d["dimension"] == "market_positioning")
-        assert market_dim["percentage"] == 0.0
+        assert market_dim["percentage"] == pytest.approx(0.0)
 
     def test_market_positioning_included_in_overall_average(
         self,
