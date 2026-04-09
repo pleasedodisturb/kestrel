@@ -190,7 +190,7 @@ export function CalendarSection({
                 type="text"
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
-                placeholder={`${formType === "interview" ? "Interview" : formType === "follow_up" ? "Follow up" : "Prep"} — ${company}`}
+                placeholder={`${({ interview: "Interview", follow_up: "Follow up", prep: "Prep" } as Record<string, string>)[formType] ?? "Prep"} — ${company}`}
                 className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
               />
             </div>
@@ -287,7 +287,7 @@ export function CalendarSection({
           </div>
           {createMutation.isError && (
             <p className="text-xs text-red-600">
-              {(createMutation.error as Error).message}
+              {createMutation.error instanceof Error ? createMutation.error.message : String(createMutation.error)}
             </p>
           )}
         </div>

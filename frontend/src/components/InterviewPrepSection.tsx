@@ -25,6 +25,52 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// ---------------------------------------------------------------------------
+// Color lookup maps for badge / bar styling
+// ---------------------------------------------------------------------------
+
+const PROGRESS_BADGE_COLORS: Record<string, string> = {
+  complete: "bg-green-100 text-green-700",
+  started: "bg-amber-100 text-amber-700",
+  default: "bg-gray-100 text-gray-600",
+};
+
+const PROGRESS_BAR_COLORS: Record<string, string> = {
+  complete: "bg-green-500",
+  started: "bg-amber-400",
+  default: "bg-gray-300",
+};
+
+const RELEVANCE_COLORS: Record<string, string> = {
+  high: "bg-red-100 text-red-700",
+  medium: "bg-amber-100 text-amber-700",
+  low: "bg-gray-100 text-gray-600",
+};
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  high: "bg-purple-100 text-purple-700",
+  medium: "bg-blue-100 text-blue-700",
+  low: "bg-gray-100 text-gray-600",
+};
+
+const QUESTION_DIFFICULTY_COLORS: Record<string, string> = {
+  high: "bg-purple-100 text-purple-700",
+  medium: "bg-amber-100 text-amber-700",
+  low: "bg-gray-100 text-gray-600",
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+  high: "bg-red-100 text-red-700",
+  medium: "bg-amber-100 text-amber-700",
+  low: "bg-gray-100 text-gray-600",
+};
+
+function progressKey(percentage: number): string {
+  if (percentage === 100) return "complete";
+  if (percentage > 0) return "started";
+  return "default";
+}
+
 interface InterviewPrepSectionProps {
   readonly applicationId: number;
   readonly profileId: number;
@@ -135,7 +181,7 @@ export function InterviewPrepSection({
           Interview Prep
         </h2>
         <p className="text-sm text-red-600">
-          {(error as Error).message}
+          {error instanceof Error ? error.message : String(error)}
         </p>
       </div>
     );
@@ -162,11 +208,7 @@ export function InterviewPrepSection({
             data-testid="prep-progress"
             className={cn(
               "rounded-full px-3 py-1 text-xs font-medium",
-              prep.progress_percentage === 100
-                ? "bg-green-100 text-green-700"
-                : prep.progress_percentage > 0
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-gray-100 text-gray-600",
+              PROGRESS_BADGE_COLORS[progressKey(prep.progress_percentage)],
             )}
           >
             {prep.completed_items}/{prep.total_items} done (
@@ -181,11 +223,7 @@ export function InterviewPrepSection({
           data-testid="prep-progress-bar"
           className={cn(
             "h-full rounded-full transition-all",
-            prep.progress_percentage === 100
-              ? "bg-green-500"
-              : prep.progress_percentage > 0
-                ? "bg-amber-400"
-                : "bg-gray-300",
+            PROGRESS_BAR_COLORS[progressKey(prep.progress_percentage)],
           )}
           style={{ width: `${prep.progress_percentage}%` }}
         />
@@ -311,11 +349,7 @@ function TopicCard({ topic }: Readonly<{ topic: PrepTopic }>) {
         <span
           className={cn(
             "rounded px-1.5 py-0.5 text-xs",
-            topic.relevance === "high"
-              ? "bg-red-100 text-red-700"
-              : topic.relevance === "medium"
-                ? "bg-amber-100 text-amber-700"
-                : "bg-gray-100 text-gray-600",
+            RELEVANCE_COLORS[topic.relevance] ?? RELEVANCE_COLORS.low,
           )}
         >
           {topic.relevance}
@@ -323,11 +357,7 @@ function TopicCard({ topic }: Readonly<{ topic: PrepTopic }>) {
         <span
           className={cn(
             "rounded px-1.5 py-0.5 text-xs",
-            topic.difficulty === "high"
-              ? "bg-purple-100 text-purple-700"
-              : topic.difficulty === "medium"
-                ? "bg-blue-100 text-blue-700"
-                : "bg-gray-100 text-gray-600",
+            DIFFICULTY_COLORS[topic.difficulty] ?? DIFFICULTY_COLORS.low,
           )}
         >
           {topic.difficulty}
@@ -359,11 +389,7 @@ function QuestionCard({
             <span
               className={cn(
                 "rounded px-1.5 py-0.5 text-xs",
-                question.difficulty === "high"
-                  ? "bg-purple-100 text-purple-700"
-                  : question.difficulty === "medium"
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-gray-100 text-gray-600",
+                QUESTION_DIFFICULTY_COLORS[question.difficulty] ?? QUESTION_DIFFICULTY_COLORS.low,
               )}
             >
               {question.difficulty}
@@ -422,11 +448,7 @@ function ChecklistItemRow({
         <span
           className={cn(
             "rounded px-1.5 py-0.5 text-xs",
-            item.priority === "high"
-              ? "bg-red-100 text-red-700"
-              : item.priority === "medium"
-                ? "bg-amber-100 text-amber-700"
-                : "bg-gray-100 text-gray-600",
+            PRIORITY_COLORS[item.priority] ?? PRIORITY_COLORS.low,
           )}
         >
           {item.priority}
