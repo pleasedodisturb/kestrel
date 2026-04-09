@@ -40,7 +40,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 interface Props {
-  data: TimeAnalyticsData;
+  readonly data: TimeAnalyticsData;
 }
 
 export function TimeTracking({ data }: Props) {

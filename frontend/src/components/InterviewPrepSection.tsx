@@ -26,8 +26,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface InterviewPrepSectionProps {
-  applicationId: number;
-  profileId: number;
+  readonly applicationId: number;
+  readonly profileId: number;
 }
 
 async function fetchInterviewPrep(
@@ -271,14 +271,14 @@ function CollapsibleSection({
   expanded,
   onToggle,
   children,
-}: {
+}: Readonly<{
   title: string;
   icon: React.ReactNode;
   count: number;
   expanded: boolean;
   onToggle: () => void;
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <div className="border-t pt-3">
       <button
@@ -303,7 +303,7 @@ function CollapsibleSection({
   );
 }
 
-function TopicCard({ topic }: { topic: PrepTopic }) {
+function TopicCard({ topic }: Readonly<{ topic: PrepTopic }>) {
   return (
     <div className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
       <span className="text-sm text-gray-800">{topic.topic}</span>
@@ -340,10 +340,10 @@ function TopicCard({ topic }: { topic: PrepTopic }) {
 function QuestionCard({
   question,
   index,
-}: {
+}: Readonly<{
   question: PrepQuestion;
   index: number;
-}) {
+}>) {
   return (
     <div className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
       <div className="flex items-start gap-2">
@@ -379,11 +379,11 @@ function ChecklistItemRow({
   item,
   onToggle,
   isToggling,
-}: {
+}: Readonly<{
   item: PrepChecklistItem;
   onToggle: (completed: boolean) => void;
   isToggling: boolean;
-}) {
+}>) {
   return (
     <div
       data-testid={`checklist-item-${item.id}`}

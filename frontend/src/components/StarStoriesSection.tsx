@@ -32,8 +32,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface StarStoriesSectionProps {
-  applicationId: number;
-  profileId: number;
+  readonly applicationId: number;
+  readonly profileId: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,10 +43,10 @@ interface StarStoriesSectionProps {
 function CreateStoryForm({
   profileId,
   onClose,
-}: {
+}: Readonly<{
   profileId: number;
   onClose: () => void;
-}) {
+}>) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<StarStoryCreate>({
     title: "",
@@ -108,10 +108,11 @@ function CreateStoryForm({
 
       {(["situation", "task", "action", "result"] as const).map((field) => (
         <div key={field}>
-          <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+          <label htmlFor={`star-story-${field}`} className="block text-xs font-medium text-gray-500 uppercase mb-1">
             {field}
           </label>
           <textarea
+            id={`star-story-${field}`}
             placeholder={`Describe the ${field}...`}
             value={form[field]}
             onChange={(e) => setForm({ ...form, [field]: e.target.value })}
@@ -123,11 +124,12 @@ function CreateStoryForm({
       ))}
 
       <div>
-        <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+        <label htmlFor="star-story-skill-tags" className="block text-xs font-medium text-gray-500 uppercase mb-1">
           Skill Tags
         </label>
         <div className="flex gap-2">
           <input
+            id="star-story-skill-tags"
             type="text"
             placeholder="Add skill tag..."
             value={tagInput}
@@ -203,11 +205,11 @@ function StoryCard({
   story,
   profileId,
   matchingSkills,
-}: {
+}: Readonly<{
   story: StarStory;
   profileId: number;
   matchingSkills?: string[];
-}) {
+}>) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
 
