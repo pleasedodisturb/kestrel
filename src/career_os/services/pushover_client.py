@@ -41,10 +41,12 @@ class PushoverClient:
         self._app_token = app_token
         self._timeout = timeout
 
-    def send_notification(
-        self,
-        *,
+    @staticmethod
+    def _build_pushover_body(
+        token: str,
+        user: str,
         message: str,
+        *,
         title: str | None = None,
         url: str | None = None,
         url_title: str | None = None,
@@ -52,15 +54,10 @@ class PushoverClient:
         sound: str | None = None,
         html: bool = False,
     ) -> dict:
-        """Send a push notification via Pushover.
-
-        Returns the API response dict on success.
-        Raises PushoverAuthError for invalid credentials (401).
-        Raises PushoverAPIError for other errors.
-        """
+        """Build the Pushover API request body with all conditional fields."""
         body: dict = {
-            "token": self._app_token,
-            "user": self._user_key,
+            "token": token,
+            "user": user,
             "message": message,
         }
         if title:
@@ -78,6 +75,36 @@ class PushoverClient:
             body["sound"] = sound
         if html:
             body["html"] = 1
+        return body
+
+    def send_notification(
+        self,
+        *,
+        message: str,
+        title: str | None = None,
+        url: str | None = None,
+        url_title: str | None = None,
+        priority: int = PRIORITY_NORMAL,
+        sound: str | None = None,
+        html: bool = False,
+    ) -> dict:
+        """Send a push notification via Pushover.
+
+        Returns the API response dict on success.
+        Raises PushoverAuthError for invalid credentials (401).
+        Raises PushoverAPIError for other errors.
+        """
+        body = self._build_pushover_body(
+            self._app_token,
+            self._user_key,
+            message,
+            title=title,
+            url=url,
+            url_title=url_title,
+            priority=priority,
+            sound=sound,
+            html=html,
+        )
 
         try:
             resp = httpx.post(

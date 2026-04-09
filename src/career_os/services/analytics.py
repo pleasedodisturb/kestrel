@@ -97,6 +97,36 @@ def _compute_stage_to_stage_percentage(
     return round(count / prev_count * 100, 1)
 
 
+def _find_latest_status_log(
+    app_obj: Application,
+    stage: str,
+    logs: list[ActivityLog],
+) -> datetime | None:
+    """Find the most recent log entry for a given stage.
+
+    Delegates to ``_find_stage_entry_time`` which inspects activity-log
+    details strings.
+    """
+    return _find_stage_entry_time(app_obj, stage, logs)
+
+
+def _compute_stage_delta(log_entry: datetime | None, now: datetime) -> float | None:
+    """Calculate elapsed days between *log_entry* and *now*.
+
+    Returns ``None`` when *log_entry* is ``None`` or the delta is negative.
+    """
+    if log_entry is None:
+        return None
+
+    if log_entry.tzinfo is None:
+        log_entry = log_entry.replace(tzinfo=UTC)
+
+    delta = (now - log_entry).total_seconds() / 86400
+    if delta < 0:
+        return None
+    return delta
+
+
 def _compute_time_in_stage(
     db: Session,
     profile_id: int,
@@ -147,13 +177,10 @@ def _compute_time_in_stage(
 
         days_list: list[float] = []
         for app_obj in apps_in_stage:
-            entered_at = _find_stage_entry_time(app_obj, status, log_by_app.get(app_obj.id, []))
-            if entered_at is not None:
-                if entered_at.tzinfo is None:
-                    entered_at = entered_at.replace(tzinfo=UTC)
-                delta = (now - entered_at).total_seconds() / 86400
-                if delta >= 0:
-                    days_list.append(delta)
+            entered_at = _find_latest_status_log(app_obj, status, log_by_app.get(app_obj.id, []))
+            delta = _compute_stage_delta(entered_at, now)
+            if delta is not None:
+                days_list.append(delta)
 
         avg = round(sum(days_list) / len(days_list), 1) if days_list else None
         time_stages.append(TimeInStage(stage=status, avg_days=avg))
@@ -256,13 +283,15 @@ def _compute_notification_metrics(db: Session, profile_id: int) -> NotificationM
     )
 
 
-def get_analytics(db: Session, *, profile_id: int) -> AnalyticsResponse:
-    """Compute all analytics metrics for a profile."""
-    base = _active_apps_query(db, profile_id)
-    all_apps = base.all()
+def _compute_funnel_stats(
+    all_apps: list[Application],
+) -> tuple[list[FunnelStage], float | None]:
+    """Compute the conversion funnel and response rate from applications.
+
+    Returns a tuple of (funnel_stages, response_rate).
+    """
     total = len(all_apps)
 
-    # --- Conversion funnel (stage-to-stage percentages) ---
     status_counts: dict[str, int] = {s: 0 for s in ALL_STATUSES}
     for app_obj in all_apps:
         status_key = app_obj.status.lower()
@@ -278,46 +307,58 @@ def get_analytics(db: Session, *, profile_id: int) -> AnalyticsResponse:
         for status, count in status_counts.items()
     ]
 
-    # --- Response rate ---
     applied_plus = sum(1 for a in all_apps if a.status.lower() in APPLIED_PLUS_STATUSES)
     responded = sum(1 for a in all_apps if a.status.lower() in RESPONDED_STATUSES)
     response_rate: float | None = None
     if applied_plus > 0:
         response_rate = round(responded / applied_plus * 100, 1)
 
-    # --- Time-in-stage (from activity_log transitions) ---
-    time_stages = _compute_time_in_stage(db, profile_id, all_apps)
+    return funnel, response_rate
 
-    # --- Applications over time (weekly) ---
-    weekly: list[WeeklyCount] = []
-    if all_apps:
-        # Group by ISO week
-        week_counts: dict[str, int] = {}
-        for a in all_apps:
-            created = a.created_at
-            if created is not None:
-                if created.tzinfo is None:
-                    created = created.replace(tzinfo=UTC)
-                # Start of ISO week (Monday)
-                iso_year, iso_week, _ = created.isocalendar()
-                week_start = datetime.fromisocalendar(iso_year, iso_week, 1)
-                week_key = week_start.strftime("%Y-%m-%d")
-                week_counts[week_key] = week_counts.get(week_key, 0) + 1
 
-        # Sort by week
-        for week_key in sorted(week_counts.keys()):
-            weekly.append(WeeklyCount(week=week_key, count=week_counts[week_key]))
+def _compute_weekly_activity(all_apps: list[Application]) -> list[WeeklyCount]:
+    """Group applications by ISO week and return sorted weekly counts."""
+    if not all_apps:
+        return []
 
-    # --- Score distribution ---
+    week_counts: dict[str, int] = {}
+    for a in all_apps:
+        created = a.created_at
+        if created is None:
+            continue
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=UTC)
+        # Start of ISO week (Monday)
+        iso_year, iso_week, _ = created.isocalendar()
+        week_start = datetime.fromisocalendar(iso_year, iso_week, 1)
+        week_key = week_start.strftime("%Y-%m-%d")
+        week_counts[week_key] = week_counts.get(week_key, 0) + 1
+
+    return [
+        WeeklyCount(week=week_key, count=week_counts[week_key])
+        for week_key in sorted(week_counts.keys())
+    ]
+
+
+def _compute_score_distribution(all_apps: list[Application]) -> list[ScoreBucket]:
+    """Build a histogram of fit scores across predefined buckets."""
     score_dist: list[ScoreBucket] = []
     for label, low, high in SCORE_BUCKETS:
         count = sum(1 for a in all_apps if a.fit_score is not None and low <= a.fit_score < high)
         score_dist.append(ScoreBucket(range=label, count=count))
+    return score_dist
 
-    # --- Prep completion metrics (VAL-CROSS-007) ---
+
+def get_analytics(db: Session, *, profile_id: int) -> AnalyticsResponse:
+    """Compute all analytics metrics for a profile."""
+    base = _active_apps_query(db, profile_id)
+    all_apps = base.all()
+
+    funnel, response_rate = _compute_funnel_stats(all_apps)
+    time_stages = _compute_time_in_stage(db, profile_id, all_apps)
+    weekly = _compute_weekly_activity(all_apps)
+    score_dist = _compute_score_distribution(all_apps)
     prep_metrics = _compute_prep_metrics(db, profile_id)
-
-    # --- Notification delivery metrics (VAL-CROSS-007) ---
     notification_metrics = _compute_notification_metrics(db, profile_id)
 
     return AnalyticsResponse(
