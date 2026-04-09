@@ -36,6 +36,12 @@ export async function batchScore(
     );
   }
 
+  if (resp.status === 422) {
+    const body = await resp.json();
+    sessionStorage.setItem("profile_incomplete", body.detail || "true");
+    throw new Error(body.detail || "Profile incomplete for scoring");
+  }
+
   if (!resp.ok) throw new Error(`Batch scoring failed: ${resp.status}`);
 
   const data: BatchScoreResponse = await resp.json();
