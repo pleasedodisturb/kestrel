@@ -9,6 +9,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from sqlalchemy.orm import Session
+
 from career_os.database import SessionLocal
 from career_os.models.models import Profile
 from career_os.services.ticktick_sync import (
@@ -24,6 +26,26 @@ DEFAULT_INTERVAL_SECONDS = 15 * 60
 _ticktick_scheduler_task: asyncio.Task | None = None
 
 
+def _sync_single_profile(db: Session, profile: Profile) -> None:
+    """Run TickTick completion sync for a single profile with error handling."""
+    try:
+        stats = sync_completions_from_ticktick(db, profile_id=profile.id)
+    except TickTickNotConfiguredError:
+        return
+    except Exception as exc:
+        logger.warning("TickTick sync failed for profile %d: %s", profile.id, exc)
+        return
+
+    if stats["synced"] > 0 or stats["errors"] > 0:
+        logger.info(
+            "TickTick sync for profile %d: %d synced, %d errors, %d skipped",
+            profile.id,
+            stats["synced"],
+            stats["errors"],
+            stats["skipped"],
+        )
+
+
 async def _ticktick_sync_loop(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) -> None:
     """Periodically pull completed tasks from TickTick for all profiles."""
     while True:
@@ -35,25 +57,7 @@ async def _ticktick_sync_loop(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) 
             try:
                 profiles = db.query(Profile).all()
                 for profile in profiles:
-                    try:
-                        stats = sync_completions_from_ticktick(db, profile_id=profile.id)
-                        if stats["synced"] > 0 or stats["errors"] > 0:
-                            logger.info(
-                                "TickTick sync for profile %d: %d synced, %d errors, %d skipped",
-                                profile.id,
-                                stats["synced"],
-                                stats["errors"],
-                                stats["skipped"],
-                            )
-                    except TickTickNotConfiguredError:
-                        # TickTick not configured for this profile — skip silently
-                        pass
-                    except Exception as exc:
-                        logger.warning(
-                            "TickTick sync failed for profile %d: %s",
-                            profile.id,
-                            exc,
-                        )
+                    _sync_single_profile(db, profile)
             finally:
                 db.close()
 

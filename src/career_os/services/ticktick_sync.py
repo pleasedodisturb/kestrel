@@ -334,6 +334,37 @@ def sync_pipeline_action_to_ticktick(
 # ---------------------------------------------------------------------------
 
 
+def _should_skip_task(task: dict, db: Session, profile_id: int | None) -> bool:
+    """Return True if the completed TickTick task should be skipped.
+
+    A task is skipped when it has no ID, no sync mapping exists,
+    it is already completed, or it belongs to a different profile.
+    """
+    task_id = task.get("id", "")
+    if not task_id:
+        return True
+
+    sync_task = (
+        db.query(TickTickSyncTask).filter(TickTickSyncTask.ticktick_task_id == task_id).first()
+    )
+    if not sync_task:
+        return True
+
+    if sync_task.status == "completed":
+        return True
+
+    return profile_id is not None and sync_task.profile_id != profile_id
+
+
+def _apply_task_completion(db: Session, sync_task: TickTickSyncTask, now: datetime) -> None:
+    """Apply a TickTick completion to the sync task and its Career OS entity."""
+    _apply_completion(db, sync_task)
+    sync_task.status = "completed"
+    sync_task.last_synced_at = now
+    sync_task.error_message = None
+    db.commit()
+
+
 def sync_completions_from_ticktick(
     db: Session,
     *,
@@ -364,35 +395,17 @@ def sync_completions_from_ticktick(
         return stats
 
     for task in completed_tasks:
-        task_id = task.get("id", "")
-        if not task_id:
+        if _should_skip_task(task, db, profile_id):
             stats["skipped"] += 1
             continue
 
-        # Find the sync mapping
+        task_id = task.get("id", "")
         sync_task = (
             db.query(TickTickSyncTask).filter(TickTickSyncTask.ticktick_task_id == task_id).first()
         )
-        if not sync_task:
-            stats["skipped"] += 1
-            continue
-
-        # Skip if already completed
-        if sync_task.status == "completed":
-            stats["skipped"] += 1
-            continue
-
-        # Apply profile filter if given
-        if profile_id is not None and sync_task.profile_id != profile_id:
-            stats["skipped"] += 1
-            continue
 
         try:
-            _apply_completion(db, sync_task)
-            sync_task.status = "completed"
-            sync_task.last_synced_at = now
-            sync_task.error_message = None
-            db.commit()
+            _apply_task_completion(db, sync_task, now)
             stats["synced"] += 1
         except Exception as exc:
             logger.error(
