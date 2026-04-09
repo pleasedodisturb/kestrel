@@ -333,11 +333,11 @@ class TestParserHelpers:
         assert _parse_date("not-a-date") is None
 
     def test_parse_fit_score_float(self) -> None:
-        assert _parse_fit_score("8.5") == 8.5
-        assert _parse_fit_score("9.5") == 9.5
+        assert _parse_fit_score("8.5") == pytest.approx(8.5)
+        assert _parse_fit_score("9.5") == pytest.approx(9.5)
 
     def test_parse_fit_score_int(self) -> None:
-        assert _parse_fit_score("8") == 8.0
+        assert _parse_fit_score("8") == pytest.approx(8.0)
 
     def test_parse_fit_score_empty(self) -> None:
         assert _parse_fit_score("") is None
@@ -539,7 +539,7 @@ class TestRealCsvImport:
             .first()
         )
         assert app is not None
-        assert app.fit_score == 8.5
+        assert app.fit_score == pytest.approx(8.5)
         assert app.status == "applied"
 
     def test_spot_check_plain(self, seeded_db: Session, real_csv_path: Path) -> None:
@@ -556,7 +556,7 @@ class TestRealCsvImport:
             .first()
         )
         assert app is not None
-        assert app.fit_score == 9.5
+        assert app.fit_score == pytest.approx(9.5)
         assert app.status == "applied"
 
     def test_spot_check_shopware_tpm(self, seeded_db: Session, real_csv_path: Path) -> None:
@@ -572,7 +572,7 @@ class TestRealCsvImport:
             .first()
         )
         assert app is not None
-        assert app.fit_score == 8.5
+        assert app.fit_score == pytest.approx(8.5)
         assert app.status == "interested"
 
     def test_real_csv_empty_urls_handled(self, seeded_db: Session, real_csv_path: Path) -> None:

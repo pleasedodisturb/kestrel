@@ -754,8 +754,8 @@ class TestCoachingDistanceRecalculation:
 
         # The effort should reflect expert distance (3), not intermediate (1)
         # distance 3 → hours = 30, weeks = 4.5, difficulty = high
-        assert k8s_suggestions[0]["hours"] == 30.0
-        assert k8s_suggestions[0]["weeks"] == 4.5
+        assert k8s_suggestions[0]["hours"] == pytest.approx(30.0)
+        assert k8s_suggestions[0]["weeks"] == pytest.approx(4.5)
         assert k8s_suggestions[0]["difficulty"] == "high"
         # The action text should mention 'expert' (highest required level)
         assert "expert" in k8s_suggestions[0]["action"]
