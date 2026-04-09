@@ -124,7 +124,7 @@ class TestCreateApplication:
         assert data["source"] == "linkedin"
         assert data["salary_range"] == "120k-160k EUR"
         assert data["notes"] == "Great opportunity"
-        assert data["fit_score"] == pytest.approx(8.5)
+        assert data["fit_score"] == 8.5
 
     def test_create_default_status_discovered(self, client: TestClient):
         data = _create_app(client)
