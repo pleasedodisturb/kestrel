@@ -42,7 +42,7 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("integrations");
 
   return (
-    <div data-testid="settings-page" className="space-y-6">
+    <section data-testid="settings-page" className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
 
       {/* Tabs */}
@@ -78,7 +78,7 @@ export function SettingsPage() {
       {/* Tab content */}
       {activeTab === "integrations" && <IntegrationsSection />}
       {activeTab === "profiles" && <ProfilesSection />}
-    </div>
+    </section>
   );
 }
 
@@ -135,7 +135,7 @@ function IntegrationsSection() {
       } catch (e) {
         return {
           success: false,
-          message: (e as Error).message ?? "Test failed",
+          message: e instanceof Error ? e.message : "Test failed",
         };
       } finally {
         setTestingName(null);
@@ -162,7 +162,7 @@ function IntegrationsSection() {
         className="py-20 text-center"
       >
         <p className="text-lg font-medium text-red-700">
-          {(error as Error).message}
+          {error instanceof Error ? error.message : String(error)}
         </p>
       </div>
     );
@@ -283,7 +283,7 @@ function ProfilesSection() {
         className="py-20 text-center"
       >
         <p className="text-lg font-medium text-red-700">
-          {(error as Error).message}
+          {error instanceof Error ? error.message : String(error)}
         </p>
       </div>
     );
@@ -317,11 +317,10 @@ function ProfilesSection() {
           data-testid="settings-mutation-error"
           className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
         >
-          {(
-            (createMutation.error ??
-              updateMutation.error ??
-              deleteMutation.error) as Error
-          )?.message ?? "An error occurred"}
+          {(() => {
+            const err = createMutation.error ?? updateMutation.error ?? deleteMutation.error;
+            return err instanceof Error ? err.message : "An error occurred";
+          })()}
         </div>
       )}
 

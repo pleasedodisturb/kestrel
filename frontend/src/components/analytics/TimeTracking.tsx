@@ -50,11 +50,11 @@ export function TimeTracking({ data }: Props) {
   const pieData = data.category_breakdown
     .filter((cb) => cb.total_hours > 0)
     .map((cb) => ({
-      name: CATEGORY_LABELS[cb.category] || cb.category,
+      name: CATEGORY_LABELS[cb.category] ?? cb.category,
       value: cb.total_hours,
       percentage: cb.percentage,
       sessions: cb.session_count,
-      fill: CATEGORY_COLORS[cb.category] || "#94a3b8",
+      fill: CATEGORY_COLORS[cb.category] ?? "#94a3b8",
     }));
 
   // Prepare weekly trend data for the stacked bar chart
@@ -150,9 +150,9 @@ export function TimeTracking({ data }: Props) {
                     cy="50%"
                     outerRadius={90}
                     dataKey="value"
-                    label={(props: PieLabelRenderProps) => {
-                      const name = String(props.name ?? "");
-                      const pct = Number((props as PieLabelRenderProps & { percentage?: number }).percentage ?? 0);
+                    label={({ name: rawName, ...rest }: PieLabelRenderProps & { percentage?: number }) => {
+                      const name = String(rawName ?? "");
+                      const pct = Number(rest.percentage ?? 0);
                       return `${name} ${pct.toFixed(0)}%`;
                     }}
                     labelLine={false}
@@ -162,8 +162,7 @@ export function TimeTracking({ data }: Props) {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value, _name, props) => {
-                      const { payload } = props as { payload: { sessions: number; name: string } };
+                    formatter={(value, _name, { payload }: { payload: { sessions: number; name: string } }) => {
                       const numValue = Number(value) || 0;
                       return [
                         `${numValue.toFixed(1)}h (${payload.sessions} sessions)`,
@@ -201,13 +200,13 @@ export function TimeTracking({ data }: Props) {
                     const strName = String(name);
                     return [
                       `${numValue.toFixed(1)}h`,
-                      CATEGORY_LABELS[strName] || strName,
+                      CATEGORY_LABELS[strName] ?? strName,
                     ];
                   }}
                 />
                 <Legend
                   formatter={(value: string) =>
-                    CATEGORY_LABELS[value] || value
+                    CATEGORY_LABELS[value] ?? value
                   }
                 />
                 {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (

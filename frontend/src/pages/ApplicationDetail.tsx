@@ -47,7 +47,7 @@ export function ApplicationDetail() {
   // Sync edit data from server data when it changes
   useEffect(() => {
     if (!data) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: sync server data to form state
     setEditData({
       company: data.company,
       role: data.role,
@@ -251,9 +251,10 @@ export function ApplicationDetail() {
           data-testid="detail-mutation-error"
           className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
         >
-          {(
-            (updateMutation.error ?? archiveMutation.error) as Error
-          )?.message ?? "An error occurred"}
+          {(() => {
+            const err = updateMutation.error ?? archiveMutation.error;
+            return err instanceof Error ? err.message : "An error occurred";
+          })()}
         </div>
       )}
 
@@ -464,7 +465,7 @@ export function ApplicationDetail() {
         {/* Sidebar: Materials + Follow-ups + Activity log */}
         <div className="space-y-6">
           {/* Materials / Application Packages */}
-          {data.packages && data.packages.length > 0 && (
+          {(data.packages?.length ?? 0) > 0 && (
             <div data-testid="materials-section" className="rounded-lg border bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
                 Materials

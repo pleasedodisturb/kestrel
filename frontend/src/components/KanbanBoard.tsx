@@ -214,9 +214,9 @@ export function KanbanBoard() {
   }
 
   return (
-    <div>
+    <section>
       {/* Header with total count + add button */}
-      <div className="mb-4 flex items-center justify-between">
+      <header className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Pipeline</h1>
         <div className="flex items-center gap-3">
           <span
@@ -234,7 +234,7 @@ export function KanbanBoard() {
             Add
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Overdue follow-ups banner */}
       <OverdueBanner />
@@ -250,7 +250,7 @@ export function KanbanBoard() {
           data-testid="kanban-update-error"
           className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
         >
-          {(updateMutation.error as Error).message}
+          {updateMutation.error instanceof Error ? updateMutation.error.message : String(updateMutation.error)}
         </div>
       )}
 
@@ -295,6 +295,6 @@ export function KanbanBoard() {
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
       />
-    </div>
+    </section>
   );
 }

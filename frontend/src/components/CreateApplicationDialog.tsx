@@ -92,12 +92,14 @@ export function CreateApplicationDialog({
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
-      onKeyDown={(e) => e.key === 'Escape' && handleClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
       role="presentation"
     >
       <div
         data-testid="create-dialog"
         className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
