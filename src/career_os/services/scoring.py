@@ -14,6 +14,7 @@ import time
 from sqlalchemy.orm import Session
 
 from career_os.ai.factory import get_ai_provider
+from career_os.ai.openrouter_provider import CreditsExhaustedError
 from career_os.models.discovery import DiscoveredJob
 from career_os.models.models import Application, Profile
 from career_os.models.scoring import ScoredJob, ScoringWeights
@@ -492,6 +493,7 @@ async def batch_score_discovery(
 
     scores: list[ScoredJob] = []
     errors: list[dict[str, str]] = []
+    credits_exhausted = False
 
     for job in jobs:
         try:
@@ -507,6 +509,14 @@ async def batch_score_discovery(
                 application_id=job.application_id,
             )
             scores.append(scored)
+        except CreditsExhaustedError:
+            logger.warning(
+                "AI credits exhausted after scoring %d/%d jobs — stopping batch",
+                len(scores),
+                len(jobs),
+            )
+            credits_exhausted = True
+            break
         except Exception as exc:
             logger.warning("Failed to score job %d: %s", job.id, exc)
             errors.append(
@@ -523,6 +533,7 @@ async def batch_score_discovery(
         "total_time_seconds": round(total_time, 2),
         "scores": scores,
         "errors": errors,
+        "credits_exhausted": credits_exhausted,
     }
 
 

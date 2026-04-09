@@ -804,6 +804,45 @@ def send_test_notification(
 
 
 # ---------------------------------------------------------------------------
+# Alert: AI credits exhausted
+# ---------------------------------------------------------------------------
+
+
+def send_credits_exhausted_alert(
+    db: Session,
+    *,
+    profile_id: int,
+    scored_count: int,
+    total_count: int,
+) -> dict:
+    """Send a high-priority notification when AI credits are exhausted mid-scoring.
+
+    Gracefully no-ops when Pushover is not configured.
+    """
+    try:
+        client = _get_pushover_client(db)
+    except PushoverNotConfiguredError:
+        return {"status": "skipped", "reason": "pushover not configured"}
+
+    title = "AI Scoring Stopped"
+    message = (
+        f"OpenRouter credits exhausted during batch scoring. "
+        f"{scored_count} of {total_count} jobs were scored before credits ran out.\n\n"
+        f"Add credits at https://openrouter.ai"
+    )
+
+    return _send_and_log(
+        db,
+        client,
+        profile_id=profile_id,
+        category="scoring",
+        title=title,
+        message=message,
+        priority=PRIORITY_HIGH,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Test Pushover connection (with actual API call)
 # ---------------------------------------------------------------------------
 

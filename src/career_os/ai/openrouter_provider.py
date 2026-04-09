@@ -30,6 +30,20 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "anthropic/claude-sonnet-4"
 
 
+class CreditsExhaustedError(Exception):
+    """Raised when OpenRouter returns 402 or 429 indicating credits/quota exhaustion."""
+
+    def __init__(self, status_code: int, detail: str = "") -> None:
+        self.status_code = status_code
+        message = (
+            f"OpenRouter credits exhausted (HTTP {status_code}). "
+            "Add credits at https://openrouter.ai"
+        )
+        if detail:
+            message += f": {detail}"
+        super().__init__(message)
+
+
 class OpenRouterProvider(AIProvider):
     """AI provider backed by OpenRouter API."""
 
@@ -81,6 +95,16 @@ class OpenRouterProvider(AIProvider):
                 },
                 json=payload,
             )
+            if response.status_code in (402, 429):
+                detail = ""
+                try:
+                    body = response.json()
+                    detail = body.get("error", {}).get("message", "")
+                except Exception:
+                    pass
+                raise CreditsExhaustedError(
+                    status_code=response.status_code, detail=detail
+                )
             response.raise_for_status()
             data = response.json()
 
