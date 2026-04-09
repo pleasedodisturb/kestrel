@@ -342,43 +342,14 @@ def _handle_goal_recalibration(prompt: str, context: dict | None) -> AIResponse:
     )
 
 
-def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
-    """Interview preparation response — varies by application company/role.
+def _extract_research_fields(
+    research_data: dict,
+) -> tuple[list[str], list, object, dict]:
+    """Extract tech_stack, culture_keywords, values_score, hiring_patterns from research data.
 
-    Derives topics, questions, and checklist items from the prompt context
-    (company, role, gaps) so different applications produce different prep.
-
-    When research_data is present in context (VAL-CROSS-009), incorporates
-    company-specific tech stack, culture, values alignment, and hiring
-    patterns into topics and questions.
-
-    VAL-CROSS-015: Uses gap data (with distances) from context to drive
-    topic generation. Unresolved gaps (distance > 0) produce focused topics;
-    resolved gaps (distance 0) are omitted or de-emphasized.
+    Handles tech_stack as either a dict (category -> list) or a flat list.
+    Returns (tech_list, culture_keywords, values_score, hiring_patterns).
     """
-    prompt_lower = prompt.lower()
-
-    # Extract company and role from context or prompt
-    company = (context or {}).get("company", "")
-    role = (context or {}).get("role", "")
-    research_data = (context or {}).get("research_data") or {}
-    gap_data: list[dict] = (context or {}).get("gaps") or []
-
-    if not company:
-        # Try to parse from prompt
-        for line in prompt.split("\n"):
-            if line.strip().startswith("Company:"):
-                company = line.split(":", 1)[1].strip()
-            elif line.strip().startswith("Role:"):
-                role = line.split(":", 1)[1].strip()
-
-    role_lower = role.lower()
-
-    # --- Classify gaps by resolution status ---
-    unresolved_gaps = [g for g in gap_data if g.get("distance", 1) > 0]
-    unresolved_skill_names = {g["skill_name"].lower() for g in unresolved_gaps}
-
-    # --- Extract research details for enrichment ---
     tech_stack = research_data.get("tech_stack", {})
     culture_keywords = research_data.get("culture", [])
     values_score = research_data.get("values_alignment_score")
@@ -391,9 +362,27 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
             if isinstance(techs, list):
                 tech_list.extend(techs)
     elif isinstance(tech_stack, list):
-        tech_list = tech_stack
+        tech_list = list(tech_stack)
 
-    # --- Derive topics from prompt context ---
+    return tech_list, culture_keywords, values_score, hiring_patterns
+
+
+def _build_topic_pool(
+    tech_list: list[str],
+    culture_keywords: list,
+    values_score: object,
+    hiring_patterns: dict,
+    unresolved_gaps: list[dict],
+    unresolved_skill_names: set[str],
+    gap_data: list[dict],
+    role: str,
+    company: str,
+    prompt_lower: str,
+) -> list[dict]:
+    """Build the topic pool from research data, gaps, and prompt keywords.
+
+    Returns the topic list capped at 7 items.
+    """
     topic_pool = [
         {
             "topic": f"{company} engineering culture and values",
@@ -424,7 +413,7 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
     if culture_keywords and isinstance(culture_keywords, list):
         topic_pool.append(
             {
-                "topic": (f"{company} culture fit: {', '.join(culture_keywords[:3])}"),
+                "topic": f"{company} culture fit: {', '.join(culture_keywords[:3])}",
                 "relevance": "high",
                 "difficulty": "low",
             }
@@ -442,7 +431,7 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
         if isinstance(depts, list) and depts:
             topic_pool.append(
                 {
-                    "topic": (f"{company} hiring focus areas: {', '.join(depts[:3])}"),
+                    "topic": f"{company} hiring focus areas: {', '.join(depts[:3])}",
                     "relevance": "medium",
                     "difficulty": "low",
                 }
@@ -459,41 +448,40 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
             difficulty = "high" if distance >= 2 else "medium"
             topic_pool.append(
                 {
-                    "topic": (f"Gap area: {skill} (distance {distance}, {severity})"),
+                    "topic": f"Gap area: {skill} (distance {distance}, {severity})",
                     "relevance": relevance,
                     "difficulty": difficulty,
                 }
             )
     else:
-        # Fallback: keyword-based gap topics (legacy path for no context)
-        if "kubernetes" in prompt_lower:
-            topic_pool.append(
-                {
-                    "topic": "Container orchestration and Kubernetes",
-                    "relevance": "high",
-                    "difficulty": "high",
-                }
-            )
-        if "python" in prompt_lower:
-            topic_pool.append(
-                {
-                    "topic": "Python best practices and architecture",
-                    "relevance": "medium",
-                    "difficulty": "medium",
-                }
-            )
+        # Fallback: keyword-to-topic lookup (legacy path for no context)
+        keyword_topics = {
+            "kubernetes": {
+                "topic": "Container orchestration and Kubernetes",
+                "relevance": "high",
+                "difficulty": "high",
+            },
+            "python": {
+                "topic": "Python best practices and architecture",
+                "relevance": "medium",
+                "difficulty": "medium",
+            },
+        }
+        for keyword, topic_entry in keyword_topics.items():
+            if keyword in prompt_lower:
+                topic_pool.append(topic_entry)
 
-    if "program management" in prompt_lower or "tpm" in role_lower:
-        # Only add if not already covered by gap data or if it's unresolved
-        pm_lower = "program management"
-        if not gap_data or pm_lower in unresolved_skill_names:
-            topic_pool.append(
-                {
-                    "topic": "Cross-functional program delivery",
-                    "relevance": "high",
-                    "difficulty": "medium",
-                }
-            )
+    role_lower = role.lower()
+    if ("program management" in prompt_lower or "tpm" in role_lower) and (
+        not gap_data or "program management" in unresolved_skill_names
+    ):
+        topic_pool.append(
+            {
+                "topic": "Cross-functional program delivery",
+                "relevance": "high",
+                "difficulty": "medium",
+            }
+        )
     if "ai" in prompt_lower or "ml" in prompt_lower:
         topic_pool.append(
             {
@@ -513,9 +501,22 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
             }
         )
 
-    topics = topic_pool[:7]  # Cap at 7
+    return topic_pool[:7]  # Cap at 7
 
-    # --- Derive questions from company/role context ---
+
+def _build_mock_questions(
+    tech_list: list[str],
+    culture_keywords: list,
+    unresolved_gaps: list[dict],
+    gap_data: list[dict],
+    role: str,
+    company: str,
+    prompt_lower: str,
+) -> list[dict]:
+    """Build the practice questions list from context, research, and gaps.
+
+    Returns the questions list capped at 8 items.
+    """
     questions = [
         {
             "question": (
@@ -610,7 +611,16 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
                 }
             )
 
-    # --- Derive checklist from company/role ---
+    return questions[:8]  # Cap at 8
+
+
+def _build_mock_checklist(
+    tech_list: list[str],
+    unresolved_gaps: list[dict],
+    role: str,
+    company: str,
+) -> list[dict]:
+    """Build the checklist items from context, research, and gaps."""
     checklist = [
         {
             "item": f"Research {company}'s recent news and product launches",
@@ -628,7 +638,7 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
             "priority": "high",
         },
         {
-            "item": (f"Practice system design problems relevant to {company}'s domain"),
+            "item": f"Practice system design problems relevant to {company}'s domain",
             "time_minutes": 60,
             "priority": "medium",
         },
@@ -667,12 +677,80 @@ def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
             }
         )
 
+    return checklist
+
+
+def _handle_interview_prep(prompt: str, context: dict | None) -> AIResponse:
+    """Interview preparation response — varies by application company/role.
+
+    Derives topics, questions, and checklist items from the prompt context
+    (company, role, gaps) so different applications produce different prep.
+
+    When research_data is present in context (VAL-CROSS-009), incorporates
+    company-specific tech stack, culture, values alignment, and hiring
+    patterns into topics and questions.
+
+    VAL-CROSS-015: Uses gap data (with distances) from context to drive
+    topic generation. Unresolved gaps (distance > 0) produce focused topics;
+    resolved gaps (distance 0) are omitted or de-emphasized.
+    """
+    prompt_lower = prompt.lower()
+
+    # Extract company and role from context or prompt
+    company = (context or {}).get("company", "")
+    role = (context or {}).get("role", "")
+    research_data = (context or {}).get("research_data") or {}
+    gap_data: list[dict] = (context or {}).get("gaps") or []
+
+    if not company:
+        # Try to parse from prompt
+        for line in prompt.split("\n"):
+            if line.strip().startswith("Company:"):
+                company = line.split(":", 1)[1].strip()
+            elif line.strip().startswith("Role:"):
+                role = line.split(":", 1)[1].strip()
+
+    # --- Classify gaps by resolution status ---
+    unresolved_gaps = [g for g in gap_data if g.get("distance", 1) > 0]
+    unresolved_skill_names = {g["skill_name"].lower() for g in unresolved_gaps}
+
+    # --- Extract research details for enrichment ---
+    tech_list, culture_keywords, values_score, hiring_patterns = _extract_research_fields(
+        research_data
+    )
+
+    # --- Build topics, questions, and checklist via helpers ---
+    topics = _build_topic_pool(
+        tech_list,
+        culture_keywords,
+        values_score,
+        hiring_patterns,
+        unresolved_gaps,
+        unresolved_skill_names,
+        gap_data,
+        role,
+        company,
+        prompt_lower,
+    )
+
+    questions = _build_mock_questions(
+        tech_list,
+        culture_keywords,
+        unresolved_gaps,
+        gap_data,
+        role,
+        company,
+        prompt_lower,
+    )
+
+    checklist = _build_mock_checklist(tech_list, unresolved_gaps, role, company)
+
     total_minutes = sum(item["time_minutes"] for item in checklist)
     total_hours = round(total_minutes / 60, 1)
 
     structured = InterviewPrepResult(
         topics=topics,
-        questions=questions[:8],  # Cap at 8
+        questions=questions,
         checklist=checklist,
         total_prep_hours=total_hours,
     )

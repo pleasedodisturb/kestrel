@@ -5,14 +5,20 @@ interview reminders. Respects user preferences (per-category enable/disable,
 quiet hours). Auth failures are logged and surfaced, never crash.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 
 from career_os.models.integrations import IntegrationConfig
 from career_os.models.models import Application, FollowUp
+
+if TYPE_CHECKING:
+    from career_os.models.calendar import CalendarEvent
 from career_os.models.pushover import NotificationLog, NotificationPreference
 from career_os.schemas.pushover import NotificationPreferenceUpdate
 from career_os.services.follow_ups import (
@@ -318,31 +324,75 @@ def list_notification_logs(
 # ---------------------------------------------------------------------------
 
 
+def _validate_followup_config(
+    db: Session, profile_id: int, category: str
+) -> tuple[NotificationPreference, bool, PushoverClient | None, dict | None]:
+    """Validate preferences and config for follow-up reminders.
+
+    Returns (pref, quiet, client, error_result).
+    If error_result is not None, the caller should return it immediately.
+    """
+    pref = _get_or_create_preferences(db, profile_id)
+
+    if not _is_category_enabled(pref, category):
+        return (
+            pref,
+            False,
+            None,
+            {
+                "triggered": 0,
+                "skipped": 1,
+                "failed": 0,
+                "details": [{"reason": f"{category}_reminders disabled"}],
+            },
+        )
+
+    quiet = _is_quiet_hours(pref)
+
+    if quiet:
+        return pref, True, None, None
+
+    try:
+        client = _get_pushover_client(db)
+    except PushoverNotConfiguredError as exc:
+        return (
+            pref,
+            False,
+            None,
+            {
+                "triggered": 0,
+                "skipped": 0,
+                "failed": 1,
+                "details": [{"reason": str(exc)}],
+            },
+        )
+
+    return pref, False, client, None
+
+
+def _build_followup_message(fu: FollowUp, app_obj: Application) -> str:
+    """Build notification message for a follow-up reminder."""
+    message = (
+        f"{app_obj.company} — {app_obj.role}\n"
+        f"Type: {fu.follow_up_type}\n"
+        f"Due: {fu.due_date.strftime('%Y-%m-%d')}"
+    )
+    if fu.notes:
+        message += f"\n{fu.notes}"
+    return message
+
+
 def trigger_follow_up_reminders(db: Session, profile_id: int) -> dict:
     """Check for due follow-ups and send Pushover notifications.
 
     VAL-PUSH-001: Due follow-up triggers Pushover notification with company,
     role, suggested action.
     """
-    pref = _get_or_create_preferences(db, profile_id)
-    result = {"triggered": 0, "skipped": 0, "failed": 0, "details": []}
+    pref, quiet, client, error_result = _validate_followup_config(db, profile_id, "follow_up")
+    if error_result is not None:
+        return error_result
 
-    if not _is_category_enabled(pref, "follow_up"):
-        result["skipped"] = 1
-        result["details"].append({"reason": "follow_up_reminders disabled"})
-        return result
-
-    quiet = _is_quiet_hours(pref)
-
-    if not quiet:
-        try:
-            client = _get_pushover_client(db)
-        except PushoverNotConfiguredError as exc:
-            result["failed"] = 1
-            result["details"].append({"reason": str(exc)})
-            return result
-    else:
-        client = None
+    result: dict = {"triggered": 0, "skipped": 0, "failed": 0, "details": []}
 
     # Find due, incomplete follow-ups
     now = datetime.now(UTC)
@@ -364,37 +414,20 @@ def trigger_follow_up_reminders(db: Session, profile_id: int) -> dict:
             continue
 
         title = "📋 Follow-up Reminder"
-        message = (
-            f"{app_obj.company} — {app_obj.role}\n"
-            f"Type: {fu.follow_up_type}\n"
-            f"Due: {fu.due_date.strftime('%Y-%m-%d')}"
-        )
-        if fu.notes:
-            message += f"\n{fu.notes}"
+        message = _build_followup_message(fu, app_obj)
 
-        if quiet:
-            send_result = _queue_notification(
-                db,
-                profile_id=profile_id,
-                category="follow_up",
-                title=title,
-                message=message,
-                application_id=fu.application_id,
-                url=f"http://localhost:8101/applications/{fu.application_id}",
-                url_title="View Application",
-            )
-        else:
-            send_result = _send_and_log(
-                db,
-                client,
-                profile_id=profile_id,
-                category="follow_up",
-                title=title,
-                message=message,
-                application_id=fu.application_id,
-                url=f"http://localhost:8101/applications/{fu.application_id}",
-                url_title="View Application",
-            )
+        send_result = _send_or_queue_notification(
+            db,
+            client,
+            quiet,
+            profile_id=profile_id,
+            category="follow_up",
+            title=title,
+            message=message,
+            application_id=fu.application_id,
+            url=f"http://localhost:8101/applications/{fu.application_id}",
+            url_title="View Application",
+        )
 
         if send_result["status"] in ("sent", "queued"):
             result["triggered"] += 1
@@ -410,6 +443,152 @@ def trigger_follow_up_reminders(db: Session, profile_id: int) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _build_ghost_notification(app_obj: Application, days_since: int) -> tuple[str, str, str]:
+    """Build notification title, message, and url for a ghost alert."""
+    title = "👻 Ghost Alert"
+    message = (
+        f"{app_obj.company} — {app_obj.role}\n"
+        f"Status: {app_obj.status}\n"
+        f"No response for {days_since} days\n"
+        f"Consider following up or marking as ghosted."
+    )
+    url = f"http://localhost:8101/applications/{app_obj.id}"
+    return title, message, url
+
+
+def _send_or_queue_notification(
+    db: Session,
+    client: PushoverClient | None,
+    quiet: bool,
+    *,
+    profile_id: int,
+    category: str,
+    title: str,
+    message: str,
+    application_id: int | None = None,
+    url: str | None = None,
+    url_title: str | None = None,
+    priority: int = PRIORITY_NORMAL,
+) -> dict:
+    """Send a notification immediately or queue it during quiet hours."""
+    if quiet:
+        return _queue_notification(
+            db,
+            profile_id=profile_id,
+            category=category,
+            title=title,
+            message=message,
+            application_id=application_id,
+            url=url,
+            url_title=url_title,
+            priority=priority,
+        )
+    return _send_and_log(
+        db,
+        client,
+        profile_id=profile_id,
+        category=category,
+        title=title,
+        message=message,
+        application_id=application_id,
+        url=url,
+        url_title=url_title,
+        priority=priority,
+    )
+
+
+def _send_ghost_notification(
+    db: Session,
+    client: PushoverClient | None,
+    quiet: bool,
+    pushover_configured: bool,
+    *,
+    profile_id: int,
+    app_obj: Application,
+    days_since: int,
+    result: dict,
+) -> None:
+    """Send or queue a ghost notification and update the result dict."""
+    title, message, url = _build_ghost_notification(app_obj, days_since)
+
+    if not pushover_configured and not quiet:
+        result["details"].append(
+            {"status": "skipped", "reason": "Pushover not configured", "title": title}
+        )
+        return
+
+    send_result = _send_or_queue_notification(
+        db,
+        client,
+        quiet,
+        profile_id=profile_id,
+        category="ghost",
+        title=title,
+        message=message,
+        application_id=app_obj.id,
+        url=url,
+        url_title="View Application",
+        priority=PRIORITY_HIGH,
+    )
+
+    if send_result["status"] in ("sent", "queued"):
+        result["triggered"] += 1
+    else:
+        result["failed"] += 1
+    result["details"].append(send_result)
+
+
+def _auto_create_ghost_follow_up(
+    db: Session,
+    profile_id: int,
+    app_obj: Application,
+    days_since: int,
+) -> None:
+    """Auto-create a follow-up for a ghost application (VAL-CROSS-008).
+
+    Skips if an open ghost-type follow-up already exists.
+    """
+    from datetime import timedelta
+
+    from career_os.schemas.follow_ups import FollowUpCreate
+
+    existing_fu = (
+        db.query(FollowUp)
+        .filter(
+            FollowUp.application_id == app_obj.id,
+            FollowUp.profile_id == profile_id,
+            FollowUp.follow_up_type == "ghost_follow_up",
+            FollowUp.completed_at.is_(None),
+        )
+        .first()
+    )
+    if existing_fu:
+        return
+
+    try:
+        from career_os.services.follow_ups import create_follow_up
+
+        now = datetime.now(UTC)
+        fu_payload = FollowUpCreate(
+            profile_id=profile_id,
+            application_id=app_obj.id,
+            due_date=now + timedelta(days=2),
+            follow_up_type="ghost_follow_up",
+            notes=(
+                f"Auto-created by ghost alert: {app_obj.company} — "
+                f"{app_obj.role} has had no response for {days_since} days. "
+                f"Consider sending a follow-up email or marking as ghosted."
+            ),
+        )
+        create_follow_up(db, fu_payload)
+    except Exception:
+        logger.debug(
+            "Failed to auto-create follow-up for ghost app %d",
+            app_obj.id,
+            exc_info=True,
+        )
+
+
 def trigger_ghost_alerts(db: Session, profile_id: int) -> dict:
     """Check for ghost applications and send Pushover notifications.
 
@@ -420,10 +599,8 @@ def trigger_ghost_alerts(db: Session, profile_id: int) -> dict:
     application and triggers TickTick push (via create_follow_up which
     already hooks into TickTick sync).
     """
-    from career_os.schemas.follow_ups import FollowUpCreate
-
     pref = _get_or_create_preferences(db, profile_id)
-    result = {"triggered": 0, "skipped": 0, "failed": 0, "details": []}
+    result: dict = {"triggered": 0, "skipped": 0, "failed": 0, "details": []}
 
     if not _is_category_enabled(pref, "ghost"):
         result["skipped"] = 1
@@ -451,94 +628,18 @@ def trigger_ghost_alerts(db: Session, profile_id: int) -> dict:
             updated = updated.replace(tzinfo=UTC)
         days_since = (now - updated).days
 
-        title = "👻 Ghost Alert"
-        message = (
-            f"{app_obj.company} — {app_obj.role}\n"
-            f"Status: {app_obj.status}\n"
-            f"No response for {days_since} days\n"
-            f"Consider following up or marking as ghosted."
+        _send_ghost_notification(
+            db,
+            client,
+            quiet,
+            pushover_configured,
+            profile_id=profile_id,
+            app_obj=app_obj,
+            days_since=days_since,
+            result=result,
         )
 
-        # Send notification if Pushover is configured
-        if pushover_configured or quiet:
-            if quiet:
-                send_result = _queue_notification(
-                    db,
-                    profile_id=profile_id,
-                    category="ghost",
-                    title=title,
-                    message=message,
-                    application_id=app_obj.id,
-                    url=f"http://localhost:8101/applications/{app_obj.id}",
-                    url_title="View Application",
-                    priority=PRIORITY_HIGH,
-                )
-            else:
-                send_result = _send_and_log(
-                    db,
-                    client,
-                    profile_id=profile_id,
-                    category="ghost",
-                    title=title,
-                    message=message,
-                    application_id=app_obj.id,
-                    url=f"http://localhost:8101/applications/{app_obj.id}",
-                    url_title="View Application",
-                    priority=PRIORITY_HIGH,
-                )
-
-            if send_result["status"] in ("sent", "queued"):
-                result["triggered"] += 1
-            else:
-                result["failed"] += 1
-            result["details"].append(send_result)
-        else:
-            # No Pushover — log but don't count as failed
-            result["details"].append(
-                {
-                    "status": "skipped",
-                    "reason": "Pushover not configured",
-                    "title": title,
-                }
-            )
-
-        # VAL-CROSS-008: Auto-create follow-up for ghost application.
-        # Check if an open (incomplete) ghost-type follow-up already exists
-        # to avoid creating duplicates on repeated trigger calls.
-        from datetime import timedelta
-
-        existing_fu = (
-            db.query(FollowUp)
-            .filter(
-                FollowUp.application_id == app_obj.id,
-                FollowUp.profile_id == profile_id,
-                FollowUp.follow_up_type == "ghost_follow_up",
-                FollowUp.completed_at.is_(None),
-            )
-            .first()
-        )
-        if not existing_fu:
-            try:
-                from career_os.services.follow_ups import create_follow_up
-
-                fu_payload = FollowUpCreate(
-                    profile_id=profile_id,
-                    application_id=app_obj.id,
-                    due_date=now + timedelta(days=2),
-                    follow_up_type="ghost_follow_up",
-                    notes=(
-                        f"Auto-created by ghost alert: {app_obj.company} — "
-                        f"{app_obj.role} has had no response for {days_since} days. "
-                        f"Consider sending a follow-up email or marking as ghosted."
-                    ),
-                )
-                create_follow_up(db, fu_payload)
-            except Exception:
-                logger.debug(
-                    "Failed to auto-create follow-up for ghost app %d",
-                    app_obj.id,
-                    exc_info=True,
-                )
+        _auto_create_ghost_follow_up(db, profile_id, app_obj, days_since)
 
     return result
 
@@ -636,6 +737,72 @@ def trigger_discovery_alert(
 # ---------------------------------------------------------------------------
 
 
+def _build_interview_message(event: CalendarEvent) -> str:
+    """Build the notification message string for an interview event."""
+    message = (
+        f"{event.company or 'Unknown'} — {event.role or 'Unknown'}\n"
+        f"Time: {event.start_time.strftime('%Y-%m-%d %H:%M UTC')}\n"
+        f"Type: {event.interview_type or 'Interview'}"
+    )
+    if event.meeting_link:
+        message += f"\nLink: {event.meeting_link}"
+    if event.prep_notes:
+        message += f"\nPrep: {event.prep_notes[:100]}"
+    return message
+
+
+def _process_interview_event(
+    db: Session,
+    event: CalendarEvent,
+    profile_id: int,
+    client: PushoverClient | None,
+    quiet: bool,
+) -> dict | None:
+    """Process a single interview event: check duplicates, build message, send.
+
+    Returns a dict with 'status' key if the event was processed,
+    or None if already notified (caller should record as skipped).
+    """
+    event_time_str = event.start_time.strftime("%Y-%m-%d %H:%M")
+    existing = (
+        db.query(NotificationLog)
+        .filter(
+            NotificationLog.profile_id == profile_id,
+            NotificationLog.category == "interview",
+            NotificationLog.application_id == event.application_id,
+            NotificationLog.status.in_(["sent", "queued"]),
+            NotificationLog.message.contains(event_time_str),
+        )
+        .first()
+    )
+    if existing:
+        return None
+
+    title = "🗓️ Interview Reminder"
+    message = _build_interview_message(event)
+
+    url = event.meeting_link or (
+        f"http://localhost:8101/applications/{event.application_id}"
+        if event.application_id
+        else None
+    )
+    url_title = "Join Interview" if event.meeting_link else "View Application"
+
+    return _send_or_queue_notification(
+        db,
+        client,
+        quiet,
+        profile_id=profile_id,
+        category="interview",
+        title=title,
+        message=message,
+        application_id=event.application_id,
+        url=url,
+        url_title=url_title,
+        priority=PRIORITY_HIGH,
+    )
+
+
 def trigger_interview_reminders(db: Session, profile_id: int) -> dict:
     """Check for upcoming interviews and send Pushover reminders.
 
@@ -644,32 +811,18 @@ def trigger_interview_reminders(db: Session, profile_id: int) -> dict:
 
     Uses CalendarEvent table for interview events.
     """
+    from datetime import timedelta
+
     from career_os.models.calendar import CalendarEvent
 
-    pref = _get_or_create_preferences(db, profile_id)
-    result = {"triggered": 0, "skipped": 0, "failed": 0, "details": []}
+    pref, quiet, client, error_result = _validate_followup_config(db, profile_id, "interview")
+    if error_result is not None:
+        return error_result
 
-    if not _is_category_enabled(pref, "interview"):
-        result["skipped"] = 1
-        result["details"].append({"reason": "interview_reminders disabled"})
-        return result
-
-    quiet = _is_quiet_hours(pref)
-
-    if not quiet:
-        try:
-            client = _get_pushover_client(db)
-        except PushoverNotConfiguredError as exc:
-            result["failed"] = 1
-            result["details"].append({"reason": str(exc)})
-            return result
-    else:
-        client = None
+    result: dict = {"triggered": 0, "skipped": 0, "failed": 0, "details": []}
 
     # Find interviews happening within the lead time window
     now = datetime.now(UTC)
-    from datetime import timedelta
-
     lead_minutes = pref.interview_lead_time_minutes
     window_end = now + timedelta(minutes=lead_minutes)
 
@@ -685,70 +838,12 @@ def trigger_interview_reminders(db: Session, profile_id: int) -> dict:
     )
 
     for event in interviews:
-        # Check if we already sent or queued a notification for this interview
-        event_time_str = event.start_time.strftime("%Y-%m-%d %H:%M")
-        existing = (
-            db.query(NotificationLog)
-            .filter(
-                NotificationLog.profile_id == profile_id,
-                NotificationLog.category == "interview",
-                NotificationLog.application_id == event.application_id,
-                NotificationLog.status.in_(["sent", "queued"]),
-                NotificationLog.message.contains(event_time_str),
-            )
-            .first()
-        )
-        if existing:
+        send_result = _process_interview_event(db, event, profile_id, client, quiet)
+
+        if send_result is None:
             result["skipped"] += 1
             result["details"].append({"reason": "already notified", "event": event.title})
             continue
-
-        title = "🗓️ Interview Reminder"
-        message = (
-            f"{event.company or 'Unknown'} — {event.role or 'Unknown'}\n"
-            f"Time: {event.start_time.strftime('%Y-%m-%d %H:%M UTC')}\n"
-            f"Type: {event.interview_type or 'Interview'}"
-        )
-        if event.meeting_link:
-            message += f"\nLink: {event.meeting_link}"
-        if event.prep_notes:
-            message += f"\nPrep: {event.prep_notes[:100]}"
-
-        if quiet:
-            send_result = _queue_notification(
-                db,
-                profile_id=profile_id,
-                category="interview",
-                title=title,
-                message=message,
-                application_id=event.application_id,
-                url=event.meeting_link
-                or (
-                    f"http://localhost:8101/applications/{event.application_id}"
-                    if event.application_id
-                    else None
-                ),
-                url_title="Join Interview" if event.meeting_link else "View Application",
-                priority=PRIORITY_HIGH,
-            )
-        else:
-            send_result = _send_and_log(
-                db,
-                client,
-                profile_id=profile_id,
-                category="interview",
-                title=title,
-                message=message,
-                application_id=event.application_id,
-                url=event.meeting_link
-                or (
-                    f"http://localhost:8101/applications/{event.application_id}"
-                    if event.application_id
-                    else None
-                ),
-                url_title="Join Interview" if event.meeting_link else "View Application",
-                priority=PRIORITY_HIGH,
-            )
 
         if send_result["status"] in ("sent", "queued"):
             result["triggered"] += 1

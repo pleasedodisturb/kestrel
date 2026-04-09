@@ -224,6 +224,56 @@ def pipeline_add(
 # ---------------------------------------------------------------------------
 
 
+def _validate_status_transition(app_obj, status: str, db) -> list[str]:
+    """Validate and apply a status transition. Returns list of change descriptions."""
+    try:
+        ApplicationStatus(status.lower())
+    except ValueError:
+        valid = ", ".join(s.value for s in ApplicationStatus)
+        console.print(f"[red]Error:[/red] Invalid status '{status}'. Valid statuses: {valid}")
+        raise typer.Exit(code=1) from None
+
+    old_status = app_obj.status.lower()
+    new_status = status.lower()
+
+    if old_status == new_status:
+        return []
+
+    if not is_valid_transition(old_status, new_status):
+        console.print(f"[red]Error:[/red] Cannot transition from '{old_status}' to '{new_status}'.")
+        raise typer.Exit(code=1)
+
+    app_obj.status = new_status
+
+    log = ActivityLog(
+        profile_id=app_obj.profile_id,
+        application_id=app_obj.id,
+        action="status_changed",
+        details=f"Status changed from '{old_status}' to '{new_status}'",
+        source="cli",
+    )
+    db.add(log)
+
+    if new_status == "applied" and app_obj.date_applied is None:
+        app_obj.date_applied = datetime.now(UTC)
+
+    return [f"status → {new_status}"]
+
+
+def _apply_notes_update(app_obj, notes: str, db) -> str:
+    """Apply a notes update to an application and log it. Returns 'notes'."""
+    app_obj.notes = notes
+    log = ActivityLog(
+        profile_id=app_obj.profile_id,
+        application_id=app_obj.id,
+        action="updated",
+        details="Updated fields: notes",
+        source="cli",
+    )
+    db.add(log)
+    return "notes"
+
+
 @pipeline_app.command("update")
 def pipeline_update(
     app_id: int = typer.Argument(..., help="Application ID"),
@@ -251,59 +301,13 @@ def pipeline_update(
             console.print(f"[red]Error:[/red] Application {app_id} not found.")
             raise typer.Exit(code=1)
 
-        changed = []
+        changed: list[str] = []
 
         if status:
-            # Validate status value
-            try:
-                ApplicationStatus(status.lower())
-            except ValueError:
-                valid = ", ".join(s.value for s in ApplicationStatus)
-                console.print(
-                    f"[red]Error:[/red] Invalid status '{status}'. Valid statuses: {valid}"
-                )
-                raise typer.Exit(code=1) from None
-
-            old_status = app_obj.status.lower()
-            new_status = status.lower()
-
-            if old_status != new_status:
-                if not is_valid_transition(old_status, new_status):
-                    console.print(
-                        f"[red]Error:[/red] Cannot transition from "
-                        f"'{old_status}' to '{new_status}'."
-                    )
-                    raise typer.Exit(code=1)
-
-                app_obj.status = new_status
-                changed.append(f"status → {new_status}")
-
-                # Log status change
-                log = ActivityLog(
-                    profile_id=app_obj.profile_id,
-                    application_id=app_obj.id,
-                    action="status_changed",
-                    details=f"Status changed from '{old_status}' to '{new_status}'",
-                    source="cli",
-                )
-                db.add(log)
-
-                # Set date_applied if transitioning to applied
-                if new_status == "applied" and app_obj.date_applied is None:
-                    app_obj.date_applied = datetime.now(UTC)
+            changed.extend(_validate_status_transition(app_obj, status, db))
 
         if notes is not None:
-            app_obj.notes = notes
-            changed.append("notes")
-
-            log = ActivityLog(
-                profile_id=app_obj.profile_id,
-                application_id=app_obj.id,
-                action="updated",
-                details="Updated fields: notes",
-                source="cli",
-            )
-            db.add(log)
+            changed.append(_apply_notes_update(app_obj, notes, db))
 
         db.commit()
         db.refresh(app_obj)
@@ -322,6 +326,45 @@ def pipeline_update(
 # ---------------------------------------------------------------------------
 
 
+def _compute_pipeline_stats(applications) -> dict:
+    """Compute pipeline statistics from a list of applications."""
+    status_counts: dict[str, int] = {}
+    scores: list[float] = []
+    company_counts: dict[str, int] = {}
+
+    for app_obj in applications:
+        s = app_obj.status.lower()
+        status_counts[s] = status_counts.get(s, 0) + 1
+
+        if app_obj.fit_score is not None:
+            scores.append(app_obj.fit_score)
+
+        company_counts[app_obj.company] = company_counts.get(app_obj.company, 0) + 1
+
+    avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+    top_companies = sorted(company_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    dates = [a.created_at for a in applications if a.created_at is not None]
+    if dates:
+        earliest = min(dates)
+        latest = max(dates)
+        if earliest.tzinfo is None:
+            earliest = earliest.replace(tzinfo=UTC)
+        if latest.tzinfo is None:
+            latest = latest.replace(tzinfo=UTC)
+        date_range = f"{earliest.strftime('%Y-%m-%d')} to {latest.strftime('%Y-%m-%d')}"
+    else:
+        date_range = "—"
+
+    return {
+        "total": len(applications),
+        "avg_score": avg_score,
+        "date_range": date_range,
+        "status_counts": status_counts,
+        "top_companies": top_companies,
+    }
+
+
 @pipeline_app.command("stats")
 def pipeline_stats() -> None:
     """Show pipeline statistics."""
@@ -338,51 +381,19 @@ def pipeline_stats() -> None:
             .all()
         )
 
-        total = len(applications)
-
-        # Per-status counts
-        status_counts: dict[str, int] = {}
-        scores: list[float] = []
-        company_counts: dict[str, int] = {}
-
-        for app_obj in applications:
-            s = app_obj.status.lower()
-            status_counts[s] = status_counts.get(s, 0) + 1
-
-            if app_obj.fit_score is not None:
-                scores.append(app_obj.fit_score)
-
-            company_counts[app_obj.company] = company_counts.get(app_obj.company, 0) + 1
-
-        avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
-
-        # Top companies by count (top 5)
-        top_companies = sorted(company_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-
-        # Date range
-        dates = [a.created_at for a in applications if a.created_at is not None]
-        if dates:
-            earliest = min(dates)
-            latest = max(dates)
-            if earliest.tzinfo is None:
-                earliest = earliest.replace(tzinfo=UTC)
-            if latest.tzinfo is None:
-                latest = latest.replace(tzinfo=UTC)
-            date_range = f"{earliest.strftime('%Y-%m-%d')} to {latest.strftime('%Y-%m-%d')}"
-        else:
-            date_range = "—"
+        stats = _compute_pipeline_stats(applications)
 
         console.print()
         console.print("[bold]Pipeline Statistics[/bold]")
-        console.print(f"  Total applications: {total}")
-        console.print(f"  Average fit score:  {avg_score}")
-        console.print(f"  Date range:         {date_range}")
+        console.print(f"  Total applications: {stats['total']}")
+        console.print(f"  Average fit score:  {stats['avg_score']}")
+        console.print(f"  Date range:         {stats['date_range']}")
         console.print()
 
         # Status breakdown
         console.print("[bold]Status Breakdown[/bold]")
         for s in ApplicationStatus:
-            count = status_counts.get(s.value, 0)
+            count = stats["status_counts"].get(s.value, 0)
             if count > 0:
                 console.print(f"  {s.value:<15} {count}")
 
@@ -390,8 +401,8 @@ def pipeline_stats() -> None:
 
         # Top companies
         console.print("[bold]Top Companies[/bold]")
-        if top_companies:
-            for company, count in top_companies:
+        if stats["top_companies"]:
+            for company, count in stats["top_companies"]:
                 console.print(f"  {company:<25} {count} application(s)")
         else:
             console.print("  —")
@@ -589,6 +600,46 @@ def skills_gaps(
         db.close()
 
 
+_SEVERITY_STYLES: dict[str, str] = {
+    "critical": "red",
+    "nice-to-have": "yellow",
+}
+
+
+def _build_gaps_table(gaps: list[dict]) -> Table:
+    """Build a Rich table for skill gaps."""
+    table = Table(title="Skill Gaps")
+    table.add_column("Skill", style="bold")
+    table.add_column("Required")
+    table.add_column("Current")
+    table.add_column("Severity")
+    table.add_column("Distance", justify="right")
+
+    for gap in gaps:
+        current = gap["current_level"] or "[dim]missing[/dim]"
+        sev = gap["severity"]
+        sev_color = _SEVERITY_STYLES.get(sev)
+        sev_str = f"[{sev_color}]{sev}[/{sev_color}]" if sev_color else f"[dim]{sev}[/dim]"
+
+        dist = gap["distance"]
+        if dist >= 3:
+            dist_str = f"[red]{dist}[/red]"
+        elif dist >= 2:
+            dist_str = f"[yellow]{dist}[/yellow]"
+        else:
+            dist_str = str(dist)
+
+        table.add_row(
+            gap["skill_name"],
+            gap["required_level"],
+            current,
+            sev_str,
+            dist_str,
+        )
+
+    return table
+
+
 def _show_application_gaps(
     db: Session,
     profile_id: int,
@@ -613,12 +664,7 @@ def _show_application_gaps(
     console.print(f"\n[bold]Gap Analysis: {result['company']} — {result['role']}[/bold]")
 
     score = result["readiness_score"]
-    if score >= 80:
-        score_style = "green"
-    elif score >= 50:
-        score_style = "yellow"
-    else:
-        score_style = "red"
+    score_style = "green" if score >= 80 else ("yellow" if score >= 50 else "red")
     console.print(f"Readiness Score: [{score_style}]{score:.1f}%[/{score_style}]")
     console.print(
         f"Total requirements: {result['total_requirements']}, Gaps: {result['gaps_count']}\n"
@@ -632,40 +678,7 @@ def _show_application_gaps(
         console.print("[green]✓ No gaps found (or all filtered out).[/green]")
         return
 
-    table = Table(title="Skill Gaps")
-    table.add_column("Skill", style="bold")
-    table.add_column("Required")
-    table.add_column("Current")
-    table.add_column("Severity")
-    table.add_column("Distance", justify="right")
-
-    for gap in gaps:
-        current = gap["current_level"] or "[dim]missing[/dim]"
-        sev = gap["severity"]
-        if sev == "critical":
-            sev_str = f"[red]{sev}[/red]"
-        elif sev == "nice-to-have":
-            sev_str = f"[yellow]{sev}[/yellow]"
-        else:
-            sev_str = f"[dim]{sev}[/dim]"
-
-        dist = gap["distance"]
-        if dist >= 3:
-            dist_str = f"[red]{dist}[/red]"
-        elif dist >= 2:
-            dist_str = f"[yellow]{dist}[/yellow]"
-        else:
-            dist_str = str(dist)
-
-        table.add_row(
-            gap["skill_name"],
-            gap["required_level"],
-            current,
-            sev_str,
-            dist_str,
-        )
-
-    console.print(table)
+    console.print(_build_gaps_table(gaps))
 
 
 def _show_aggregate_gaps(db: Session, profile_id: int, aggregate_fn) -> None:
@@ -720,6 +733,47 @@ def _show_aggregate_gaps(db: Session, profile_id: int, aggregate_fn) -> None:
 # ---------------------------------------------------------------------------
 
 
+_GOAL_STATUS_STYLES: dict[str, str] = {
+    "completed": "green",
+    "paused": "yellow",
+    "abandoned": "dim",
+}
+
+
+def _get_status_style(status: str) -> str:
+    """Return Rich-styled status string based on goal status."""
+    style = _GOAL_STATUS_STYLES.get(status)
+    if style:
+        return f"[{style}]{status}[/{style}]"
+    return status
+
+
+def _format_goal_row(goal, get_progress_fn, db, profile_id: int) -> tuple:
+    """Format a single goal as a table row tuple."""
+    try:
+        progress_data = get_progress_fn(db, goal.id, profile_id)
+        progress_str = f"{progress_data['overall_progress']:.1f}%"
+    except Exception:
+        progress_str = "—"
+
+    target = goal.target_date
+    if target:
+        if target.tzinfo is None:
+            target = target.replace(tzinfo=UTC)
+        target_str = target.strftime("%Y-%m-%d")
+    else:
+        target_str = "—"
+
+    return (
+        str(goal.id),
+        goal.title,
+        goal.goal_type,
+        _get_status_style(goal.status),
+        target_str,
+        progress_str,
+    )
+
+
 @goals_app.callback(invoke_without_command=True)
 def goals_list(ctx: typer.Context) -> None:
     """List all career goals with progress."""
@@ -748,40 +802,7 @@ def goals_list(ctx: typer.Context) -> None:
         table.add_column("Progress", justify="right")
 
         for goal in goals:
-            # Get progress for each goal
-            try:
-                progress_data = get_progress(db, goal.id, profile.id)
-                progress_pct = progress_data["overall_progress"]
-                progress_str = f"{progress_pct:.1f}%"
-            except Exception:
-                progress_str = "—"
-
-            target = goal.target_date
-            if target:
-                if target.tzinfo is None:
-                    target = target.replace(tzinfo=UTC)
-                target_str = target.strftime("%Y-%m-%d")
-            else:
-                target_str = "—"
-
-            status = goal.status
-            if status == "completed":
-                status_str = f"[green]{status}[/green]"
-            elif status == "paused":
-                status_str = f"[yellow]{status}[/yellow]"
-            elif status == "abandoned":
-                status_str = f"[dim]{status}[/dim]"
-            else:
-                status_str = status
-
-            table.add_row(
-                str(goal.id),
-                goal.title,
-                goal.goal_type,
-                status_str,
-                target_str,
-                progress_str,
-            )
+            table.add_row(*_format_goal_row(goal, get_progress, db, profile.id))
 
         console.print(table)
         console.print(f"\n[dim]Total: {total} goal(s)[/dim]")
@@ -1298,50 +1319,58 @@ def score(
         db.close()
 
 
+def _get_score_color(score: float, thresholds: tuple[float, float]) -> str:
+    """Return a Rich color name based on score and (high, mid) thresholds."""
+    high, mid = thresholds
+    if score >= high:
+        return "green"
+    if score >= mid:
+        return "yellow"
+    return "red"
+
+
+def _format_breakdown_factors(scored) -> str:
+    """Format score breakdown factors as Rich-styled lines."""
+    breakdown_data = getattr(scored, "score_breakdown", None)
+    if not breakdown_data:
+        return ""
+
+    # Handle both JSON string and list of dicts/objects
+    if isinstance(breakdown_data, str):
+        try:
+            breakdown_data = json_mod.loads(breakdown_data)
+        except (json_mod.JSONDecodeError, TypeError):
+            return ""
+
+    if not breakdown_data:
+        return ""
+
+    lines = "\n[bold]Score Factors:[/bold]\n"
+    for factor in breakdown_data:
+        if isinstance(factor, dict):
+            name = factor.get("factor", "")
+            contrib = factor.get("contribution", 0)
+            desc = factor.get("description", "")
+        else:
+            name = getattr(factor, "factor", "")
+            contrib = getattr(factor, "contribution", 0)
+            desc = getattr(factor, "description", "")
+        sign = "+" if contrib >= 0 else ""
+        color = "green" if contrib >= 0 else "red"
+        lines += f"  [{color}]{sign}{contrib:.1f}[/{color}] {name}: {desc}\n"
+
+    return lines
+
+
 def _score_output_table(scored) -> None:
     """Print score breakdown as a formatted panel."""
-    # Color code fit score
     fit = scored.fit_score
-    if fit >= 8:
-        fit_style = "green"
-    elif fit >= 6:
-        fit_style = "yellow"
-    else:
-        fit_style = "red"
+    fit_style = _get_score_color(fit, (8, 6))
 
-    # Color code readiness score
     readiness = scored.readiness_score
-    if readiness >= 80:
-        ready_style = "green"
-    elif readiness >= 50:
-        ready_style = "yellow"
-    else:
-        ready_style = "red"
+    ready_style = _get_score_color(readiness, (80, 50))
 
-    # Build breakdown section if available
-    breakdown_lines = ""
-    breakdown_data = getattr(scored, "score_breakdown", None)
-    if breakdown_data:
-        # Handle both JSON string and list of dicts/objects
-        if isinstance(breakdown_data, str):
-            try:
-                breakdown_data = json_mod.loads(breakdown_data)
-            except (json_mod.JSONDecodeError, TypeError):
-                breakdown_data = []
-        if breakdown_data:
-            breakdown_lines = "\n[bold]Score Factors:[/bold]\n"
-            for factor in breakdown_data:
-                if isinstance(factor, dict):
-                    name = factor.get("factor", "")
-                    contrib = factor.get("contribution", 0)
-                    desc = factor.get("description", "")
-                else:
-                    name = getattr(factor, "factor", "")
-                    contrib = getattr(factor, "contribution", 0)
-                    desc = getattr(factor, "description", "")
-                sign = "+" if contrib >= 0 else ""
-                color = "green" if contrib >= 0 else "red"
-                breakdown_lines += f"  [{color}]{sign}{contrib:.1f}[/{color}] {name}: {desc}\n"
+    breakdown_lines = _format_breakdown_factors(scored)
 
     console.print()
     console.print(
@@ -1443,99 +1472,134 @@ def market(
         db.close()
 
 
+_TREND_ICONS: dict[str, str] = {
+    "up": "📈",
+    "down": "📉",
+    "stable": "➡️",
+}
+
+
+def _build_salary_table(salary_data: dict) -> Table | None:
+    """Build a Rich table for salary trends. Returns None if no data."""
+    trends = salary_data.get("trends")
+    if not trends:
+        return None
+
+    table = Table()
+    table.add_column("Role", style="bold")
+    table.add_column("P25", justify="right")
+    table.add_column("Median", justify="right")
+    table.add_column("P75", justify="right")
+    table.add_column("Sample", justify="right", style="dim")
+
+    for t in trends:
+        table.add_row(
+            t["role"],
+            f"€{t['p25']:,.0f}",
+            f"€{t['median']:,.0f}",
+            f"€{t['p75']:,.0f}",
+            str(t["sample_size"]),
+        )
+    return table
+
+
+def _build_skill_trends_table(skill_data: dict) -> Table | None:
+    """Build a Rich table for skill demand trends. Returns None if no data."""
+    skills = skill_data.get("skills")
+    if not skills:
+        return None
+
+    table = Table()
+    table.add_column("Skill", style="bold")
+    table.add_column("Mentions", justify="right")
+    table.add_column("% of Postings", justify="right")
+    table.add_column("Trend")
+
+    for s in skills[:10]:  # Top 10
+        trend_icon = _TREND_ICONS.get(s["trend_direction"], "—")
+        table.add_row(
+            s["skill_name"],
+            str(s["mention_count"]),
+            f"{s['percentage_of_postings']:.1f}%",
+            trend_icon,
+        )
+    return table
+
+
+def _build_hiring_table(hiring_data: dict) -> Table | None:
+    """Build a Rich table for company hiring patterns. Returns None if no data."""
+    companies = hiring_data.get("companies")
+    if not companies:
+        return None
+
+    table = Table()
+    table.add_column("Company", style="bold")
+    table.add_column("Active", justify="right")
+    table.add_column("Velocity", justify="right")
+    table.add_column("Roles")
+
+    for c in companies[:10]:  # Top 10
+        roles_str = ", ".join(c["roles_trending"][:3])
+        if len(c["roles_trending"]) > 3:
+            roles_str += f" (+{len(c['roles_trending']) - 3} more)"
+
+        table.add_row(
+            c["company"],
+            str(c["active_postings_count"]),
+            f"{c['posting_velocity']:.1f}/wk",
+            roles_str,
+        )
+    return table
+
+
+def _build_positioning_table(positioning_data: dict) -> Table | None:
+    """Build a Rich table for market positioning. Returns None if no data."""
+    positions = positioning_data.get("positions")
+    if not positions:
+        return None
+
+    table = Table()
+    table.add_column("Role Type", style="bold")
+    table.add_column("Match %", justify="right")
+    table.add_column("Roles Analyzed", justify="right", style="dim")
+
+    for p in positions:
+        pct_style = _get_score_color(p["match_percentage"], (70, 40))
+        table.add_row(
+            p["role_type"],
+            f"[{pct_style}]{p['match_percentage']:.1f}%[/{pct_style}]",
+            str(p["total_roles_analyzed"]),
+        )
+    return table
+
+
 def _market_output_table(salary_data, skill_data, hiring_data, positioning_data) -> None:
     """Print market intelligence as Rich tables."""
-    # Section 1: Salary Trends
-    console.print("\n[bold]📊 Salary Trends[/bold]")
-    if salary_data.get("trends"):
-        table = Table()
-        table.add_column("Role", style="bold")
-        table.add_column("P25", justify="right")
-        table.add_column("Median", justify="right")
-        table.add_column("P75", justify="right")
-        table.add_column("Sample", justify="right", style="dim")
+    sections = [
+        ("📊 Salary Trends", _build_salary_table(salary_data), "No salary data available."),
+        (
+            "🔥 Skill Demand Trends",
+            _build_skill_trends_table(skill_data),
+            "No skill trend data available.",
+        ),
+        (
+            "🏢 Company Hiring Patterns",
+            _build_hiring_table(hiring_data),
+            "No hiring pattern data available.",
+        ),
+        (
+            "🎯 Market Positioning",
+            _build_positioning_table(positioning_data),
+            "No positioning data available.",
+        ),
+    ]
 
-        for t in salary_data["trends"]:
-            table.add_row(
-                t["role"],
-                f"€{t['p25']:,.0f}",
-                f"€{t['median']:,.0f}",
-                f"€{t['p75']:,.0f}",
-                str(t["sample_size"]),
-            )
-        console.print(table)
-    else:
-        console.print("  [dim]No salary data available.[/dim]")
-
-    # Section 2: Skill Demand Trends
-    console.print("\n[bold]🔥 Skill Demand Trends[/bold]")
-    if skill_data.get("skills"):
-        table = Table()
-        table.add_column("Skill", style="bold")
-        table.add_column("Mentions", justify="right")
-        table.add_column("% of Postings", justify="right")
-        table.add_column("Trend")
-
-        for s in skill_data["skills"][:10]:  # Top 10
-            trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(s["trend_direction"], "—")
-            table.add_row(
-                s["skill_name"],
-                str(s["mention_count"]),
-                f"{s['percentage_of_postings']:.1f}%",
-                trend_icon,
-            )
-        console.print(table)
-    else:
-        console.print("  [dim]No skill trend data available.[/dim]")
-
-    # Section 3: Hiring Patterns
-    console.print("\n[bold]🏢 Company Hiring Patterns[/bold]")
-    if hiring_data.get("companies"):
-        table = Table()
-        table.add_column("Company", style="bold")
-        table.add_column("Active", justify="right")
-        table.add_column("Velocity", justify="right")
-        table.add_column("Roles")
-
-        for c in hiring_data["companies"][:10]:  # Top 10
-            roles_str = ", ".join(c["roles_trending"][:3])
-            if len(c["roles_trending"]) > 3:
-                roles_str += f" (+{len(c['roles_trending']) - 3} more)"
-
-            table.add_row(
-                c["company"],
-                str(c["active_postings_count"]),
-                f"{c['posting_velocity']:.1f}/wk",
-                roles_str,
-            )
-        console.print(table)
-    else:
-        console.print("  [dim]No hiring pattern data available.[/dim]")
-
-    # Section 4: Market Positioning
-    console.print("\n[bold]🎯 Market Positioning[/bold]")
-    if positioning_data.get("positions"):
-        table = Table()
-        table.add_column("Role Type", style="bold")
-        table.add_column("Match %", justify="right")
-        table.add_column("Roles Analyzed", justify="right", style="dim")
-
-        for p in positioning_data["positions"]:
-            if p["match_percentage"] >= 70:
-                pct_style = "green"
-            elif p["match_percentage"] >= 40:
-                pct_style = "yellow"
-            else:
-                pct_style = "red"
-
-            table.add_row(
-                p["role_type"],
-                f"[{pct_style}]{p['match_percentage']:.1f}%[/{pct_style}]",
-                str(p["total_roles_analyzed"]),
-            )
-        console.print(table)
-    else:
-        console.print("  [dim]No positioning data available.[/dim]")
+    for title, table, empty_msg in sections:
+        console.print(f"\n[bold]{title}[/bold]")
+        if table:
+            console.print(table)
+        else:
+            console.print(f"  [dim]{empty_msg}[/dim]")
 
     console.print()
 
@@ -1627,6 +1691,81 @@ def research(
         db.close()
 
 
+def _render_tech_section(ts) -> list[str]:
+    """Render tech stack section lines. Returns list of printable lines."""
+    _TECH_FIELDS = [
+        ("frontend", "Frontend:      "),
+        ("backend", "Backend:       "),
+        ("infrastructure", "Infrastructure:"),
+        ("analytics", "Analytics:     "),
+    ]
+    lines: list[str] = []
+    for attr, label in _TECH_FIELDS:
+        value = getattr(ts, attr, None)
+        if value:
+            lines.append(f"  {label} {', '.join(value)}")
+    return lines
+
+
+def _render_funding_section(f) -> list[str]:
+    """Render funding section lines. Returns list of printable lines."""
+    _FUNDING_FIELDS = [
+        ("stage", "Stage:         "),
+        ("total_raised", "Total Raised:  "),
+        ("lead_investor", "Lead Investor: "),
+        ("last_round_date", "Last Round:    "),
+    ]
+    lines: list[str] = []
+    for attr, label in _FUNDING_FIELDS:
+        value = getattr(f, attr, None)
+        if value:
+            lines.append(f"  {label} {value}")
+    return lines
+
+
+def _render_glassdoor_section(g) -> list[str]:
+    """Render glassdoor/culture section lines. Returns list of printable lines."""
+    lines: list[str] = []
+    if g.overall_rating is not None:
+        lines.append(f"  Overall Rating: {g.overall_rating:.1f}/5.0")
+    if g.ceo_approval is not None:
+        lines.append(f"  CEO Approval:   {g.ceo_approval}%")
+    if g.work_life_balance is not None:
+        lines.append(f"  Work-Life Bal:  {g.work_life_balance:.1f}/5.0")
+    if g.culture_keywords:
+        lines.append(f"  Culture:        {', '.join(g.culture_keywords)}")
+    return lines
+
+
+def _render_values_section(va) -> list[str]:
+    """Render values alignment section lines. Returns list of printable lines."""
+    score = va.score
+    score_style = _get_score_color(score, (8, 5))
+    return [
+        f"  Score: [{score_style}]{score:.1f}/10[/{score_style}]",
+        f"  {va.rationale}",
+    ]
+
+
+def _render_hiring_section(hp) -> list[str]:
+    """Render hiring patterns section lines. Returns list of printable lines."""
+    _HIRING_FIELDS = [
+        ("active_postings", "Active Postings: "),
+        ("posting_velocity", "Posting Velocity:"),
+        ("top_departments", "Top Departments: "),
+    ]
+    lines: list[str] = []
+    for attr, label in _HIRING_FIELDS:
+        value = getattr(hp, attr, None)
+        if not value:
+            continue
+        if isinstance(value, list):
+            lines.append(f"  {label} {', '.join(value)}")
+        else:
+            lines.append(f"  {label} {value}")
+    return lines
+
+
 def _render_research_report(report) -> None:
     """Render a CompanyResearchReport as a formatted Rich output."""
 
@@ -1641,85 +1780,23 @@ def _render_research_report(report) -> None:
         console.print(f"[bold]ATS Platform:[/bold] {report.ats_platform}")
     console.print()
 
-    # Tech Stack
-    console.print("[bold]🔧 Tech Stack[/bold]")
-    ts = report.tech_stack
-    has_tech = any([ts.frontend, ts.backend, ts.infrastructure, ts.analytics])
-    if has_tech:
-        if ts.frontend:
-            console.print(f"  Frontend:       {', '.join(ts.frontend)}")
-        if ts.backend:
-            console.print(f"  Backend:        {', '.join(ts.backend)}")
-        if ts.infrastructure:
-            console.print(f"  Infrastructure: {', '.join(ts.infrastructure)}")
-        if ts.analytics:
-            console.print(f"  Analytics:      {', '.join(ts.analytics)}")
-    else:
-        console.print("  [dim]No data found[/dim]")
-    console.print()
+    # Render data sections with a common pattern
+    _data_sections = [
+        ("🔧 Tech Stack", _render_tech_section(report.tech_stack)),
+        ("💰 Funding", _render_funding_section(report.funding)),
+        ("⭐ Glassdoor & Culture", _render_glassdoor_section(report.glassdoor)),
+        ("🎯 Values Alignment", _render_values_section(report.values_alignment)),
+        ("📈 Hiring Patterns", _render_hiring_section(report.hiring_patterns)),
+    ]
 
-    # Funding
-    console.print("[bold]💰 Funding[/bold]")
-    f = report.funding
-    has_funding = any([f.stage, f.total_raised, f.lead_investor])
-    if has_funding:
-        if f.stage:
-            console.print(f"  Stage:          {f.stage}")
-        if f.total_raised:
-            console.print(f"  Total Raised:   {f.total_raised}")
-        if f.lead_investor:
-            console.print(f"  Lead Investor:  {f.lead_investor}")
-        if f.last_round_date:
-            console.print(f"  Last Round:     {f.last_round_date}")
-    else:
-        console.print("  [dim]No data found[/dim]")
-    console.print()
-
-    # Glassdoor / Culture
-    console.print("[bold]⭐ Glassdoor & Culture[/bold]")
-    g = report.glassdoor
-    has_glassdoor = any([g.overall_rating, g.ceo_approval, g.culture_keywords])
-    if has_glassdoor:
-        if g.overall_rating is not None:
-            console.print(f"  Overall Rating: {g.overall_rating:.1f}/5.0")
-        if g.ceo_approval is not None:
-            console.print(f"  CEO Approval:   {g.ceo_approval}%")
-        if g.work_life_balance is not None:
-            console.print(f"  Work-Life Bal:  {g.work_life_balance:.1f}/5.0")
-        if g.culture_keywords:
-            console.print(f"  Culture:        {', '.join(g.culture_keywords)}")
-    else:
-        console.print("  [dim]No data found[/dim]")
-    console.print()
-
-    # Values Alignment
-    console.print("[bold]🎯 Values Alignment[/bold]")
-    va = report.values_alignment
-    score = va.score
-    if score >= 8:
-        score_style = "green"
-    elif score >= 5:
-        score_style = "yellow"
-    else:
-        score_style = "red"
-    console.print(f"  Score: [{score_style}]{score:.1f}/10[/{score_style}]")
-    console.print(f"  {va.rationale}")
-    console.print()
-
-    # Hiring Patterns
-    console.print("[bold]📈 Hiring Patterns[/bold]")
-    hp = report.hiring_patterns
-    has_hiring = any([hp.active_postings, hp.posting_velocity, hp.top_departments])
-    if has_hiring:
-        if hp.active_postings is not None:
-            console.print(f"  Active Postings:  {hp.active_postings}")
-        if hp.posting_velocity:
-            console.print(f"  Posting Velocity: {hp.posting_velocity}")
-        if hp.top_departments:
-            console.print(f"  Top Departments:  {', '.join(hp.top_departments)}")
-    else:
-        console.print("  [dim]No data found[/dim]")
-    console.print()
+    for title, lines in _data_sections:
+        console.print(f"[bold]{title}[/bold]")
+        if lines:
+            for line in lines:
+                console.print(line)
+        else:
+            console.print("  [dim]No data found[/dim]")
+        console.print()
 
     # Warnings
     if report.warnings:
@@ -1777,6 +1854,65 @@ def interview_prep_generate(
         db.close()
 
 
+RELEVANCE_STYLES: dict[str, str] = {
+    "high": "red",
+    "medium": "yellow",
+}
+
+
+def _style_level(value: str) -> str:
+    """Apply Rich styling to a relevance/difficulty/priority level string."""
+    style = RELEVANCE_STYLES.get(value)
+    if style:
+        return f"[{style}]{value}[/{style}]"
+    return f"[dim]{value}[/dim]"
+
+
+def _build_topics_table(topics) -> Table:
+    """Build a Rich table for interview prep topics."""
+    table = Table(title="Topics")
+    table.add_column("Topic", style="bold")
+    table.add_column("Relevance")
+    table.add_column("Difficulty")
+    table.add_column("Source", style="dim")
+
+    for t in topics:
+        table.add_row(
+            t.topic, _style_level(t.relevance), _style_level(t.difficulty), t.source or "—"
+        )
+
+    return table
+
+
+def _build_questions_table(questions) -> Table:
+    """Build a Rich table for practice questions."""
+    table = Table(title="Practice Questions")
+    table.add_column("#", style="dim", justify="right")
+    table.add_column("Question", style="bold", max_width=70)
+    table.add_column("Category")
+    table.add_column("Difficulty")
+
+    for i, q in enumerate(questions, start=1):
+        table.add_row(str(i), q.question, q.category, _style_level(q.difficulty))
+
+    return table
+
+
+def _build_checklist_table(checklist) -> Table:
+    """Build a Rich table for the prep checklist."""
+    table = Table(title="Prep Checklist")
+    table.add_column("", justify="center", width=3)
+    table.add_column("Item", style="bold", max_width=60)
+    table.add_column("Time", justify="right")
+    table.add_column("Priority")
+
+    for item in checklist:
+        check = "[green]✓[/green]" if item.completed else "○"
+        table.add_row(check, item.item, f"{item.time_minutes}m", _style_level(item.priority))
+
+    return table
+
+
 def _render_interview_prep(prep) -> None:
     """Render an InterviewPrepResponse as Rich output."""
 
@@ -1784,17 +1920,10 @@ def _render_interview_prep(prep) -> None:
 
     # Progress summary
     progress = prep.progress_percentage
-    completed = prep.completed_items
-    total = prep.total_items
-    if progress >= 80:
-        p_style = "green"
-    elif progress >= 50:
-        p_style = "yellow"
-    else:
-        p_style = "red"
+    p_style = _get_score_color(progress, (80, 50))
     console.print(
         f"Progress: [{p_style}]{progress:.1f}%[/{p_style}] "
-        f"({completed}/{total} items) | "
+        f"({prep.completed_items}/{prep.total_items} items) | "
         f"Est. prep time: {prep.total_prep_hours:.1f}h"
     )
 
@@ -1806,83 +1935,17 @@ def _render_interview_prep(prep) -> None:
 
     # Topics
     if prep.topics:
-        table = Table(title="Topics")
-        table.add_column("Topic", style="bold")
-        table.add_column("Relevance")
-        table.add_column("Difficulty")
-        table.add_column("Source", style="dim")
-
-        for t in prep.topics:
-            rel = t.relevance
-            if rel == "high":
-                rel_str = f"[red]{rel}[/red]"
-            elif rel == "medium":
-                rel_str = f"[yellow]{rel}[/yellow]"
-            else:
-                rel_str = f"[dim]{rel}[/dim]"
-
-            diff = t.difficulty
-            if diff == "high":
-                diff_str = f"[red]{diff}[/red]"
-            elif diff == "medium":
-                diff_str = f"[yellow]{diff}[/yellow]"
-            else:
-                diff_str = f"[dim]{diff}[/dim]"
-
-            table.add_row(t.topic, rel_str, diff_str, t.source or "—")
-
-        console.print(table)
+        console.print(_build_topics_table(prep.topics))
         console.print()
 
     # Questions
     if prep.questions:
-        table = Table(title="Practice Questions")
-        table.add_column("#", style="dim", justify="right")
-        table.add_column("Question", style="bold", max_width=70)
-        table.add_column("Category")
-        table.add_column("Difficulty")
-
-        for i, q in enumerate(prep.questions, start=1):
-            diff = q.difficulty
-            if diff == "high":
-                diff_str = f"[red]{diff}[/red]"
-            elif diff == "medium":
-                diff_str = f"[yellow]{diff}[/yellow]"
-            else:
-                diff_str = f"[dim]{diff}[/dim]"
-
-            table.add_row(str(i), q.question, q.category, diff_str)
-
-        console.print(table)
+        console.print(_build_questions_table(prep.questions))
         console.print()
 
     # Checklist
     if prep.checklist:
-        table = Table(title="Prep Checklist")
-        table.add_column("", justify="center", width=3)
-        table.add_column("Item", style="bold", max_width=60)
-        table.add_column("Time", justify="right")
-        table.add_column("Priority")
-
-        for item in prep.checklist:
-            check = "[green]✓[/green]" if item.completed else "○"
-
-            priority = item.priority
-            if priority == "high":
-                pri_str = f"[red]{priority}[/red]"
-            elif priority == "medium":
-                pri_str = f"[yellow]{priority}[/yellow]"
-            else:
-                pri_str = f"[dim]{priority}[/dim]"
-
-            table.add_row(
-                check,
-                item.item,
-                f"{item.time_minutes}m",
-                pri_str,
-            )
-
-        console.print(table)
+        console.print(_build_checklist_table(prep.checklist))
 
         total_mins = prep.total_prep_minutes
         console.print(
@@ -1895,6 +1958,15 @@ def _render_interview_prep(prep) -> None:
 # ---------------------------------------------------------------------------
 # career interview-prep stories (list / add / view / edit)
 # ---------------------------------------------------------------------------
+
+
+def _compute_story_usage(story, app_requirements: dict[int, set[str]]) -> int:
+    """Count how many applications match a story's skill tags."""
+    tags = story.get_skill_tags_list()
+    tags_lower = {t.lower().strip() for t in tags}
+    if not tags_lower:
+        return 0
+    return sum(1 for req_skills in app_requirements.values() if tags_lower & req_skills)
 
 
 @stories_app.callback(invoke_without_command=True)
@@ -1924,12 +1996,10 @@ def stories_list_default(ctx: typer.Context) -> None:
             )
             return
 
-        # Build a mapping of story → usage count (how many applications match)
-        # by checking skill tags overlap with job requirements
+        # Build a mapping of application_id → set of required skill names
         all_requirements = (
             db.query(JobRequirement).filter(JobRequirement.profile_id == profile.id).all()
         )
-        # Group requirements by application_id for counting
         app_requirements: dict[int, set[str]] = {}
         for req in all_requirements:
             app_requirements.setdefault(req.application_id, set()).add(
@@ -1946,13 +2016,7 @@ def stories_list_default(ctx: typer.Context) -> None:
         for story in stories:
             tags = story.get_skill_tags_list()
             tags_str = ", ".join(tags) if tags else "—"
-            tags_lower = {t.lower().strip() for t in tags}
-
-            # Count applications where this story's tags match any requirement
-            usage_count = 0
-            for _app_id, req_skills in app_requirements.items():
-                if tags_lower & req_skills:
-                    usage_count += 1
+            usage_count = _compute_story_usage(story, app_requirements)
 
             created = story.created_at
             if created and created.tzinfo is None:
