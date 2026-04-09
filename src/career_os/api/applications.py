@@ -41,7 +41,7 @@ def _enrich_with_readiness(app_response: ApplicationResponse, db: Session) -> Ap
     return app_response
 
 
-@router.post("", response_model=ApplicationResponse, status_code=201)
+@router.post("", status_code=201)
 async def create(
     payload: ApplicationCreate,
     db: Session = Depends(get_db),
@@ -58,7 +58,7 @@ async def create(
     return ApplicationResponse.model_validate(app_obj)
 
 
-@router.get("", response_model=ApplicationListResponse)
+@router.get("")
 async def list_apps(
     profile_id: int = Query(..., description="Profile to list applications for"),
     status: str | None = Query(default=None, description="Filter by status"),
@@ -126,7 +126,7 @@ async def list_apps(
     )
 
 
-@router.get("/{application_id}", response_model=ApplicationDetailResponse)
+@router.get("/{application_id}")
 async def get_detail(
     application_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -186,7 +186,7 @@ async def get_detail(
     )
 
 
-@router.patch("/{application_id}", response_model=ApplicationResponse)
+@router.patch("/{application_id}")
 async def update(
     application_id: int,
     payload: ApplicationUpdate,
@@ -212,7 +212,7 @@ async def update(
     return ApplicationResponse.model_validate(app_obj)
 
 
-@router.delete("/{application_id}", response_model=ApplicationResponse)
+@router.delete("/{application_id}")
 async def delete(
     application_id: int,
     profile_id: int = Query(..., description="Active profile ID"),

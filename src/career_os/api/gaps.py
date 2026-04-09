@@ -28,7 +28,6 @@ router = APIRouter(tags=["gaps"])
 
 @router.get(
     "/api/applications/{application_id}/gaps",
-    response_model=GapAnalysisResponse,
 )
 async def get_application_gaps(
     application_id: int,
@@ -64,7 +63,6 @@ async def get_application_gaps(
 
 @router.get(
     "/api/gaps/aggregate",
-    response_model=AggregateGapResponse,
 )
 async def get_aggregate_gaps(
     profile_id: int = Query(..., description="Active profile ID"),
@@ -89,7 +87,6 @@ async def get_aggregate_gaps(
 
 @router.get(
     "/api/applications/{application_id}/requirements",
-    response_model=list[JobRequirementResponse],
 )
 async def get_requirements(
     application_id: int,
@@ -117,7 +114,6 @@ async def get_requirements(
 
 @router.post(
     "/api/applications/{application_id}/requirements",
-    response_model=list[JobRequirementResponse],
     status_code=201,
 )
 async def create_requirements(

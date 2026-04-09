@@ -31,7 +31,7 @@ router = APIRouter(tags=["jobs"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/jobs", response_model=JobSearchResponse)
+@router.get("/api/jobs")
 async def search_jobs_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     q: str | None = Query(None, description="Full-text search query"),
@@ -107,7 +107,6 @@ async def search_jobs_endpoint(
 
 @router.post(
     "/api/saved-searches",
-    response_model=SavedSearchResponse,
     status_code=201,
 )
 async def create_saved_search_endpoint(
@@ -132,7 +131,6 @@ async def create_saved_search_endpoint(
 
 @router.get(
     "/api/saved-searches",
-    response_model=SavedSearchListResponse,
 )
 async def list_saved_searches_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
@@ -148,7 +146,6 @@ async def list_saved_searches_endpoint(
 
 @router.get(
     "/api/saved-searches/{search_id}",
-    response_model=SavedSearchResponse,
 )
 async def get_saved_search_endpoint(
     search_id: int,
@@ -165,7 +162,6 @@ async def get_saved_search_endpoint(
 
 @router.put(
     "/api/saved-searches/{search_id}",
-    response_model=SavedSearchResponse,
 )
 async def update_saved_search_endpoint(
     search_id: int,
