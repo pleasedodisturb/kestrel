@@ -12,6 +12,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.star_stories import (
     RecommendedStoriesResponse,
@@ -47,7 +48,7 @@ router = APIRouter(prefix="/api/star-stories", tags=["star-stories"])
 @router.post("", status_code=201, responses={404: {"description": "Not found"}})
 async def create_star_story_endpoint(
     body: StarStoryCreate,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StarStoryResponse:
     """Create a new STAR story."""
@@ -59,7 +60,7 @@ async def create_star_story_endpoint(
 
 @router.get("", responses={404: {"description": "Not found"}})
 async def list_star_stories_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StarStoryListResponse:
     """List all STAR stories for a profile."""
@@ -72,7 +73,7 @@ async def list_star_stories_endpoint(
 @router.get("/{story_id}", responses={404: {"description": "Not found"}})
 async def get_star_story_endpoint(
     story_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StarStoryResponse:
     """Get a single STAR story by ID."""
@@ -88,7 +89,7 @@ async def get_star_story_endpoint(
 async def update_star_story_endpoint(
     story_id: int,
     body: StarStoryUpdate,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StarStoryResponse:
     """Update an existing STAR story."""
@@ -103,7 +104,7 @@ async def update_star_story_endpoint(
 @router.delete("/{story_id}", status_code=204, responses={404: {"description": "Not found"}})
 async def delete_star_story_endpoint(
     story_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a STAR story."""
@@ -128,7 +129,7 @@ app_router = APIRouter(prefix="/api/applications", tags=["star-stories"])
 )
 async def get_recommended_stories_endpoint(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RecommendedStoriesResponse:
     """Get STAR stories recommended for an application.
@@ -149,7 +150,7 @@ async def get_recommended_stories_endpoint(
 )
 async def get_story_gaps_endpoint(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StoryGapsResponse:
     """Identify skills with no corresponding STAR story.

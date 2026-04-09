@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.learning import (
     GapRecommendationsResponse,
@@ -32,7 +33,7 @@ router = APIRouter(tags=["learning"])
 )
 async def get_recommendations(
     gap_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GapRecommendationsResponse:
     """Get learning recommendations for a specific gap.

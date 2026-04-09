@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_FILTER_BY_CATEGORY, DESC_PROFILE_ID, TIME_SESSION_NOT_FOUND
 from career_os.database import get_db
 from career_os.schemas.timingsapp import (
     TimeAnalyticsResponse,
@@ -66,7 +67,7 @@ async def create_session(
 )
 async def stop_session_endpoint(
     session_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     payload: TimeSessionStop | None = None,
 ) -> TimeSessionResponse:
@@ -84,16 +85,16 @@ async def stop_session_endpoint(
         )
         return TimeSessionResponse.model_validate(session_record)
     except TimeSessionNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Time session not found") from exc
+        raise HTTPException(status_code=404, detail=TIME_SESSION_NOT_FOUND) from exc
     except TimeSessionAlreadyStoppedError as exc:
         raise HTTPException(status_code=400, detail="Session is already stopped") from exc
 
 
 @router.get("/sessions")
 async def list_sessions_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
-    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    category: Annotated[str | None, Query(description=DESC_FILTER_BY_CATEGORY)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> TimeSessionListResponse:
@@ -113,7 +114,7 @@ async def list_sessions_endpoint(
 
 @router.get("/sessions/running")
 async def get_running_session_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> TimeSessionResponse | None:
     """Get the currently running (unstopped) time session, or null."""
@@ -126,7 +127,7 @@ async def get_running_session_endpoint(
 @router.get("/sessions/{session_id}", responses={404: {"description": "Not found"}})
 async def get_session_endpoint(
     session_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> TimeSessionResponse:
     """Get a specific time session by ID."""
@@ -134,14 +135,14 @@ async def get_session_endpoint(
         session_record = get_session(db, session_id, profile_id=profile_id)
         return TimeSessionResponse.model_validate(session_record)
     except TimeSessionNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Time session not found") from exc
+        raise HTTPException(status_code=404, detail=TIME_SESSION_NOT_FOUND) from exc
 
 
 @router.patch("/sessions/{session_id}", responses={404: {"description": "Not found"}})
 async def update_session_endpoint(
     session_id: int,
     payload: TimeSessionUpdate,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> TimeSessionResponse:
     """Update a time session's details."""
@@ -149,12 +150,12 @@ async def update_session_endpoint(
         session_record = update_session(db, session_id, payload, profile_id=profile_id)
         return TimeSessionResponse.model_validate(session_record)
     except TimeSessionNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Time session not found") from exc
+        raise HTTPException(status_code=404, detail=TIME_SESSION_NOT_FOUND) from exc
 
 
 @router.get("/analytics")
 async def get_analytics(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     weeks: Annotated[int, Query(ge=1, le=52, description="Number of weeks to analyze")] = 4,
 ) -> TimeAnalyticsResponse:

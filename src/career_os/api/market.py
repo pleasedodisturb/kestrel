@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.market import (
     HiringPatternsResponse,
@@ -36,7 +37,7 @@ router = APIRouter(tags=["market-intelligence"])
 
 @router.get("/api/market/salary-trends", responses={404: {"description": "Not found"}})
 async def salary_trends_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     role: Annotated[str | None, Query(description="Filter by role substring")] = None,
     location: Annotated[str | None, Query(description="Filter by location substring")] = None,
@@ -61,7 +62,7 @@ async def salary_trends_endpoint(
 
 @router.get("/api/market/skill-trends", responses={404: {"description": "Not found"}})
 async def skill_trends_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SkillTrendsResponse:
     """Get most-demanded skills ranked by mention count.
@@ -84,7 +85,7 @@ async def skill_trends_endpoint(
 
 @router.get("/api/market/hiring-patterns", responses={404: {"description": "Not found"}})
 async def hiring_patterns_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> HiringPatternsResponse:
     """Get company hiring patterns.
@@ -107,7 +108,7 @@ async def hiring_patterns_endpoint(
 
 @router.get("/api/market/positioning", responses={404: {"description": "Not found"}})
 async def positioning_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> PositioningResponse:
     """Get market positioning - profile match % by role type.
@@ -130,7 +131,7 @@ async def positioning_endpoint(
 
 @router.get("/api/market/opportunity-radar", responses={404: {"description": "Not found"}})
 async def opportunity_radar_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     dream_companies: Annotated[
         str | None,

@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, DESC_FILTER_BY_CATEGORY
 from career_os.database import get_db
 from career_os.schemas.skills import (
     IngestRequest,
@@ -40,7 +41,7 @@ _DEFAULT_PROFILE_DIR = _PROJECT_ROOT / "profile"
 async def list_skills_endpoint(
     profile_id: Annotated[int, Query(description="Profile to list skills for")],
     db: Annotated[Session, Depends(get_db)],
-    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    category: Annotated[str | None, Query(description=DESC_FILTER_BY_CATEGORY)] = None,
     source: Annotated[str | None, Query(description="Filter by evidence source")] = None,
     proficiency: Annotated[str | None, Query(description="Filter by proficiency")] = None,
     q: Annotated[str | None, Query(description="Search by name")] = None,
@@ -75,7 +76,7 @@ async def list_skills_endpoint(
 @router.get("/{skill_id}", responses={404: {"description": "Not found"}})
 async def get_skill_endpoint(
     skill_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SkillResponse:
     """Get a single skill by ID."""
@@ -89,7 +90,7 @@ async def get_skill_endpoint(
 @router.get("/{skill_id}/history", responses={404: {"description": "Not found"}})
 async def get_skill_history_endpoint(
     skill_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[SkillHistoryResponse]:
     """Get proficiency change history for a skill."""
@@ -132,7 +133,7 @@ async def create_skill_endpoint(
 async def update_skill_endpoint(
     skill_id: int,
     payload: SkillUpdate,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SkillResponse:
     """Update a skill. Records history if proficiency changes."""
