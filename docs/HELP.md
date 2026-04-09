@@ -81,6 +81,41 @@ Docker might have stopped. Check:
 2. Open Terminal and type: `docker compose up -d`
 3. Wait 30 seconds, then try http://localhost:8101 again
 
+### "My Mac went to sleep and Kestrel stopped working"
+
+This is a known macOS issue. Docker containers sometimes fail to recover after sleep/wake.
+
+**Quick fix (works most of the time):**
+```
+cd ~/Downloads/kestrel-main
+docker compose up -d
+```
+
+**If that didn't work:**
+
+1. Check if Docker Desktop is running (whale icon in menu bar). If not, open it and wait 30 seconds.
+2. Then run:
+   ```
+   docker compose down
+   docker compose up -d
+   ```
+3. Wait 30 seconds, then open http://localhost:8101
+
+**Automatic monitoring (optional):**
+
+Kestrel includes a watchdog script that checks and restarts containers for you:
+
+```
+bash scripts/docker-watchdog.sh
+```
+
+To run it continuously in the background:
+```
+bash scripts/docker-watchdog.sh --watch
+```
+
+Your data is never lost during sleep/wake — it's saved in a database file on your computer, not in Docker's memory.
+
 ---
 
 ## Dashboard issues
@@ -169,4 +204,5 @@ Someone will help you.
 | See what's happening | `docker compose logs backend` |
 | Check if it's running | `curl http://localhost:8100/health` |
 | Start completely fresh | `docker compose down -v && bash setup.sh` |
+| Check & fix containers after sleep | `bash scripts/docker-watchdog.sh` |
 | Open the settings file | `open .env` (Mac) or `notepad .env` (Windows) |

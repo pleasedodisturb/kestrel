@@ -231,7 +231,18 @@ There's no catch. The author built this to solve their own job search problem an
 
 ### I closed my laptop / computer went to sleep. Is Kestrel still running?
 
-Maybe. Docker containers usually survive sleep/wake on Mac. Open http://localhost:8101 - if it loads, you're fine. If not, open Terminal and run `docker compose up -d` from your Kestrel folder. Your data is never lost - it's saved in a file on your computer, not in Docker's memory.
+Docker containers sometimes stop working after macOS sleep/wake. Open http://localhost:8101 — if it loads, you're fine. If not, open Terminal and run:
+
+```
+cd ~/Downloads/kestrel-main
+docker compose up -d
+```
+
+If that doesn't work, make sure Docker Desktop is running (whale icon in the menu bar), then try `docker compose down && docker compose up -d`.
+
+Kestrel also includes a watchdog script that checks and restarts containers automatically: `bash scripts/docker-watchdog.sh`. See the [troubleshooting guide](HELP.md#my-mac-went-to-sleep-and-kestrel-stopped-working) for details.
+
+Your data is never lost — it's saved in a file on your computer, not in Docker's memory.
 
 ---
 
