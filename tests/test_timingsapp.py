@@ -73,8 +73,6 @@ def db_session():
     def override_get_db():
         try:
             yield session
-        finally:
-            pass
 
     app.dependency_overrides[get_db] = override_get_db
     yield session
@@ -536,23 +534,23 @@ class TestTimeAnalytics:
         by_cat = {cb.category: cb for cb in analytics.category_breakdown}
 
         # applying: 2+2 = 4 hours
-        assert by_cat["applying"].total_hours == 4.0
+        assert by_cat["applying"].total_hours == pytest.approx(4.0)
         assert by_cat["applying"].session_count == 2
 
         # researching: 1 hour
-        assert by_cat["researching"].total_hours == 1.0
+        assert by_cat["researching"].total_hours == pytest.approx(1.0)
         assert by_cat["researching"].session_count == 1
 
         # prepping: 2 hours
-        assert by_cat["prepping"].total_hours == 2.0
+        assert by_cat["prepping"].total_hours == pytest.approx(2.0)
         assert by_cat["prepping"].session_count == 1
 
         # networking: 1 hour
-        assert by_cat["networking"].total_hours == 1.0
+        assert by_cat["networking"].total_hours == pytest.approx(1.0)
         assert by_cat["networking"].session_count == 1
 
         # learning: 1 hour
-        assert by_cat["learning"].total_hours == 1.0
+        assert by_cat["learning"].total_hours == pytest.approx(1.0)
         assert by_cat["learning"].session_count == 1
 
     def test_analytics_category_percentages_sum_to_100(self, db_session, profile, sample_sessions):
@@ -590,11 +588,11 @@ class TestTimeAnalytics:
     def test_analytics_empty_data(self, db_session, profile):
         """Empty data returns zeros, no errors."""
         analytics = get_time_analytics(db_session, profile_id=profile.id)
-        assert analytics.total_hours == 0.0
+        assert analytics.total_hours == pytest.approx(0.0)
         assert analytics.total_sessions == 0
-        assert analytics.avg_daily_hours == 0.0
+        assert analytics.avg_daily_hours == pytest.approx(0.0)
         assert len(analytics.category_breakdown) == 5
-        assert all(cb.total_hours == 0.0 for cb in analytics.category_breakdown)
+        assert all(cb.total_hours == pytest.approx(0.0) for cb in analytics.category_breakdown)
         assert len(analytics.weekly_trend) == 4
 
     def test_analytics_includes_running_sessions(self, db_session, profile):
@@ -747,7 +745,7 @@ class TestProfileIsolation:
         analytics_b = get_time_analytics(db_session, profile_id=profile_b.id)
 
         assert analytics_a.total_hours > 0
-        assert analytics_b.total_hours == 0.0
+        assert analytics_b.total_hours == pytest.approx(0.0)
 
 
 # ===========================================================================
@@ -924,7 +922,7 @@ class TestTimingsAppAPI:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["total_hours"] == 9.0
+        assert data["total_hours"] == pytest.approx(9.0)
         assert data["total_sessions"] == 6
         assert len(data["category_breakdown"]) == 5
         assert len(data["weekly_trend"]) == 4
@@ -937,7 +935,7 @@ class TestTimingsAppAPI:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["total_hours"] == 0.0
+        assert data["total_hours"] == pytest.approx(0.0)
         assert data["total_sessions"] == 0
 
     def test_test_connection_not_configured(self, db_session):
@@ -1152,7 +1150,7 @@ class TestWeeksLoopBounds:
         """Extremely large weeks value is clamped, no hang or OOM."""
         analytics = get_time_analytics(db_session, profile_id=profile.id, weeks=999_999)
         # Should succeed (clamped to 1000) and return a result
-        assert analytics.total_hours == 0.0
+        assert analytics.total_hours == pytest.approx(0.0)
         assert len(analytics.weekly_trend) == 1000
 
     def test_weeks_clamped_to_min(self, db_session, profile):

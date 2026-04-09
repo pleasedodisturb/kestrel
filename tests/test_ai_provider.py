@@ -404,7 +404,7 @@ class TestOpenRouterStructuredParsing:
         )
         result = _try_parse_structured(content, AIFeature.score)
         assert isinstance(result, ScoreResult)
-        assert result.fit_score == 7.5
+        assert result.fit_score == pytest.approx(7.5)
 
     def test_parse_gap_analysis_result(self) -> None:
         """Gap analysis JSON is parsed into GapAnalysisResult."""
@@ -428,7 +428,7 @@ class TestOpenRouterStructuredParsing:
         result = _try_parse_structured(content, AIFeature.gap_analysis)
         assert isinstance(result, GapAnalysisResult)
         assert len(result.gaps) == 1
-        assert result.readiness_score == 65.0
+        assert result.readiness_score == pytest.approx(65.0)
 
     def test_parse_coaching_result(self) -> None:
         """Coaching JSON is parsed into CoachingResult."""

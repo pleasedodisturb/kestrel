@@ -55,8 +55,6 @@ def db_session():
     def override_get_db():
         try:
             yield session
-        finally:
-            pass
 
     app.dependency_overrides[get_db] = override_get_db
     yield session
@@ -264,7 +262,7 @@ class TestConversionFunnel:
         stage_map = {s["stage"]: s for s in funnel}
 
         # applied / interested = 1 / 0 → 0%
-        assert stage_map["applied"]["percentage"] == 0.0
+        assert stage_map["applied"]["percentage"] == pytest.approx(0.0)
 
     def test_funnel_ghosted_relative_to_total(self, client, db_session):
         """Ghosted percentage is relative to total, not a specific previous stage."""
