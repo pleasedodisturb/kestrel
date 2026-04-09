@@ -41,8 +41,8 @@ def _db_engine():
 
 @pytest.fixture
 def test_db(_db_engine):
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -562,4 +562,4 @@ class TestDiscoveryScorePropagation:
 
         propagate_discovery_scores(test_db, profile.id)
         test_db.refresh(app_obj)
-        assert app_obj.fit_score == 8.5
+        assert app_obj.fit_score == pytest.approx(8.5)

@@ -53,8 +53,8 @@ def _db_engine():
 @pytest.fixture
 def test_db(_db_engine):
     """Create a database session for testing."""
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -102,8 +102,8 @@ def client(_db_engine, test_db: Session):
     test_app.include_router(skills_router)
 
     def override_get_db():
-        TestSession = sessionmaker(bind=_db_engine)
-        session = TestSession()
+        test_session_cls = sessionmaker(bind=_db_engine)
+        session = test_session_cls()
         try:
             yield session
         finally:
@@ -262,7 +262,7 @@ class TestReadinessScore:
             {"severity": "nice-to-have", "distance": 0},
             {"severity": "bonus", "distance": 0},
         ]
-        assert _compute_readiness_score(gaps, 3) == 100.0
+        assert _compute_readiness_score(gaps, 3) == pytest.approx(100.0)
 
     def test_all_missing_gives_zero(self):
         """All gaps with distance 3 → readiness 0."""
@@ -270,7 +270,7 @@ class TestReadinessScore:
             {"severity": "critical", "distance": 3},
             {"severity": "nice-to-have", "distance": 3},
         ]
-        assert _compute_readiness_score(gaps, 2) == 0.0
+        assert _compute_readiness_score(gaps, 2) == pytest.approx(0.0)
 
     def test_weighted_by_severity(self):
         """Critical gaps weigh more than bonus gaps."""
@@ -300,7 +300,7 @@ class TestReadinessScore:
 
     def test_empty_requirements_gives_100(self):
         """No requirements → readiness 100."""
-        assert _compute_readiness_score([], 0) == 100.0
+        assert _compute_readiness_score([], 0) == pytest.approx(100.0)
 
     def test_score_between_0_and_100(self):
         """Score is always in [0, 100] range."""

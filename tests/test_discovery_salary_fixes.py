@@ -46,8 +46,8 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     # Seed two profiles
     profile_a = Profile(id=1, name="Profile A", email="a@test.com", location="Frankfurt")
@@ -113,7 +113,7 @@ class TestSalaryParsing:
 
     def test_midpoint_calculation(self):
         mid = salary_midpoint("120000-160000 EUR")
-        assert mid == 140000.0
+        assert mid == pytest.approx(140000.0)
 
     def test_midpoint_none_for_unparseable(self):
         mid = salary_midpoint("TBD")

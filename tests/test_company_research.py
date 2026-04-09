@@ -49,8 +49,8 @@ def _db_engine():
 @pytest.fixture
 def test_db(_db_engine):
     """Create a database session for testing."""
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -85,10 +85,10 @@ def second_profile(test_db: Session) -> Profile:
 @pytest.fixture
 def client(_db_engine, test_db) -> TestClient:
     """Create a test client with overridden DB dependency."""
-    TestSession = sessionmaker(bind=_db_engine)
+    test_session_cls = sessionmaker(bind=_db_engine)
 
     def _override_get_db():
-        session = TestSession()
+        session = test_session_cls()
         try:
             yield session
         finally:
@@ -657,7 +657,7 @@ class TestGracefulDegradation:
             )
 
         data = response.json()
-        assert data["values_alignment"]["score"] == 5.0
+        assert data["values_alignment"]["score"] == pytest.approx(5.0)
 
     def test_warnings_include_error_description(
         self, client: TestClient, test_profile: Profile, _db_engine
@@ -910,7 +910,7 @@ class TestMockProviderCompanyResearch:
         # Stripe-specific assertions
         assert "Fintech" in data["industry_segment"]
         assert data["ats_platform"] == "Greenhouse"
-        assert data["values_alignment"]["score"] == 8.5
+        assert data["values_alignment"]["score"] == pytest.approx(8.5)
         assert data["funding"]["stage"] == "Series I"
         assert len(data["glassdoor"]["culture_keywords"]) >= 3
 
@@ -927,7 +927,7 @@ class TestMockProviderCompanyResearch:
 
         assert "Observability" in data["industry_segment"]
         assert data["ats_platform"] == "Greenhouse"
-        assert data["values_alignment"]["score"] == 7.0
+        assert data["values_alignment"]["score"] == pytest.approx(7.0)
 
     def test_mock_provider_evilcorp_response(self, client: TestClient, test_profile: Profile):
         """Mock provider returns low-aligned data for misaligned company."""
@@ -940,10 +940,10 @@ class TestMockProviderCompanyResearch:
         )
         data = response.json()
 
-        assert data["values_alignment"]["score"] == 2.0
+        assert data["values_alignment"]["score"] == pytest.approx(2.0)
         assert data["ats_platform"] == "Workday"
         assert "Legacy" in data["industry_segment"]
-        assert data["glassdoor"]["overall_rating"] == 2.3
+        assert data["glassdoor"]["overall_rating"] == pytest.approx(2.3)
 
 
 # ===========================================================================
