@@ -1,6 +1,7 @@
 """Skills Intelligence API routes."""
 
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -37,14 +38,14 @@ _DEFAULT_PROFILE_DIR = _PROJECT_ROOT / "profile"
 
 @router.get("")
 async def list_skills_endpoint(
-    profile_id: int = Query(..., description="Profile to list skills for"),
-    category: str | None = Query(default=None, description="Filter by category"),
-    source: str | None = Query(default=None, description="Filter by evidence source"),
-    proficiency: str | None = Query(default=None, description="Filter by proficiency"),
-    q: str | None = Query(default=None, description="Search by name"),
-    page: int = Query(default=1, ge=1, description="Page number"),
-    page_size: int = Query(default=50, ge=1, le=200, description="Results per page"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile to list skills for")],
+    db: Annotated[Session, Depends(get_db)],
+    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    source: Annotated[str | None, Query(description="Filter by evidence source")] = None,
+    proficiency: Annotated[str | None, Query(description="Filter by proficiency")] = None,
+    q: Annotated[str | None, Query(description="Search by name")] = None,
+    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=200, description="Results per page")] = 50,
 ) -> SkillListResponse | SkillsEmptyStateResponse:
     """List skills with optional filters.
 
@@ -74,8 +75,8 @@ async def list_skills_endpoint(
 @router.get("/{skill_id}")
 async def get_skill_endpoint(
     skill_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> SkillResponse:
     """Get a single skill by ID."""
     try:
@@ -88,8 +89,8 @@ async def get_skill_endpoint(
 @router.get("/{skill_id}/history")
 async def get_skill_history_endpoint(
     skill_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> list[SkillHistoryResponse]:
     """Get proficiency change history for a skill."""
     try:
@@ -102,7 +103,7 @@ async def get_skill_history_endpoint(
 @router.post("", status_code=201)
 async def create_skill_endpoint(
     payload: SkillCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> SkillResponse:
     """Create a new skill manually.
 
@@ -118,7 +119,7 @@ async def create_skill_endpoint(
                 "name": payload.name,
                 "category": payload.category.value,
                 "proficiency": payload.proficiency.value,
-                "evidence_source": "manual",  # Always force manual — ignore client value
+                "evidence_source": "manual",  # Always force manual - ignore client value
                 "evidence_detail": payload.evidence_detail,
             },
         )
@@ -131,8 +132,8 @@ async def create_skill_endpoint(
 async def update_skill_endpoint(
     skill_id: int,
     payload: SkillUpdate,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> SkillResponse:
     """Update a skill. Records history if proficiency changes."""
     # Convert to dict, excluding unset fields (None means "don't change")
@@ -152,7 +153,7 @@ async def update_skill_endpoint(
 @router.post("/ingest")
 async def ingest_skills_endpoint(
     payload: IngestRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> IngestResponse:
     """Ingest skills from CV, assessments, and/or profile docs.
 

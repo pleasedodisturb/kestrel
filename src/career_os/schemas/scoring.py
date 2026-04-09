@@ -154,3 +154,7 @@ class BatchScoreResponse(BaseModel):
     errors: list[dict[str, str]] = Field(
         default_factory=list, description="Scoring errors for individual jobs"
     )
+    credits_exhausted: bool = Field(
+        default=False,
+        description="True if scoring stopped due to AI provider credits being exhausted",
+    )

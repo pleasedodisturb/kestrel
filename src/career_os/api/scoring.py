@@ -1,8 +1,12 @@
-"""Scoring API routes — AI-powered job scoring engine."""
+"""Scoring API routes - AI-powered job scoring engine."""
+
+import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.ai.openrouter_provider import CreditsExhaustedError
 from career_os.database import get_db
 from career_os.schemas.scoring import (
     BatchScoreRequest,
@@ -12,6 +16,7 @@ from career_os.schemas.scoring import (
     ScoringWeightsResponse,
     ScoringWeightsUpdate,
 )
+from career_os.services.pushover import send_credits_exhausted_alert
 from career_os.services.scoring import (
     JobNotFoundError,
     ProfileNotFoundError,
@@ -25,6 +30,8 @@ from career_os.services.scoring import (
     update_weights,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["scoring"])
 
 
@@ -36,7 +43,7 @@ router = APIRouter(tags=["scoring"])
 @router.post("/api/score", status_code=201)
 async def score_endpoint(
     payload: ScoreRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse:
     """Score a job against a profile.
 
@@ -59,6 +66,11 @@ async def score_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except JobNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CreditsExhaustedError as exc:
+        raise HTTPException(
+            status_code=402,
+            detail="AI scoring credits exhausted. Add credits at https://openrouter.ai",
+        ) from exc
     except ScoringError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
@@ -74,8 +86,8 @@ async def score_endpoint(
 
 @router.get("/api/scoring-weights")
 async def get_weights_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoringWeightsResponse:
     """Get scoring weights for a profile."""
     try:
@@ -89,8 +101,8 @@ async def get_weights_endpoint(
 @router.put("/api/scoring-weights")
 async def update_weights_endpoint(
     payload: ScoringWeightsUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoringWeightsResponse:
     """Update scoring weights for a profile.
 
@@ -116,7 +128,7 @@ async def update_weights_endpoint(
 @router.post("/api/score/batch")
 async def batch_score_endpoint(
     payload: BatchScoreRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> BatchScoreResponse:
     """Batch score discovered jobs for a profile.
 
@@ -134,11 +146,25 @@ async def batch_score_endpoint(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Batch scoring error: {exc}") from exc
 
+    credits_exhausted = result.get("credits_exhausted", False)
+
+    if credits_exhausted:
+        try:
+            send_credits_exhausted_alert(
+                db,
+                profile_id=payload.profile_id,
+                scored_count=result["scored_count"],
+                total_count=result["scored_count"] + len(result.get("errors", [])),
+            )
+        except Exception:
+            logger.warning("Could not send Pushover notification for credits exhausted")
+
     return BatchScoreResponse(
         scored_count=result["scored_count"],
         total_time_seconds=result["total_time_seconds"],
         scores=[ScoreResponse.model_validate(s) for s in result["scores"]],
         errors=result["errors"],
+        credits_exhausted=credits_exhausted,
     )
 
 
@@ -150,8 +176,8 @@ async def batch_score_endpoint(
 @router.get("/api/score/job/{discovered_job_id}")
 async def get_job_score_endpoint(
     discovered_job_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
     """Get the latest score for a discovered job."""
     scored = get_score_for_job(db, profile_id, discovered_job_id)
@@ -165,8 +191,8 @@ async def get_job_score_endpoint(
 )
 async def get_application_score_endpoint(
     application_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
     """Get the latest score for an application."""
     scored = get_score_for_application(db, profile_id, application_id)
@@ -182,8 +208,8 @@ async def get_application_score_endpoint(
 
 @router.post("/api/scoring/flag-stale")
 async def flag_stale_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, int]:
     """Mark all scores for a profile as stale.
 

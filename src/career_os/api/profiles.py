@@ -1,6 +1,7 @@
 """Profile API routes."""
 
 import json
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
 
 @router.get("")
-async def list_profiles(db: Session = Depends(get_db)) -> ProfileListResponse:
+async def list_profiles(db: Annotated[Session, Depends(get_db)]) -> ProfileListResponse:
     """List all profiles."""
     profiles = db.query(Profile).all()
     return ProfileListResponse(
@@ -30,7 +31,7 @@ async def list_profiles(db: Session = Depends(get_db)) -> ProfileListResponse:
 
 
 @router.get("/{profile_id}")
-async def get_profile(profile_id: int, db: Session = Depends(get_db)) -> ProfileResponse:
+async def get_profile(profile_id: int, db: Annotated[Session, Depends(get_db)]) -> ProfileResponse:
     """Get a specific profile by ID."""
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if profile is None:
@@ -41,7 +42,7 @@ async def get_profile(profile_id: int, db: Session = Depends(get_db)) -> Profile
 @router.post("", status_code=201)
 async def create_profile(
     payload: ProfileCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> ProfileResponse:
     """Create a new profile.
 
@@ -64,7 +65,7 @@ async def create_profile(
 async def update_profile(
     profile_id: int,
     payload: ProfileUpdate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> ProfileResponse:
     """Update a profile's fields (partial update).
 
@@ -76,7 +77,7 @@ async def update_profile(
 
     update_data = payload.model_dump(exclude_unset=True)
 
-    # Track whether job_family changed — triggers stale score invalidation
+    # Track whether job_family changed - triggers stale score invalidation
     # (VAL-CROSS-004)
     old_job_family = profile.job_family
     job_family_changing = (
@@ -102,7 +103,7 @@ async def update_profile(
 @router.delete("/{profile_id}", status_code=204)
 async def delete_profile(
     profile_id: int,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a profile.
 
