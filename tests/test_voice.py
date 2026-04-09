@@ -40,8 +40,8 @@ def _db_engine():
 
 @pytest.fixture
 def test_db(_db_engine):
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -50,10 +50,10 @@ def test_db(_db_engine):
 
 @pytest.fixture
 def client(_db_engine) -> TestClient:
-    TestSession = sessionmaker(bind=_db_engine)
+    test_session_cls = sessionmaker(bind=_db_engine)
 
     def override():
-        db = TestSession()
+        db = test_session_cls()
         try:
             yield db
         finally:

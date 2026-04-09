@@ -67,8 +67,8 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     def override_get_db():
         yield session
@@ -618,7 +618,7 @@ class TestTimeAnalytics:
 # ===========================================================================
 
 
-class TestSessionCRUD:
+class test_session_clsCRUD:
     """Session listing, retrieval, updating."""
 
     def test_list_sessions(self, db_session, profile, sample_sessions):
@@ -946,8 +946,8 @@ class TestTimingsAppAPI:
 
     def test_test_connection_configured(self, db_session, timingsapp_config):
         """POST /api/timingsapp/test with mock returns success."""
-        with patch("career_os.services.timingsapp.TimingsAppClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.timingsapp.TimingsAppClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.test_connection.return_value = True
 
             resp = api_client.post("/api/timingsapp/test")
@@ -1114,13 +1114,13 @@ class TestConnectionTest:
 
     def test_not_configured_returns_false(self, db_session):
         """Not configured integration returns failure."""
-        success, msg = check_timingsapp_connection(db_session)
+        success, _msg = check_timingsapp_connection(db_session)
         assert success is False
 
     def test_configured_and_connected(self, db_session, timingsapp_config):
         """Configured integration with mocked API returns success."""
-        with patch("career_os.services.timingsapp.TimingsAppClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.timingsapp.TimingsAppClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.test_connection.return_value = True
 
             success, msg = check_timingsapp_connection(db_session)
@@ -1129,11 +1129,11 @@ class TestConnectionTest:
 
     def test_configured_but_api_fails(self, db_session, timingsapp_config):
         """Configured integration with API failure returns failure."""
-        with patch("career_os.services.timingsapp.TimingsAppClient") as MockClient:
-            mock_instance = MockClient.return_value
+        with patch("career_os.services.timingsapp.TimingsAppClient") as mock_client:
+            mock_instance = mock_client.return_value
             mock_instance.test_connection.return_value = False
 
-            success, msg = check_timingsapp_connection(db_session)
+            success, _msg = check_timingsapp_connection(db_session)
             assert success is False
 
 
