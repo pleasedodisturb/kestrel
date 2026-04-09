@@ -1329,32 +1329,43 @@ def _get_score_color(score: float, thresholds: tuple[float, float]) -> str:
     return "red"
 
 
-def _format_breakdown_factors(scored) -> str:
-    """Format score breakdown factors as Rich-styled lines."""
+def _extract_factor_fields(factor) -> tuple[str, float, str]:
+    """Extract (name, contribution, description) from a factor dict or object."""
+    if isinstance(factor, dict):
+        return (
+            factor.get("factor", ""),
+            factor.get("contribution", 0),
+            factor.get("description", ""),
+        )
+    return (
+        getattr(factor, "factor", ""),
+        getattr(factor, "contribution", 0),
+        getattr(factor, "description", ""),
+    )
+
+
+def _parse_breakdown_data(scored):
+    """Parse score_breakdown from scored object, handling JSON string and list formats."""
     breakdown_data = getattr(scored, "score_breakdown", None)
     if not breakdown_data:
-        return ""
-
-    # Handle both JSON string and list of dicts/objects
+        return None
     if isinstance(breakdown_data, str):
         try:
             breakdown_data = json_mod.loads(breakdown_data)
         except (json_mod.JSONDecodeError, TypeError):
-            return ""
+            return None
+    return breakdown_data or None
 
+
+def _format_breakdown_factors(scored) -> str:
+    """Format score breakdown factors as Rich-styled lines."""
+    breakdown_data = _parse_breakdown_data(scored)
     if not breakdown_data:
         return ""
 
     lines = "\n[bold]Score Factors:[/bold]\n"
     for factor in breakdown_data:
-        if isinstance(factor, dict):
-            name = factor.get("factor", "")
-            contrib = factor.get("contribution", 0)
-            desc = factor.get("description", "")
-        else:
-            name = getattr(factor, "factor", "")
-            contrib = getattr(factor, "contribution", 0)
-            desc = getattr(factor, "description", "")
+        name, contrib, desc = _extract_factor_fields(factor)
         sign = "+" if contrib >= 0 else ""
         color = "green" if contrib >= 0 else "red"
         lines += f"  [{color}]{sign}{contrib:.1f}[/{color}] {name}: {desc}\n"

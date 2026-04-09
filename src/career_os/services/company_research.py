@@ -383,6 +383,27 @@ def _parse_ai_result(
     )
 
 
+def _detect_partial_warnings(
+    glassdoor, hiring_patterns, industry_segment, employee_count, ats_platform
+) -> list[SourceWarning]:
+    """Detect missing sections for partial simulation mode (VAL-RESEARCH-009)."""
+    checks = [
+        ("glassdoor", not glassdoor.overall_rating and not glassdoor.culture_keywords),
+        (
+            "hiring_patterns",
+            not hiring_patterns.active_postings and not hiring_patterns.top_departments,
+        ),
+        ("industry_segment", not industry_segment),
+        ("employee_count", not employee_count),
+        ("ats_platform", ats_platform is None),
+    ]
+    return [
+        SourceWarning(source=section, error=f"Data unavailable for {section} (partial simulation)")
+        for section, missing in checks
+        if missing
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -477,24 +498,11 @@ async def research_company(
 
     # VAL-RESEARCH-009: Add source_warnings for missing sections in partial mode
     if simulate_partial:
-        partial_sections = []
-        if not glassdoor.overall_rating and not glassdoor.culture_keywords:
-            partial_sections.append("glassdoor")
-        if not hiring_patterns.active_postings and not hiring_patterns.top_departments:
-            partial_sections.append("hiring_patterns")
-        if not industry_segment:
-            partial_sections.append("industry_segment")
-        if not employee_count:
-            partial_sections.append("employee_count")
-        if ats_platform is None:
-            partial_sections.append("ats_platform")
-        for section in partial_sections:
-            warnings.append(
-                SourceWarning(
-                    source=section,
-                    error=f"Data unavailable for {section} (partial simulation)",
-                )
+        warnings.extend(
+            _detect_partial_warnings(
+                glassdoor, hiring_patterns, industry_segment, employee_count, ats_platform
             )
+        )
 
     # Build report JSON for persistence (VAL-CROSS-009: prep uses research data)
     report_json_data = {

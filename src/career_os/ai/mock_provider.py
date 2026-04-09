@@ -367,6 +367,82 @@ def _extract_research_fields(
     return tech_list, culture_keywords, values_score, hiring_patterns
 
 
+def _add_research_topics(
+    topic_pool, tech_list, culture_keywords, values_score, hiring_patterns, company
+):
+    """Append research-derived topics to the topic pool (VAL-CROSS-009)."""
+    if tech_list:
+        topic_pool.append(
+            {
+                "topic": f"{company} tech stack deep-dive: {', '.join(tech_list[:4])}",
+                "relevance": "high",
+                "difficulty": "medium",
+            }
+        )
+    if culture_keywords and isinstance(culture_keywords, list):
+        topic_pool.append(
+            {
+                "topic": f"{company} culture fit: {', '.join(culture_keywords[:3])}",
+                "relevance": "high",
+                "difficulty": "low",
+            }
+        )
+    if values_score is not None:
+        topic_pool.append(
+            {
+                "topic": f"Values alignment discussion ({company}, score: {values_score}/10)",
+                "relevance": "medium",
+                "difficulty": "low",
+            }
+        )
+    if not hiring_patterns or not hiring_patterns.get("top_departments"):
+        return
+    depts = hiring_patterns["top_departments"]
+    if isinstance(depts, list) and depts:
+        topic_pool.append(
+            {
+                "topic": f"{company} hiring focus areas: {', '.join(depts[:3])}",
+                "relevance": "medium",
+                "difficulty": "low",
+            }
+        )
+
+
+def _add_gap_or_keyword_topics(topic_pool, gap_data, unresolved_gaps, prompt_lower):
+    """Append gap-driven or keyword-fallback topics (VAL-CROSS-015)."""
+    if gap_data:
+        for gap in unresolved_gaps:
+            skill = gap["skill_name"]
+            distance = gap.get("distance", 1)
+            severity = gap.get("severity", "nice-to-have")
+            relevance = "high" if severity == "critical" else "medium"
+            difficulty = "high" if distance >= 2 else "medium"
+            topic_pool.append(
+                {
+                    "topic": f"Gap area: {skill} (distance {distance}, {severity})",
+                    "relevance": relevance,
+                    "difficulty": difficulty,
+                }
+            )
+        return
+
+    keyword_topics = {
+        "kubernetes": {
+            "topic": "Container orchestration and Kubernetes",
+            "relevance": "high",
+            "difficulty": "high",
+        },
+        "python": {
+            "topic": "Python best practices and architecture",
+            "relevance": "medium",
+            "difficulty": "medium",
+        },
+    }
+    for keyword, topic_entry in keyword_topics.items():
+        if keyword in prompt_lower:
+            topic_pool.append(topic_entry)
+
+
 def _build_topic_pool(
     tech_list: list[str],
     culture_keywords: list,
@@ -401,75 +477,10 @@ def _build_topic_pool(
         },
     ]
 
-    # Add research-derived topics (VAL-CROSS-009)
-    if tech_list:
-        topic_pool.append(
-            {
-                "topic": f"{company} tech stack deep-dive: {', '.join(tech_list[:4])}",
-                "relevance": "high",
-                "difficulty": "medium",
-            }
-        )
-    if culture_keywords and isinstance(culture_keywords, list):
-        topic_pool.append(
-            {
-                "topic": f"{company} culture fit: {', '.join(culture_keywords[:3])}",
-                "relevance": "high",
-                "difficulty": "low",
-            }
-        )
-    if values_score is not None:
-        topic_pool.append(
-            {
-                "topic": f"Values alignment discussion ({company}, score: {values_score}/10)",
-                "relevance": "medium",
-                "difficulty": "low",
-            }
-        )
-    if hiring_patterns and hiring_patterns.get("top_departments"):
-        depts = hiring_patterns["top_departments"]
-        if isinstance(depts, list) and depts:
-            topic_pool.append(
-                {
-                    "topic": f"{company} hiring focus areas: {', '.join(depts[:3])}",
-                    "relevance": "medium",
-                    "difficulty": "low",
-                }
-            )
-
-    # VAL-CROSS-015: Add gap-driven topics based on actual gap data
-    # Only add topics for UNRESOLVED gaps (distance > 0); skip resolved ones
-    if gap_data:
-        for gap in unresolved_gaps:
-            skill = gap["skill_name"]
-            distance = gap.get("distance", 1)
-            severity = gap.get("severity", "nice-to-have")
-            relevance = "high" if severity == "critical" else "medium"
-            difficulty = "high" if distance >= 2 else "medium"
-            topic_pool.append(
-                {
-                    "topic": f"Gap area: {skill} (distance {distance}, {severity})",
-                    "relevance": relevance,
-                    "difficulty": difficulty,
-                }
-            )
-    else:
-        # Fallback: keyword-to-topic lookup (legacy path for no context)
-        keyword_topics = {
-            "kubernetes": {
-                "topic": "Container orchestration and Kubernetes",
-                "relevance": "high",
-                "difficulty": "high",
-            },
-            "python": {
-                "topic": "Python best practices and architecture",
-                "relevance": "medium",
-                "difficulty": "medium",
-            },
-        }
-        for keyword, topic_entry in keyword_topics.items():
-            if keyword in prompt_lower:
-                topic_pool.append(topic_entry)
+    _add_research_topics(
+        topic_pool, tech_list, culture_keywords, values_score, hiring_patterns, company
+    )
+    _add_gap_or_keyword_topics(topic_pool, gap_data, unresolved_gaps, prompt_lower)
 
     role_lower = role.lower()
     if ("program management" in prompt_lower or "tpm" in role_lower) and (
