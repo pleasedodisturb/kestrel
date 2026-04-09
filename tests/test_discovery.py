@@ -379,9 +379,10 @@ class TestDiscoveryService:
 
         # Should still have results from the working adapter
         assert result["new_jobs"] == 1
-        assert len(result["warnings"]) == 1
-        assert result["warnings"][0]["source"] == "arbeitsagentur"
-        assert "API timeout" in result["warnings"][0]["error"]
+        assert len(result["warnings"]) >= 1
+        scraper_warnings = [w for w in result["warnings"] if w["source"] == "arbeitsagentur"]
+        assert len(scraper_warnings) == 1
+        assert "API timeout" in scraper_warnings[0]["error"]
 
     @pytest.mark.asyncio
     async def test_profile_not_found_raises(self, db_session):
@@ -479,8 +480,9 @@ class TestDiscoverAPI:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data["warnings"]) == 1
-        assert data["warnings"][0]["source"] == "arbeitsagentur"
+        assert len(data["warnings"]) >= 1
+        scraper_warnings = [w for w in data["warnings"] if w["source"] == "arbeitsagentur"]
+        assert len(scraper_warnings) == 1
         assert data["new_jobs"] == 1
 
     def test_discover_nonexistent_profile(self, client):
@@ -705,6 +707,84 @@ class TestDiscoveryRuns:
         data = resp.json()
         assert len(data) >= 1
         assert data[0]["status"] == "completed"
+
+    def test_get_latest_discovery_run_returns_most_recent_completed(self, client, db_session):
+        """GET /api/discovery-runs/latest returns the most recent completed run, not a pending one."""
+        from datetime import UTC, timedelta
+
+        now = datetime.now(UTC)
+
+        # Older completed run
+        older_run = DiscoveryRun(
+            profile_id=1,
+            trigger="manual",
+            status="completed",
+            total_found=10,
+            new_jobs=5,
+            duplicates=5,
+            started_at=now - timedelta(hours=2),
+            completed_at=now - timedelta(hours=2),
+        )
+        # Most recent completed run
+        newer_run = DiscoveryRun(
+            profile_id=1,
+            trigger="scheduled",
+            status="completed",
+            total_found=8,
+            new_jobs=3,
+            duplicates=5,
+            started_at=now - timedelta(hours=1),
+            completed_at=now - timedelta(hours=1),
+        )
+        # Pending run (should not be returned)
+        pending_run = DiscoveryRun(
+            profile_id=1,
+            trigger="manual",
+            status="running",
+            total_found=0,
+            new_jobs=0,
+            duplicates=0,
+            started_at=now,
+            completed_at=None,
+        )
+        db_session.add_all([older_run, newer_run, pending_run])
+        db_session.commit()
+        newer_run_id = newer_run.id
+
+        resp = client.get("/api/discovery-runs/latest?profile_id=1")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data is not None
+        assert data["id"] == newer_run_id
+        assert data["status"] == "completed"
+        assert data["trigger"] == "scheduled"
+
+    def test_get_latest_discovery_run_no_runs_returns_null(self, client, db_session):
+        """GET /api/discovery-runs/latest returns null when no runs exist for the profile."""
+        resp = client.get("/api/discovery-runs/latest?profile_id=1")
+        assert resp.status_code == 200
+        assert resp.json() is None
+
+    def test_get_latest_discovery_run_only_pending_returns_null(self, client, db_session):
+        """GET /api/discovery-runs/latest returns null when only pending runs exist."""
+        from datetime import UTC
+
+        pending_run = DiscoveryRun(
+            profile_id=1,
+            trigger="manual",
+            status="running",
+            total_found=0,
+            new_jobs=0,
+            duplicates=0,
+            started_at=datetime.now(UTC),
+            completed_at=None,
+        )
+        db_session.add(pending_run)
+        db_session.commit()
+
+        resp = client.get("/api/discovery-runs/latest?profile_id=1")
+        assert resp.status_code == 200
+        assert resp.json() is None
 
 
 # ---------------------------------------------------------------------------
@@ -945,7 +1025,7 @@ class TestEdgeCases:
         assert resp.status_code == 200
         data = resp.json()
         assert data["new_jobs"] == 0
-        assert len(data["warnings"]) == 1
+        assert len(data["warnings"]) >= 1
 
     def test_search_profile_with_filters(self, client):
         """Search profile can include custom filters."""

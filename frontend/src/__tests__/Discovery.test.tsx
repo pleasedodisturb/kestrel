@@ -27,6 +27,7 @@ const mockSearchJobs = vi.fn<() => Promise<JobSearchResponse>>();
 const mockFetchSavedSearches = vi.fn<() => Promise<SavedSearchListResponse>>();
 const mockCreateSavedSearch = vi.fn<() => Promise<SavedSearch>>();
 const mockDeleteSavedSearch = vi.fn<() => Promise<void>>();
+const mockFetchLatestDiscoveryRun = vi.fn<() => Promise<null>>();
 
 vi.mock("@/api/discovery", () => ({
   searchJobs: (...args: unknown[]) => mockSearchJobs(...(args as [])),
@@ -36,6 +37,8 @@ vi.mock("@/api/discovery", () => ({
     mockCreateSavedSearch(...(args as [])),
   deleteSavedSearch: (...args: unknown[]) =>
     mockDeleteSavedSearch(...(args as [])),
+  fetchLatestDiscoveryRun: (...args: unknown[]) =>
+    mockFetchLatestDiscoveryRun(...(args as [])),
 }));
 
 vi.mock("@/api/applications", () => ({
@@ -150,6 +153,7 @@ beforeEach(() => {
     searches: [],
     total: 0,
   });
+  mockFetchLatestDiscoveryRun.mockResolvedValue(null);
 });
 
 // ---- tests ----
