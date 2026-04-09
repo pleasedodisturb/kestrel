@@ -42,7 +42,7 @@ from career_os.services.calendar import (
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
 
-@router.post("/events", response_model=CalendarEventResponse, status_code=201)
+@router.post("/events", status_code=201)
 async def create_event(
     payload: CalendarEventCreate,
     db: Session = Depends(get_db),
@@ -60,7 +60,7 @@ async def create_event(
     return CalendarEventResponse.model_validate(event)
 
 
-@router.get("/events", response_model=CalendarEventListResponse)
+@router.get("/events")
 async def list_events(
     profile_id: int = Query(..., description="Profile ID"),
     event_type: str | None = Query(default=None, description="Filter by event type"),
@@ -80,7 +80,7 @@ async def list_events(
     )
 
 
-@router.get("/events/{event_id}", response_model=CalendarEventResponse)
+@router.get("/events/{event_id}")
 async def get_event(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -94,7 +94,7 @@ async def get_event(
     return CalendarEventResponse.model_validate(event)
 
 
-@router.patch("/events/{event_id}", response_model=CalendarEventResponse)
+@router.patch("/events/{event_id}")
 async def update_event(
     event_id: int,
     payload: CalendarEventUpdate,
@@ -132,7 +132,6 @@ async def delete_event(
 
 @router.post(
     "/events/from-follow-up/{follow_up_id}",
-    response_model=CalendarEventResponse,
     status_code=201,
 )
 async def create_from_follow_up(
@@ -211,7 +210,7 @@ async def export_all_ical(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/google", response_model=GoogleCalendarUrlResponse)
+@router.get("/events/{event_id}/google")
 async def google_calendar_url(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -230,7 +229,7 @@ async def google_calendar_url(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/fantastical", response_model=FantasticalUrlResponse)
+@router.get("/events/{event_id}/fantastical")
 async def fantastical_url(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -249,7 +248,7 @@ async def fantastical_url(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/providers", response_model=CalendarProviderConfigResponse)
+@router.get("/events/{event_id}/providers")
 async def event_providers(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),

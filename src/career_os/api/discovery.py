@@ -35,7 +35,7 @@ router = APIRouter(tags=["discovery"])
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/discover", response_model=DiscoverResponse)
+@router.post("/api/discover")
 async def discover(
     payload: DiscoverRequest,
     db: Session = Depends(get_db),
@@ -79,7 +79,6 @@ async def discover(
 
 @router.post(
     "/api/search-profiles",
-    response_model=SearchProfileResponse,
     status_code=201,
 )
 async def create_search_profile_endpoint(
@@ -101,7 +100,6 @@ async def create_search_profile_endpoint(
 
 @router.get(
     "/api/search-profiles",
-    response_model=SearchProfileListResponse,
 )
 async def list_search_profiles_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
@@ -118,7 +116,6 @@ async def list_search_profiles_endpoint(
 
 @router.get(
     "/api/search-profiles/{sp_id}",
-    response_model=SearchProfileResponse,
 )
 async def get_search_profile_endpoint(
     sp_id: int,
@@ -135,7 +132,6 @@ async def get_search_profile_endpoint(
 
 @router.put(
     "/api/search-profiles/{sp_id}",
-    response_model=SearchProfileResponse,
 )
 async def update_search_profile_endpoint(
     sp_id: int,
@@ -179,7 +175,6 @@ async def delete_search_profile_endpoint(
 
 @router.get(
     "/api/discovery-runs",
-    response_model=list[DiscoveryRunResponse],
 )
 async def list_discovery_runs_endpoint(
     profile_id: int = Query(..., description="Profile ID"),

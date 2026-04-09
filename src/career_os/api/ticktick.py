@@ -30,7 +30,7 @@ from career_os.services.ticktick_sync import (
 router = APIRouter(prefix="/api/ticktick", tags=["ticktick"])
 
 
-@router.get("/status", response_model=TickTickSyncStatusResponse)
+@router.get("/status")
 async def ticktick_sync_status(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -59,7 +59,7 @@ async def ticktick_sync_status(
     )
 
 
-@router.post("/push", response_model=TickTickPushResponse)
+@router.post("/push")
 async def ticktick_push(
     payload: TickTickPushRequest,
     db: Session = Depends(get_db),
@@ -136,7 +136,7 @@ async def ticktick_push(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@router.post("/pull", response_model=TickTickPullResponse)
+@router.post("/pull")
 async def ticktick_pull(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -156,7 +156,7 @@ async def ticktick_pull(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/test", response_model=TickTickConnectionTestResponse)
+@router.post("/test")
 async def ticktick_test_connection(
     db: Session = Depends(get_db),
 ) -> TickTickConnectionTestResponse:

@@ -24,7 +24,7 @@ from career_os.services.follow_ups import (
 router = APIRouter(prefix="/api/follow-ups", tags=["follow-ups"])
 
 
-@router.post("", response_model=FollowUpResponse, status_code=201)
+@router.post("", status_code=201)
 async def create(
     payload: FollowUpCreate,
     db: Session = Depends(get_db),
@@ -55,7 +55,7 @@ async def create(
     )
 
 
-@router.get("/overdue-count", response_model=OverdueCountResponse)
+@router.get("/overdue-count")
 async def overdue_count(
     profile_id: int = Query(..., description="Profile to check overdue count for"),
     db: Session = Depends(get_db),
@@ -65,7 +65,7 @@ async def overdue_count(
     return OverdueCountResponse(count=count)
 
 
-@router.get("", response_model=FollowUpListResponse)
+@router.get("")
 async def list_all(
     profile_id: int = Query(..., description="Profile to list follow-ups for"),
     overdue: bool = Query(default=False, description="Only show overdue follow-ups"),
@@ -93,7 +93,7 @@ async def list_all(
     )
 
 
-@router.patch("/{follow_up_id}", response_model=FollowUpResponse)
+@router.patch("/{follow_up_id}")
 async def complete(
     follow_up_id: int,
     payload: FollowUpComplete,
