@@ -42,7 +42,7 @@ from career_os.services.calendar import (
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
 
-@router.post("/events", status_code=201)
+@router.post("/events", status_code=201, responses={404: {"description": "Not found"}})
 async def create_event(
     payload: CalendarEventCreate,
     db: Session = Depends(get_db),
@@ -80,7 +80,7 @@ async def list_events(
     )
 
 
-@router.get("/events/{event_id}")
+@router.get("/events/{event_id}", responses={404: {"description": "Not found"}})
 async def get_event(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -94,7 +94,7 @@ async def get_event(
     return CalendarEventResponse.model_validate(event)
 
 
-@router.patch("/events/{event_id}")
+@router.patch("/events/{event_id}", responses={404: {"description": "Not found"}})
 async def update_event(
     event_id: int,
     payload: CalendarEventUpdate,
@@ -112,7 +112,11 @@ async def update_event(
     return CalendarEventResponse.model_validate(event)
 
 
-@router.delete("/events/{event_id}", status_code=204)
+@router.delete(
+    "/events/{event_id}",
+    status_code=204,
+    responses={404: {"description": "Not found"}},
+)
 async def delete_event(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -133,6 +137,7 @@ async def delete_event(
 @router.post(
     "/events/from-follow-up/{follow_up_id}",
     status_code=201,
+    responses={404: {"description": "Not found"}},
 )
 async def create_from_follow_up(
     follow_up_id: int,
@@ -159,7 +164,7 @@ async def create_from_follow_up(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/ical")
+@router.get("/events/{event_id}/ical", responses={404: {"description": "Not found"}})
 async def export_ical(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -210,7 +215,7 @@ async def export_all_ical(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/google")
+@router.get("/events/{event_id}/google", responses={404: {"description": "Not found"}})
 async def google_calendar_url(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -229,7 +234,7 @@ async def google_calendar_url(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/fantastical")
+@router.get("/events/{event_id}/fantastical", responses={404: {"description": "Not found"}})
 async def fantastical_url(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),
@@ -248,7 +253,7 @@ async def fantastical_url(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/providers")
+@router.get("/events/{event_id}/providers", responses={404: {"description": "Not found"}})
 async def event_providers(
     event_id: int,
     profile_id: int = Query(..., description="Profile ID"),

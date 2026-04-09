@@ -39,6 +39,7 @@ router = APIRouter(prefix="/api/applications", tags=["interview-prep"])
 
 @router.get(
     "/{application_id}/interview-prep",
+    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
 )
 async def get_interview_prep_endpoint(
     application_id: int,
@@ -78,6 +79,7 @@ async def get_interview_prep_endpoint(
 
 @router.patch(
     "/interview-prep/items/{item_id}",
+    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
 )
 async def update_prep_item_endpoint(
     item_id: int,

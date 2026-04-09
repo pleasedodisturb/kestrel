@@ -32,7 +32,7 @@ router = APIRouter(tags=["market-intelligence"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/salary-trends")
+@router.get("/api/market/salary-trends", responses={404: {"description": "Not found"}})
 async def salary_trends_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     role: str | None = Query(default=None, description="Filter by role substring"),
@@ -57,7 +57,7 @@ async def salary_trends_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/skill-trends")
+@router.get("/api/market/skill-trends", responses={404: {"description": "Not found"}})
 async def skill_trends_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -80,7 +80,7 @@ async def skill_trends_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/hiring-patterns")
+@router.get("/api/market/hiring-patterns", responses={404: {"description": "Not found"}})
 async def hiring_patterns_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -103,7 +103,7 @@ async def hiring_patterns_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/positioning")
+@router.get("/api/market/positioning", responses={404: {"description": "Not found"}})
 async def positioning_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -126,7 +126,7 @@ async def positioning_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/market/opportunity-radar")
+@router.get("/api/market/opportunity-radar", responses={404: {"description": "Not found"}})
 async def opportunity_radar_endpoint(
     profile_id: int = Query(..., description="Profile ID"),
     dream_companies: str | None = Query(
@@ -172,7 +172,7 @@ async def opportunity_radar_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/market/refresh")
+@router.post("/api/market/refresh", responses={404: {"description": "Not found"}})
 async def refresh_market_endpoint(
     payload: MarketRefreshRequest,
     db: Session = Depends(get_db),

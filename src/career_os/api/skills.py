@@ -71,7 +71,7 @@ async def list_skills_endpoint(
     )
 
 
-@router.get("/{skill_id}")
+@router.get("/{skill_id}", responses={404: {"description": "Not found"}})
 async def get_skill_endpoint(
     skill_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -85,7 +85,7 @@ async def get_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.get("/{skill_id}/history")
+@router.get("/{skill_id}/history", responses={404: {"description": "Not found"}})
 async def get_skill_history_endpoint(
     skill_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -99,7 +99,7 @@ async def get_skill_history_endpoint(
     return [SkillHistoryResponse.model_validate(h) for h in history]
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, responses={404: {"description": "Not found"}})
 async def create_skill_endpoint(
     payload: SkillCreate,
     db: Session = Depends(get_db),
@@ -127,7 +127,7 @@ async def create_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.put("/{skill_id}")
+@router.put("/{skill_id}", responses={404: {"description": "Not found"}})
 async def update_skill_endpoint(
     skill_id: int,
     payload: SkillUpdate,
@@ -149,7 +149,7 @@ async def update_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.post("/ingest")
+@router.post("/ingest", responses={404: {"description": "Not found"}})
 async def ingest_skills_endpoint(
     payload: IngestRequest,
     db: Session = Depends(get_db),
