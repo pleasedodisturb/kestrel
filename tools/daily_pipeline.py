@@ -198,6 +198,31 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
             job["review_reason"] = result.get("review_reason", "")
 
         except Exception as e:
+            status_code = getattr(e, "status_code", None)
+            error_str = str(e)
+
+            if status_code in (402, 429) or "insufficient_quota" in error_str.lower():
+                logger.error(
+                    f"AI credits exhausted after scoring {len(scored)}/{total} jobs — stopping. "
+                    "Add credits at https://openrouter.ai"
+                )
+                job["fit_score"] = 0
+                job["fit_reasoning"] = "Not scored: AI credits exhausted"
+                job["estimated_salary"] = "unknown"
+                job["effort_flag"] = "unknown"
+                job["prep_level"] = 0
+                job["prep_notes"] = ""
+                scored.append(job)
+                for remaining_job in jobs[i + 1 :]:
+                    remaining_job["fit_score"] = 0
+                    remaining_job["fit_reasoning"] = "Not scored: AI credits exhausted"
+                    remaining_job["estimated_salary"] = "unknown"
+                    remaining_job["effort_flag"] = "unknown"
+                    remaining_job["prep_level"] = 0
+                    remaining_job["prep_notes"] = ""
+                    scored.append(remaining_job)
+                break
+
             logger.warning(f"Scoring failed for {title} @ {company}: {e}")
             job["fit_score"] = 2  # Default to 2, not 5 -- unknown jobs shouldn't pass
             job["fit_reasoning"] = f"Scoring error: {e}"

@@ -20,7 +20,26 @@
 
 ## Install
 
-Pick whichever feels right. All three give you the same app.
+Pick whichever feels right. They all give you the same app.
+
+### Quick install (one command)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pleasedodisturb/kestrel/main/install.sh | bash
+```
+
+Detects your OS, checks for Python 3.13+, installs Kestrel, and opens it in your browser.
+
+Or if you have Node.js:
+```bash
+npx kestrel-app
+```
+
+Or with Homebrew (macOS):
+```bash
+brew install pleasedodisturb/kestrel/kestrel
+kestrel start
+```
 
 ### Option 1: pip install (simplest)
 
@@ -49,6 +68,25 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (free
 Free with a GitHub account. Your own instance in 2 minutes. Nothing installed on your computer.
 
 **Lost?** [Step-by-step guide](docs/QUICKSTART.md) or [FAQ](docs/FAQ.md).
+
+---
+
+## Preview
+
+<p align="center">
+  <strong>Pipeline — drag applications across stages</strong><br><br>
+  <img src="docs/images/preview-pipeline.svg" alt="Kanban board showing job applications across pipeline stages" width="820">
+</p>
+
+<p align="center">
+  <strong>Discovery — AI-scored job matches</strong><br><br>
+  <img src="docs/images/preview-discovery.svg" alt="Discovery page showing scored job listings from multiple boards" width="820">
+</p>
+
+<p align="center">
+  <strong>Settings — connect your integrations</strong><br><br>
+  <img src="docs/images/preview-settings.svg" alt="Settings page showing integration configuration" width="820">
+</p>
 
 ---
 
