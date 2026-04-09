@@ -38,6 +38,14 @@ from career_os.services.salary import parse_salary_range
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_for_log(value: object, max_length: int = 200) -> str:
+    """Sanitize user-controlled data before logging to prevent log injection."""
+    text = str(value).replace("\n", "\\n").replace("\r", "\\r")
+    if len(text) > max_length:
+        text = text[:max_length] + "...[truncated]"
+    return text
+
+
 # ---------------------------------------------------------------------------
 # Exceptions
 # ---------------------------------------------------------------------------
@@ -134,8 +142,8 @@ async def get_interview_format(
     except Exception as exc:
         logger.warning(
             "AI provider failed for interview format '%s': %s",
-            company,
-            exc,
+            _sanitize_for_log(company),
+            _sanitize_for_log(exc),
         )
         structured = None
         warnings.append(
@@ -486,8 +494,8 @@ async def get_interview_patterns(
     except Exception as exc:
         logger.warning(
             "AI provider failed for interview patterns '%s': %s",
-            role,
-            exc,
+            _sanitize_for_log(role),
+            _sanitize_for_log(exc),
         )
         structured = None
         warnings.append(
