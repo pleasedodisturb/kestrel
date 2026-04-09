@@ -544,7 +544,7 @@ class TestEffortEstimates:
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["estimated_hours"] == 5.0
+        assert data["estimated_hours"] == pytest.approx(5.0)
 
     def test_difficulty_field_present(self, client: TestClient, test_profile: Profile, gap_id: int):
         """Created resource has difficulty rating."""
@@ -965,5 +965,5 @@ class TestTemplateRecommendations:
         # Kubernetes gap requires 'advanced' level → free_course hours should be 30.0
         templates = data["template_recommendations"]
         free = [t for t in templates if t["resource_type"] == "free_course"][0]
-        assert free["estimated_hours"] == 30.0
+        assert free["estimated_hours"] == pytest.approx(30.0)
         assert free["difficulty"] == "advanced"

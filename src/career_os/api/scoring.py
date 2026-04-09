@@ -1,8 +1,7 @@
 """Scoring API routes - AI-powered job scoring engine."""
 
-from typing import Annotated
-
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session

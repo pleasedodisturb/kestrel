@@ -56,10 +56,7 @@ def db_session():
     session.commit()
 
     def override_get_db():
-        try:
-            yield session
-        finally:
-            pass
+        yield session
 
     app.dependency_overrides[get_db] = override_get_db
     yield session
@@ -113,7 +110,7 @@ class TestSalaryParsing:
 
     def test_midpoint_calculation(self):
         mid = salary_midpoint("120000-160000 EUR")
-        assert mid == 140000.0
+        assert mid == pytest.approx(140000.0)
 
     def test_midpoint_none_for_unparseable(self):
         mid = salary_midpoint("TBD")
