@@ -31,6 +31,7 @@ from career_os.services.follow_ups import (
     is_ghost_application,
 )
 from career_os.services.gap_analysis import get_readiness_score
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -131,7 +132,7 @@ async def list_apps(
 @router.get("/{application_id}", responses={404: {"description": "Not found"}})
 async def get_detail(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationDetailResponse:
     """Get application detail including activity log and follow-ups.
@@ -195,7 +196,7 @@ async def get_detail(
 async def update(
     application_id: int,
     payload: ApplicationUpdate,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationResponse:
     """Update an application.
@@ -220,7 +221,7 @@ async def update(
 @router.delete("/{application_id}", responses={404: {"description": "Not found"}})
 async def delete(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationResponse:
     """Soft-delete (archive) an application.

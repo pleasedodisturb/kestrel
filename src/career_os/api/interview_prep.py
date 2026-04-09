@@ -27,6 +27,7 @@ from career_os.services.interview_prep import (
     get_or_create_interview_prep,
     update_prep_item,
 )
+from career_os.api.constants import DESC_PROFILE_ID
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ router = APIRouter(prefix="/api/applications", tags=["interview-prep"])
 )
 async def get_interview_prep_endpoint(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InterviewPrepResponse:
     """Get or generate interview preparation for an application.
@@ -85,7 +86,7 @@ async def get_interview_prep_endpoint(
 async def update_prep_item_endpoint(
     item_id: int,
     body: PrepItemUpdate,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> PrepChecklistItem:
     """Update a prep checklist item's completion state.

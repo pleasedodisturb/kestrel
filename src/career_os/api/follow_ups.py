@@ -22,6 +22,7 @@ from career_os.services.follow_ups import (
     get_overdue_count,
     list_follow_ups,
 )
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api/follow-ups", tags=["follow-ups"])
 
@@ -99,7 +100,7 @@ async def list_all(
 async def complete(
     follow_up_id: int,
     payload: FollowUpComplete,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> FollowUpResponse:
     """Complete a follow-up (set completed_at).

@@ -32,6 +32,7 @@ from career_os.services.goals import (
     recalibrate_goal,
     update_goal,
 )
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api/goals", tags=["goals"])
 
@@ -54,7 +55,7 @@ async def list_goals_endpoint(
 @router.get("/{goal_id}", responses={404: {"description": "Not found"}})
 async def get_goal_endpoint(
     goal_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GoalResponse:
     """Get a single goal by ID."""
@@ -92,7 +93,7 @@ async def create_goal_endpoint(
 async def update_goal_endpoint(
     goal_id: int,
     payload: GoalUpdate,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GoalResponse:
     """Update a goal's fields."""
@@ -112,7 +113,7 @@ async def update_goal_endpoint(
 @router.delete("/{goal_id}", status_code=204, responses={404: {"description": "Not found"}})
 async def delete_goal_endpoint(
     goal_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a goal."""
@@ -125,7 +126,7 @@ async def delete_goal_endpoint(
 @router.get("/{goal_id}/reality-map", responses={404: {"description": "Not found"}})
 async def get_reality_map_endpoint(
     goal_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RealityMapResponse:
     """Get goal-to-reality mapping.
@@ -150,7 +151,7 @@ async def get_reality_map_endpoint(
 @router.get("/{goal_id}/progress", responses={404: {"description": "Not found"}})
 async def get_progress_endpoint(
     goal_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ProgressResponse:
     """Get progress tracking across applications, learning, portfolio."""
@@ -170,7 +171,7 @@ async def get_progress_endpoint(
 @router.put("/{goal_id}/recalibrate", responses={404: {"description": "Not found"}})
 async def recalibrate_goal_endpoint(
     goal_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RecalibrationResponse:
     """AI-powered goal recalibration with market-data-backed suggestions."""
@@ -191,7 +192,7 @@ async def recalibrate_goal_endpoint(
 @router.get("/{goal_id}/alternatives", responses={404: {"description": "Not found"}})
 async def get_alternatives_endpoint(
     goal_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AlternativesResponse:
     """Get alternative path analysis (employment, freelance, consulting)."""
