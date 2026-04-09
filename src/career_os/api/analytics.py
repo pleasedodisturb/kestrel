@@ -1,5 +1,7 @@
 """Analytics dashboard API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -12,8 +14,8 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 @router.get("")
 async def analytics(
-    profile_id: int = Query(..., description="Profile to show analytics for"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile to show analytics for")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> AnalyticsResponse:
     """Get analytics dashboard data.
 

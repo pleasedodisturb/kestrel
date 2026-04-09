@@ -1,5 +1,7 @@
 """Application pipeline CRUD API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -44,7 +46,7 @@ def _enrich_with_readiness(app_response: ApplicationResponse, db: Session) -> Ap
 @router.post("", status_code=201)
 async def create(
     payload: ApplicationCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationResponse:
     """Create a new application.
 
@@ -60,17 +62,17 @@ async def create(
 
 @router.get("")
 async def list_apps(
-    profile_id: int = Query(..., description="Profile to list applications for"),
-    status: str | None = Query(default=None, description="Filter by status"),
-    search: str | None = Query(default=None, description="Search by company name"),
-    sort: str | None = Query(default=None, description="Sort field: 'score' or 'date'"),
-    order: str = Query(default="desc", description="Sort order: 'asc' or 'desc'"),
-    ghost_alert: bool = Query(default=False, description="Filter to ghost candidates only"),
-    applied_threshold: int = Query(default=14, description="Applied ghost threshold (days)"),
-    interviewing_threshold: int = Query(
-        default=7, description="Interviewing ghost threshold (days)"
-    ),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile to list applications for")],
+    db: Annotated[Session, Depends(get_db)],
+    status: Annotated[str | None, Query(description="Filter by status")] = None,
+    search: Annotated[str | None, Query(description="Search by company name")] = None,
+    sort: Annotated[str | None, Query(description="Sort field: 'score' or 'date'")] = None,
+    order: Annotated[str, Query(description="Sort order: 'asc' or 'desc'")] = "desc",
+    ghost_alert: Annotated[bool, Query(description="Filter to ghost candidates only")] = False,
+    applied_threshold: Annotated[int, Query(description="Applied ghost threshold (days)")] = 14,
+    interviewing_threshold: Annotated[
+        int, Query(description="Interviewing ghost threshold (days)")
+    ] = 7,
 ) -> ApplicationListResponse:
     """List applications with optional filters and sorting.
 
@@ -129,8 +131,8 @@ async def list_apps(
 @router.get("/{application_id}")
 async def get_detail(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationDetailResponse:
     """Get application detail including activity log and follow-ups.
 
@@ -190,15 +192,15 @@ async def get_detail(
 async def update(
     application_id: int,
     payload: ApplicationUpdate,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationResponse:
     """Update an application.
 
     Returns 404 if the application does not belong to the given profile.
     Status changes are validated against the workflow:
-    discovered→interested→applied→interviewing→offer→accepted/rejected.
-    Any status can transition to ghosted.  Only offer→rejected is valid
+    discovered->interested->applied->interviewing->offer->accepted/rejected.
+    Any status can transition to ghosted.  Only offer->rejected is valid
     (pre-offer states cannot transition directly to rejected).
     Invalid transitions return 422.  Status values are normalized to
     lowercase (title-cased Kanban DnD values are accepted).
@@ -215,8 +217,8 @@ async def update(
 @router.delete("/{application_id}")
 async def delete(
     application_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationResponse:
     """Soft-delete (archive) an application.
 

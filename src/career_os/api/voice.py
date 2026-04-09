@@ -1,5 +1,7 @@
 """Voice Discussion Mode API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -30,7 +32,7 @@ router = APIRouter(prefix="/api/voice", tags=["voice"])
 @router.post("/sessions", status_code=201)
 async def create_voice_session(
     data: VoiceSessionCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> VoiceSessionResponse:
     """Create a new voice discussion session.
 
@@ -59,9 +61,9 @@ async def create_voice_session(
 
 @router.get("/sessions")
 async def list_voice_sessions(
-    profile_id: int = Query(..., description="Active profile ID"),
-    mode: str | None = Query(default=None, description="Filter by mode"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    mode: Annotated[str | None, Query(description="Filter by mode")] = None,
 ) -> VoiceSessionListResponse:
     """List voice discussion sessions for a profile."""
     sessions = list_sessions(db, profile_id=profile_id, mode=mode)
@@ -74,8 +76,8 @@ async def list_voice_sessions(
 @router.get("/sessions/{session_id}")
 async def get_voice_session(
     session_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> VoiceSessionResponse:
     """Get a voice session with all messages."""
     try:
@@ -92,7 +94,7 @@ async def get_voice_session(
 async def send_voice_message(
     session_id: int,
     data: VoiceMessageCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> VoiceSendResponse:
     """Send a message in a voice session and receive AI response.
 
@@ -123,8 +125,8 @@ async def send_voice_message(
 )
 async def complete_voice_session(
     session_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> VoiceSessionResponse:
     """Mark a voice session as completed."""
     try:
