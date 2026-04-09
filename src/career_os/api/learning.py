@@ -26,7 +26,6 @@ router = APIRouter(tags=["learning"])
 
 @router.get(
     "/api/gaps/{gap_id}/recommendations",
-    response_model=GapRecommendationsResponse,
 )
 async def get_recommendations(
     gap_id: int,
@@ -69,7 +68,6 @@ async def get_recommendations(
 
 @router.post(
     "/api/gaps/{gap_id}/recommendations",
-    response_model=LearningResourceResponse,
     status_code=201,
 )
 async def add_recommendation(
@@ -106,7 +104,6 @@ async def add_recommendation(
 
 @router.patch(
     "/api/learning/{resource_id}/status",
-    response_model=LearningResourceResponse,
 )
 async def update_status(
     resource_id: int,

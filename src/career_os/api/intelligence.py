@@ -34,7 +34,7 @@ router = APIRouter(prefix="/api/intelligence", tags=["role-intelligence"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/interview-format", response_model=InterviewFormatResponse)
+@router.get("/interview-format")
 async def interview_format_endpoint(
     company: str = Query(..., min_length=1, description="Company name"),
     profile_id: int = Query(..., description="Profile ID"),
@@ -70,7 +70,7 @@ async def interview_format_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/salary", response_model=SalaryBenchmarkResponse)
+@router.get("/salary")
 async def salary_benchmark_endpoint(
     role: str = Query(..., min_length=1, description="Role type to benchmark"),
     profile_id: int = Query(..., description="Profile ID"),
@@ -109,7 +109,7 @@ async def salary_benchmark_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/patterns", response_model=InterviewPatternsResponse)
+@router.get("/patterns")
 async def interview_patterns_endpoint(
     role: str = Query(..., min_length=1, description="Role type"),
     profile_id: int = Query(..., description="Profile ID"),

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 
-@router.post("/complete", response_model=AIResponse)
+@router.post("/complete")
 async def ai_complete(request: AICompleteRequest) -> AIResponse:
     """Generate an AI completion.
 
@@ -66,7 +66,7 @@ async def get_current_provider() -> dict[str, str]:
         ) from exc
 
 
-@router.get("/health", response_model=AIHealthResponse)
+@router.get("/health")
 async def ai_health(db: Session = Depends(get_db)) -> AIHealthResponse:
     """Check connectivity and health of all configured AI providers.
 
@@ -77,7 +77,7 @@ async def ai_health(db: Session = Depends(get_db)) -> AIHealthResponse:
     return await check_all_providers(db)
 
 
-@router.get("/health/check", response_model=ProviderHealthStatus)
+@router.get("/health/check")
 async def ai_health_check_single(
     provider: str = "mock",
     db: Session = Depends(get_db),
