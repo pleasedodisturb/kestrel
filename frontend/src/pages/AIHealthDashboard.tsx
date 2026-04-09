@@ -50,7 +50,7 @@ export function AIHealthDashboard() {
       <div data-testid="ai-health-error" className="py-20 text-center">
         <XCircle className="mx-auto h-12 w-12 text-red-400" />
         <p className="mt-4 text-lg font-medium text-red-700">
-          {(error as Error).message}
+          {error instanceof Error ? error.message : String(error)}
         </p>
       </div>
     );
@@ -68,9 +68,9 @@ export function AIHealthDashboard() {
   ).length;
 
   return (
-    <div data-testid="ai-health-dashboard" className="space-y-6">
+    <section data-testid="ai-health-dashboard" className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             AI Provider Health
@@ -91,7 +91,7 @@ export function AIHealthDashboard() {
           />
           Refresh
         </button>
-      </div>
+      </header>
 
       {/* Summary bar */}
       <div className="grid grid-cols-3 gap-4">
@@ -127,7 +127,7 @@ export function AIHealthDashboard() {
           <ProviderCard key={provider.name} provider={provider} />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -173,12 +173,12 @@ function StatusBadge({ status }: Readonly<{ status: string }>) {
 // ---- Provider Card Component ----
 
 function ProviderCard({ provider }: Readonly<{ provider: ProviderHealthStatus }>) {
-  const borderColor =
-    provider.status === "reachable"
-      ? "border-green-200"
-      : provider.status === "error" || provider.status === "unreachable"
-        ? "border-red-200"
-        : "border-gray-200";
+  const borderColorMap: Record<string, string> = {
+    reachable: "border-green-200",
+    error: "border-red-200",
+    unreachable: "border-red-200",
+  };
+  const borderColor = borderColorMap[provider.status] ?? "border-gray-200";
 
   return (
     <div

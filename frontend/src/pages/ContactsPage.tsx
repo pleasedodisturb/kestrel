@@ -45,7 +45,7 @@ function ContactCard({
     <div
       className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
       onClick={() => onSelect(contact)}
-      onKeyDown={(e) => e.key === 'Enter' && onSelect(contact)}
+      onKeyDown={(e) => { if (e.key === 'Enter') onSelect(contact); }}
       role="button"
       tabIndex={0}
       data-testid={`contact-card-${contact.id}`}
@@ -67,14 +67,14 @@ function ContactCard({
         <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
           {RELATIONSHIP_LABELS[contact.relationship_type] ?? contact.relationship_type}
         </span>
-        {contact.referral_status && contact.referral_status !== "none" && (
+        {contact.referral_status != null && contact.referral_status !== "none" && (
           <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
             {contact.referral_status.replace("_", " ")}
           </span>
         )}
       </div>
 
-      {contact.tags && contact.tags.length > 0 && (
+      {(contact.tags?.length ?? 0) > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {contact.tags.map((tag) => (
             <span
@@ -111,12 +111,14 @@ function ContactDetail({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="presentation"
       data-testid="contact-detail-overlay"
     >
       <div
         className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between">
@@ -153,7 +155,7 @@ function ContactDetail({
           {contact.phone && <p><span className="font-medium">Phone:</span> {contact.phone}</p>}
           <p><span className="font-medium">Type:</span> {RELATIONSHIP_LABELS[contact.relationship_type]}</p>
           <p><span className="font-medium">Warmth:</span> <WarmthBadge warmth={contact.warmth} /></p>
-          {contact.referral_status && contact.referral_status !== "none" && (
+          {contact.referral_status != null && contact.referral_status !== "none" && (
             <p><span className="font-medium">Referral:</span> {contact.referral_status.replace("_", " ")}</p>
           )}
           {contact.source && <p><span className="font-medium">Source:</span> {contact.source}</p>}
@@ -219,12 +221,14 @@ function AddContactDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="presentation"
       data-testid="add-contact-dialog"
     >
       <div
         className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-lg font-bold">Add Contact</h2>
@@ -355,12 +359,14 @@ function LogInteractionDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="presentation"
       data-testid="log-interaction-dialog"
     >
       <div
         className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-lg font-bold">Log Interaction</h2>
@@ -455,7 +461,7 @@ export default function ContactsPage() {
   if (error) {
     return (
       <div className="py-10 text-center text-red-600" data-testid="contacts-error">
-        Failed to load contacts: {(error as Error).message}
+        Failed to load contacts: {error instanceof Error ? error.message : String(error)}
       </div>
     );
   }
@@ -463,9 +469,9 @@ export default function ContactsPage() {
   const contacts = data?.contacts ?? [];
 
   return (
-    <div>
+    <section>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <header className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
           <p className="text-sm text-gray-500">
@@ -479,7 +485,7 @@ export default function ContactsPage() {
         >
           + Add Contact
         </button>
-      </div>
+      </header>
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap gap-3">
@@ -588,6 +594,6 @@ export default function ContactsPage() {
           }}
         />
       )}
-    </div>
+    </section>
   );
 }
