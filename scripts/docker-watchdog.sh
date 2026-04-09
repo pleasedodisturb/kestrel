@@ -55,7 +55,7 @@ if [ ! -f "$COMPOSE_FILE" ]; then
     exit 1
 fi
 
-COMPOSE_CMD="docker compose -f $COMPOSE_FILE"
+COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE")
 
 wait_for_docker() {
     local elapsed=0
@@ -80,9 +80,9 @@ wait_for_docker() {
 check_health() {
     # Check if containers are running
     local running
-    running=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
+    running=$("${COMPOSE_CMD[@]}" ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
     local expected
-    expected=$($COMPOSE_CMD config --services 2>/dev/null | wc -l | tr -d ' ')
+    expected=$("${COMPOSE_CMD[@]}" config --services 2>/dev/null | wc -l | tr -d ' ')
 
     if [ "$running" -lt "$expected" ]; then
         log "Only $running of $expected containers running"
@@ -100,7 +100,7 @@ check_health() {
 
 recover() {
     log "Restarting containers..."
-    $COMPOSE_CMD up -d 2>&1 | tail -5
+    "${COMPOSE_CMD[@]}" up -d 2>&1 | tail -5
 
     # Wait for health (same pattern as setup.sh)
     log "Waiting for health check..."
@@ -114,7 +114,7 @@ recover() {
     done
 
     log "Recovery failed — containers did not become healthy within 60s"
-    log "Try: $COMPOSE_CMD logs backend"
+    log "Try: "${COMPOSE_CMD[@]}" logs backend"
     return 1
 }
 
