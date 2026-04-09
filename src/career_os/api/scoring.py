@@ -18,6 +18,7 @@ from career_os.schemas.scoring import (
 from career_os.services.pushover import send_credits_exhausted_alert
 from career_os.services.scoring import (
     JobNotFoundError,
+    ProfileIncompleteError,
     ProfileNotFoundError,
     ScoringError,
     batch_score_discovery,
@@ -63,6 +64,8 @@ async def score_endpoint(
         )
     except ProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ProfileIncompleteError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except JobNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except CreditsExhaustedError as exc:
@@ -142,6 +145,8 @@ async def batch_score_endpoint(
         )
     except ProfileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ProfileIncompleteError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Batch scoring error: {exc}") from exc
 
