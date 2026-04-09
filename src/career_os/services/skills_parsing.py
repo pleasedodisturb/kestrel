@@ -227,6 +227,20 @@ def _extract_skills_from_experience(experience: list[dict]) -> list[ParsedSkill]
 # ---------------------------------------------------------------------------
 
 
+def _proficiency_from_rank(rank: int, total: int = 34) -> str | None:
+    """Map a CliftonStrengths rank to a proficiency level.
+
+    Returns None for ranks that should be skipped (bottom 14).
+    """
+    if rank <= 5:
+        return "expert"
+    if rank <= 10:
+        return "advanced"
+    if rank <= 20:
+        return "intermediate"
+    return None  # Skip bottom 14 (below average)
+
+
 def parse_cliftonstrengths(file_path: Path) -> list[ParsedSkill]:
     """Parse CliftonStrengths assessment → soft skills with proficiency from rank."""
     if not file_path.exists():
@@ -252,15 +266,9 @@ def parse_cliftonstrengths(file_path: Path) -> list[ParsedSkill]:
         if not theme or theme == "Theme":  # skip header row
             continue
 
-        # Proficiency based on rank: top 5 = expert, 6-10 = advanced, 11-20 = intermediate
-        if rank <= 5:
-            proficiency = "expert"
-        elif rank <= 10:
-            proficiency = "advanced"
-        elif rank <= 20:
-            proficiency = "intermediate"
-        else:
-            continue  # Skip bottom 14 (below average)
+        proficiency = _proficiency_from_rank(rank)
+        if proficiency is None:
+            continue
 
         skills.append(
             ParsedSkill(
@@ -302,16 +310,7 @@ def parse_epp(file_path: Path) -> list[ParsedSkill]:
         if not trait or trait == "Trait":  # skip header
             continue
 
-        # Proficiency from percentile:
-        # 80+ = expert, 60-79 = advanced, 40-59 = intermediate, <40 = beginner
-        if percentile >= 80:
-            proficiency = "expert"
-        elif percentile >= 60:
-            proficiency = "advanced"
-        elif percentile >= 40:
-            proficiency = "intermediate"
-        else:
-            proficiency = "beginner"
+        proficiency = _proficiency_from_percentile(percentile)
 
         skills.append(
             ParsedSkill(
@@ -324,6 +323,34 @@ def parse_epp(file_path: Path) -> list[ParsedSkill]:
         )
 
     return skills
+
+
+def _proficiency_from_percentile(percentile: int) -> str:
+    """Map a percentile score to a proficiency level.
+
+    >=80 → expert, >=60 → advanced, >=40 → intermediate, else → beginner.
+    """
+    if percentile >= 80:
+        return "expert"
+    if percentile >= 60:
+        return "advanced"
+    if percentile >= 40:
+        return "intermediate"
+    return "beginner"
+
+
+_CCAT_SKILL_MAP: dict[str, tuple[str, str]] = {
+    "Spatial Reasoning": ("Spatial Reasoning", "soft"),
+    "Math & Logic": ("Analytical Thinking", "soft"),
+    "Verbal": ("Verbal Reasoning", "soft"),
+}
+
+
+def _map_ccat_category(
+    category_name: str, skill_map: dict[str, tuple[str, str]]
+) -> tuple[str, str] | None:
+    """Resolve a CCAT category name to (skill_name, skill_category) or None."""
+    return skill_map.get(category_name)
 
 
 def parse_ccat(file_path: Path) -> list[ParsedSkill]:
@@ -350,27 +377,12 @@ def parse_ccat(file_path: Path) -> list[ParsedSkill]:
         category_name = category_name.strip()
         description = description.strip()
 
-        # Map CCAT categories to skill names
-        skill_map = {
-            "Spatial Reasoning": ("Spatial Reasoning", "soft"),
-            "Math & Logic": ("Analytical Thinking", "soft"),
-            "Verbal": ("Verbal Reasoning", "soft"),
-        }
-
-        if category_name in skill_map:
-            skill_name, skill_category = skill_map[category_name]
-        else:
+        mapped = _map_ccat_category(category_name, _CCAT_SKILL_MAP)
+        if mapped is None:
             continue
+        skill_name, skill_category = mapped
 
-        # Proficiency from percentile
-        if percentile >= 80:
-            proficiency = "expert"
-        elif percentile >= 60:
-            proficiency = "advanced"
-        elif percentile >= 40:
-            proficiency = "intermediate"
-        else:
-            proficiency = "beginner"
+        proficiency = _proficiency_from_percentile(percentile)
 
         skills.append(
             ParsedSkill(
@@ -386,11 +398,9 @@ def parse_ccat(file_path: Path) -> list[ParsedSkill]:
     overall_match = re.search(r"\*\*Percentile\*\*\s*\|\s*(\d+)(?:st|nd|rd|th)", content)
     if overall_match:
         overall_pct = int(overall_match.group(1))
-        if overall_pct >= 80:
-            prof = "expert"
-        elif overall_pct >= 60:
-            prof = "advanced"
-        else:
+        # Overall score uses intermediate as floor (no beginner for overall aptitude)
+        prof = _proficiency_from_percentile(overall_pct)
+        if prof == "beginner":
             prof = "intermediate"
 
         skills.append(
@@ -545,6 +555,39 @@ class _NarrativeMatch:
     count: int = 1
 
 
+def _extract_matches_from_file(
+    file_path: Path,
+    skill_patterns: dict[str, tuple[str, str]],
+    matches: dict[str, _NarrativeMatch],
+) -> None:
+    """Scan a single file for skill patterns and update *matches* in place."""
+    content = file_path.read_text()
+
+    for pattern, (skill_name, category) in skill_patterns.items():
+        regex_matches = list(re.finditer(pattern, content, re.IGNORECASE))
+        if not regex_matches:
+            continue
+
+        # Get context around first match for evidence
+        first_match = regex_matches[0]
+        start = max(0, first_match.start() - 60)
+        end = min(len(content), first_match.end() + 60)
+        evidence_quote = content[start:end].strip()
+        # Clean up the evidence (remove markdown)
+        evidence_quote = re.sub(r"\s+", " ", evidence_quote)
+
+        key = skill_name.lower()
+        if key in matches:
+            matches[key].count += 1
+        else:
+            matches[key] = _NarrativeMatch(
+                skill_name=skill_name,
+                category=category,
+                source_file=file_path.name,
+                evidence_quote=evidence_quote,
+            )
+
+
 def parse_profile_docs(profile_dir: Path) -> list[ParsedSkill]:
     """Parse profile narrative documents for skills.
 
@@ -568,30 +611,7 @@ def parse_profile_docs(profile_dir: Path) -> list[ParsedSkill]:
     for md_file in sorted(profile_dir.glob("*.md")):
         if md_file.name in assessment_files:
             continue
-
-        content = md_file.read_text()
-
-        for pattern, (skill_name, category) in _NARRATIVE_SKILL_PATTERNS.items():
-            regex_matches = list(re.finditer(pattern, content, re.IGNORECASE))
-            if regex_matches:
-                # Get context around first match for evidence
-                first_match = regex_matches[0]
-                start = max(0, first_match.start() - 60)
-                end = min(len(content), first_match.end() + 60)
-                evidence_quote = content[start:end].strip()
-                # Clean up the evidence (remove markdown)
-                evidence_quote = re.sub(r"\s+", " ", evidence_quote)
-
-                key = skill_name.lower()
-                if key in matches:
-                    matches[key].count += 1
-                else:
-                    matches[key] = _NarrativeMatch(
-                        skill_name=skill_name,
-                        category=category,
-                        source_file=md_file.name,
-                        evidence_quote=evidence_quote,
-                    )
+        _extract_matches_from_file(md_file, _NARRATIVE_SKILL_PATTERNS, matches)
 
     skills: list[ParsedSkill] = []
     for match in matches.values():
@@ -623,6 +643,22 @@ class IngestionResult:
     errors: list[str] = field(default_factory=list)
 
 
+def _ingest_source(
+    result: IngestionResult,
+    func: callable,
+    args: tuple,
+    label: str,
+) -> None:
+    """Call *func(*args)*, extending *result* on success or appending an error."""
+    try:
+        parsed = func(*args)
+        result.skills.extend(parsed)
+        if parsed:
+            result.sources_processed.append(label)
+    except Exception as e:
+        result.errors.append(f"{label} parsing error: {e}")
+
+
 def ingest_all_skills(
     cv_path: Path | None = None,
     profile_dir: Path | None = None,
@@ -645,13 +681,7 @@ def ingest_all_skills(
     result = IngestionResult()
 
     if "cv" in sources and cv_path:
-        try:
-            cv_skills = parse_cv_yaml(cv_path)
-            result.skills.extend(cv_skills)
-            if cv_skills:
-                result.sources_processed.append("cv.yaml")
-        except Exception as e:
-            result.errors.append(f"CV parsing error: {e}")
+        _ingest_source(result, parse_cv_yaml, (cv_path,), "cv.yaml")
 
     if "assessments" in sources and profile_dir:
         assessment_parsers = [
@@ -661,22 +691,10 @@ def ingest_all_skills(
             ("workplace-insights.md", parse_workplace_insights, "assessment:workplace-insights"),
         ]
         for filename, parser, source_name in assessment_parsers:
-            try:
-                parsed = parser(profile_dir / filename)
-                result.skills.extend(parsed)
-                if parsed:
-                    result.sources_processed.append(source_name)
-            except Exception as e:
-                result.errors.append(f"{filename} parsing error: {e}")
+            _ingest_source(result, parser, (profile_dir / filename,), source_name)
 
     if "profile" in sources and profile_dir:
-        try:
-            profile_skills = parse_profile_docs(profile_dir)
-            result.skills.extend(profile_skills)
-            if profile_skills:
-                result.sources_processed.append("profile")
-        except Exception as e:
-            result.errors.append(f"Profile docs parsing error: {e}")
+        _ingest_source(result, parse_profile_docs, (profile_dir,), "profile")
 
     return result
 
@@ -684,6 +702,41 @@ def ingest_all_skills(
 def _evidence_sources_set(evidence_source: str) -> set[str]:
     """Parse a comma-separated evidence_source string into a set of sources."""
     return {s.strip() for s in evidence_source.split(",") if s.strip()}
+
+
+def _upgrade_proficiency(
+    existing_skill: ParsedSkill,
+    new_skill: ParsedSkill,
+    current_sources: set[str],
+) -> None:
+    """Upgrade *existing_skill* proficiency and evidence from *new_skill* in place.
+
+    Handles both level-comparison and source-count-based upgrades.
+    """
+    existing_skill.proficiency = _higher_proficiency(
+        existing_skill.proficiency, new_skill.proficiency
+    )
+
+    new_sources = _evidence_sources_set(new_skill.evidence_source)
+    added_sources = new_sources - current_sources
+    if not added_sources:
+        return
+
+    current_sources.update(added_sources)
+
+    # Append evidence detail from different sources
+    if new_skill.evidence_detail:
+        if existing_skill.evidence_detail:
+            existing_skill.evidence_detail += f" | Also: {new_skill.evidence_detail}"
+        else:
+            existing_skill.evidence_detail = new_skill.evidence_detail
+
+    # Update evidence_source to include all sources
+    existing_skill.evidence_source = ", ".join(sorted(current_sources))
+
+    # Upgrade proficiency based on total source count
+    source_prof = _proficiency_from_source_count(len(current_sources))
+    existing_skill.proficiency = _higher_proficiency(existing_skill.proficiency, source_prof)
 
 
 def merge_skills(existing: list[ParsedSkill], new: list[ParsedSkill]) -> list[ParsedSkill]:
@@ -701,30 +754,7 @@ def merge_skills(existing: list[ParsedSkill], new: list[ParsedSkill]) -> list[Pa
     for skill in existing + new:
         key = skill.name.lower().strip()
         if key in merged:
-            existing_skill = merged[key]
-            # Upgrade proficiency if new evidence is stronger
-            existing_skill.proficiency = _higher_proficiency(
-                existing_skill.proficiency, skill.proficiency
-            )
-            # Track all distinct evidence sources
-            current_sources = sources_per_skill[key]
-            new_sources = _evidence_sources_set(skill.evidence_source)
-            added_sources = new_sources - current_sources
-            if added_sources:
-                current_sources.update(added_sources)
-                # Append evidence detail from different sources
-                if skill.evidence_detail:
-                    if existing_skill.evidence_detail:
-                        existing_skill.evidence_detail += f" | Also: {skill.evidence_detail}"
-                    else:
-                        existing_skill.evidence_detail = skill.evidence_detail
-                # Update evidence_source to include all sources
-                existing_skill.evidence_source = ", ".join(sorted(current_sources))
-                # Upgrade proficiency based on total source count
-                source_prof = _proficiency_from_source_count(len(current_sources))
-                existing_skill.proficiency = _higher_proficiency(
-                    existing_skill.proficiency, source_prof
-                )
+            _upgrade_proficiency(merged[key], skill, sources_per_skill[key])
         else:
             merged[key] = ParsedSkill(
                 name=skill.name,
