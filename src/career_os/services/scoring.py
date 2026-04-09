@@ -37,6 +37,10 @@ class JobNotFoundError(Exception):
     """Raised when a discovered job or application is not found."""
 
 
+class ProfileIncompleteError(Exception):
+    """Raised when profile lacks required fields for meaningful scoring."""
+
+
 class ScoringError(Exception):
     """Raised when scoring fails."""
 
@@ -274,6 +278,17 @@ async def score_job(
     if not profile:
         raise ProfileNotFoundError(f"Profile {profile_id} not found")
 
+    # Guard: profile must have target roles and location for meaningful scores
+    if not profile.job_family or not profile.location:
+        missing = []
+        if not profile.job_family:
+            missing.append("target roles")
+        if not profile.location:
+            missing.append("location")
+        raise ProfileIncompleteError(
+            f"Fill in your profile ({', '.join(missing)}) for personalized scores"
+        )
+
     # Validate discovered_job_id if provided
     if discovered_job_id is not None:
         dj = (
@@ -447,6 +462,17 @@ async def batch_score_discovery(
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if not profile:
         raise ProfileNotFoundError(f"Profile {profile_id} not found")
+
+    # Guard: profile must have target roles and location for meaningful scores
+    if not profile.job_family or not profile.location:
+        missing = []
+        if not profile.job_family:
+            missing.append("target roles")
+        if not profile.location:
+            missing.append("location")
+        raise ProfileIncompleteError(
+            f"Fill in your profile ({', '.join(missing)}) for personalized scores"
+        )
 
     start_time = time.monotonic()
 
