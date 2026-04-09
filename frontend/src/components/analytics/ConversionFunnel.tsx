@@ -75,8 +75,8 @@ export function ConversionFunnel({ data }: Props) {
                 allowDecimals={false}
               />
               <Tooltip
-                formatter={(value, _name, props) => [
-                  `${value} (${(props.payload as { percentage: number }).percentage}%)`,
+                formatter={(value, _name, { payload }: { payload: { percentage: number } }) => [
+                  `${value} (${payload.percentage}%)`,
                   "Count",
                 ]}
                 contentStyle={{
