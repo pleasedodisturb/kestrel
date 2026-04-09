@@ -12,6 +12,27 @@ import type {
 
 const JOBS_API = "/api/jobs";
 const SAVED_SEARCHES_API = "/api/saved-searches";
+const DISCOVERY_RUNS_API = "/api/discovery-runs";
+
+export interface DiscoveryRunLatest {
+  id: number;
+  new_jobs: number;
+  completed_at: string | null;
+}
+
+/**
+ * Get the latest completed discovery run for a profile.
+ */
+export async function fetchLatestDiscoveryRun(
+  profileId: number,
+): Promise<DiscoveryRunLatest | null> {
+  const resp = await fetch(
+    `${DISCOVERY_RUNS_API}/latest?profile_id=${profileId}`,
+  );
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return data;
+}
 
 /**
  * Search, filter, sort, and paginate discovered jobs.
