@@ -52,6 +52,25 @@ Free with a GitHub account. Your own instance in 2 minutes. Nothing installed on
 
 ---
 
+## Preview
+
+<p align="center">
+  <strong>Pipeline — drag applications across stages</strong><br><br>
+  <img src="docs/images/preview-pipeline.svg" alt="Kanban board showing job applications across pipeline stages" width="820">
+</p>
+
+<p align="center">
+  <strong>Discovery — AI-scored job matches</strong><br><br>
+  <img src="docs/images/preview-discovery.svg" alt="Discovery page showing scored job listings from multiple boards" width="820">
+</p>
+
+<p align="center">
+  <strong>Settings — connect your integrations</strong><br><br>
+  <img src="docs/images/preview-settings.svg" alt="Settings page showing integration configuration" width="820">
+</p>
+
+---
+
 ## What it does
 
 - **Discovers jobs** from multiple boards automatically (Indeed, LinkedIn, Glassdoor, Arbeitsagentur)
