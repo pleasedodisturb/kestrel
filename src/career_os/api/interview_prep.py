@@ -2,13 +2,14 @@
 
 Covers:
 - VAL-PREP-001: Personalized topic list per application
-- VAL-PREP-002: Practice question generation (≥5 tailored)
+- VAL-PREP-002: Practice question generation (>=5 tailored)
 - VAL-PREP-003: Prep checklist with time estimates and total
 - VAL-PREP-004: Prep progress tracking (persists on revisit)
 - VAL-PREP-005: No-research prompt for un-researched companies
 """
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -39,12 +40,11 @@ router = APIRouter(prefix="/api/applications", tags=["interview-prep"])
 
 @router.get(
     "/{application_id}/interview-prep",
-    response_model=InterviewPrepResponse,
 )
 async def get_interview_prep_endpoint(
     application_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> InterviewPrepResponse:
     """Get or generate interview preparation for an application.
 
@@ -79,13 +79,12 @@ async def get_interview_prep_endpoint(
 
 @router.patch(
     "/interview-prep/items/{item_id}",
-    response_model=PrepChecklistItem,
 )
 async def update_prep_item_endpoint(
     item_id: int,
     body: PrepItemUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> PrepChecklistItem:
     """Update a prep checklist item's completion state.
 

@@ -1,5 +1,7 @@
 """Coaching Engine API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -17,10 +19,10 @@ from career_os.services.coaching import (
 router = APIRouter(prefix="/api/coaching", tags=["coaching"])
 
 
-@router.get("/suggestions", response_model=CoachingSuggestionsResponse)
+@router.get("/suggestions")
 async def get_suggestions(
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> CoachingSuggestionsResponse:
     """Get prioritized coaching suggestions.
 
@@ -28,7 +30,7 @@ async def get_suggestions(
     gaps, career goals, and pipeline state. Each suggestion includes
     effort estimates (hours, weeks, difficulty).
 
-    Coaching adapts when learning items are completed — resolved
+    Coaching adapts when learning items are completed - resolved
     suggestions are removed and new priorities surfaced.
     """
     try:

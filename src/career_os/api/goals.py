@@ -1,5 +1,7 @@
 """Career Goals API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -34,12 +36,12 @@ from career_os.services.goals import (
 router = APIRouter(prefix="/api/goals", tags=["goals"])
 
 
-@router.get("", response_model=GoalListResponse)
+@router.get("")
 async def list_goals_endpoint(
-    profile_id: int = Query(..., description="Profile to list goals for"),
-    status: str | None = Query(default=None, description="Filter by status"),
-    goal_type: str | None = Query(default=None, description="Filter by type"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile to list goals for")],
+    db: Annotated[Session, Depends(get_db)],
+    status: Annotated[str | None, Query(description="Filter by status")] = None,
+    goal_type: Annotated[str | None, Query(description="Filter by type")] = None,
 ) -> GoalListResponse:
     """List career goals with optional filters."""
     goals, total = list_goals(db, profile_id, status=status, goal_type=goal_type)
@@ -49,11 +51,11 @@ async def list_goals_endpoint(
     )
 
 
-@router.get("/{goal_id}", response_model=GoalResponse)
+@router.get("/{goal_id}")
 async def get_goal_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> GoalResponse:
     """Get a single goal by ID."""
     try:
@@ -63,10 +65,10 @@ async def get_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.post("", response_model=GoalResponse, status_code=201)
+@router.post("", status_code=201)
 async def create_goal_endpoint(
     payload: GoalCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> GoalResponse:
     """Create a new career goal."""
     try:
@@ -86,12 +88,12 @@ async def create_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.put("/{goal_id}", response_model=GoalResponse)
+@router.put("/{goal_id}")
 async def update_goal_endpoint(
     goal_id: int,
     payload: GoalUpdate,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> GoalResponse:
     """Update a goal's fields."""
     update_data = payload.model_dump(exclude_unset=True)
@@ -110,8 +112,8 @@ async def update_goal_endpoint(
 @router.delete("/{goal_id}", status_code=204)
 async def delete_goal_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a goal."""
     try:
@@ -120,11 +122,11 @@ async def delete_goal_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{goal_id}/reality-map", response_model=RealityMapResponse)
+@router.get("/{goal_id}/reality-map")
 async def get_reality_map_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> RealityMapResponse:
     """Get goal-to-reality mapping.
 
@@ -145,11 +147,11 @@ async def get_reality_map_endpoint(
     )
 
 
-@router.get("/{goal_id}/progress", response_model=ProgressResponse)
+@router.get("/{goal_id}/progress")
 async def get_progress_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> ProgressResponse:
     """Get progress tracking across applications, learning, portfolio."""
     try:
@@ -165,11 +167,11 @@ async def get_progress_endpoint(
     )
 
 
-@router.put("/{goal_id}/recalibrate", response_model=RecalibrationResponse)
+@router.put("/{goal_id}/recalibrate")
 async def recalibrate_goal_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> RecalibrationResponse:
     """AI-powered goal recalibration with market-data-backed suggestions."""
     try:
@@ -186,11 +188,11 @@ async def recalibrate_goal_endpoint(
     )
 
 
-@router.get("/{goal_id}/alternatives", response_model=AlternativesResponse)
+@router.get("/{goal_id}/alternatives")
 async def get_alternatives_endpoint(
     goal_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> AlternativesResponse:
     """Get alternative path analysis (employment, freelance, consulting)."""
     try:

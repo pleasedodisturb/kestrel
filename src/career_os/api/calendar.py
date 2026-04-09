@@ -7,6 +7,8 @@ Covers:
 - VAL-CAL-004: Multi-provider support (iCal, Google Calendar, Fantastical)
 """
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -42,10 +44,10 @@ from career_os.services.calendar import (
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
 
-@router.post("/events", response_model=CalendarEventResponse, status_code=201)
+@router.post("/events", status_code=201)
 async def create_event(
     payload: CalendarEventCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> CalendarEventResponse:
     """Create a calendar event (interview, follow-up, or prep reminder).
 
@@ -60,12 +62,12 @@ async def create_event(
     return CalendarEventResponse.model_validate(event)
 
 
-@router.get("/events", response_model=CalendarEventListResponse)
+@router.get("/events")
 async def list_events(
-    profile_id: int = Query(..., description="Profile ID"),
-    event_type: str | None = Query(default=None, description="Filter by event type"),
-    application_id: int | None = Query(default=None, description="Filter by application"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    event_type: Annotated[str | None, Query(description="Filter by event type")] = None,
+    application_id: Annotated[int | None, Query(description="Filter by application")] = None,
 ) -> CalendarEventListResponse:
     """List calendar events for a profile with optional filters."""
     events, total = list_calendar_events(
@@ -80,11 +82,11 @@ async def list_events(
     )
 
 
-@router.get("/events/{event_id}", response_model=CalendarEventResponse)
+@router.get("/events/{event_id}")
 async def get_event(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> CalendarEventResponse:
     """Get a single calendar event by ID."""
     try:
@@ -94,12 +96,12 @@ async def get_event(
     return CalendarEventResponse.model_validate(event)
 
 
-@router.patch("/events/{event_id}", response_model=CalendarEventResponse)
+@router.patch("/events/{event_id}")
 async def update_event(
     event_id: int,
     payload: CalendarEventUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> CalendarEventResponse:
     """Update a calendar event.
 
@@ -115,8 +117,8 @@ async def update_event(
 @router.delete("/events/{event_id}", status_code=204)
 async def delete_event(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a calendar event."""
     try:
@@ -126,19 +128,18 @@ async def delete_event(
 
 
 # ---------------------------------------------------------------------------
-# Follow-up → Calendar event
+# Follow-up -> Calendar event
 # ---------------------------------------------------------------------------
 
 
 @router.post(
     "/events/from-follow-up/{follow_up_id}",
-    response_model=CalendarEventResponse,
     status_code=201,
 )
 async def create_from_follow_up(
     follow_up_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> CalendarEventResponse:
     """Create a calendar event from a follow-up."""
     follow_up = (
@@ -163,8 +164,8 @@ async def create_from_follow_up(
 @router.get("/events/{event_id}/ical")
 async def export_ical(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> Response:
     """Export a single calendar event as .ics file.
 
@@ -184,10 +185,10 @@ async def export_ical(
 
 @router.get("/export/ical")
 async def export_all_ical(
-    profile_id: int = Query(..., description="Profile ID"),
-    event_type: str | None = Query(default=None, description="Filter by event type"),
-    application_id: int | None = Query(default=None, description="Filter by application"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    event_type: Annotated[str | None, Query(description="Filter by event type")] = None,
+    application_id: Annotated[int | None, Query(description="Filter by application")] = None,
 ) -> Response:
     """Export calendar events as .ics file.
 
@@ -211,11 +212,11 @@ async def export_all_ical(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/google", response_model=GoogleCalendarUrlResponse)
+@router.get("/events/{event_id}/google")
 async def google_calendar_url(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> GoogleCalendarUrlResponse:
     """Get a Google Calendar 'Add Event' URL for an event."""
     try:
@@ -230,11 +231,11 @@ async def google_calendar_url(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/fantastical", response_model=FantasticalUrlResponse)
+@router.get("/events/{event_id}/fantastical")
 async def fantastical_url(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> FantasticalUrlResponse:
     """Get a Fantastical URL scheme for adding an event."""
     try:
@@ -249,11 +250,11 @@ async def fantastical_url(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/events/{event_id}/providers", response_model=CalendarProviderConfigResponse)
+@router.get("/events/{event_id}/providers")
 async def event_providers(
     event_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> CalendarProviderConfigResponse:
     """Get export URLs/data for all supported calendar providers."""
     try:

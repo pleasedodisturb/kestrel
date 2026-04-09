@@ -1,5 +1,7 @@
 """Integration configuration API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -20,19 +22,19 @@ from career_os.services.integrations import (
 router = APIRouter(prefix="/api/integrations", tags=["integrations"])
 
 
-@router.get("", response_model=IntegrationListResponse)
+@router.get("")
 async def list_all_integrations(
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> IntegrationListResponse:
     """List all known integrations with their configuration status."""
     integrations = list_integrations(db)
     return IntegrationListResponse(integrations=integrations, count=len(integrations))
 
 
-@router.get("/{name}/config", response_model=IntegrationConfigResponse)
+@router.get("/{name}/config")
 async def get_integration_config(
     name: str,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> IntegrationConfigResponse:
     """Get a specific integration's configuration by name."""
     result = get_integration(db, name)
@@ -41,11 +43,11 @@ async def get_integration_config(
     return result
 
 
-@router.put("/{name}/config", response_model=IntegrationConfigResponse)
+@router.put("/{name}/config")
 async def update_integration_config(
     name: str,
     payload: IntegrationConfigUpdate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> IntegrationConfigResponse:
     """Update an integration's configuration (credentials and/or enabled state).
 
@@ -57,10 +59,10 @@ async def update_integration_config(
     return result
 
 
-@router.post("/{name}/test", response_model=IntegrationTestResponse)
+@router.post("/{name}/test")
 async def test_integration(
     name: str,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> IntegrationTestResponse:
     """Test an integration's connection using stored credentials."""
     result = test_integration_connection(db, name)

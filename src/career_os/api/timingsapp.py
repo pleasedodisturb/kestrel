@@ -8,6 +8,8 @@ Provides endpoints for:
 - Connection testing
 """
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -37,10 +39,10 @@ from career_os.services.timingsapp import (
 router = APIRouter(prefix="/api/timingsapp", tags=["timingsapp"])
 
 
-@router.post("/sessions", response_model=TimeSessionResponse, status_code=201)
+@router.post("/sessions", status_code=201)
 async def create_session(
     payload: TimeSessionCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> TimeSessionResponse:
     """Start a new tracked time session.
 
@@ -58,12 +60,12 @@ async def create_session(
     return TimeSessionResponse.model_validate(session_record)
 
 
-@router.put("/sessions/{session_id}/stop", response_model=TimeSessionResponse)
+@router.put("/sessions/{session_id}/stop")
 async def stop_session_endpoint(
     session_id: int,
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
     payload: TimeSessionStop | None = None,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
 ) -> TimeSessionResponse:
     """Stop a tracked time session.
 
@@ -84,13 +86,13 @@ async def stop_session_endpoint(
         raise HTTPException(status_code=400, detail="Session is already stopped") from exc
 
 
-@router.get("/sessions", response_model=TimeSessionListResponse)
+@router.get("/sessions")
 async def list_sessions_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    category: str | None = Query(default=None, description="Filter by category"),
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    category: Annotated[str | None, Query(description="Filter by category")] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> TimeSessionListResponse:
     """List tracked time sessions for a profile."""
     sessions, total = list_sessions(
@@ -106,10 +108,10 @@ async def list_sessions_endpoint(
     )
 
 
-@router.get("/sessions/running", response_model=TimeSessionResponse | None)
+@router.get("/sessions/running")
 async def get_running_session_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> TimeSessionResponse | None:
     """Get the currently running (unstopped) time session, or null."""
     session_record = get_running_session(db, profile_id=profile_id)
@@ -118,11 +120,11 @@ async def get_running_session_endpoint(
     return TimeSessionResponse.model_validate(session_record)
 
 
-@router.get("/sessions/{session_id}", response_model=TimeSessionResponse)
+@router.get("/sessions/{session_id}")
 async def get_session_endpoint(
     session_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> TimeSessionResponse:
     """Get a specific time session by ID."""
     try:
@@ -132,12 +134,12 @@ async def get_session_endpoint(
         raise HTTPException(status_code=404, detail="Time session not found") from exc
 
 
-@router.patch("/sessions/{session_id}", response_model=TimeSessionResponse)
+@router.patch("/sessions/{session_id}")
 async def update_session_endpoint(
     session_id: int,
     payload: TimeSessionUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> TimeSessionResponse:
     """Update a time session's details."""
     try:
@@ -147,11 +149,11 @@ async def update_session_endpoint(
         raise HTTPException(status_code=404, detail="Time session not found") from exc
 
 
-@router.get("/analytics", response_model=TimeAnalyticsResponse)
+@router.get("/analytics")
 async def get_analytics(
-    profile_id: int = Query(..., description="Profile ID"),
-    weeks: int = Query(default=4, ge=1, le=52, description="Number of weeks to analyze"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    weeks: Annotated[int, Query(ge=1, le=52, description="Number of weeks to analyze")] = 4,
 ) -> TimeAnalyticsResponse:
     """Get time analytics with total hours, category breakdown, and weekly trend."""
     return get_time_analytics(db, profile_id=profile_id, weeks=weeks)
@@ -159,7 +161,7 @@ async def get_analytics(
 
 @router.post("/test")
 async def test_connection(
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """Test the TimingsApp API connection using stored credentials."""
     success, message = check_timingsapp_connection(db)

@@ -1,6 +1,7 @@
 """TickTick bidirectional sync API routes."""
 
 from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -30,10 +31,10 @@ from career_os.services.ticktick_sync import (
 router = APIRouter(prefix="/api/ticktick", tags=["ticktick"])
 
 
-@router.get("/status", response_model=TickTickSyncStatusResponse)
+@router.get("/status")
 async def ticktick_sync_status(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> TickTickSyncStatusResponse:
     """Get the current TickTick sync status for a profile."""
     status = get_sync_status(db, profile_id=profile_id)
@@ -59,10 +60,10 @@ async def ticktick_sync_status(
     )
 
 
-@router.post("/push", response_model=TickTickPushResponse)
+@router.post("/push")
 async def ticktick_push(
     payload: TickTickPushRequest,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> TickTickPushResponse:
     """Push a Career OS entity to TickTick.
 
@@ -136,10 +137,10 @@ async def ticktick_push(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@router.post("/pull", response_model=TickTickPullResponse)
+@router.post("/pull")
 async def ticktick_pull(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> TickTickPullResponse:
     """Pull completed tasks from TickTick and update Career OS entities."""
     try:
@@ -156,9 +157,9 @@ async def ticktick_pull(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/test", response_model=TickTickConnectionTestResponse)
+@router.post("/test")
 async def ticktick_test_connection(
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> TickTickConnectionTestResponse:
     """Test the TickTick API connection."""
     success, message = check_ticktick_connection(db)

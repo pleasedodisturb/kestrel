@@ -1,5 +1,7 @@
 """Learning Paths API routes."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -26,12 +28,11 @@ router = APIRouter(tags=["learning"])
 
 @router.get(
     "/api/gaps/{gap_id}/recommendations",
-    response_model=GapRecommendationsResponse,
 )
 async def get_recommendations(
     gap_id: int,
-    profile_id: int = Query(..., description="Active profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Active profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> GapRecommendationsResponse:
     """Get learning recommendations for a specific gap.
 
@@ -69,13 +70,12 @@ async def get_recommendations(
 
 @router.post(
     "/api/gaps/{gap_id}/recommendations",
-    response_model=LearningResourceResponse,
     status_code=201,
 )
 async def add_recommendation(
     gap_id: int,
     payload: LearningResourceCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> LearningResourceResponse:
     """Add a learning resource (recommendation) to a gap.
 
@@ -106,19 +106,18 @@ async def add_recommendation(
 
 @router.patch(
     "/api/learning/{resource_id}/status",
-    response_model=LearningResourceResponse,
 )
 async def update_status(
     resource_id: int,
     payload: LearningStatusUpdate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> LearningResourceResponse:
     """Update the status of a learning resource.
 
     Valid transitions:
-    - not_started → in_progress (sets started_at)
-    - in_progress → completed (sets completed_at, triggers skill upgrade)
-    - not_started → completed (sets both timestamps)
+    - not_started -> in_progress (sets started_at)
+    - in_progress -> completed (sets completed_at, triggers skill upgrade)
+    - not_started -> completed (sets both timestamps)
 
     Completing a resource triggers:
     1. Skill creation/upgrade in the skills inventory
