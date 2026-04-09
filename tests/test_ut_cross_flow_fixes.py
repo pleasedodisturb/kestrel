@@ -562,4 +562,4 @@ class TestDiscoveryScorePropagation:
 
         propagate_discovery_scores(test_db, profile.id)
         test_db.refresh(app_obj)
-        assert app_obj.fit_score == 8.5
+        assert app_obj.fit_score == pytest.approx(8.5)

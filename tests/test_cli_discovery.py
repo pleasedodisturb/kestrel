@@ -473,7 +473,7 @@ class TestScoreCommand:
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "fit_score" in data
-        assert data["fit_score"] == 8.5
+        assert data["fit_score"] == pytest.approx(8.5)
 
     def test_score_output_table(self, scored_db: Session) -> None:
         """--output table produces formatted table output."""
