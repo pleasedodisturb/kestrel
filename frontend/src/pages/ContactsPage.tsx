@@ -23,7 +23,7 @@ import {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function WarmthBadge({ warmth }: { warmth: Warmth }) {
+function WarmthBadge({ warmth }: Readonly<{ warmth: Warmth }>) {
   const colors = WARMTH_COLORS[warmth];
   return (
     <span
@@ -37,14 +37,17 @@ function WarmthBadge({ warmth }: { warmth: Warmth }) {
 function ContactCard({
   contact,
   onSelect,
-}: {
+}: Readonly<{
   contact: Contact;
   onSelect: (c: Contact) => void;
-}) {
+}>) {
   return (
     <div
       className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
       onClick={() => onSelect(contact)}
+      onKeyDown={(e) => e.key === 'Enter' && onSelect(contact)}
+      role="button"
+      tabIndex={0}
       data-testid={`contact-card-${contact.id}`}
     >
       <div className="flex items-start justify-between">
@@ -98,16 +101,18 @@ function ContactDetail({
   onClose,
   onLogInteraction,
   onArchive,
-}: {
+}: Readonly<{
   contact: Contact;
   onClose: () => void;
   onLogInteraction: (contactId: number) => void;
   onArchive: (contactId: number) => void;
-}) {
+}>) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
       data-testid="contact-detail-overlay"
     >
       <div
@@ -182,10 +187,10 @@ function ContactDetail({
 function AddContactDialog({
   onClose,
   onSubmit,
-}: {
+}: Readonly<{
   onClose: () => void;
   onSubmit: (data: ContactCreate) => void;
-}) {
+}>) {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
@@ -214,6 +219,8 @@ function AddContactDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
       data-testid="add-contact-dialog"
     >
       <div
@@ -314,14 +321,14 @@ function LogInteractionDialog({
   contactId,
   onClose,
   onSubmit,
-}: {
+}: Readonly<{
   contactId: number;
   onClose: () => void;
   onSubmit: (data: {
     contactId: number;
     data: { interaction_type: string; direction: string; subject?: string; notes?: string };
   }) => void;
-}) {
+}>) {
   const [interactionType, setInteractionType] = useState<InteractionType>("email");
   const [direction, setDirection] = useState<"inbound" | "outbound">("outbound");
   const [subject, setSubject] = useState("");
@@ -348,6 +355,8 @@ function LogInteractionDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
       data-testid="log-interaction-dialog"
     >
       <div

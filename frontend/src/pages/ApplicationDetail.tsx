@@ -361,11 +361,12 @@ export function ApplicationDetail() {
 
             {/* Notes — full width */}
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-500">
+              <label htmlFor="field-notes-input" className="block text-sm font-medium text-gray-500">
                 Notes
               </label>
               {isEditing ? (
                 <textarea
+                  id="field-notes-input"
                   data-testid="field-notes-input"
                   value={editData.notes ?? ""}
                   onChange={(e) =>
@@ -388,11 +389,12 @@ export function ApplicationDetail() {
 
             {/* Next Step */}
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-500">
+              <label htmlFor="field-next-step-input" className="block text-sm font-medium text-gray-500">
                 Next Step
               </label>
               {isEditing ? (
                 <input
+                  id="field-next-step-input"
                   data-testid="field-next-step-input"
                   type="text"
                   value={editData.next_step ?? ""}
@@ -565,7 +567,7 @@ function FieldRow({
   inputType = "text",
   onChange,
   renderDisplay,
-}: {
+}: Readonly<{
   label: string;
   value: string;
   isEditing: boolean;
@@ -573,14 +575,15 @@ function FieldRow({
   inputType?: string;
   onChange?: (value: string) => void;
   renderDisplay?: (value: string) => React.ReactNode;
-}) {
+}>) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-500">
+      <label htmlFor={`${testId}-input`} className="block text-sm font-medium text-gray-500">
         {label}
       </label>
       {isEditing && onChange ? (
         <input
+          id={`${testId}-input`}
           data-testid={`${testId}-input`}
           type={inputType}
           value={value}
@@ -607,11 +610,11 @@ function DateField({
   label,
   value,
   testId,
-}: {
+}: Readonly<{
   label: string;
   value: string | null;
   testId: string;
-}) {
+}>) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-500">

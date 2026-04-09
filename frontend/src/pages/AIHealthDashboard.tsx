@@ -133,7 +133,7 @@ export function AIHealthDashboard() {
 
 // ---- Status Badge Component ----
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: Readonly<{ status: string }>) {
   const config: Record<string, { label: string; className: string; Icon: typeof CheckCircle2 }> = {
     reachable: {
       label: "Reachable",
@@ -172,7 +172,7 @@ function StatusBadge({ status }: { status: string }) {
 
 // ---- Provider Card Component ----
 
-function ProviderCard({ provider }: { provider: ProviderHealthStatus }) {
+function ProviderCard({ provider }: Readonly<{ provider: ProviderHealthStatus }>) {
   const borderColor =
     provider.status === "reachable"
       ? "border-green-200"

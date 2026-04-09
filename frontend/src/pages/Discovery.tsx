@@ -74,11 +74,11 @@ function FilterPanel({
   filters,
   onFiltersChange,
   onClear,
-}: {
+}: Readonly<{
   filters: SavedSearchConfig;
   onFiltersChange: (f: SavedSearchConfig) => void;
   onClear: () => void;
-}) {
+}>) {
   const hasFilters = Object.values(filters).some(
     (v) => v !== undefined && v !== null && v !== "",
   );
@@ -103,8 +103,9 @@ function FilterPanel({
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {/* Source */}
         <div>
-          <label className="block text-xs font-medium text-gray-500">Source</label>
+          <label htmlFor="filter-source" className="block text-xs font-medium text-gray-500">Source</label>
           <input
+            id="filter-source"
             type="text"
             placeholder="e.g. linkedin"
             value={filters.source ?? ""}
@@ -117,8 +118,9 @@ function FilterPanel({
 
         {/* Remote */}
         <div>
-          <label className="block text-xs font-medium text-gray-500">Remote</label>
+          <label htmlFor="filter-remote" className="block text-xs font-medium text-gray-500">Remote</label>
           <select
+            id="filter-remote"
             value={
               filters.remote === undefined
                 ? ""
@@ -145,8 +147,9 @@ function FilterPanel({
 
         {/* Score range */}
         <div>
-          <label className="block text-xs font-medium text-gray-500">Score min</label>
+          <label htmlFor="filter-score-min" className="block text-xs font-medium text-gray-500">Score min</label>
           <input
+            id="filter-score-min"
             type="number"
             min={0}
             max={10}
@@ -163,8 +166,9 @@ function FilterPanel({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500">Score max</label>
+          <label htmlFor="filter-score-max" className="block text-xs font-medium text-gray-500">Score max</label>
           <input
+            id="filter-score-max"
             type="number"
             min={0}
             max={10}
@@ -183,8 +187,9 @@ function FilterPanel({
 
         {/* Salary min */}
         <div>
-          <label className="block text-xs font-medium text-gray-500">Salary min</label>
+          <label htmlFor="filter-salary-min" className="block text-xs font-medium text-gray-500">Salary min</label>
           <input
+            id="filter-salary-min"
             type="number"
             min={0}
             step={1000}
@@ -202,8 +207,9 @@ function FilterPanel({
 
         {/* Salary max */}
         <div>
-          <label className="block text-xs font-medium text-gray-500">Salary max</label>
+          <label htmlFor="filter-salary-max" className="block text-xs font-medium text-gray-500">Salary max</label>
           <input
+            id="filter-salary-max"
             type="number"
             min={0}
             step={1000}
@@ -221,8 +227,9 @@ function FilterPanel({
 
         {/* Company */}
         <div>
-          <label className="block text-xs font-medium text-gray-500">Company</label>
+          <label htmlFor="filter-company" className="block text-xs font-medium text-gray-500">Company</label>
           <input
+            id="filter-company"
             type="text"
             placeholder="Filter by company"
             value={filters.company ?? ""}
@@ -235,8 +242,9 @@ function FilterPanel({
 
         {/* Location */}
         <div>
-          <label className="block text-xs font-medium text-gray-500">Location</label>
+          <label htmlFor="filter-location" className="block text-xs font-medium text-gray-500">Location</label>
           <input
+            id="filter-location"
             type="text"
             placeholder="Filter by location"
             value={filters.location ?? ""}
@@ -249,8 +257,9 @@ function FilterPanel({
 
         {/* Date range */}
         <div>
-          <label className="block text-xs font-medium text-gray-500">Date from</label>
+          <label htmlFor="filter-date-from" className="block text-xs font-medium text-gray-500">Date from</label>
           <input
+            id="filter-date-from"
             type="date"
             value={filters.date_from ?? ""}
             onChange={(e) =>
@@ -260,8 +269,9 @@ function FilterPanel({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500">Date to</label>
+          <label htmlFor="filter-date-to" className="block text-xs font-medium text-gray-500">Date to</label>
           <input
+            id="filter-date-to"
             type="date"
             value={filters.date_to ?? ""}
             onChange={(e) =>
@@ -279,7 +289,7 @@ function FilterPanel({
 // Job Card Component
 // ---------------------------------------------------------------------------
 
-function JobCard({ job }: { job: DiscoveredJob }) {
+function JobCard({ job }: Readonly<{ job: DiscoveredJob }>) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
@@ -369,10 +379,10 @@ function JobCard({ job }: { job: DiscoveredJob }) {
 function SaveSearchDialog({
   config,
   onClose,
-}: {
+}: Readonly<{
   config: SavedSearchConfig;
   onClose: () => void;
-}) {
+}>) {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
 
@@ -393,6 +403,8 @@ function SaveSearchDialog({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+      role="presentation"
     >
       <div
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
@@ -415,10 +427,11 @@ function SaveSearchDialog({
           className="mt-4 space-y-4"
         >
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="save-search-name" className="block text-sm font-medium text-gray-700">
               Search Name *
             </label>
             <input
+              id="save-search-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
