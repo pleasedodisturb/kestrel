@@ -35,7 +35,10 @@ router = APIRouter(prefix="/api/intelligence", tags=["role-intelligence"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/interview-format")
+@router.get(
+    "/interview-format",
+    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+)
 async def interview_format_endpoint(
     company: Annotated[str, Query(min_length=1, description="Company name")],
     profile_id: Annotated[int, Query(description="Profile ID")],
@@ -71,7 +74,10 @@ async def interview_format_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/salary")
+@router.get(
+    "/salary",
+    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+)
 async def salary_benchmark_endpoint(
     role: Annotated[str, Query(min_length=1, description="Role type to benchmark")],
     profile_id: Annotated[int, Query(description="Profile ID")],
@@ -110,7 +116,10 @@ async def salary_benchmark_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/patterns")
+@router.get(
+    "/patterns",
+    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+)
 async def interview_patterns_endpoint(
     role: Annotated[str, Query(min_length=1, description="Role type")],
     profile_id: Annotated[int, Query(description="Profile ID")],

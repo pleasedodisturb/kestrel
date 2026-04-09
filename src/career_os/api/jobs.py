@@ -33,7 +33,7 @@ router = APIRouter(tags=["jobs"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/jobs")
+@router.get("/api/jobs", responses={404: {"description": "Not found"}})
 async def search_jobs_endpoint(
     profile_id: Annotated[int, Query(description="Profile ID")],
     db: Annotated[Session, Depends(get_db)],
@@ -112,6 +112,7 @@ async def search_jobs_endpoint(
 @router.post(
     "/api/saved-searches",
     status_code=201,
+    responses={404: {"description": "Not found"}},
 )
 async def create_saved_search_endpoint(
     payload: SavedSearchCreate,
@@ -150,6 +151,7 @@ async def list_saved_searches_endpoint(
 
 @router.get(
     "/api/saved-searches/{search_id}",
+    responses={404: {"description": "Not found"}},
 )
 async def get_saved_search_endpoint(
     search_id: int,
@@ -166,6 +168,7 @@ async def get_saved_search_endpoint(
 
 @router.put(
     "/api/saved-searches/{search_id}",
+    responses={404: {"description": "Not found"}},
 )
 async def update_saved_search_endpoint(
     search_id: int,
@@ -191,6 +194,7 @@ async def update_saved_search_endpoint(
 @router.delete(
     "/api/saved-searches/{search_id}",
     status_code=204,
+    responses={404: {"description": "Not found"}},
 )
 async def delete_saved_search_endpoint(
     search_id: int,

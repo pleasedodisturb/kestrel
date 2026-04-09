@@ -31,7 +31,7 @@ async def list_all_integrations(
     return IntegrationListResponse(integrations=integrations, count=len(integrations))
 
 
-@router.get("/{name}/config")
+@router.get("/{name}/config", responses={404: {"description": "Not found"}})
 async def get_integration_config(
     name: str,
     db: Annotated[Session, Depends(get_db)],
@@ -43,7 +43,7 @@ async def get_integration_config(
     return result
 
 
-@router.put("/{name}/config")
+@router.put("/{name}/config", responses={404: {"description": "Not found"}})
 async def update_integration_config(
     name: str,
     payload: IntegrationConfigUpdate,
@@ -59,7 +59,7 @@ async def update_integration_config(
     return result
 
 
-@router.post("/{name}/test")
+@router.post("/{name}/test", responses={404: {"description": "Not found"}})
 async def test_integration(
     name: str,
     db: Annotated[Session, Depends(get_db)],

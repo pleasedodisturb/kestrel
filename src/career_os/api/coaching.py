@@ -19,7 +19,7 @@ from career_os.services.coaching import (
 router = APIRouter(prefix="/api/coaching", tags=["coaching"])
 
 
-@router.get("/suggestions")
+@router.get("/suggestions", responses={404: {"description": "Not found"}})
 async def get_suggestions(
     profile_id: Annotated[int, Query(description="Active profile ID")],
     db: Annotated[Session, Depends(get_db)],

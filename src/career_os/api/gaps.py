@@ -30,6 +30,7 @@ router = APIRouter(tags=["gaps"])
 
 @router.get(
     "/api/applications/{application_id}/gaps",
+    responses={400: {"description": "Bad request"}, 404: {"description": "Not found"}},
 )
 async def get_application_gaps(
     application_id: int,
@@ -65,6 +66,7 @@ async def get_application_gaps(
 
 @router.get(
     "/api/gaps/aggregate",
+    responses={404: {"description": "Not found"}},
 )
 async def get_aggregate_gaps(
     profile_id: Annotated[int, Query(description="Active profile ID")],
@@ -117,6 +119,7 @@ async def get_requirements(
 @router.post(
     "/api/applications/{application_id}/requirements",
     status_code=201,
+    responses={404: {"description": "Not found"}},
 )
 async def create_requirements(
     application_id: int,
