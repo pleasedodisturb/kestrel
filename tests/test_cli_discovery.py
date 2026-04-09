@@ -45,14 +45,14 @@ def db_session(monkeypatch, tmp_path):
     engine = create_engine(url, connect_args={"check_same_thread": False})
     event.listen(engine, "connect", _set_sqlite_pragmas)
     Base.metadata.create_all(bind=engine)
-    TestingSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    testing_session_cls = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
     # Patch the CLI to use our test database
     import career_os.cli.main as cli_mod
 
-    monkeypatch.setattr(cli_mod, "_get_session", lambda: TestingSession())
+    monkeypatch.setattr(cli_mod, "_get_session", lambda: testing_session_cls())
 
-    session = TestingSession()
+    session = testing_session_cls()
     # Seed a default profile
     profile = Profile(id=1, name="Test User", email="test@test.com", location="Frankfurt")
     session.add(profile)

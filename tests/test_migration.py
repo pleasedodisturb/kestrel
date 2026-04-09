@@ -51,8 +51,8 @@ def engine():
 @pytest.fixture
 def db(engine) -> Session:
     """Create a test database session."""
-    TestSession = sessionmaker(bind=engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=engine)
+    session = test_session_cls()
     yield session
     session.close()
 
@@ -725,15 +725,15 @@ class TestProfileAPI:
         db_path = tmp_path / "test.db"
         test_engine = create_test_engine(f"sqlite:///{db_path}")
         Base.metadata.create_all(test_engine)
-        TestSession = sessionmaker(bind=test_engine)
+        test_session_cls = sessionmaker(bind=test_engine)
 
         # Seed default profile
-        db = TestSession()
+        db = test_session_cls()
         seed_default_profile(db)
         db.close()
 
         def get_test_db():
-            db = TestSession()
+            db = test_session_cls()
             try:
                 yield db
             finally:

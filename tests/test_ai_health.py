@@ -38,8 +38,8 @@ def db_session():
     Base.metadata.create_all(bind=engine)
 
     connection = engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     def override_get_db():
         yield session

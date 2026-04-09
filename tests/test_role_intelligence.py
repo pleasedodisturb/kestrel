@@ -45,8 +45,8 @@ def _db_engine():
 @pytest.fixture
 def test_db(_db_engine):
     """Create a database session for testing."""
-    TestSession = sessionmaker(bind=_db_engine)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=_db_engine)
+    session = test_session_cls()
     try:
         yield session
     finally:
@@ -161,10 +161,10 @@ def discovered_jobs(test_db: Session, test_profile: Profile) -> list[DiscoveredJ
 @pytest.fixture
 def client(_db_engine, test_db) -> TestClient:
     """Create a test client with overridden DB dependency."""
-    TestSession = sessionmaker(bind=_db_engine)
+    test_session_cls = sessionmaker(bind=_db_engine)
 
     def _override_get_db():
-        session = TestSession()
+        session = test_session_cls()
         try:
             yield session
         finally:

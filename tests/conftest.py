@@ -52,8 +52,8 @@ def db_session(db_engine) -> Session:
     see the same in-memory tables when dependency is overridden.
     """
     connection = db_engine.connect()
-    TestSession = sessionmaker(bind=connection, autocommit=False, autoflush=False)
-    session = TestSession()
+    test_session_cls = sessionmaker(bind=connection, autocommit=False, autoflush=False)
+    session = test_session_cls()
 
     def override_get_db():
         yield session
