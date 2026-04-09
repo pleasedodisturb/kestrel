@@ -7,6 +7,7 @@ Covers:
 """
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -30,15 +31,17 @@ router = APIRouter(prefix="/api/research", tags=["research"])
 @router.post("/company")
 async def research_company_endpoint(
     request: CompanyResearchRequest,
-    simulate_partial: bool = Query(
-        default=False,
-        description=(
-            "When true, instructs the mock provider to return partial data "
-            "with source_warnings for graceful degradation testing "
-            "(VAL-RESEARCH-009)."
+    db: Annotated[Session, Depends(get_db)],
+    simulate_partial: Annotated[
+        bool,
+        Query(
+            description=(
+                "When true, instructs the mock provider to return partial data "
+                "with source_warnings for graceful degradation testing "
+                "(VAL-RESEARCH-009)."
+            ),
         ),
-    ),
-    db: Session = Depends(get_db),
+    ] = False,
 ) -> CompanyResearchReport:
     """Research a company and return a structured deep-dive report.
 

@@ -1,5 +1,7 @@
 """Jobs Search & Filter API routes (Milestone 3)."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -33,23 +35,25 @@ router = APIRouter(tags=["jobs"])
 
 @router.get("/api/jobs")
 async def search_jobs_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    q: str | None = Query(None, description="Full-text search query"),
-    source: str | None = Query(None, description="Filter by source name"),
-    remote: bool | None = Query(None, description="Filter by remote status"),
-    salary_min: int | None = Query(None, description="Min salary (numeric)"),
-    salary_max: int | None = Query(None, description="Max salary (numeric)"),
-    score_min: float | None = Query(None, description="Min fit score"),
-    score_max: float | None = Query(None, description="Max fit score"),
-    date_from: str | None = Query(None, description="Date from (ISO 8601)"),
-    date_to: str | None = Query(None, description="Date to (ISO 8601)"),
-    company: str | None = Query(None, description="Filter by company name"),
-    location: str | None = Query(None, description="Filter by location"),
-    sort: str | None = Query(None, description="Sort by: score, date, salary, readiness"),
-    order: str | None = Query(None, description="Sort order: asc, desc"),
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(20, ge=1, le=100, description="Page size"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
+    q: Annotated[str | None, Query(description="Full-text search query")] = None,
+    source: Annotated[str | None, Query(description="Filter by source name")] = None,
+    remote: Annotated[bool | None, Query(description="Filter by remote status")] = None,
+    salary_min: Annotated[int | None, Query(description="Min salary (numeric)")] = None,
+    salary_max: Annotated[int | None, Query(description="Max salary (numeric)")] = None,
+    score_min: Annotated[float | None, Query(description="Min fit score")] = None,
+    score_max: Annotated[float | None, Query(description="Max fit score")] = None,
+    date_from: Annotated[str | None, Query(description="Date from (ISO 8601)")] = None,
+    date_to: Annotated[str | None, Query(description="Date to (ISO 8601)")] = None,
+    company: Annotated[str | None, Query(description="Filter by company name")] = None,
+    location: Annotated[str | None, Query(description="Filter by location")] = None,
+    sort: Annotated[
+        str | None, Query(description="Sort by: score, date, salary, readiness")
+    ] = None,
+    order: Annotated[str | None, Query(description="Sort order: asc, desc")] = None,
+    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100, description="Page size")] = 20,
 ) -> JobSearchResponse:
     """Search, filter, sort, and paginate discovered jobs.
 
@@ -111,7 +115,7 @@ async def search_jobs_endpoint(
 )
 async def create_saved_search_endpoint(
     payload: SavedSearchCreate,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> SavedSearchResponse:
     """Create a saved search/filter combination."""
     try:
@@ -133,8 +137,8 @@ async def create_saved_search_endpoint(
     "/api/saved-searches",
 )
 async def list_saved_searches_endpoint(
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> SavedSearchListResponse:
     """List all saved searches for a profile."""
     searches = list_saved_searches(db, profile_id)
@@ -149,8 +153,8 @@ async def list_saved_searches_endpoint(
 )
 async def get_saved_search_endpoint(
     search_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> SavedSearchResponse:
     """Get a single saved search."""
     try:
@@ -166,8 +170,8 @@ async def get_saved_search_endpoint(
 async def update_saved_search_endpoint(
     search_id: int,
     payload: SavedSearchUpdate,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> SavedSearchResponse:
     """Update a saved search."""
     update_data: dict = {}
@@ -190,8 +194,8 @@ async def update_saved_search_endpoint(
 )
 async def delete_saved_search_endpoint(
     search_id: int,
-    profile_id: int = Query(..., description="Profile ID"),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description="Profile ID")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a saved search."""
     try:

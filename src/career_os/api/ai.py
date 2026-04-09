@@ -1,6 +1,7 @@
 """AI provider API routes."""
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -67,20 +68,20 @@ async def get_current_provider() -> dict[str, str]:
 
 
 @router.get("/health")
-async def ai_health(db: Session = Depends(get_db)) -> AIHealthResponse:
+async def ai_health(db: Annotated[Session, Depends(get_db)]) -> AIHealthResponse:
     """Check connectivity and health of all configured AI providers.
 
     Reads provider configuration from stored integration config.
     Only reports runtime-supported providers (mock, openrouter).
-    Each provider is checked independently — one failure does not affect others.
+    Each provider is checked independently - one failure does not affect others.
     """
     return await check_all_providers(db)
 
 
 @router.get("/health/check")
 async def ai_health_check_single(
+    db: Annotated[Session, Depends(get_db)],
     provider: str = "mock",
-    db: Session = Depends(get_db),
 ) -> ProviderHealthStatus:
     """Check health of a single AI provider by name."""
     return await check_single_provider(provider, db)
