@@ -392,6 +392,106 @@ def update_session(
 
 
 # ---------------------------------------------------------------------------
+# Time analytics — helpers
+# ---------------------------------------------------------------------------
+
+
+def _ensure_utc(dt: datetime) -> datetime:
+    """Normalize a datetime to UTC; add tzinfo if missing."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt
+
+
+def _compute_session_hours(
+    completed_sessions: list[TimeSession],
+    running_sessions: list[TimeSession],
+    now: datetime,
+) -> float:
+    """Return total seconds tracked across completed and running sessions."""
+    total_seconds = 0.0
+    for s in completed_sessions:
+        if s.duration_seconds:
+            total_seconds += s.duration_seconds
+    for s in running_sessions:
+        total_seconds += (now - _ensure_utc(s.started_at)).total_seconds()
+    return total_seconds
+
+
+def _aggregate_by_category(
+    completed_sessions: list[TimeSession],
+    running_sessions: list[TimeSession],
+    categories: list[str],
+    now: datetime,
+) -> tuple[dict[str, float], dict[str, int]]:
+    """Build per-category seconds and session-count dicts."""
+    category_seconds: dict[str, float] = {cat: 0.0 for cat in categories}
+    category_counts: dict[str, int] = {cat: 0 for cat in categories}
+
+    for s in completed_sessions:
+        if s.category in category_seconds:
+            category_seconds[s.category] += s.duration_seconds or 0.0
+            category_counts[s.category] += 1
+
+    for s in running_sessions:
+        if s.category in category_seconds:
+            category_seconds[s.category] += (now - _ensure_utc(s.started_at)).total_seconds()
+            category_counts[s.category] += 1
+
+    return category_seconds, category_counts
+
+
+def _session_seconds(s: TimeSession, now: datetime) -> float:
+    """Return the effective seconds for a single session."""
+    if s.duration_seconds:
+        return s.duration_seconds
+    if s.stopped_at is None:
+        return (now - _ensure_utc(s.started_at)).total_seconds()
+    return 0.0
+
+
+def _build_weekly_trends(
+    all_sessions: list[TimeSession],
+    categories: list[str],
+    weeks: int,
+    now: datetime,
+) -> list[WeeklyTrend]:
+    """Build the weekly trend list with per-week aggregation."""
+    weekly_trend: list[WeeklyTrend] = []
+
+    for i in range(weeks):
+        week_end = now - timedelta(weeks=i)
+        week_start = week_end - timedelta(weeks=1)
+
+        iso_year, iso_week, _ = week_start.isocalendar()
+        week_monday = datetime.fromisocalendar(iso_year, iso_week, 1).replace(tzinfo=UTC)
+        week_label = week_monday.strftime("%Y-%m-%d")
+
+        week_total = 0.0
+        week_cat_hours: dict[str, float] = {cat: 0.0 for cat in categories}
+
+        for s in all_sessions:
+            started = _ensure_utc(s.started_at)
+            if not (week_start <= started < week_end):
+                continue
+            secs = _session_seconds(s, now)
+            week_total += secs
+            if s.category in week_cat_hours:
+                week_cat_hours[s.category] += secs
+
+        weekly_trend.append(
+            WeeklyTrend(
+                week=week_label,
+                total_hours=round(week_total / 3600, 2),
+                category_hours={cat: round(hrs / 3600, 2) for cat, hrs in week_cat_hours.items()},
+            )
+        )
+
+    weekly_trend.reverse()
+    return weekly_trend
+
+
+# ---------------------------------------------------------------------------
 # Time analytics
 # ---------------------------------------------------------------------------
 
@@ -411,8 +511,7 @@ def get_time_analytics(
     now = datetime.now(UTC)
     start_of_period = now - timedelta(weeks=weeks)
 
-    # Get all completed sessions in the period
-    sessions = (
+    completed = (
         db.query(TimeSession)
         .filter(
             TimeSession.profile_id == profile_id,
@@ -422,7 +521,6 @@ def get_time_analytics(
         .all()
     )
 
-    # Also include running sessions (count time so far)
     running = (
         db.query(TimeSession)
         .filter(
@@ -433,47 +531,17 @@ def get_time_analytics(
         .all()
     )
 
-    all_sessions = sessions + running
-
-    # --- Total hours ---
-    total_seconds = 0.0
-    for s in sessions:
-        if s.duration_seconds:
-            total_seconds += s.duration_seconds
-
-    # Add running time for active sessions
-    for s in running:
-        started = s.started_at
-        if started.tzinfo is None:
-            started = started.replace(tzinfo=UTC)
-        total_seconds += (now - started).total_seconds()
-
-    total_hours = round(total_seconds / 3600, 2)
-    total_sessions_count = len(all_sessions)
-
-    # --- Category breakdown ---
-    category_seconds: dict[str, float] = {}
-    category_counts: dict[str, int] = {}
+    all_sessions = completed + running
     all_categories = [c.value for c in ActivityCategory]
 
-    for cat in all_categories:
-        category_seconds[cat] = 0.0
-        category_counts[cat] = 0
+    # Total hours
+    total_seconds = _compute_session_hours(completed, running, now)
+    total_hours = round(total_seconds / 3600, 2)
 
-    for s in sessions:
-        cat = s.category
-        if cat in category_seconds:
-            category_seconds[cat] += s.duration_seconds or 0.0
-            category_counts[cat] += 1
-
-    for s in running:
-        cat = s.category
-        if cat in category_seconds:
-            started = s.started_at
-            if started.tzinfo is None:
-                started = started.replace(tzinfo=UTC)
-            category_seconds[cat] += (now - started).total_seconds()
-            category_counts[cat] += 1
+    # Category breakdown
+    category_seconds, category_counts = _aggregate_by_category(
+        completed, running, all_categories, now
+    )
 
     breakdown: list[CategoryBreakdown] = []
     for cat in all_categories:
@@ -488,56 +556,16 @@ def get_time_analytics(
             )
         )
 
-    # --- Weekly trend (4-week) ---
-    weekly_trend: list[WeeklyTrend] = []
+    # Weekly trend
+    weekly_trend = _build_weekly_trends(all_sessions, all_categories, weeks, now)
 
-    for i in range(weeks):
-        week_end = now - timedelta(weeks=i)
-        week_start = week_end - timedelta(weeks=1)
-
-        # Monday of the week
-        iso_year, iso_week, _ = week_start.isocalendar()
-        week_monday = datetime.fromisocalendar(iso_year, iso_week, 1).replace(tzinfo=UTC)
-        week_label = week_monday.strftime("%Y-%m-%d")
-
-        week_total = 0.0
-        week_cat_hours: dict[str, float] = {cat: 0.0 for cat in all_categories}
-
-        for s in all_sessions:
-            started = s.started_at
-            if started.tzinfo is None:
-                started = started.replace(tzinfo=UTC)
-
-            if week_start <= started < week_end:
-                if s.duration_seconds:
-                    secs = s.duration_seconds
-                elif s.stopped_at is None:
-                    secs = (now - started).total_seconds()
-                else:
-                    secs = 0.0
-                week_total += secs
-                cat = s.category
-                if cat in week_cat_hours:
-                    week_cat_hours[cat] += secs
-
-        weekly_trend.append(
-            WeeklyTrend(
-                week=week_label,
-                total_hours=round(week_total / 3600, 2),
-                category_hours={cat: round(hrs / 3600, 2) for cat, hrs in week_cat_hours.items()},
-            )
-        )
-
-    # Reverse so oldest week is first
-    weekly_trend.reverse()
-
-    # --- Avg daily hours ---
+    # Avg daily hours
     days_in_period = weeks * 7
     avg_daily = round(total_hours / days_in_period, 2) if days_in_period > 0 else 0.0
 
     return TimeAnalyticsResponse(
         total_hours=total_hours,
-        total_sessions=total_sessions_count,
+        total_sessions=len(all_sessions),
         category_breakdown=breakdown,
         weekly_trend=weekly_trend,
         avg_daily_hours=avg_daily,
