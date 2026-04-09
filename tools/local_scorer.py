@@ -408,7 +408,14 @@ def main():
     )
     args = parser.parse_args()
 
-    data = json.loads(Path(args.json_path).read_text())
+    # Resolve paths and guard against path traversal
+    project_root = Path(__file__).resolve().parent.parent
+    input_path = Path(args.json_path).resolve()
+    if not str(input_path).startswith(str(project_root)):
+        print(f"Error: input path must be within project root ({project_root})", file=sys.stderr)
+        sys.exit(1)
+
+    data = json.loads(input_path.read_text())
     print(f"Scoring {len(data)} jobs locally...")
 
     scored = [score_job_local(j) for j in data]
@@ -417,10 +424,13 @@ def main():
     scored.sort(key=lambda j: j.get("fit_score", 0), reverse=True)
 
     # Output path
-    input_name = Path(args.json_path).stem.replace("scraped_raw", "scraped_scored")
+    input_name = input_path.stem.replace("scraped_raw", "scraped_scored")
     output_path = (
-        Path(args.output) if args.output else Path(args.json_path).parent / f"{input_name}.json"
+        Path(args.output).resolve() if args.output else input_path.parent / f"{input_name}.json"
     )
+    if not str(output_path).startswith(str(project_root)):
+        print(f"Error: output path must be within project root ({project_root})", file=sys.stderr)
+        sys.exit(1)
     output_path.write_text(json.dumps(scored, indent=2, ensure_ascii=False))
 
     # Stats
