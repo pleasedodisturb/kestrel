@@ -20,7 +20,26 @@
 
 ## Install
 
-Pick whichever feels right. All three give you the same app.
+Pick whichever feels right. They all give you the same app.
+
+### Quick install (one command)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pleasedodisturb/kestrel/main/install.sh | bash
+```
+
+Detects your OS, checks for Python 3.13+, installs Kestrel, and opens it in your browser.
+
+Or if you have Node.js:
+```bash
+npx kestrel-app
+```
+
+Or with Homebrew (macOS):
+```bash
+brew install pleasedodisturb/kestrel/kestrel
+kestrel start
+```
 
 ### Option 1: pip install (simplest)
 
