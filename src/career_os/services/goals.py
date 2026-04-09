@@ -151,6 +151,141 @@ def delete_goal(db: Session, goal_id: int, profile_id: int) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Reality map helpers
+# ---------------------------------------------------------------------------
+
+
+def _goal_targets(goal_type: str) -> dict:
+    """Return target thresholds based on goal type (aspirational vs realistic)."""
+    if goal_type == "aspirational":
+        return {
+            "skills_required": "Expert-level in ≥5 core areas",
+            "skills_target": 5,
+            "apps_required": "≥10 active applications, ≥3 in interview stage",
+            "apps_target_active": 10,
+            "apps_target_advanced": 3,
+        }
+    return {
+        "skills_required": "Advanced/expert in ≥3 core areas",
+        "skills_target": 3,
+        "apps_required": "≥5 active applications, ≥1 in interview stage",
+        "apps_target_active": 5,
+        "apps_target_advanced": 1,
+    }
+
+
+def _skills_dimension(advanced_or_expert: int, total_skills: int, targets: dict) -> dict:
+    """Build the skills dimension dict for the reality map."""
+    skills_target = targets["skills_target"]
+    skills_progress = min(100.0, (advanced_or_expert / max(skills_target, 1)) * 100)
+
+    delta = (
+        f"Need {max(0, skills_target - advanced_or_expert)} more advanced/expert skills"
+        if advanced_or_expert < skills_target
+        else "Skills target met"
+    )
+
+    return {
+        "dimension": "skills",
+        "current_state": (
+            f"{advanced_or_expert} advanced/expert skills out of {total_skills} total"
+        ),
+        "required_state": targets["skills_required"],
+        "delta": delta,
+        "progress_pct": round(skills_progress, 1),
+    }
+
+
+def _apps_dimension(active_apps: int, advanced_apps: int, targets: dict) -> dict:
+    """Build the applications dimension dict for the reality map."""
+    apps_target_active = targets["apps_target_active"]
+    apps_target_advanced = targets["apps_target_advanced"]
+
+    apps_progress_active = min(100.0, (active_apps / max(apps_target_active, 1)) * 100)
+    apps_progress_advanced = min(100.0, (advanced_apps / max(apps_target_advanced, 1)) * 100)
+    apps_progress = (apps_progress_active + apps_progress_advanced) / 2
+
+    if active_apps < apps_target_active or advanced_apps < apps_target_advanced:
+        delta = (
+            f"Need {max(0, apps_target_active - active_apps)} more active "
+            f"applications and {max(0, apps_target_advanced - advanced_apps)} "
+            f"more in interview stage"
+        )
+    else:
+        delta = "Application pipeline target met"
+
+    return {
+        "dimension": "applications",
+        "current_state": (
+            f"{active_apps} active applications, {advanced_apps} in interview/offer stage"
+        ),
+        "required_state": targets["apps_required"],
+        "delta": delta,
+        "progress_pct": round(apps_progress, 1),
+    }
+
+
+def _learning_dimension(completed_learning: int, total_learning: int) -> dict:
+    """Build the portfolio/learning dimension dict for the reality map."""
+    learning_progress = (
+        min(100.0, (completed_learning / max(total_learning, 1)) * 100)
+        if total_learning > 0
+        else 0.0
+    )
+
+    if total_learning == 0:
+        current_state = "No learning resources tracked"
+        delta = "Add learning resources to track progress"
+    else:
+        current_state = f"{completed_learning}/{total_learning} learning resources completed"
+        delta = (
+            f"{total_learning - completed_learning} resources remaining"
+            if total_learning > completed_learning
+            else "All resources completed"
+        )
+
+    return {
+        "dimension": "portfolio",
+        "current_state": current_state,
+        "required_state": "Complete all identified learning resources",
+        "delta": delta,
+        "progress_pct": round(learning_progress, 1),
+    }
+
+
+def _compute_goal_metrics(db: Session, goal: Goal, profile_id: int) -> list[dict]:
+    """Compute dimension metrics for a goal's reality map."""
+    skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
+    total_skills = len(skills)
+    advanced_or_expert = sum(1 for s in skills if s.proficiency in ("advanced", "expert"))
+
+    applications = (
+        db.query(Application)
+        .filter(
+            Application.profile_id == profile_id,
+            Application.archived_at.is_(None),
+        )
+        .all()
+    )
+    active_apps = sum(1 for a in applications if a.status in ("applied", "interviewing", "offer"))
+    advanced_apps = sum(1 for a in applications if a.status in ("interviewing", "offer"))
+
+    learning_resources = (
+        db.query(LearningResource).filter(LearningResource.profile_id == profile_id).all()
+    )
+    total_learning = len(learning_resources)
+    completed_learning = sum(1 for lr in learning_resources if lr.status == "completed")
+
+    targets = _goal_targets(goal.goal_type)
+
+    return [
+        _skills_dimension(advanced_or_expert, total_skills, targets),
+        _apps_dimension(active_apps, advanced_apps, targets),
+        _learning_dimension(completed_learning, total_learning),
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Reality map
 # ---------------------------------------------------------------------------
 
@@ -167,110 +302,7 @@ def get_reality_map(db: Session, goal_id: int, profile_id: int) -> dict:
         Dict with goal_id, title, goal_type, dimensions, overall_progress.
     """
     goal = _get_goal(db, goal_id, profile_id)
-
-    # Collect skills data
-    skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
-    total_skills = len(skills)
-    advanced_or_expert = sum(1 for s in skills if s.proficiency in ("advanced", "expert"))
-
-    # Collect applications data
-    applications = (
-        db.query(Application)
-        .filter(
-            Application.profile_id == profile_id,
-            Application.archived_at.is_(None),
-        )
-        .all()
-    )
-    active_apps = sum(1 for a in applications if a.status in ("applied", "interviewing", "offer"))
-    advanced_apps = sum(1 for a in applications if a.status in ("interviewing", "offer"))
-
-    # Collect learning data
-    learning_resources = (
-        db.query(LearningResource).filter(LearningResource.profile_id == profile_id).all()
-    )
-    total_learning = len(learning_resources)
-    completed_learning = sum(1 for lr in learning_resources if lr.status == "completed")
-
-    # Skills dimension
-    if goal.goal_type == "aspirational":
-        skills_required = "Expert-level in ≥5 core areas"
-        skills_target = 5
-    else:
-        skills_required = "Advanced/expert in ≥3 core areas"
-        skills_target = 3
-
-    skills_progress = min(100.0, (advanced_or_expert / max(skills_target, 1)) * 100)
-
-    # Applications dimension
-    if goal.goal_type == "aspirational":
-        apps_required = "≥10 active applications, ≥3 in interview stage"
-        apps_target_active = 10
-        apps_target_advanced = 3
-    else:
-        apps_required = "≥5 active applications, ≥1 in interview stage"
-        apps_target_active = 5
-        apps_target_advanced = 1
-
-    apps_progress_active = min(100.0, (active_apps / max(apps_target_active, 1)) * 100)
-    apps_progress_advanced = min(100.0, (advanced_apps / max(apps_target_advanced, 1)) * 100)
-    apps_progress = (apps_progress_active + apps_progress_advanced) / 2
-
-    # Learning / portfolio dimension
-    learning_progress = (
-        min(100.0, (completed_learning / max(total_learning, 1)) * 100)
-        if total_learning > 0
-        else 0.0
-    )
-
-    dimensions = [
-        {
-            "dimension": "skills",
-            "current_state": (
-                f"{advanced_or_expert} advanced/expert skills out of {total_skills} total"
-            ),
-            "required_state": skills_required,
-            "delta": (
-                f"Need {max(0, skills_target - advanced_or_expert)} more advanced/expert skills"
-                if advanced_or_expert < skills_target
-                else "Skills target met"
-            ),
-            "progress_pct": round(skills_progress, 1),
-        },
-        {
-            "dimension": "applications",
-            "current_state": (
-                f"{active_apps} active applications, {advanced_apps} in interview/offer stage"
-            ),
-            "required_state": apps_required,
-            "delta": (
-                f"Need {max(0, apps_target_active - active_apps)} more active "
-                f"applications and {max(0, apps_target_advanced - advanced_apps)} "
-                f"more in interview stage"
-                if active_apps < apps_target_active or advanced_apps < apps_target_advanced
-                else "Application pipeline target met"
-            ),
-            "progress_pct": round(apps_progress, 1),
-        },
-        {
-            "dimension": "portfolio",
-            "current_state": (
-                f"{completed_learning}/{total_learning} learning resources completed"
-                if total_learning > 0
-                else "No learning resources tracked"
-            ),
-            "required_state": "Complete all identified learning resources",
-            "delta": (
-                f"{total_learning - completed_learning} resources remaining"
-                if total_learning > completed_learning
-                else "All resources completed"
-                if total_learning > 0
-                else "Add learning resources to track progress"
-            ),
-            "progress_pct": round(learning_progress, 1),
-        },
-    ]
-
+    dimensions = _compute_goal_metrics(db, goal, profile_id)
     overall = round(sum(d["progress_pct"] for d in dimensions) / len(dimensions), 1)
 
     return {
@@ -287,6 +319,138 @@ def get_reality_map(db: Session, goal_id: int, profile_id: int) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _progress_apps_dimension(db: Session, profile_id: int, goal_type: str) -> dict:
+    """Compute the applications progress dimension."""
+    applications = (
+        db.query(Application)
+        .filter(
+            Application.profile_id == profile_id,
+            Application.archived_at.is_(None),
+        )
+        .all()
+    )
+    total_apps = len(applications)
+    active_apps = sum(1 for a in applications if a.status in ("applied", "interviewing", "offer"))
+    target_apps = 10 if goal_type == "aspirational" else 5
+    apps_pct = min(100.0, (active_apps / max(target_apps, 1)) * 100)
+
+    return {
+        "dimension": "applications",
+        "percentage": round(apps_pct, 1),
+        "detail": f"{active_apps}/{target_apps} active applications ({total_apps} total)",
+    }
+
+
+def _progress_learning_dimension(db: Session, profile_id: int) -> dict:
+    """Compute the learning progress dimension."""
+    learning_resources = (
+        db.query(LearningResource).filter(LearningResource.profile_id == profile_id).all()
+    )
+    total_learning = len(learning_resources)
+    completed_learning = sum(1 for lr in learning_resources if lr.status == "completed")
+    learning_pct = (
+        min(100.0, (completed_learning / max(total_learning, 1)) * 100)
+        if total_learning > 0
+        else 0.0
+    )
+
+    detail = (
+        f"{completed_learning}/{total_learning} learning resources completed"
+        if total_learning > 0
+        else "No learning resources tracked yet"
+    )
+
+    return {
+        "dimension": "learning",
+        "percentage": round(learning_pct, 1),
+        "detail": detail,
+    }
+
+
+def _progress_portfolio_dimension(db: Session, profile_id: int, goal_type: str) -> dict:
+    """Compute the portfolio/skills progress dimension."""
+    skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
+    total_skills = len(skills)
+    advanced_or_expert = sum(1 for s in skills if s.proficiency in ("advanced", "expert"))
+    target_advanced = 5 if goal_type == "aspirational" else 3
+    portfolio_pct = min(100.0, (advanced_or_expert / max(target_advanced, 1)) * 100)
+
+    return {
+        "dimension": "portfolio",
+        "percentage": round(portfolio_pct, 1),
+        "detail": (
+            f"{advanced_or_expert}/{target_advanced} advanced/expert skills "
+            f"({total_skills} total skills)"
+        ),
+    }
+
+
+def _progress_market_dimension(db: Session, profile_id: int, goal_id: int) -> dict:
+    """Compute the market positioning progress dimension.
+
+    Market positioning progress is a composite of:
+      1. Discovery coverage: having discovered jobs and analyzed role types
+         is itself meaningful progress (worth up to 50%).
+      2. Skills match: the average match percentage across analyzed role
+         types (worth up to 50%).
+
+    This ensures market_positioning > 0% as soon as discovery has been run
+    and jobs have been analyzed, even before skills are fully parsed.
+    """
+    market_pct = 0.0
+    market_detail = "No market positioning data available"
+    try:
+        from career_os.services.market import get_market_positioning
+
+        positioning = get_market_positioning(db, profile_id)
+        positions = positioning.get("positions", [])
+        if positions:
+            market_pct, market_detail = _market_from_positions(positions)
+    except Exception:
+        logger.debug("Market positioning data unavailable for goal %d progress", goal_id)
+
+    return {
+        "dimension": "market_positioning",
+        "percentage": market_pct,
+        "detail": market_detail,
+    }
+
+
+def _market_from_positions(positions: list[dict]) -> tuple[float, str]:
+    """Derive market positioning percentage and detail string from positions."""
+    total_roles = sum(p["total_roles_analyzed"] for p in positions)
+    avg_match = sum(p["match_percentage"] for p in positions) / len(positions)
+
+    # Discovery coverage component: scales 0-50% based on number of role types
+    if len(positions) >= 3:
+        coverage_component = 50.0
+    elif len(positions) == 2:
+        coverage_component = 30.0
+    else:
+        coverage_component = 20.0
+
+    # Skills match component: scales 0-50% based on average match %
+    match_component = avg_match * 0.5
+
+    market_pct = min(100.0, round(coverage_component + match_component, 1))
+    market_detail = (
+        f"{market_pct}% market positioning "
+        f"({len(positions)} role types, {total_roles} jobs analyzed, "
+        f"{round(avg_match, 1)}% skills match)"
+    )
+    return market_pct, market_detail
+
+
+def _compute_progress_metrics(db: Session, goal: Goal, profile_id: int) -> list[dict]:
+    """Compute all progress dimension metrics for a goal."""
+    return [
+        _progress_apps_dimension(db, profile_id, goal.goal_type),
+        _progress_learning_dimension(db, profile_id),
+        _progress_portfolio_dimension(db, profile_id, goal.goal_type),
+        _progress_market_dimension(db, profile_id, goal.id),
+    ]
+
+
 def get_progress(db: Session, goal_id: int, profile_id: int) -> dict:
     """Get progress tracking across dimensions.
 
@@ -299,113 +463,7 @@ def get_progress(db: Session, goal_id: int, profile_id: int) -> dict:
         Dict with goal_id, title, dimensions, overall_progress.
     """
     goal = _get_goal(db, goal_id, profile_id)
-
-    # Applications dimension
-    applications = (
-        db.query(Application)
-        .filter(
-            Application.profile_id == profile_id,
-            Application.archived_at.is_(None),
-        )
-        .all()
-    )
-    total_apps = len(applications)
-    active_apps = sum(1 for a in applications if a.status in ("applied", "interviewing", "offer"))
-    # Target: at least 5 active apps for realistic, 10 for aspirational
-    target_apps = 10 if goal.goal_type == "aspirational" else 5
-    apps_pct = min(100.0, (active_apps / max(target_apps, 1)) * 100)
-
-    # Learning dimension
-    learning_resources = (
-        db.query(LearningResource).filter(LearningResource.profile_id == profile_id).all()
-    )
-    total_learning = len(learning_resources)
-    completed_learning = sum(1 for lr in learning_resources if lr.status == "completed")
-    learning_pct = (
-        min(100.0, (completed_learning / max(total_learning, 1)) * 100)
-        if total_learning > 0
-        else 0.0
-    )
-
-    # Portfolio dimension (skills strength)
-    skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
-    total_skills = len(skills)
-    advanced_or_expert = sum(1 for s in skills if s.proficiency in ("advanced", "expert"))
-    target_advanced = 5 if goal.goal_type == "aspirational" else 3
-    portfolio_pct = min(100.0, (advanced_or_expert / max(target_advanced, 1)) * 100)
-
-    # Market positioning dimension (VAL-CROSS-016)
-    #
-    # Market positioning progress is a composite of:
-    #   1. Discovery coverage: having discovered jobs and analyzed role types
-    #      is itself meaningful progress (worth up to 50%).
-    #   2. Skills match: the average match percentage across analyzed role
-    #      types (worth up to 50%).
-    #
-    # This ensures market_positioning > 0% as soon as discovery has been run
-    # and jobs have been analyzed, even before skills are fully parsed.
-    market_pct = 0.0
-    market_detail = "No market positioning data available"
-    try:
-        from career_os.services.market import get_market_positioning
-
-        positioning = get_market_positioning(db, profile_id)
-        positions = positioning.get("positions", [])
-        if positions:
-            total_roles = sum(p["total_roles_analyzed"] for p in positions)
-            avg_match = sum(p["match_percentage"] for p in positions) / len(positions)
-
-            # Discovery coverage component: scales 0→50% based on number of
-            # role types analyzed (1 type = 20%, 2 = 30%, 3+ = 50%)
-            if len(positions) >= 3:
-                coverage_component = 50.0
-            elif len(positions) == 2:
-                coverage_component = 30.0
-            else:
-                coverage_component = 20.0
-
-            # Skills match component: scales 0→50% based on average match %
-            match_component = avg_match * 0.5
-
-            market_pct = min(100.0, round(coverage_component + match_component, 1))
-            market_detail = (
-                f"{market_pct}% market positioning "
-                f"({len(positions)} role types, {total_roles} jobs analyzed, "
-                f"{round(avg_match, 1)}% skills match)"
-            )
-    except Exception:
-        logger.debug("Market positioning data unavailable for goal %d progress", goal_id)
-
-    dimensions = [
-        {
-            "dimension": "applications",
-            "percentage": round(apps_pct, 1),
-            "detail": f"{active_apps}/{target_apps} active applications ({total_apps} total)",
-        },
-        {
-            "dimension": "learning",
-            "percentage": round(learning_pct, 1),
-            "detail": (
-                f"{completed_learning}/{total_learning} learning resources completed"
-                if total_learning > 0
-                else "No learning resources tracked yet"
-            ),
-        },
-        {
-            "dimension": "portfolio",
-            "percentage": round(portfolio_pct, 1),
-            "detail": (
-                f"{advanced_or_expert}/{target_advanced} advanced/expert skills "
-                f"({total_skills} total skills)"
-            ),
-        },
-        {
-            "dimension": "market_positioning",
-            "percentage": market_pct,
-            "detail": market_detail,
-        },
-    ]
-
+    dimensions = _compute_progress_metrics(db, goal, profile_id)
     overall = round(sum(d["percentage"] for d in dimensions) / len(dimensions), 1)
 
     return {

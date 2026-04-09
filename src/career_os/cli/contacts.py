@@ -144,6 +144,41 @@ def list_cmd(
         db.close()
 
 
+def _build_contact_info(contact) -> str:  # noqa: ANN001
+    """Build a rich-formatted info string for a contact detail panel."""
+    dash = "\u2014"
+
+    tags = ""
+    if contact.tags:
+        try:
+            tag_list = json_mod.loads(contact.tags)
+            tags = ", ".join(tag_list)
+        except (json_mod.JSONDecodeError, TypeError):
+            tags = contact.tags
+
+    last_contacted = (
+        contact.last_contacted_at.strftime("%Y-%m-%d %H:%M") if contact.last_contacted_at else dash
+    )
+    next_follow_up = contact.next_follow_up.strftime("%Y-%m-%d") if contact.next_follow_up else dash
+
+    return (
+        f"[bold]{contact.name}[/bold]\n"
+        f"Company: {contact.company or dash}\n"
+        f"Role: {contact.role or dash}\n"
+        f"Email: {contact.email or dash}\n"
+        f"LinkedIn: {contact.linkedin_url or dash}\n"
+        f"Phone: {contact.phone or dash}\n"
+        f"Type: {contact.relationship_type}\n"
+        f"Warmth: {contact.warmth}\n"
+        f"Referral Status: {contact.referral_status or dash}\n"
+        f"Source: {contact.source or dash}\n"
+        f"Tags: {tags or dash}\n"
+        f"Last Contacted: {last_contacted}\n"
+        f"Next Follow-up: {next_follow_up}\n"
+        f"Notes: {contact.notes or dash}"
+    )
+
+
 @contacts_app.command("show")
 def show(
     contact_id: int = typer.Argument(..., help="Contact ID"),
@@ -153,32 +188,8 @@ def show(
     db = SessionLocal()
     try:
         contact = get_contact(db, contact_id, profile_id=profile_id)
-
-        tags = ""
-        if contact.tags:
-            try:
-                tag_list = json_mod.loads(contact.tags)
-                tags = ", ".join(tag_list)
-            except (json_mod.JSONDecodeError, TypeError):
-                tags = contact.tags
-
-        info = f"""[bold]{contact.name}[/bold]
-Company: {contact.company or "—"}
-Role: {contact.role or "—"}
-Email: {contact.email or "—"}
-LinkedIn: {contact.linkedin_url or "—"}
-Phone: {contact.phone or "—"}
-Type: {contact.relationship_type}
-Warmth: {contact.warmth}
-Referral Status: {contact.referral_status or "—"}
-Source: {contact.source or "—"}
-Tags: {tags or "—"}
-Last Contacted: {contact.last_contacted_at.strftime("%Y-%m-%d %H:%M") if contact.last_contacted_at else "—"}
-Next Follow-up: {contact.next_follow_up.strftime("%Y-%m-%d") if contact.next_follow_up else "—"}
-Notes: {contact.notes or "—"}"""
-
+        info = _build_contact_info(contact)
         console.print(Panel(info, title=f"Contact #{contact.id}"))
-
     except ContactNotFoundError as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(code=1) from e
