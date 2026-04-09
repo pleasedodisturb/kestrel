@@ -547,6 +547,19 @@ def list_discovery_runs(db: Session, profile_id: int, *, limit: int = 20) -> lis
     )
 
 
+def get_latest_discovery_run(db: Session, profile_id: int) -> DiscoveryRun | None:
+    """Get the most recent completed discovery run for a profile."""
+    return (
+        db.query(DiscoveryRun)
+        .filter(
+            DiscoveryRun.profile_id == profile_id,
+            DiscoveryRun.status == "completed",
+        )
+        .order_by(DiscoveryRun.completed_at.desc())
+        .first()
+    )
+
+
 # ---------------------------------------------------------------------------
 # Scheduled Discovery
 # ---------------------------------------------------------------------------
