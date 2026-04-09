@@ -33,7 +33,7 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/preferences", response_model=NotificationPreferenceResponse)
+@router.get("/preferences")
 async def get_notification_preferences(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -43,7 +43,7 @@ async def get_notification_preferences(
     return NotificationPreferenceResponse.model_validate(pref)
 
 
-@router.put("/preferences", response_model=NotificationPreferenceResponse)
+@router.put("/preferences")
 async def update_notification_preferences(
     profile_id: int = Query(..., description="Profile ID"),
     payload: NotificationPreferenceUpdate = ...,
@@ -59,7 +59,7 @@ async def update_notification_preferences(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/log", response_model=NotificationLogListResponse)
+@router.get("/log")
 async def get_notification_log(
     profile_id: int = Query(..., description="Profile ID"),
     category: str | None = Query(default=None, description="Filter by category"),
@@ -82,7 +82,7 @@ async def get_notification_log(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/trigger/follow-ups", response_model=NotificationTriggerResponse)
+@router.post("/trigger/follow-ups")
 async def trigger_follow_ups(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -92,7 +92,7 @@ async def trigger_follow_ups(
     return NotificationTriggerResponse(**result)
 
 
-@router.post("/trigger/ghosts", response_model=NotificationTriggerResponse)
+@router.post("/trigger/ghosts")
 async def trigger_ghosts(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),
@@ -125,7 +125,7 @@ async def trigger_discovery(
     return NotificationTriggerResponse(**result)
 
 
-@router.post("/trigger/interviews", response_model=NotificationTriggerResponse)
+@router.post("/trigger/interviews")
 async def trigger_interviews(
     profile_id: int = Query(..., description="Profile ID"),
     db: Session = Depends(get_db),

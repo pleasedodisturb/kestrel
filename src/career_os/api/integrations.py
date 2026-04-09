@@ -20,7 +20,7 @@ from career_os.services.integrations import (
 router = APIRouter(prefix="/api/integrations", tags=["integrations"])
 
 
-@router.get("", response_model=IntegrationListResponse)
+@router.get("")
 async def list_all_integrations(
     db: Session = Depends(get_db),
 ) -> IntegrationListResponse:
@@ -29,7 +29,7 @@ async def list_all_integrations(
     return IntegrationListResponse(integrations=integrations, count=len(integrations))
 
 
-@router.get("/{name}/config", response_model=IntegrationConfigResponse)
+@router.get("/{name}/config")
 async def get_integration_config(
     name: str,
     db: Session = Depends(get_db),
@@ -41,7 +41,7 @@ async def get_integration_config(
     return result
 
 
-@router.put("/{name}/config", response_model=IntegrationConfigResponse)
+@router.put("/{name}/config")
 async def update_integration_config(
     name: str,
     payload: IntegrationConfigUpdate,
@@ -57,7 +57,7 @@ async def update_integration_config(
     return result
 
 
-@router.post("/{name}/test", response_model=IntegrationTestResponse)
+@router.post("/{name}/test")
 async def test_integration(
     name: str,
     db: Session = Depends(get_db),

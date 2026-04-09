@@ -34,7 +34,7 @@ from career_os.services.goals import (
 router = APIRouter(prefix="/api/goals", tags=["goals"])
 
 
-@router.get("", response_model=GoalListResponse)
+@router.get("")
 async def list_goals_endpoint(
     profile_id: int = Query(..., description="Profile to list goals for"),
     status: str | None = Query(default=None, description="Filter by status"),
@@ -49,7 +49,7 @@ async def list_goals_endpoint(
     )
 
 
-@router.get("/{goal_id}", response_model=GoalResponse)
+@router.get("/{goal_id}")
 async def get_goal_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -63,7 +63,7 @@ async def get_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.post("", response_model=GoalResponse, status_code=201)
+@router.post("", status_code=201)
 async def create_goal_endpoint(
     payload: GoalCreate,
     db: Session = Depends(get_db),
@@ -86,7 +86,7 @@ async def create_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.put("/{goal_id}", response_model=GoalResponse)
+@router.put("/{goal_id}")
 async def update_goal_endpoint(
     goal_id: int,
     payload: GoalUpdate,
@@ -120,7 +120,7 @@ async def delete_goal_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{goal_id}/reality-map", response_model=RealityMapResponse)
+@router.get("/{goal_id}/reality-map")
 async def get_reality_map_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -145,7 +145,7 @@ async def get_reality_map_endpoint(
     )
 
 
-@router.get("/{goal_id}/progress", response_model=ProgressResponse)
+@router.get("/{goal_id}/progress")
 async def get_progress_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -165,7 +165,7 @@ async def get_progress_endpoint(
     )
 
 
-@router.put("/{goal_id}/recalibrate", response_model=RecalibrationResponse)
+@router.put("/{goal_id}/recalibrate")
 async def recalibrate_goal_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -186,7 +186,7 @@ async def recalibrate_goal_endpoint(
     )
 
 
-@router.get("/{goal_id}/alternatives", response_model=AlternativesResponse)
+@router.get("/{goal_id}/alternatives")
 async def get_alternatives_endpoint(
     goal_id: int,
     profile_id: int = Query(..., description="Active profile ID"),

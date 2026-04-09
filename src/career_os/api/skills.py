@@ -35,7 +35,7 @@ _DEFAULT_CV_PATH = _PROJECT_ROOT / "cv" / "cv.yaml"
 _DEFAULT_PROFILE_DIR = _PROJECT_ROOT / "profile"
 
 
-@router.get("", response_model=SkillListResponse | SkillsEmptyStateResponse)
+@router.get("")
 async def list_skills_endpoint(
     profile_id: int = Query(..., description="Profile to list skills for"),
     category: str | None = Query(default=None, description="Filter by category"),
@@ -71,7 +71,7 @@ async def list_skills_endpoint(
     )
 
 
-@router.get("/{skill_id}", response_model=SkillResponse)
+@router.get("/{skill_id}")
 async def get_skill_endpoint(
     skill_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -85,7 +85,7 @@ async def get_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.get("/{skill_id}/history", response_model=list[SkillHistoryResponse])
+@router.get("/{skill_id}/history")
 async def get_skill_history_endpoint(
     skill_id: int,
     profile_id: int = Query(..., description="Active profile ID"),
@@ -99,7 +99,7 @@ async def get_skill_history_endpoint(
     return [SkillHistoryResponse.model_validate(h) for h in history]
 
 
-@router.post("", response_model=SkillResponse, status_code=201)
+@router.post("", status_code=201)
 async def create_skill_endpoint(
     payload: SkillCreate,
     db: Session = Depends(get_db),
@@ -127,7 +127,7 @@ async def create_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.put("/{skill_id}", response_model=SkillResponse)
+@router.put("/{skill_id}")
 async def update_skill_endpoint(
     skill_id: int,
     payload: SkillUpdate,
@@ -149,7 +149,7 @@ async def update_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.post("/ingest", response_model=IngestResponse)
+@router.post("/ingest")
 async def ingest_skills_endpoint(
     payload: IngestRequest,
     db: Session = Depends(get_db),
