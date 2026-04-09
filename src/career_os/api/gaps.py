@@ -24,6 +24,7 @@ from career_os.services.gap_analysis import (
     analyze_gaps,
     create_job_requirements,
 )
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(tags=["gaps"])
 
@@ -34,7 +35,7 @@ router = APIRouter(tags=["gaps"])
 )
 async def get_application_gaps(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GapAnalysisResponse:
     """Perform gap analysis for a specific application.
@@ -69,7 +70,7 @@ async def get_application_gaps(
     responses={404: {"description": "Not found"}},
 )
 async def get_aggregate_gaps(
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AggregateGapResponse:
     """Get aggregate gap analysis across all applications.
@@ -94,7 +95,7 @@ async def get_aggregate_gaps(
 )
 async def get_requirements(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[JobRequirementResponse]:
     """Get job requirements for an application.

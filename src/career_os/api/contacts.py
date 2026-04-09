@@ -35,6 +35,7 @@ from career_os.services.contacts import (
     unlink_contact_from_application,
     update_contact,
 )
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api", tags=["contacts"])
 
@@ -86,7 +87,7 @@ async def list_all(
 @router.get("/contacts/by-company/{company}")
 async def contacts_at_company(
     company: str,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ContactListResponse:
     """Get all contacts at a company."""
@@ -100,7 +101,7 @@ async def contacts_at_company(
 @router.get("/contacts/{contact_id}", responses={404: {"description": "Not found"}})
 async def get_detail(
     contact_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ContactDetailResponse:
     """Get contact detail with interactions and linked applications."""
@@ -125,7 +126,7 @@ async def get_detail(
 async def update(
     contact_id: int,
     payload: ContactUpdate,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ContactResponse:
     """Update a contact."""
@@ -143,7 +144,7 @@ async def update(
 )
 async def delete(
     contact_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Soft-delete a contact."""
@@ -166,7 +167,7 @@ async def delete(
 async def log_interaction(
     contact_id: int,
     payload: InteractionCreate,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InteractionResponse:
     """Log an interaction with a contact."""
@@ -183,7 +184,7 @@ async def log_interaction(
 )
 async def get_interactions(
     contact_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InteractionListResponse:
     """List interactions for a contact."""
@@ -210,7 +211,7 @@ async def get_interactions(
 async def link_application(
     contact_id: int,
     payload: ContactApplicationCreate,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ContactApplicationResponse:
     """Link a contact to an application."""
@@ -228,7 +229,7 @@ async def link_application(
 @router.get("/contacts/{contact_id}/applications", responses={404: {"description": "Not found"}})
 async def get_linked_applications(
     contact_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ):
     """List applications linked to a contact."""
@@ -251,7 +252,7 @@ async def get_linked_applications(
 async def unlink_application(
     contact_id: int,
     application_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Unlink a contact from an application."""
@@ -269,7 +270,7 @@ async def unlink_application(
 @router.get("/applications/{application_id}/contacts")
 async def get_application_contacts(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Active profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ):
     """Get contacts linked to an application (reverse lookup)."""

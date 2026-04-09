@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from career_os.ai.openrouter_provider import CreditsExhaustedError
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.scoring import (
     BatchScoreRequest,
@@ -95,7 +96,7 @@ async def score_endpoint(
 
 @router.get("/api/scoring-weights", responses={404: {"description": "Not found"}})
 async def get_weights_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoringWeightsResponse:
     """Get scoring weights for a profile."""
@@ -110,7 +111,7 @@ async def get_weights_endpoint(
 @router.put("/api/scoring-weights", responses={404: {"description": "Not found"}})
 async def update_weights_endpoint(
     payload: ScoringWeightsUpdate,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoringWeightsResponse:
     """Update scoring weights for a profile.
@@ -188,7 +189,7 @@ async def batch_score_endpoint(
 @router.get("/api/score/job/{discovered_job_id}", responses={404: {"description": "Not found"}})
 async def get_job_score_endpoint(
     discovered_job_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
     """Get the latest score for a discovered job."""
@@ -204,7 +205,7 @@ async def get_job_score_endpoint(
 )
 async def get_application_score_endpoint(
     application_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
     """Get the latest score for an application."""
@@ -221,7 +222,7 @@ async def get_application_score_endpoint(
 
 @router.post("/api/scoring/flag-stale")
 async def flag_stale_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, int]:
     """Mark all scores for a profile as stale.

@@ -28,6 +28,7 @@ from career_os.services.discovery import (
     run_discovery,
     update_search_profile,
 )
+from career_os.api.constants import DESC_PROFILE_ID
 
 router = APIRouter(tags=["discovery"])
 
@@ -105,7 +106,7 @@ async def create_search_profile_endpoint(
     "/api/search-profiles",
 )
 async def list_search_profiles_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     active_only: Annotated[bool, Query(description="Only active profiles")] = False,
 ) -> SearchProfileListResponse:
@@ -123,7 +124,7 @@ async def list_search_profiles_endpoint(
 )
 async def get_search_profile_endpoint(
     sp_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SearchProfileResponse:
     """Get a single search profile."""
@@ -141,7 +142,7 @@ async def get_search_profile_endpoint(
 async def update_search_profile_endpoint(
     sp_id: int,
     payload: SearchProfileUpdate,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SearchProfileResponse:
     """Update a search profile."""
@@ -164,7 +165,7 @@ async def update_search_profile_endpoint(
 )
 async def delete_search_profile_endpoint(
     sp_id: int,
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a search profile."""
@@ -183,7 +184,7 @@ async def delete_search_profile_endpoint(
     "/api/discovery-runs",
 )
 async def list_discovery_runs_endpoint(
-    profile_id: Annotated[int, Query(description="Profile ID")],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     limit: Annotated[int, Query(ge=1, le=100, description="Max results")] = 20,
 ) -> list[DiscoveryRunResponse]:
