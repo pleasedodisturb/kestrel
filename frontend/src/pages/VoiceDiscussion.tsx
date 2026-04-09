@@ -402,7 +402,7 @@ export function VoiceDiscussion() {
 }
 
 /** Single message bubble component. */
-function MessageBubble({ message }: { message: VoiceMessage }) {
+function MessageBubble({ message }: Readonly<{ message: VoiceMessage }>) {
   const isUser = message.role === "user";
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>

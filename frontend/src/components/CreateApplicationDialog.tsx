@@ -10,8 +10,8 @@ import { useCreateApplication } from "@/hooks/useApplications";
 import { X, Plus } from "lucide-react";
 
 interface CreateApplicationDialogProps {
-  open: boolean;
-  onClose: () => void;
+  readonly open: boolean;
+  readonly onClose: () => void;
 }
 
 export function CreateApplicationDialog({
@@ -92,6 +92,8 @@ export function CreateApplicationDialog({
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
+      onKeyDown={(e) => e.key === 'Escape' && handleClose()}
+      role="presentation"
     >
       <div
         data-testid="create-dialog"
@@ -165,10 +167,11 @@ export function CreateApplicationDialog({
             error={errors.fit_score}
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="create-notes" className="block text-sm font-medium text-gray-700">
               Notes
             </label>
             <textarea
+              id="create-notes"
               data-testid="create-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -210,7 +213,7 @@ function FormField({
   type = "text",
   placeholder,
   error,
-}: {
+}: Readonly<{
   label: string;
   testId: string;
   value: string;
@@ -218,13 +221,14 @@ function FormField({
   type?: string;
   placeholder?: string;
   error?: string;
-}) {
+}>) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700">
+      <label htmlFor={testId} className="block text-sm font-medium text-gray-700">
         {label}
       </label>
       <input
+        id={testId}
         data-testid={testId}
         type={type}
         value={value}
