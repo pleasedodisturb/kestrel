@@ -301,6 +301,38 @@ class TestScoreEndpoint:
         )
         assert resp.status_code == 422
 
+    def test_score_incomplete_profile_no_job_family_returns_422(self, client, db_session):
+        """Scoring with profile missing job_family returns 422."""
+        profile = db_session.query(Profile).filter(Profile.id == 1).first()
+        profile.job_family = None
+        db_session.commit()
+
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        assert resp.status_code == 422
+        assert "target roles" in resp.json()["detail"]
+
+    def test_score_incomplete_profile_no_location_returns_422(self, client, db_session):
+        """Scoring with profile missing location returns 422."""
+        profile = db_session.query(Profile).filter(Profile.id == 1).first()
+        profile.location = None
+        db_session.commit()
+
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        assert resp.status_code == 422
+        assert "location" in resp.json()["detail"]
+
     def test_score_with_discovered_job_id(self, client, db_session):
         """Score linked to a discovered job updates its fit_score."""
         job_ids = _seed_discovered_jobs(db_session)
@@ -778,6 +810,16 @@ class TestBatchScoring:
         """Batch scoring with non-existent profile returns 404."""
         resp = client.post("/api/score/batch", json={"profile_id": 999})
         assert resp.status_code == 404
+
+    def test_batch_score_incomplete_profile_returns_422(self, client, db_session):
+        """Batch scoring with incomplete profile returns 422."""
+        profile = db_session.query(Profile).filter(Profile.id == 1).first()
+        profile.job_family = None
+        db_session.commit()
+
+        resp = client.post("/api/score/batch", json={"profile_id": 1})
+        assert resp.status_code == 422
+        assert "target roles" in resp.json()["detail"]
 
     def test_batch_score_completes_within_60s(self, client, db_session):
         """Batch scoring completes within 60 seconds."""

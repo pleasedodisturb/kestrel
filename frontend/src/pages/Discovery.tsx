@@ -511,6 +511,9 @@ export function Discovery() {
   const [creditsExhausted, setCreditsExhausted] = useState(
     () => sessionStorage.getItem("credits_exhausted") === "true",
   );
+  const [profileIncomplete, setProfileIncomplete] = useState(
+    () => sessionStorage.getItem("profile_incomplete") !== null,
+  );
 
   // Debounce search input
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -769,6 +772,41 @@ export function Discovery() {
                 sessionStorage.removeItem("credits_exhausted");
               }}
               className="ml-4 text-amber-400 hover:text-amber-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Profile incomplete banner */}
+      {profileIncomplete && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+              <div>
+                <h3 className="text-sm font-semibold text-blue-800">
+                  Profile Incomplete
+                </h3>
+                <p className="mt-1 text-sm text-blue-700">
+                  Fill in your profile (target roles and location) for
+                  personalized AI scores.{" "}
+                  <a
+                    href="/settings"
+                    className="font-medium underline hover:text-blue-900"
+                  >
+                    Go to Settings
+                  </a>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setProfileIncomplete(false);
+                sessionStorage.removeItem("profile_incomplete");
+              }}
+              className="ml-4 text-blue-400 hover:text-blue-600"
             >
               <X className="h-4 w-4" />
             </button>
