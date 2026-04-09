@@ -274,6 +274,68 @@ def _mode_to_feature(mode: str) -> AIFeature:
     return feature_map.get(mode, AIFeature.complete)
 
 
+def _build_cover_letter_context(app: Application | None) -> list[str]:
+    """Return mode-specific prompt parts for cover_letter mode."""
+    parts = [
+        "You are a career coach helping brainstorm a cover letter. "
+        "Be conversational, specific, and reference the user's profile strengths."
+    ]
+    if not app:
+        return parts
+    parts.append(f"Target role: {app.role} at {app.company}")
+    if app.notes:
+        parts.append(f"Role notes: {app.notes}")
+    if app.salary_range:
+        parts.append(f"Salary range: {app.salary_range}")
+    return parts
+
+
+def _build_coaching_context() -> list[str]:
+    """Return mode-specific prompt parts for coaching mode."""
+    return [
+        "You are a career coach providing role-relevant questions and "
+        "constructive feedback. Ask probing questions, give actionable advice."
+    ]
+
+
+def _build_evaluation_context(app: Application | None) -> list[str]:
+    """Return mode-specific prompt parts for job_evaluation mode."""
+    parts = [
+        "You are a career advisor evaluating a job opportunity. "
+        "Provide a scored assessment with specific pros and cons "
+        "referencing the user's profile and career goals."
+    ]
+    if not app:
+        return parts
+    parts.append(f"Evaluating: {app.role} at {app.company}")
+    if app.fit_score:
+        parts.append(f"Current fit score: {app.fit_score}")
+    if app.salary_range:
+        parts.append(f"Salary range: {app.salary_range}")
+    if app.notes:
+        parts.append(f"Notes: {app.notes}")
+    return parts
+
+
+def _format_conversation_history(messages: list[VoiceMessage]) -> list[str]:
+    """Format recent conversation history (last 10 messages) for the prompt."""
+    recent = messages[-10:] if len(messages) > 10 else messages
+    if not recent:
+        return []
+    parts = ["\nConversation so far:"]
+    for msg in recent:
+        prefix = "User" if msg.role == "user" else "Assistant"
+        parts.append(f"{prefix}: {msg.content}")
+    return parts
+
+
+_MODE_CONTEXT_HANDLERS: dict = {
+    "cover_letter": lambda app, _profile: _build_cover_letter_context(app),
+    "coaching": lambda _app, _profile: _build_coaching_context(),
+    "job_evaluation": lambda app, _profile: _build_evaluation_context(app),
+}
+
+
 def _build_prompt(
     mode: str,
     user_input: str,
@@ -284,37 +346,10 @@ def _build_prompt(
     """Build a prompt for the AI provider including conversation context."""
     parts: list[str] = []
 
-    # System context
-    if mode == "cover_letter":
-        parts.append(
-            "You are a career coach helping brainstorm a cover letter. "
-            "Be conversational, specific, and reference the user's profile strengths."
-        )
-        if app:
-            parts.append(f"Target role: {app.role} at {app.company}")
-            if app.notes:
-                parts.append(f"Role notes: {app.notes}")
-            if app.salary_range:
-                parts.append(f"Salary range: {app.salary_range}")
-    elif mode == "coaching":
-        parts.append(
-            "You are a career coach providing role-relevant questions and "
-            "constructive feedback. Ask probing questions, give actionable advice."
-        )
-    elif mode == "job_evaluation":
-        parts.append(
-            "You are a career advisor evaluating a job opportunity. "
-            "Provide a scored assessment with specific pros and cons "
-            "referencing the user's profile and career goals."
-        )
-        if app:
-            parts.append(f"Evaluating: {app.role} at {app.company}")
-            if app.fit_score:
-                parts.append(f"Current fit score: {app.fit_score}")
-            if app.salary_range:
-                parts.append(f"Salary range: {app.salary_range}")
-            if app.notes:
-                parts.append(f"Notes: {app.notes}")
+    # System context via dispatch
+    handler = _MODE_CONTEXT_HANDLERS.get(mode)
+    if handler:
+        parts.extend(handler(app, profile))
 
     # Profile context
     if profile:
@@ -324,13 +359,8 @@ def _build_prompt(
         if profile.job_family:
             parts.append(f"Job family: {profile.job_family}")
 
-    # Conversation history (last 10 messages for context window)
-    recent = history[-10:] if len(history) > 10 else history
-    if recent:
-        parts.append("\nConversation so far:")
-        for msg in recent:
-            prefix = "User" if msg.role == "user" else "Assistant"
-            parts.append(f"{prefix}: {msg.content}")
+    # Conversation history
+    parts.extend(_format_conversation_history(history))
 
     # Current user input
     parts.append(f"\nUser: {user_input}")

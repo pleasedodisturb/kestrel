@@ -259,6 +259,60 @@ def _gather_profile_data(db: Session, profile: Profile) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _validate_scoring_inputs(
+    db: Session,
+    profile_id: int,
+    application_id: int | None,
+    discovered_job_id: int | None,
+) -> Profile:
+    """Validate profile, discovered job, and application exist for scoring.
+
+    Returns the Profile on success.
+    Raises ProfileNotFoundError or JobNotFoundError on failure.
+    """
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if not profile:
+        raise ProfileNotFoundError(f"Profile {profile_id} not found")
+
+    if discovered_job_id is not None:
+        dj = (
+            db.query(DiscoveredJob)
+            .filter(
+                DiscoveredJob.id == discovered_job_id,
+                DiscoveredJob.profile_id == profile_id,
+            )
+            .first()
+        )
+        if not dj:
+            raise JobNotFoundError(
+                f"Discovered job {discovered_job_id} not found for profile {profile_id}"
+            )
+
+    if application_id is not None:
+        app = (
+            db.query(Application)
+            .filter(
+                Application.id == application_id,
+                Application.profile_id == profile_id,
+            )
+            .first()
+        )
+        if not app:
+            raise JobNotFoundError(
+                f"Application {application_id} not found for profile {profile_id}"
+            )
+
+    return profile
+
+
+def _gather_scoring_context(db: Session, profile: Profile, profile_id: int) -> dict:
+    """Gather profile data and scoring weights into a single context dict."""
+    weights = get_or_create_weights(db, profile_id)
+    profile_data = _gather_profile_data(db, profile)
+    profile_data["weights"] = weights.to_dict()
+    return profile_data
+
+
 async def score_job(
     db: Session,
     profile_id: int,
@@ -274,9 +328,7 @@ async def score_job(
 
     Returns a ScoredJob record persisted in the database.
     """
-    profile = db.query(Profile).filter(Profile.id == profile_id).first()
-    if not profile:
-        raise ProfileNotFoundError(f"Profile {profile_id} not found")
+    profile = _validate_scoring_inputs(db, profile_id, application_id, discovered_job_id)
 
     # Guard: profile must have target roles and location for meaningful scores
     if not profile.job_family or not profile.location:
@@ -289,42 +341,8 @@ async def score_job(
             f"Fill in your profile ({', '.join(missing)}) for personalized scores"
         )
 
-    # Validate discovered_job_id if provided
-    if discovered_job_id is not None:
-        dj = (
-            db.query(DiscoveredJob)
-            .filter(
-                DiscoveredJob.id == discovered_job_id,
-                DiscoveredJob.profile_id == profile_id,
-            )
-            .first()
-        )
-        if not dj:
-            raise JobNotFoundError(
-                f"Discovered job {discovered_job_id} not found for profile {profile_id}"
-            )
-
-    # Validate application_id if provided
-    if application_id is not None:
-        app = (
-            db.query(Application)
-            .filter(
-                Application.id == application_id,
-                Application.profile_id == profile_id,
-            )
-            .first()
-        )
-        if not app:
-            raise JobNotFoundError(
-                f"Application {application_id} not found for profile {profile_id}"
-            )
-
-    # Get weights
-    weights = get_or_create_weights(db, profile_id)
-
-    # Gather profile data for scoring
-    profile_data = _gather_profile_data(db, profile)
-    profile_data["weights"] = weights.to_dict()
+    # Gather profile data and weights for scoring
+    profile_data = _gather_scoring_context(db, profile, profile_id)
 
     # Build scoring prompt with job context
     prompt = _build_scoring_prompt(
@@ -370,7 +388,7 @@ async def score_job(
         prep_notes=score_data.prep_notes,
         score_breakdown=breakdown_json,
         is_stale=False,
-        weights_snapshot=json.dumps(weights.to_dict()),
+        weights_snapshot=json.dumps(profile_data["weights"]),
     )
     db.add(scored_job)
 

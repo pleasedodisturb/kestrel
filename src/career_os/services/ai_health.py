@@ -60,6 +60,37 @@ async def _check_mock() -> ProviderHealthStatus:
     )
 
 
+def _parse_openrouter_response(
+    data: dict,
+) -> tuple[ProviderCredits | None, ProviderRateLimit | None]:
+    """Parse credits and rate limit info from an OpenRouter auth/key response.
+
+    Returns (credits, rate_limit) — either may be None.
+    """
+    key_data = data.get("data", {})
+    if not key_data:
+        return None, None
+
+    credits = None
+    usage = key_data.get("usage")
+    limit = key_data.get("limit")
+    if limit is not None:
+        remaining = (limit - usage) if usage is not None else None
+        credits = ProviderCredits(remaining=remaining, total=limit, unit="USD")
+    elif usage is not None:
+        credits = ProviderCredits(remaining=None, total=None, unit="USD")
+
+    rate_limit = None
+    rl = key_data.get("rate_limit")
+    if rl:
+        rate_limit = ProviderRateLimit(
+            requests_per_minute=rl.get("requests"),
+            tokens_per_minute=rl.get("tokens"),
+        )
+
+    return credits, rate_limit
+
+
 async def _check_openrouter(api_key: str) -> ProviderHealthStatus:
     """Check OpenRouter API connectivity and credits."""
     if not api_key.strip():
@@ -81,35 +112,7 @@ async def _check_openrouter(api_key: str) -> ProviderHealthStatus:
         elapsed_ms = (time.monotonic() - start) * 1000
 
         if resp.status_code == 200:
-            data = resp.json()
-            # OpenRouter returns {"data": {"label": "...", "usage": ..., "limit": ...}}
-            key_data = data.get("data", {})
-            credits = None
-            if key_data:
-                usage = key_data.get("usage")
-                limit = key_data.get("limit")
-                if limit is not None:
-                    remaining = (limit - usage) if usage is not None else None
-                    credits = ProviderCredits(
-                        remaining=remaining,
-                        total=limit,
-                        unit="USD",
-                    )
-                elif usage is not None:
-                    credits = ProviderCredits(
-                        remaining=None,
-                        total=None,
-                        unit="USD",
-                    )
-
-            rate_limit = None
-            if key_data.get("rate_limit"):
-                rl = key_data["rate_limit"]
-                rate_limit = ProviderRateLimit(
-                    requests_per_minute=rl.get("requests"),
-                    tokens_per_minute=rl.get("tokens"),
-                )
-
+            credits, rate_limit = _parse_openrouter_response(resp.json())
             return ProviderHealthStatus(
                 name="openrouter",
                 display_name="OpenRouter",
