@@ -48,6 +48,7 @@ router = APIRouter(tags=["scoring"])
     responses={
         402: {"description": "Payment required"},
         404: {"description": "Not found"},
+        422: {"description": "Profile incomplete"},
         500: {"description": "Internal server error"},
         502: {"description": "Bad gateway"},
     },
@@ -140,7 +141,11 @@ async def update_weights_endpoint(
 
 @router.post(
     "/api/score/batch",
-    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+    responses={
+        404: {"description": "Not found"},
+        422: {"description": "Profile incomplete"},
+        500: {"description": "Internal server error"},
+    },
 )
 async def batch_score_endpoint(
     payload: BatchScoreRequest,
