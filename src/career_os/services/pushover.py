@@ -971,6 +971,33 @@ def test_pushover_connection(db: Session) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _deliver_single_notification(client: PushoverClient, log_entry: NotificationLog) -> bool:
+    """Attempt to send one queued notification. Returns True on success."""
+    metadata: dict = {}
+    if log_entry.error_message:
+        try:
+            metadata = json.loads(log_entry.error_message)
+        except (json.JSONDecodeError, TypeError):
+            metadata = {}
+
+    try:
+        client.send_notification(
+            message=log_entry.message,
+            title=log_entry.title,
+            url=metadata.get("url"),
+            url_title=metadata.get("url_title"),
+            priority=metadata.get("priority", PRIORITY_NORMAL),
+        )
+        log_entry.status = "sent"
+        log_entry.error_message = None
+        log_entry.sent_at = datetime.now(UTC)
+        return True
+    except (PushoverAuthError, PushoverAPIError) as exc:
+        log_entry.status = "failed"
+        log_entry.error_message = str(exc)
+        return False
+
+
 def deliver_queued_notifications(db: Session, profile_id: int) -> dict:
     """Deliver all queued notifications for a profile.
 
@@ -1004,29 +1031,9 @@ def deliver_queued_notifications(db: Session, profile_id: int) -> dict:
     failed = 0
 
     for log_entry in queued:
-        # Parse the stored metadata from error_message
-        metadata: dict = {}
-        if log_entry.error_message:
-            try:
-                metadata = json.loads(log_entry.error_message)
-            except (json.JSONDecodeError, TypeError):
-                metadata = {}
-
-        try:
-            client.send_notification(
-                message=log_entry.message,
-                title=log_entry.title,
-                url=metadata.get("url"),
-                url_title=metadata.get("url_title"),
-                priority=metadata.get("priority", PRIORITY_NORMAL),
-            )
-            log_entry.status = "sent"
-            log_entry.error_message = None
-            log_entry.sent_at = datetime.now(UTC)
+        if _deliver_single_notification(client, log_entry):
             delivered += 1
-        except (PushoverAuthError, PushoverAPIError) as exc:
-            log_entry.status = "failed"
-            log_entry.error_message = str(exc)
+        else:
             failed += 1
 
     db.commit()

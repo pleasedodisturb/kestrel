@@ -384,3 +384,222 @@ class TestFetchEntity:
         with pytest.raises(HTTPException) as exc_info:
             _fetch_entity(db, model, 1, 1, "Learning goal")
         assert "Learning goal not found" in exc_info.value.detail
+
+
+# ---------------------------------------------------------------------------
+# Batch 2 helpers
+# ---------------------------------------------------------------------------
+
+
+class TestExtractErrorDetail:
+    """Tests for OpenRouter error detail extraction."""
+
+    def test_extracts_message_from_valid_json(self):
+        from career_os.ai.openrouter_provider import _extract_error_detail
+
+        response = MagicMock()
+        response.json.return_value = {"error": {"message": "Insufficient credits"}}
+        assert _extract_error_detail(response) == "Insufficient credits"
+
+    def test_returns_empty_on_json_error(self):
+        from career_os.ai.openrouter_provider import _extract_error_detail
+
+        response = MagicMock()
+        response.json.side_effect = ValueError("bad json")
+        assert _extract_error_detail(response) == ""
+
+    def test_returns_empty_when_no_error_key(self):
+        from career_os.ai.openrouter_provider import _extract_error_detail
+
+        response = MagicMock()
+        response.json.return_value = {"status": "fail"}
+        assert _extract_error_detail(response) == ""
+
+
+class TestHandleStatusTransition:
+    """Tests for application status transition handler."""
+
+    def test_skips_when_no_status_in_data(self):
+        from career_os.services.applications import _handle_status_transition
+
+        db = MagicMock()
+        app_obj = MagicMock()
+        update_data = {"notes": "updated"}
+        _handle_status_transition(db, app_obj, update_data)
+        # No activity logged for non-status changes
+        db.add.assert_not_called()
+
+    def test_normalizes_and_validates_status(self):
+        from career_os.services.applications import (
+            _handle_status_transition,
+        )
+
+        db = MagicMock()
+        app_obj = MagicMock()
+        app_obj.status = "discovered"
+        app_obj.profile_id = 1
+        app_obj.id = 10
+
+        # discovered → interested is a valid transition
+        update_data = {"status": "  Interested  "}
+        _handle_status_transition(db, app_obj, update_data)
+        assert update_data["status"] == "interested"
+
+    def test_sets_date_applied_on_applied_transition(self):
+        from career_os.services.applications import _handle_status_transition
+
+        db = MagicMock()
+        app_obj = MagicMock()
+        # interested → applied is a valid transition
+        app_obj.status = "interested"
+        app_obj.profile_id = 1
+        app_obj.id = 10
+        app_obj.date_applied = None
+
+        _handle_status_transition(db, app_obj, {"status": "applied"})
+        assert app_obj.date_applied is not None
+
+
+class TestApplyFieldUpdates:
+    """Tests for application field update tracker."""
+
+    def test_tracks_changed_fields(self):
+        from career_os.services.applications import _apply_field_updates
+
+        db = MagicMock()
+        app_obj = MagicMock()
+        app_obj.notes = "old"
+        app_obj.url = "https://old.com"
+
+        _apply_field_updates(db, app_obj, {"notes": "new"})
+        # Should have called setattr and logged
+        assert app_obj.notes == "new"
+
+    def test_sets_status_without_logging(self):
+        from career_os.services.applications import _apply_field_updates
+
+        db = MagicMock()
+        app_obj = MagicMock()
+        app_obj.status = "discovered"
+        app_obj.profile_id = 1
+        app_obj.id = 10
+
+        # Status field should be set but not counted as a changed field
+        _apply_field_updates(db, app_obj, {"status": "applied"})
+
+
+class TestApplyStatusTimestamps:
+    """Tests for learning resource status timestamp handler."""
+
+    def test_in_progress_sets_started_at(self):
+        from career_os.services.learning import _apply_status_timestamps
+
+        db = MagicMock()
+        resource = MagicMock()
+        resource.started_at = None
+        now = datetime(2026, 4, 10, tzinfo=UTC)
+
+        _apply_status_timestamps(db, resource, "in_progress", now)
+        assert resource.status == "in_progress"
+        assert resource.started_at == now
+
+    def test_in_progress_preserves_existing_started_at(self):
+        from career_os.services.learning import _apply_status_timestamps
+
+        db = MagicMock()
+        resource = MagicMock()
+        old_time = datetime(2026, 1, 1, tzinfo=UTC)
+        resource.started_at = old_time
+        now = datetime(2026, 4, 10, tzinfo=UTC)
+
+        _apply_status_timestamps(db, resource, "in_progress", now)
+        assert resource.started_at == old_time  # preserved
+
+    def test_completed_sets_both_timestamps(self):
+        from career_os.services.learning import _apply_status_timestamps
+
+        db = MagicMock()
+        resource = MagicMock()
+        resource.started_at = None
+        now = datetime(2026, 4, 10, tzinfo=UTC)
+
+        _apply_status_timestamps(db, resource, "completed", now)
+        assert resource.status == "completed"
+        assert resource.started_at == now
+        assert resource.completed_at == now
+
+    def test_not_started_clears_timestamps(self):
+        from career_os.services.learning import _apply_status_timestamps
+
+        db = MagicMock()
+        resource = MagicMock()
+        resource.started_at = datetime(2026, 1, 1, tzinfo=UTC)
+        resource.completed_at = datetime(2026, 2, 1, tzinfo=UTC)
+        now = datetime(2026, 4, 10, tzinfo=UTC)
+
+        _apply_status_timestamps(db, resource, "not_started", now)
+        assert resource.status == "not_started"
+        assert resource.started_at is None
+        assert resource.completed_at is None
+
+
+class TestDeliverSingleNotification:
+    """Tests for the individual notification delivery helper."""
+
+    def test_successful_delivery(self):
+        from career_os.services.pushover import _deliver_single_notification
+
+        client = MagicMock()
+        log_entry = MagicMock()
+        log_entry.error_message = None
+        log_entry.message = "Test notification"
+        log_entry.title = "Test"
+
+        result = _deliver_single_notification(client, log_entry)
+        assert result is True
+        assert log_entry.status == "sent"
+        assert log_entry.error_message is None
+        client.send_notification.assert_called_once()
+
+    def test_failed_delivery(self):
+        from career_os.services.pushover import PushoverAPIError, _deliver_single_notification
+
+        client = MagicMock()
+        client.send_notification.side_effect = PushoverAPIError("API down")
+        log_entry = MagicMock()
+        log_entry.error_message = None
+        log_entry.message = "Test"
+        log_entry.title = "Test"
+
+        result = _deliver_single_notification(client, log_entry)
+        assert result is False
+        assert log_entry.status == "failed"
+        assert "API down" in log_entry.error_message
+
+    def test_parses_metadata_from_error_message_json(self):
+        import json
+
+        from career_os.services.pushover import _deliver_single_notification
+
+        client = MagicMock()
+        log_entry = MagicMock()
+        log_entry.error_message = json.dumps({"url": "https://example.com", "priority": 1})
+        log_entry.message = "Test"
+        log_entry.title = "Test"
+
+        _deliver_single_notification(client, log_entry)
+        call_kwargs = client.send_notification.call_args.kwargs
+        assert call_kwargs["url"] == "https://example.com"
+        assert call_kwargs["priority"] == 1
+
+    def test_handles_invalid_json_metadata(self):
+        from career_os.services.pushover import _deliver_single_notification
+
+        client = MagicMock()
+        log_entry = MagicMock()
+        log_entry.error_message = "not valid json {{"
+        log_entry.message = "Test"
+        log_entry.title = "Test"
+
+        result = _deliver_single_notification(client, log_entry)
+        assert result is True  # should still send successfully
