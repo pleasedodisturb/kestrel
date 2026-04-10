@@ -35,6 +35,7 @@ from career_os.services.ticktick_sync import (
     sync_learning_goal_to_ticktick,
     sync_pipeline_action_to_ticktick,
 )
+from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 client = TestClient(app)
 
@@ -80,12 +81,7 @@ def db_session():
 @pytest.fixture()
 def profile(db_session) -> Profile:
     """Create a test profile."""
-    p = Profile(
-        name="Test User",
-        email="test@example.com",
-        location="Frankfurt",
-        job_family="Software Engineering",
-    )
+    p = Profile(**DEFAULT_PROFILE_KWARGS)
     db_session.add(p)
     db_session.commit()
     db_session.refresh(p)
@@ -95,12 +91,7 @@ def profile(db_session) -> Profile:
 @pytest.fixture()
 def profile_b(db_session) -> Profile:
     """Create a second test profile for isolation tests."""
-    p = Profile(
-        name="Other User",
-        email="other@example.com",
-        location="Berlin",
-        job_family="Software Engineering",
-    )
+    p = Profile(**SECOND_PROFILE_KWARGS)
     db_session.add(p)
     db_session.commit()
     db_session.refresh(p)

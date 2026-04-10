@@ -34,6 +34,7 @@ from career_os.services.skills_parsing import (
     parse_profile_docs,
     parse_workplace_insights,
 )
+from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 # ---------------------------------------------------------------------------
 # Test fixtures
@@ -74,12 +75,7 @@ def test_db(_db_engine):
 @pytest.fixture
 def test_profile(test_db: Session) -> Profile:
     """Seed a test profile."""
-    profile = Profile(
-        name="Test User",
-        email="test@example.com",
-        location="Frankfurt",
-        job_family="Software Engineering",
-    )
+    profile = Profile(**DEFAULT_PROFILE_KWARGS)
     test_db.add(profile)
     test_db.commit()
     test_db.refresh(profile)
@@ -89,9 +85,7 @@ def test_profile(test_db: Session) -> Profile:
 @pytest.fixture
 def second_profile(test_db: Session) -> Profile:
     """Create a second profile for scoping tests."""
-    profile = Profile(
-        name="Other User", email="other@example.com", job_family="Software Engineering"
-    )
+    profile = Profile(**{k: v for k, v in SECOND_PROFILE_KWARGS.items() if k != "location"})
     test_db.add(profile)
     test_db.commit()
     test_db.refresh(profile)
