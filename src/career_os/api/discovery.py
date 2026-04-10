@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID
 from career_os.database import get_db
 from career_os.schemas.discovery import (
     DiscoveredJobResponse,
@@ -29,7 +30,6 @@ from career_os.services.discovery import (
     run_discovery,
     update_search_profile,
 )
-from career_os.api.constants import DESC_PROFILE_ID
 
 router = APIRouter(tags=["discovery"])
 
@@ -196,8 +196,8 @@ async def list_discovery_runs_endpoint(
 
 @router.get("/api/discovery-runs/latest")
 async def get_latest_discovery_run_endpoint(
-    profile_id: int = Query(..., description=DESC_PROFILE_ID),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> DiscoveryRunResponse | None:
     """Get the most recent completed discovery run for a profile."""
     run = get_latest_discovery_run(db, profile_id)
