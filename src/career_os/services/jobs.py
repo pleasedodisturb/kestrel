@@ -109,7 +109,7 @@ def _build_job_filters(
             dt_to = datetime.fromisoformat(date_to).replace(tzinfo=UTC)
             query = query.filter(DiscoveredJob.created_at <= dt_to)
         except ValueError:
-            pass
+            pass  # ignore invalid date
 
     return query
 
