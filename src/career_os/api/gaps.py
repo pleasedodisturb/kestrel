@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_NOT_FOUND
 from career_os.database import get_db
 from career_os.models.models import Application
 from career_os.models.skills import JobRequirement
@@ -24,14 +25,13 @@ from career_os.services.gap_analysis import (
     analyze_gaps,
     create_job_requirements,
 )
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(tags=["gaps"])
 
 
 @router.get(
     "/api/applications/{application_id}/gaps",
-    responses={400: {"description": "Bad request"}, 404: {"description": "Not found"}},
+    responses={400: {"description": "Bad request"}, 404: {"description": RESP_NOT_FOUND}},
 )
 async def get_application_gaps(
     application_id: int,
@@ -67,7 +67,7 @@ async def get_application_gaps(
 
 @router.get(
     "/api/gaps/aggregate",
-    responses={404: {"description": "Not found"}},
+    responses={404: {"description": RESP_NOT_FOUND}},
 )
 async def get_aggregate_gaps(
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -120,7 +120,7 @@ async def get_requirements(
 @router.post(
     "/api/applications/{application_id}/requirements",
     status_code=201,
-    responses={404: {"description": "Not found"}},
+    responses={404: {"description": RESP_NOT_FOUND}},
 )
 async def create_requirements(
     application_id: int,
