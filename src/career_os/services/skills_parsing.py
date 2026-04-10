@@ -416,6 +416,22 @@ def parse_ccat(file_path: Path) -> list[ParsedSkill]:
     return skills
 
 
+_STRENGTH_KEYWORD_MAP: list[tuple[list[str], str]] = [
+    (["assertive", "deferential"], "Adaptive Assertiveness"),
+    (["sociable", "energetic"], "Social Energy"),
+    (["curiosity", "experiment"], "Experimental Mindset"),
+]
+
+
+def _match_strength_keyword(line: str) -> str | None:
+    """Return the skill name if any strength keywords match the line."""
+    lower = line.lower()
+    for keywords, skill_name in _STRENGTH_KEYWORD_MAP:
+        if any(kw in lower for kw in keywords):
+            return skill_name
+    return None
+
+
 def parse_workplace_insights(file_path: Path) -> list[ParsedSkill]:
     """Parse Workplace Insights report → soft skills from notable traits."""
     if not file_path.exists():
@@ -456,30 +472,11 @@ def parse_workplace_insights(file_path: Path) -> list[ParsedSkill]:
     if strengths_section:
         for line in strengths_section.group(1).strip().split("\n"):
             line = line.strip("- ").strip()
-            if "assertive" in line.lower() or "deferential" in line.lower():
+            matched = _match_strength_keyword(line)
+            if matched:
                 skills.append(
                     ParsedSkill(
-                        name="Adaptive Assertiveness",
-                        category="soft",
-                        proficiency="advanced",
-                        evidence_source="assessment:workplace-insights",
-                        evidence_detail=f"Workplace Insights strength: {line[:120]}",
-                    )
-                )
-            elif "sociable" in line.lower() or "energetic" in line.lower():
-                skills.append(
-                    ParsedSkill(
-                        name="Social Energy",
-                        category="soft",
-                        proficiency="advanced",
-                        evidence_source="assessment:workplace-insights",
-                        evidence_detail=f"Workplace Insights strength: {line[:120]}",
-                    )
-                )
-            elif "curiosity" in line.lower() or "experiment" in line.lower():
-                skills.append(
-                    ParsedSkill(
-                        name="Experimental Mindset",
+                        name=matched,
                         category="soft",
                         proficiency="advanced",
                         evidence_source="assessment:workplace-insights",

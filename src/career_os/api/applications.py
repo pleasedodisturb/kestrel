@@ -44,6 +44,27 @@ def _enrich_with_readiness(app_response: ApplicationResponse, db: Session) -> Ap
     return app_response
 
 
+def _derive_package_type(pkg) -> str:
+    if pkg.cover_letter_path and pkg.cv_path:
+        return "full"
+    if pkg.cover_letter_path:
+        return "cover_letter"
+    if pkg.cv_path:
+        return "cv"
+    return "directory"
+
+
+def _build_package_summary(pkg) -> ApplicationPackageSummaryResponse:
+    pkg_dir = pkg.package_dir or ""
+    package_name = pkg_dir.rstrip("/").split("/")[-1] if pkg_dir else "Unknown"
+    return ApplicationPackageSummaryResponse(
+        id=pkg.id,
+        package_name=package_name,
+        file_path=pkg_dir,
+        package_type=_derive_package_type(pkg),
+    )
+
+
 @router.post("", status_code=201, responses={404: {"description": RESP_NOT_FOUND}})
 async def create(
     payload: ApplicationCreate,
@@ -150,29 +171,7 @@ async def get_detail(
     # Include follow-ups sorted by due date
     follow_ups_sorted = sorted(app_obj.follow_ups, key=lambda x: x.due_date)
 
-    # Build packages list with derived fields
-    packages_list = []
-    for pkg in app_obj.packages:
-        # Derive a readable package_name from the directory path
-        pkg_dir = pkg.package_dir or ""
-        package_name = pkg_dir.rstrip("/").split("/")[-1] if pkg_dir else "Unknown"
-        # Determine package_type from available files
-        if pkg.cover_letter_path and pkg.cv_path:
-            package_type = "full"
-        elif pkg.cover_letter_path:
-            package_type = "cover_letter"
-        elif pkg.cv_path:
-            package_type = "cv"
-        else:
-            package_type = "directory"
-        packages_list.append(
-            ApplicationPackageSummaryResponse(
-                id=pkg.id,
-                package_name=package_name,
-                file_path=pkg_dir,
-                package_type=package_type,
-            )
-        )
+    packages_list = [_build_package_summary(pkg) for pkg in app_obj.packages]
 
     # Compute readiness score if requirements exist
     readiness = get_readiness_score(db, app_obj.id, app_obj.profile_id)

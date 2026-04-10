@@ -42,6 +42,17 @@ VALID_MODES = {"cover_letter", "coaching", "job_evaluation"}
 # ---------------------------------------------------------------------------
 
 
+def _generate_session_title(mode: str, app: Application | None) -> str:
+    """Auto-generate a session title based on mode and optional application."""
+    if mode == "cover_letter" and app:
+        return f"Cover Letter Brainstorm — {app.company} ({app.role})"
+    if mode == "job_evaluation" and app:
+        return f"Job Evaluation — {app.company} ({app.role})"
+    if mode == "coaching":
+        return "Coaching Session"
+    return f"Voice Discussion ({mode})"
+
+
 def create_session(
     db: Session,
     *,
@@ -86,16 +97,8 @@ def create_session(
                 f"Application {application_id} not found for profile {profile_id}"
             )
 
-    # Auto-generate title if not provided
     if not title:
-        if mode == "cover_letter" and app:
-            title = f"Cover Letter Brainstorm — {app.company} ({app.role})"
-        elif mode == "coaching":
-            title = "Coaching Session"
-        elif mode == "job_evaluation" and app:
-            title = f"Job Evaluation — {app.company} ({app.role})"
-        else:
-            title = f"Voice Discussion ({mode})"
+        title = _generate_session_title(mode, app)
 
     session = VoiceSession(
         profile_id=profile_id,
