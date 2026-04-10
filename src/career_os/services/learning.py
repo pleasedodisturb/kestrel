@@ -189,6 +189,24 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
 }
 
 
+def _apply_status_timestamps(
+    db: Session, resource: LearningResource, new_status: str, now: datetime
+) -> None:
+    """Set timestamps and trigger side effects for a learning status transition."""
+    resource.status = new_status
+    if new_status == "in_progress":
+        if resource.started_at is None:
+            resource.started_at = now
+    elif new_status == "completed":
+        if resource.started_at is None:
+            resource.started_at = now
+        resource.completed_at = now
+        _upgrade_skill_on_completion(db, resource)
+    elif new_status == "not_started":
+        resource.started_at = None
+        resource.completed_at = None
+
+
 def update_learning_status(
     db: Session,
     resource_id: int,
@@ -238,24 +256,7 @@ def update_learning_status(
 
     now = _utcnow()
 
-    if new_status == "in_progress":
-        resource.status = "in_progress"
-        if resource.started_at is None:
-            resource.started_at = now
-
-    elif new_status == "completed":
-        resource.status = "completed"
-        if resource.started_at is None:
-            resource.started_at = now
-        resource.completed_at = now
-
-        # Trigger skill upgrade when completing learning
-        _upgrade_skill_on_completion(db, resource)
-
-    elif new_status == "not_started":
-        resource.status = "not_started"
-        resource.started_at = None
-        resource.completed_at = None
+    _apply_status_timestamps(db, resource, new_status, now)
 
     resource.updated_at = now
     db.commit()

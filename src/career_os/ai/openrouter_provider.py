@@ -44,6 +44,15 @@ class CreditsExhaustedError(Exception):
         super().__init__(message)
 
 
+def _extract_error_detail(response: httpx.Response) -> str:
+    """Best-effort extraction of error message from an OpenRouter error response."""
+    try:
+        body = response.json()
+        return body.get("error", {}).get("message", "")
+    except Exception:
+        return ""
+
+
 class OpenRouterProvider(AIProvider):
     """AI provider backed by OpenRouter API."""
 
@@ -96,12 +105,7 @@ class OpenRouterProvider(AIProvider):
                 json=payload,
             )
             if response.status_code in (402, 429):
-                detail = ""
-                try:
-                    body = response.json()
-                    detail = body.get("error", {}).get("message", "")
-                except Exception:
-                    pass  # best-effort JSON parse for error detail
+                detail = _extract_error_detail(response)
                 raise CreditsExhaustedError(status_code=response.status_code, detail=detail)
             response.raise_for_status()
             data = response.json()
