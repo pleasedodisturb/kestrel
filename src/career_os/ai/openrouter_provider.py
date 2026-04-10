@@ -101,7 +101,7 @@ class OpenRouterProvider(AIProvider):
                     body = response.json()
                     detail = body.get("error", {}).get("message", "")
                 except Exception:
-                    pass
+                    pass  # best-effort JSON parse for error detail
                 raise CreditsExhaustedError(status_code=response.status_code, detail=detail)
             response.raise_for_status()
             data = response.json()
