@@ -161,7 +161,7 @@ export function ApplicationDetail() {
     STATUS_COLORS[normalizedStatus] ?? STATUS_COLORS.discovered;
 
   return (
-    <div data-testid="application-detail" className="space-y-6">
+    <section data-testid="application-detail" className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -554,7 +554,7 @@ export function ApplicationDetail() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -618,9 +618,9 @@ function DateField({
 }>) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-500">
+      <span className="block text-sm font-medium text-gray-500">
         {label}
-      </label>
+      </span>
       <p data-testid={testId} className="mt-1 text-sm text-gray-900">
         {value ? formatDate(value) : <span className="text-gray-400">—</span>}
       </p>
