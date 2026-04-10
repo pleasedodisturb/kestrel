@@ -10,6 +10,7 @@ from career_os.api.constants import DESC_PROFILE_ID, RESP_NOT_FOUND
 from career_os.database import get_db
 from career_os.models.models import Application, FollowUp
 from career_os.models.skills import Goal
+from career_os.models.ticktick_sync import TickTickSyncTask
 from career_os.schemas.ticktick import (
     TickTickConnectionTestResponse,
     TickTickPullResponse,
@@ -79,53 +80,7 @@ async def ticktick_push(
     Supports: follow_up, learning_goal, pipeline_action.
     """
     try:
-        if payload.entity_type == "follow_up":
-            follow_up = (
-                db.query(FollowUp)
-                .filter(
-                    FollowUp.id == payload.entity_id,
-                    FollowUp.profile_id == payload.profile_id,
-                )
-                .first()
-            )
-            if not follow_up:
-                raise HTTPException(status_code=404, detail="Follow-up not found")
-            sync_task = sync_follow_up_to_ticktick(db, follow_up)
-
-        elif payload.entity_type == "learning_goal":
-            goal = (
-                db.query(Goal)
-                .filter(
-                    Goal.id == payload.entity_id,
-                    Goal.profile_id == payload.profile_id,
-                )
-                .first()
-            )
-            if not goal:
-                raise HTTPException(status_code=404, detail="Learning goal not found")
-            sync_task = sync_learning_goal_to_ticktick(db, goal)
-
-        elif payload.entity_type == "pipeline_action":
-            application = (
-                db.query(Application)
-                .filter(
-                    Application.id == payload.entity_id,
-                    Application.profile_id == payload.profile_id,
-                )
-                .first()
-            )
-            if not application:
-                raise HTTPException(status_code=404, detail="Application not found")
-            sync_task = sync_pipeline_action_to_ticktick(
-                db, application, f"Action for {application.company}"
-            )
-        else:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Invalid entity_type: {payload.entity_type}. "
-                "Must be follow_up, learning_goal, or pipeline_action",
-            )
-
+        sync_task = _resolve_and_sync(db, payload)
         return TickTickPushResponse(
             success=True,
             message=f"Synced {payload.entity_type} {payload.entity_id} to TickTick",
@@ -144,6 +99,37 @@ async def ticktick_push(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except TickTickSyncError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+def _resolve_and_sync(db: Session, payload: TickTickPushRequest) -> TickTickSyncTask:
+    """Look up the entity and sync it to TickTick."""
+    if payload.entity_type == "follow_up":
+        entity = _fetch_entity(db, FollowUp, payload.entity_id, payload.profile_id, "Follow-up")
+        return sync_follow_up_to_ticktick(db, entity)
+
+    if payload.entity_type == "learning_goal":
+        entity = _fetch_entity(db, Goal, payload.entity_id, payload.profile_id, "Learning goal")
+        return sync_learning_goal_to_ticktick(db, entity)
+
+    if payload.entity_type == "pipeline_action":
+        entity = _fetch_entity(
+            db, Application, payload.entity_id, payload.profile_id, "Application"
+        )
+        return sync_pipeline_action_to_ticktick(db, entity, f"Action for {entity.company}")
+
+    raise HTTPException(
+        status_code=422,
+        detail=f"Invalid entity_type: {payload.entity_type}. "
+        "Must be follow_up, learning_goal, or pipeline_action",
+    )
+
+
+def _fetch_entity(db: Session, model, entity_id: int, profile_id: int, label: str):
+    """Query a model by id + profile_id, raising 404 if missing."""
+    obj = db.query(model).filter(model.id == entity_id, model.profile_id == profile_id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail=f"{label} not found")
+    return obj
 
 
 @router.post("/pull", responses={400: {"description": "Bad request"}})
