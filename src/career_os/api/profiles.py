@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import PROFILE_NOT_FOUND, RESP_NOT_FOUND
+from career_os.api.constants import PROFILE_NOT_FOUND, RESP_404, RESP_NOT_FOUND
 from career_os.database import get_db
 from career_os.models.models import Profile
 from career_os.schemas.profiles import (
@@ -31,7 +31,7 @@ async def list_profiles(db: Annotated[Session, Depends(get_db)]) -> ProfileListR
     )
 
 
-@router.get("/{profile_id}", responses={404: {"description": RESP_NOT_FOUND}})
+@router.get("/{profile_id}", responses=RESP_404)
 async def get_profile(profile_id: int, db: Annotated[Session, Depends(get_db)]) -> ProfileResponse:
     """Get a specific profile by ID."""
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
@@ -62,7 +62,7 @@ async def create_profile(
     return ProfileResponse.model_validate(profile)
 
 
-@router.patch("/{profile_id}", responses={404: {"description": RESP_NOT_FOUND}})
+@router.patch("/{profile_id}", responses=RESP_404)
 async def update_profile(
     profile_id: int,
     payload: ProfileUpdate,

@@ -14,7 +14,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_PROFILE_ID, RESP_NOT_FOUND
+from career_os.api.constants import DESC_PROFILE_ID, RESP_404_500
 from career_os.database import get_db
 from career_os.schemas.interview_prep import (
     InterviewPrepResponse,
@@ -41,7 +41,7 @@ router = APIRouter(prefix="/api/applications", tags=["interview-prep"])
 
 @router.get(
     "/{application_id}/interview-prep",
-    responses={404: {"description": RESP_NOT_FOUND}, 500: {"description": "Internal server error"}},
+    responses=RESP_404_500,
 )
 async def get_interview_prep_endpoint(
     application_id: int,
@@ -81,7 +81,7 @@ async def get_interview_prep_endpoint(
 
 @router.patch(
     "/interview-prep/items/{item_id}",
-    responses={404: {"description": RESP_NOT_FOUND}, 500: {"description": "Internal server error"}},
+    responses=RESP_404_500,
 )
 async def update_prep_item_endpoint(
     item_id: int,
