@@ -22,6 +22,7 @@ from career_os.main import app
 from career_os.models.discovery import DiscoveredJob
 from career_os.models.models import Profile
 from career_os.schemas.ai import AIFeature
+from tests.profile_data import SECOND_PROFILE_KWARGS
 
 # ---------------------------------------------------------------------------
 # Test fixtures
@@ -71,9 +72,7 @@ def test_profile(test_db: Session) -> Profile:
 @pytest.fixture
 def second_profile(test_db: Session) -> Profile:
     """Create a second profile for scoping tests."""
-    profile = Profile(
-        name="Other User", email="other@example.com", job_family="Software Engineering"
-    )
+    profile = Profile(**{k: v for k, v in SECOND_PROFILE_KWARGS.items() if k != "location"})
     test_db.add(profile)
     test_db.commit()
     test_db.refresh(profile)
