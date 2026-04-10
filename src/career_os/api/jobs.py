@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_PROFILE_ID, RESP_NOT_FOUND
+from career_os.api.constants import DESC_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.schemas.jobs import (
     JobSearchResponse,
@@ -34,7 +34,7 @@ router = APIRouter(tags=["jobs"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/jobs", responses={404: {"description": RESP_NOT_FOUND}})
+@router.get("/api/jobs", responses=RESP_404)
 async def search_jobs_endpoint(
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
@@ -113,7 +113,7 @@ async def search_jobs_endpoint(
 @router.post(
     "/api/saved-searches",
     status_code=201,
-    responses={404: {"description": RESP_NOT_FOUND}},
+    responses=RESP_404,
 )
 async def create_saved_search_endpoint(
     payload: SavedSearchCreate,
@@ -152,7 +152,7 @@ async def list_saved_searches_endpoint(
 
 @router.get(
     "/api/saved-searches/{search_id}",
-    responses={404: {"description": RESP_NOT_FOUND}},
+    responses=RESP_404,
 )
 async def get_saved_search_endpoint(
     search_id: int,
@@ -169,7 +169,7 @@ async def get_saved_search_endpoint(
 
 @router.put(
     "/api/saved-searches/{search_id}",
-    responses={404: {"description": RESP_NOT_FOUND}},
+    responses=RESP_404,
 )
 async def update_saved_search_endpoint(
     search_id: int,
@@ -195,7 +195,7 @@ async def update_saved_search_endpoint(
 @router.delete(
     "/api/saved-searches/{search_id}",
     status_code=204,
-    responses={404: {"description": RESP_NOT_FOUND}},
+    responses=RESP_404,
 )
 async def delete_saved_search_endpoint(
     search_id: int,

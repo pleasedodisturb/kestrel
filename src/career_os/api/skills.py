@@ -6,7 +6,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, DESC_FILTER_BY_CATEGORY, RESP_NOT_FOUND
+from career_os.api.constants import (
+    DESC_ACTIVE_PROFILE_ID,
+    DESC_FILTER_BY_CATEGORY,
+    RESP_404,
+)
 from career_os.database import get_db
 from career_os.schemas.skills import (
     IngestRequest,
@@ -73,7 +77,7 @@ async def list_skills_endpoint(
     )
 
 
-@router.get("/{skill_id}", responses={404: {"description": RESP_NOT_FOUND}})
+@router.get("/{skill_id}", responses=RESP_404)
 async def get_skill_endpoint(
     skill_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -87,7 +91,7 @@ async def get_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.get("/{skill_id}/history", responses={404: {"description": RESP_NOT_FOUND}})
+@router.get("/{skill_id}/history", responses=RESP_404)
 async def get_skill_history_endpoint(
     skill_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -101,7 +105,7 @@ async def get_skill_history_endpoint(
     return [SkillHistoryResponse.model_validate(h) for h in history]
 
 
-@router.post("", status_code=201, responses={404: {"description": RESP_NOT_FOUND}})
+@router.post("", status_code=201, responses=RESP_404)
 async def create_skill_endpoint(
     payload: SkillCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -129,7 +133,7 @@ async def create_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.put("/{skill_id}", responses={404: {"description": RESP_NOT_FOUND}})
+@router.put("/{skill_id}", responses=RESP_404)
 async def update_skill_endpoint(
     skill_id: int,
     payload: SkillUpdate,
@@ -151,7 +155,7 @@ async def update_skill_endpoint(
     return SkillResponse.model_validate(skill)
 
 
-@router.post("/ingest", responses={404: {"description": RESP_NOT_FOUND}})
+@router.post("/ingest", responses=RESP_404)
 async def ingest_skills_endpoint(
     payload: IngestRequest,
     db: Annotated[Session, Depends(get_db)],

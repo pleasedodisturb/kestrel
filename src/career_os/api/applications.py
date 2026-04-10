@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_NOT_FOUND
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404, RESP_404_422
 from career_os.database import get_db
 from career_os.schemas.applications import (
     ActivityLogResponse,
@@ -65,7 +65,7 @@ def _build_package_summary(pkg) -> ApplicationPackageSummaryResponse:
     )
 
 
-@router.post("", status_code=201, responses={404: {"description": RESP_NOT_FOUND}})
+@router.post("", status_code=201, responses=RESP_404)
 async def create(
     payload: ApplicationCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -150,7 +150,7 @@ async def list_apps(
     )
 
 
-@router.get("/{application_id}", responses={404: {"description": RESP_NOT_FOUND}})
+@router.get("/{application_id}", responses=RESP_404)
 async def get_detail(
     application_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -190,7 +190,7 @@ async def get_detail(
 
 @router.patch(
     "/{application_id}",
-    responses={404: {"description": RESP_NOT_FOUND}, 422: {"description": "Validation error"}},
+    responses=RESP_404_422,
 )
 async def update(
     application_id: int,
@@ -217,7 +217,7 @@ async def update(
     return ApplicationResponse.model_validate(app_obj)
 
 
-@router.delete("/{application_id}", responses={404: {"description": RESP_NOT_FOUND}})
+@router.delete("/{application_id}", responses=RESP_404)
 async def delete(
     application_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
