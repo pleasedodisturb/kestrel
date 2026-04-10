@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Kestrel Logo v2 - Concept C: Split Negative Space</title>
+  <desc>Bird defined by two shapes with negative space channel between wing and body. The gap IS the design.</desc>
+
+  <!--
+    CONCEPT C: Two-Shape Bird
+    - Wing and body are SEPARATE shapes
+    - Negative space gap between them defines the form
+    - Same single color for both shapes
+    - The space between shapes does the visual work
+  -->
+
+  <!-- WING - long pointed falcon sweep -->
+  <path fill="#1E293B" d="
+    M 52 22
+    C 142 58, 232 108, 295 148
+    C 310 158, 310 148, 295 145
+    C 312 132, 332 128, 355 138
+    C 370 145, 382 150, 390 158
+    L 378 148
+    C 358 132, 322 118, 290 128
+    C 262 118, 190 82, 65 45
+    Z
+  "/>
+
+  <!-- BODY + HEAD + TAIL with eye cutout -->
+  <path fill-rule="evenodd" fill="#1E293B" d="
+    M 440 208
+    C 425 185, 395 162, 362 148
+    C 342 140, 325 142, 310 152
+    C 302 160, 290 172, 282 195
+    C 270 232, 258 272, 248 310
+    C 238 345, 222 375, 195 402
+    C 162 435, 130 455, 95 472
+    L 130 462
+    C 165 445, 205 418, 250 382
+    C 298 340, 342 292, 382 248
+    C 408 228, 430 215, 440 208
+    Z
+    M 368 160
+    a 14 14 0 1 0 0 28
+    a 14 14 0 1 0 0 -28
+    Z
+  "/>
+</svg>

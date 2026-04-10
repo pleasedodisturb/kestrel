@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Kestrel Logo v2 - Concept A: Bold Silhouette</title>
+  <desc>Single-color falcon silhouette with negative space eye. The pointed wing is the defining feature.</desc>
+
+  <!--
+    CONCEPT A: Bold Silhouette
+    - ONE color only (#1E293B dark navy)
+    - Negative space eye
+    - Long pointed falcon wing = instant "raptor" read
+    - Works at any size, any background
+  -->
+
+  <path fill-rule="evenodd" fill="#1E293B" d="
+    M 440 208
+    C 425 182, 388 152, 355 138
+    C 332 128, 312 132, 295 145
+    C 232 105, 142 58, 52 22
+    L 65 45
+    C 148 75, 235 122, 285 158
+    C 292 165, 288 178, 282 195
+    C 270 232, 258 272, 248 310
+    C 238 345, 222 375, 195 402
+    C 162 435, 130 455, 95 472
+    L 130 462
+    C 165 445, 205 418, 250 382
+    C 298 340, 342 292, 382 248
+    C 408 228, 430 215, 440 208
+    Z
+    M 362 150
+    a 16 16 0 1 0 0 32
+    a 16 16 0 1 0 0 -32
+    Z
+  "/>
+</svg>

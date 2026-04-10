@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Kestrel Logo v2 - Concept B: Circle Negative Space</title>
+  <desc>Dark circle with kestrel falcon cut out as negative space. The bird IS the empty space.</desc>
+
+  <!--
+    CONCEPT B: Circle with Negative Space Bird
+    - Dark circle, bird is the ABSENCE of color
+    - Eye becomes a filled dot inside the cutout
+    - Very bold badge/icon format
+    - fill-rule="evenodd": circle=filled, bird=hole, eye=filled-dot-in-hole
+  -->
+
+  <path fill-rule="evenodd" fill="#1E293B" d="
+    M 256 8
+    A 248 248 0 1 1 256 504
+    A 248 248 0 1 1 256 8
+    Z
+
+    M 415 222
+    C 402 198, 370 172, 340 158
+    C 320 150, 302 154, 288 165
+    C 232 130, 158 92, 82 62
+    L 92 82
+    C 162 105, 238 142, 282 172
+    C 288 178, 285 188, 280 202
+    C 270 235, 260 270, 252 305
+    C 244 335, 230 360, 208 385
+    C 178 415, 150 432, 120 448
+    L 148 440
+    C 178 425, 212 402, 250 370
+    C 292 332, 332 290, 365 252
+    C 388 235, 408 225, 415 222
+    Z
+
+    M 348 168
+    a 14 14 0 1 0 0 28
+    a 14 14 0 1 0 0 -28
+    Z
+  "/>
+</svg>
