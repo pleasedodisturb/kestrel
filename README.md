@@ -1,4 +1,11 @@
-<h1 align="center">Kestrel</h1>
+<p align="center">
+  <img src="assets/logo-full.svg" alt="Kestrel Logo" width="480">
+</p>
+
+<p align="center">
+  <em>Yes, the logo looks like a flying salmon. It's AI-generated v0.1 and we know it. 🐟<br>
+  We don't hide our cringe, we aerate it. <a href="https://github.com/pleasedodisturb/kestrel/issues/79">Help us fix it?</a></em>
+</p>
 
 <p align="center">
   <strong>A job search system that runs on your computer.</strong><br>
