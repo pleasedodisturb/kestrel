@@ -43,10 +43,14 @@ class TestMatchStrengthKeyword:
         assert _match_strength_keyword("Brings energetic presence") == "Social Energy"
 
     def test_curiosity_maps_to_experimental_mindset(self):
-        assert _match_strength_keyword("Intellectual curiosity is a driver") == "Experimental Mindset"
+        assert (
+            _match_strength_keyword("Intellectual curiosity is a driver") == "Experimental Mindset"
+        )
 
     def test_experiment_maps_to_experimental_mindset(self):
-        assert _match_strength_keyword("Likes to experiment with new ideas") == "Experimental Mindset"
+        assert (
+            _match_strength_keyword("Likes to experiment with new ideas") == "Experimental Mindset"
+        )
 
     def test_case_insensitive(self):
         assert _match_strength_keyword("ASSERTIVE leadership") == "Adaptive Assertiveness"
@@ -159,7 +163,9 @@ class TestDerivePackageType:
         from career_os.api.applications import _build_package_summary
 
         pkg = self._make_pkg(
-            package_dir="/home/user/packages/acme-corp/", cover_letter_path="/cl.pdf", cv_path="/cv.pdf"
+            package_dir="/home/user/packages/acme-corp/",
+            cover_letter_path="/cl.pdf",
+            cv_path="/cv.pdf",
         )
         summary = _build_package_summary(pkg)
         assert summary.package_name == "acme-corp"

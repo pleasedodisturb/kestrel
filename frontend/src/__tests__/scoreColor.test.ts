@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { scoreColor } from "@/components/KanbanCard";
+import { scoreColor } from "@/lib/utils";
 
 describe("scoreColor", () => {
   // --- fit_score thresholds (high=8, mid=5) ---
