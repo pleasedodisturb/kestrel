@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import PROFILE_NOT_FOUND, RESP_NOT_FOUND
 from career_os.database import get_db
 from career_os.models.models import Profile
 from career_os.schemas.profiles import (
@@ -16,7 +17,6 @@ from career_os.schemas.profiles import (
     ProfileUpdate,
 )
 from career_os.services.scoring import flag_stale_scores, regenerate_weights_for_job_family
-from career_os.api.constants import PROFILE_NOT_FOUND
 
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
@@ -31,7 +31,7 @@ async def list_profiles(db: Annotated[Session, Depends(get_db)]) -> ProfileListR
     )
 
 
-@router.get("/{profile_id}", responses={404: {"description": "Not found"}})
+@router.get("/{profile_id}", responses={404: {"description": RESP_NOT_FOUND}})
 async def get_profile(profile_id: int, db: Annotated[Session, Depends(get_db)]) -> ProfileResponse:
     """Get a specific profile by ID."""
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
@@ -62,7 +62,7 @@ async def create_profile(
     return ProfileResponse.model_validate(profile)
 
 
-@router.patch("/{profile_id}", responses={404: {"description": "Not found"}})
+@router.patch("/{profile_id}", responses={404: {"description": RESP_NOT_FOUND}})
 async def update_profile(
     profile_id: int,
     payload: ProfileUpdate,
@@ -104,7 +104,7 @@ async def update_profile(
 @router.delete(
     "/{profile_id}",
     status_code=204,
-    responses={404: {"description": "Not found"}, 409: {"description": "Conflict"}},
+    responses={404: {"description": RESP_NOT_FOUND}, 409: {"description": "Conflict"}},
 )
 async def delete_profile(
     profile_id: int,
