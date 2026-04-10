@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404, RESP_NOT_FOUND
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.models.models import Application
 from career_os.models.skills import JobRequirement
@@ -31,7 +31,7 @@ router = APIRouter(tags=["gaps"])
 
 @router.get(
     "/api/applications/{application_id}/gaps",
-    responses={400: {"description": "Bad request"}, 404: {"description": RESP_NOT_FOUND}},
+    responses={**RESP_404, 400: {"description": "Bad request"}},
 )
 async def get_application_gaps(
     application_id: int,

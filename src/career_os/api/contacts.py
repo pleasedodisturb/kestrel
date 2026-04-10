@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404, RESP_NOT_FOUND
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.schemas.contacts import (
     ContactApplicationCreate,
@@ -206,7 +206,7 @@ async def get_interactions(
 @router.post(
     "/contacts/{contact_id}/applications",
     status_code=201,
-    responses={404: {"description": RESP_NOT_FOUND}, 409: {"description": "Conflict"}},
+    responses={**RESP_404, 409: {"description": "Conflict"}},
 )
 async def link_application(
     contact_id: int,

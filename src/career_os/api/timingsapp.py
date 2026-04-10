@@ -17,7 +17,6 @@ from career_os.api.constants import (
     DESC_FILTER_BY_CATEGORY,
     DESC_PROFILE_ID,
     RESP_404,
-    RESP_NOT_FOUND,
     TIME_SESSION_NOT_FOUND,
 )
 from career_os.database import get_db
@@ -69,7 +68,7 @@ async def create_session(
 
 @router.put(
     "/sessions/{session_id}/stop",
-    responses={400: {"description": "Bad request"}, 404: {"description": RESP_NOT_FOUND}},
+    responses={**RESP_404, 400: {"description": "Bad request"}},
 )
 async def stop_session_endpoint(
     session_id: int,

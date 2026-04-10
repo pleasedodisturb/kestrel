@@ -34,7 +34,7 @@ from career_os.services.skills_parsing import (
     parse_profile_docs,
     parse_workplace_insights,
 )
-from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 # ---------------------------------------------------------------------------
 # Test fixtures
