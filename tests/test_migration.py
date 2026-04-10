@@ -826,7 +826,9 @@ class TestMultiUserIsolation:
         import_csv(seeded_db, sample_csv, profile_id=1)
 
         # Create a second profile
-        p2 = Profile(name="Other User", email="other@example.com", job_family="Software Engineering")
+        p2 = Profile(
+            name="Other User", email="other@example.com", job_family="Software Engineering"
+        )
         seeded_db.add(p2)
         seeded_db.commit()
 
