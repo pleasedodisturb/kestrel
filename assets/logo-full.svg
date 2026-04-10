@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="960" height="300">
+  <title>Kestrel - AI-Powered Job Search</title>
+  <desc>Kestrel full logo with bird icon and wordmark</desc>
+
+  <!-- === COLOR PALETTE ===
+    Body:    #D4572A  (warm rusty orange)
+    Accent:  #1E293B  (dark navy slate)
+    Eye:     #F5A623  (amber gold)
+    Light:   #E8845A  (lighter orange highlight)
+    Text:    #1E293B  (dark navy)
+  -->
+
+  <!-- Bird icon scaled to fit ~260x260 area on the left -->
+  <g transform="translate(15, 18) scale(0.52)">
+
+    <!-- TAIL FEATHERS -->
+    <path d="M 195 345 L 108 385 L 118 395 L 195 360 Z" fill="#D4572A"/>
+    <path d="M 190 355 L 95 405 L 108 418 L 192 370 Z" fill="#D4572A"/>
+    <path d="M 185 368 L 100 428 L 115 438 L 190 382 Z" fill="#D4572A"/>
+    <!-- Dark tail tips -->
+    <path d="M 108 385 L 92 392 L 100 400 L 118 395 Z" fill="#1E293B"/>
+    <path d="M 95 405 L 78 415 L 88 425 L 108 418 Z" fill="#1E293B"/>
+    <path d="M 100 428 L 82 440 L 95 448 L 115 438 Z" fill="#1E293B"/>
+
+    <!-- BODY -->
+    <path d="M 402 165 C 388 135, 355 108, 318 98 C 295 92, 278 100, 265 120 C 250 145, 245 178, 240 215 C 235 252, 228 290, 218 325 C 210 352, 200 368, 190 382 L 200 375 C 218 352, 238 322, 258 290 C 280 255, 308 225, 338 200 C 362 182, 385 170, 402 165 Z" fill="#D4572A"/>
+
+    <!-- BREAST HIGHLIGHT -->
+    <path d="M 380 172 C 365 180, 340 198, 315 218 C 290 240, 268 265, 248 295 C 240 308, 232 322, 225 338 L 218 325 C 228 298, 238 268, 255 240 C 272 215, 298 195, 325 180 C 348 170, 368 168, 380 172 Z" fill="#E8845A"/>
+
+    <!-- WING -->
+    <path d="M 272 148 C 258 165, 232 192, 178 235 C 145 260, 115 280, 82 302 L 75 318 L 92 325 C 122 308, 158 288, 195 268 C 235 245, 262 228, 278 210 C 288 198, 288 175, 280 158 Z" fill="#1E293B"/>
+    <path d="M 245 175 C 220 198, 175 232, 125 268" stroke="#2D3B50" stroke-width="1.5" fill="none" opacity="0.5"/>
+    <path d="M 255 185 C 228 210, 180 245, 108 292" stroke="#2D3B50" stroke-width="1.5" fill="none" opacity="0.5"/>
+
+    <!-- BEAK -->
+    <path d="M 402 165 L 435 158 L 420 172 L 402 170 Z" fill="#1E293B"/>
+
+    <!-- HEAD MARKING -->
+    <path d="M 365 130 C 350 115, 330 105, 318 98 C 305 93, 292 95, 282 105 C 295 98, 312 96, 328 102 C 345 110, 358 122, 365 130 Z" fill="#8B8B8B" opacity="0.35"/>
+
+    <!-- EYE -->
+    <circle cx="348" cy="128" r="15" fill="#F5A623"/>
+    <circle cx="348" cy="128" r="12" fill="#E8960A"/>
+    <circle cx="350" cy="126" r="6" fill="#1E293B"/>
+    <circle cx="353" cy="122" r="2.5" fill="#FFFFFF"/>
+    <circle cx="345" cy="131" r="1.5" fill="#FFFFFF" opacity="0.5"/>
+
+    <!-- MALAR STRIPE -->
+    <path d="M 355 140 C 362 152, 375 168, 392 178 L 388 182 C 372 172, 360 158, 352 145 Z" fill="#1E293B"/>
+    <path d="M 340 142 C 345 150, 352 162, 365 175 L 362 178 C 350 166, 342 154, 338 146 Z" fill="#1E293B" opacity="0.6"/>
+
+  </g>
+
+  <!-- ============================================ -->
+  <!--  WORDMARK - "KESTREL"                         -->
+  <!-- ============================================ -->
+  <text
+    x="295"
+    y="175"
+    font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-weight="700"
+    font-size="82"
+    letter-spacing="10"
+    fill="#1E293B"
+  >KESTREL</text>
+
+  <!-- Tagline -->
+  <text
+    x="298"
+    y="210"
+    font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-weight="400"
+    font-size="18"
+    letter-spacing="6"
+    fill="#D4572A"
+    opacity="0.85"
+  >AI-POWERED JOB SEARCH</text>
+
+</svg>
