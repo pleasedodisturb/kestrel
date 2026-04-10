@@ -41,7 +41,7 @@ from career_os.services.pushover_client import (
     PushoverAuthError,
     PushoverClient,
 )
-from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 client = TestClient(app)
 

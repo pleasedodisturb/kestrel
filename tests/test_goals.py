@@ -23,7 +23,7 @@ from career_os.main import app
 from career_os.models.discovery import DiscoveredJob
 from career_os.models.models import Application, Profile
 from career_os.models.skills import Goal, LearningResource, Skill
-from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 # ---------------------------------------------------------------------------
 # Test fixtures

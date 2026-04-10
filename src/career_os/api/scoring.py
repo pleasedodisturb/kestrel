@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from career_os.ai.openrouter_provider import CreditsExhaustedError
-from career_os.api.constants import DESC_PROFILE_ID, RESP_404, RESP_NOT_FOUND
+from career_os.api.constants import DESC_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.schemas.scoring import (
     BatchScoreRequest,
@@ -46,8 +46,8 @@ router = APIRouter(tags=["scoring"])
     "/api/score",
     status_code=201,
     responses={
+        **RESP_404,
         402: {"description": "Payment required"},
-        404: {"description": RESP_NOT_FOUND},
         422: {"description": "Profile incomplete"},
         500: {"description": "Internal server error"},
         502: {"description": "Bad gateway"},
@@ -142,7 +142,7 @@ async def update_weights_endpoint(
 @router.post(
     "/api/score/batch",
     responses={
-        404: {"description": RESP_NOT_FOUND},
+        **RESP_404,
         422: {"description": "Profile incomplete"},
         500: {"description": "Internal server error"},
     },

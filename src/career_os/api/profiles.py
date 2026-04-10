@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import PROFILE_NOT_FOUND, RESP_404, RESP_NOT_FOUND
+from career_os.api.constants import PROFILE_NOT_FOUND, RESP_404
 from career_os.database import get_db
 from career_os.models.models import Profile
 from career_os.schemas.profiles import (
@@ -104,7 +104,7 @@ async def update_profile(
 @router.delete(
     "/{profile_id}",
     status_code=204,
-    responses={404: {"description": RESP_NOT_FOUND}, 409: {"description": "Conflict"}},
+    responses={**RESP_404, 409: {"description": "Conflict"}},
 )
 async def delete_profile(
     profile_id: int,

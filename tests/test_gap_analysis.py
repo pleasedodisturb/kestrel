@@ -28,7 +28,7 @@ from career_os.services.gap_analysis import (
     analyze_gaps,
     classify_severity,
 )
-from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 # ---------------------------------------------------------------------------
 # Test fixtures

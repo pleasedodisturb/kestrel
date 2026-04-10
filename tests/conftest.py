@@ -17,20 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 
 
-# Shared Profile data used across test fixtures to avoid duplicating
-# the same constructor kwargs in every test module.
-DEFAULT_PROFILE_KWARGS = dict(
-    name="Test User",
-    email="test@example.com",
-    location="Frankfurt",
-    job_family="Software Engineering",
-)
-SECOND_PROFILE_KWARGS = dict(
-    name="Other User",
-    email="other@example.com",
-    location="Berlin",
-    job_family="Software Engineering",
-)
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
 
 
 @pytest.fixture

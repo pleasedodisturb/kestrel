@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_PROFILE_ID, RESP_NOT_FOUND
+from career_os.api.constants import DESC_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.models.models import Application, FollowUp
 from career_os.models.skills import Goal
@@ -65,8 +65,8 @@ async def ticktick_sync_status(
 @router.post(
     "/push",
     responses={
+        **RESP_404,
         400: {"description": "Bad request"},
-        404: {"description": RESP_NOT_FOUND},
         422: {"description": "Validation error"},
         502: {"description": "Bad gateway"},
     },

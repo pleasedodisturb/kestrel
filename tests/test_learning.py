@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from career_os.database import Base, get_db
 from career_os.models.models import Application, Profile
 from career_os.models.skills import JobRequirement, Skill
-from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 # ---------------------------------------------------------------------------
 # Test fixtures
