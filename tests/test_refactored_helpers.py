@@ -4,23 +4,85 @@ Covers:
 - skills_parsing: _match_strength_keyword, _STRENGTH_KEYWORD_MAP
 - voice: _generate_session_title
 - ticktick_sync: _complete_follow_up, _complete_learning_goal,
-  _complete_pipeline_action, _COMPLETION_HANDLERS
+  _complete_pipeline_action, _COMPLETION_HANDLERS, _apply_completion
 - api/applications: _derive_package_type, _build_package_summary
 - api/ticktick: _fetch_entity
-- components/KanbanCard: scoreColor (covered in frontend tests)
+- ai/openrouter_provider: _extract_error_detail
+- services/applications: _handle_status_transition, _apply_field_updates
+- services/learning: _apply_status_timestamps
+- services/pushover: _deliver_single_notification
 """
 
+import json
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi import HTTPException
 
+from career_os.ai.openrouter_provider import _extract_error_detail
+from career_os.api.applications import _build_package_summary, _derive_package_type
+from career_os.api.ticktick import _fetch_entity
+from career_os.services.applications import (
+    _apply_field_updates,
+    _handle_status_transition,
+)
+from career_os.services.learning import _apply_status_timestamps
+from career_os.services.pushover import PushoverAPIError, _deliver_single_notification
 from career_os.services.skills_parsing import (
     _STRENGTH_KEYWORD_MAP,
     _match_strength_keyword,
 )
+from career_os.services.ticktick_sync import (
+    _COMPLETION_HANDLERS,
+    _apply_completion,
+    _complete_follow_up,
+    _complete_learning_goal,
+    _complete_pipeline_action,
+)
 from career_os.services.voice import _generate_session_title
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+
+NOW = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
+
+
+def _mock_db(query_result=None):
+    """Create a MagicMock db session with a pre-configured query chain."""
+    db = MagicMock()
+    db.query.return_value.filter.return_value.first.return_value = query_result
+    return db
+
+
+def _mock_log_entry(*, error_message=None, message="Test", title="Test"):
+    """Create a MagicMock notification log entry."""
+    entry = MagicMock()
+    entry.error_message = error_message
+    entry.message = message
+    entry.title = title
+    return entry
+
+
+def _mock_app_obj(status="discovered", profile_id=1, app_id=10, date_applied=None):
+    """Create a MagicMock application object."""
+    obj = MagicMock()
+    obj.status = status
+    obj.profile_id = profile_id
+    obj.id = app_id
+    obj.date_applied = date_applied
+    return obj
+
+
+def _mock_sa_model():
+    """Create a mock SQLAlchemy model class with id and profile_id columns."""
+    model = MagicMock()
+    model.id = MagicMock()
+    model.profile_id = MagicMock()
+    return model
+
 
 # ---------------------------------------------------------------------------
 # _match_strength_keyword
@@ -65,9 +127,8 @@ class TestMatchStrengthKeyword:
 
     def test_first_match_wins(self):
         """If a line contains keywords from multiple categories, first match wins."""
-        # _STRENGTH_KEYWORD_MAP is iterated in order
         result = _match_strength_keyword("assertive and sociable person")
-        assert result == "Adaptive Assertiveness"  # first entry in the map
+        assert result == "Adaptive Assertiveness"
 
     def test_keyword_map_has_expected_entries(self):
         """Sanity check: the map has exactly 3 entries mapping to known skills."""
@@ -84,50 +145,48 @@ class TestMatchStrengthKeyword:
 class TestGenerateSessionTitle:
     """Tests for voice session title generation."""
 
-    def _make_app(self, company="Acme Corp", role="Senior Engineer"):
+    @staticmethod
+    def _app(company="Acme Corp", role="Senior Engineer"):
         return SimpleNamespace(company=company, role=role)
 
     def test_cover_letter_with_app(self):
-        app = self._make_app()
-        result = _generate_session_title("cover_letter", app)
-        assert result == "Cover Letter Brainstorm — Acme Corp (Senior Engineer)"
+        assert _generate_session_title("cover_letter", self._app()) == (
+            "Cover Letter Brainstorm — Acme Corp (Senior Engineer)"
+        )
 
     def test_job_evaluation_with_app(self):
-        app = self._make_app("Google", "PM")
-        result = _generate_session_title("job_evaluation", app)
-        assert result == "Job Evaluation — Google (PM)"
+        assert _generate_session_title("job_evaluation", self._app("Google", "PM")) == (
+            "Job Evaluation — Google (PM)"
+        )
 
     def test_coaching_mode(self):
-        result = _generate_session_title("coaching", None)
-        assert result == "Coaching Session"
+        assert _generate_session_title("coaching", None) == "Coaching Session"
 
     def test_coaching_ignores_app(self):
-        app = self._make_app()
-        result = _generate_session_title("coaching", app)
-        assert result == "Coaching Session"
+        assert _generate_session_title("coaching", self._app()) == "Coaching Session"
 
     def test_cover_letter_without_app_falls_through(self):
-        result = _generate_session_title("cover_letter", None)
-        assert result == "Voice Discussion (cover_letter)"
+        assert _generate_session_title("cover_letter", None) == "Voice Discussion (cover_letter)"
 
     def test_job_evaluation_without_app_falls_through(self):
-        result = _generate_session_title("job_evaluation", None)
-        assert result == "Voice Discussion (job_evaluation)"
+        assert (
+            _generate_session_title("job_evaluation", None) == "Voice Discussion (job_evaluation)"
+        )
 
     def test_unknown_mode(self):
-        result = _generate_session_title("brainstorm", None)
-        assert result == "Voice Discussion (brainstorm)"
+        assert _generate_session_title("brainstorm", None) == "Voice Discussion (brainstorm)"
 
 
 # ---------------------------------------------------------------------------
-# _derive_package_type  /  _build_package_summary
+# _derive_package_type / _build_package_summary
 # ---------------------------------------------------------------------------
 
 
 class TestDerivePackageType:
     """Tests for application package type derivation."""
 
-    def _make_pkg(self, cover_letter_path=None, cv_path=None, package_dir=None, pkg_id=1):
+    @staticmethod
+    def _pkg(cover_letter_path=None, cv_path=None, package_dir=None, pkg_id=1):
         return SimpleNamespace(
             id=pkg_id,
             cover_letter_path=cover_letter_path,
@@ -136,33 +195,22 @@ class TestDerivePackageType:
         )
 
     def test_full_package(self):
-        from career_os.api.applications import _derive_package_type
-
-        pkg = self._make_pkg(cover_letter_path="/cl.pdf", cv_path="/cv.pdf")
-        assert _derive_package_type(pkg) == "full"
+        assert (
+            _derive_package_type(self._pkg(cover_letter_path="/cl.pdf", cv_path="/cv.pdf"))
+            == "full"
+        )
 
     def test_cover_letter_only(self):
-        from career_os.api.applications import _derive_package_type
-
-        pkg = self._make_pkg(cover_letter_path="/cl.pdf")
-        assert _derive_package_type(pkg) == "cover_letter"
+        assert _derive_package_type(self._pkg(cover_letter_path="/cl.pdf")) == "cover_letter"
 
     def test_cv_only(self):
-        from career_os.api.applications import _derive_package_type
-
-        pkg = self._make_pkg(cv_path="/cv.pdf")
-        assert _derive_package_type(pkg) == "cv"
+        assert _derive_package_type(self._pkg(cv_path="/cv.pdf")) == "cv"
 
     def test_directory_fallback(self):
-        from career_os.api.applications import _derive_package_type
+        assert _derive_package_type(self._pkg()) == "directory"
 
-        pkg = self._make_pkg()
-        assert _derive_package_type(pkg) == "directory"
-
-    def test_build_package_summary_extracts_name_from_dir(self):
-        from career_os.api.applications import _build_package_summary
-
-        pkg = self._make_pkg(
+    def test_build_summary_extracts_name_from_dir(self):
+        pkg = self._pkg(
             package_dir="/home/user/packages/acme-corp/",
             cover_letter_path="/cl.pdf",
             cv_path="/cv.pdf",
@@ -172,23 +220,15 @@ class TestDerivePackageType:
         assert summary.package_type == "full"
         assert summary.file_path == "/home/user/packages/acme-corp/"
 
-    def test_build_package_summary_unknown_for_empty_dir(self):
-        from career_os.api.applications import _build_package_summary
+    def test_build_summary_unknown_for_empty_dir(self):
+        assert _build_package_summary(self._pkg(package_dir="")).package_name == "Unknown"
 
-        pkg = self._make_pkg(package_dir="")
-        summary = _build_package_summary(pkg)
-        assert summary.package_name == "Unknown"
-
-    def test_build_package_summary_unknown_for_none_dir(self):
-        from career_os.api.applications import _build_package_summary
-
-        pkg = self._make_pkg(package_dir=None)
-        summary = _build_package_summary(pkg)
-        assert summary.package_name == "Unknown"
+    def test_build_summary_unknown_for_none_dir(self):
+        assert _build_package_summary(self._pkg(package_dir=None)).package_name == "Unknown"
 
 
 # ---------------------------------------------------------------------------
-# _COMPLETION_HANDLERS  /  individual handlers
+# _COMPLETION_HANDLERS / individual handlers
 # ---------------------------------------------------------------------------
 
 
@@ -196,144 +236,78 @@ class TestCompletionHandlers:
     """Tests for TickTick completion handler dispatch table."""
 
     def test_handler_keys(self):
-        from career_os.services.ticktick_sync import _COMPLETION_HANDLERS
-
         assert set(_COMPLETION_HANDLERS.keys()) == {"follow_up", "learning_goal", "pipeline_action"}
 
     def test_all_handlers_are_callable(self):
-        from career_os.services.ticktick_sync import _COMPLETION_HANDLERS
-
         for key, handler in _COMPLETION_HANDLERS.items():
             assert callable(handler), f"Handler for {key} is not callable"
 
     def test_complete_follow_up_sets_completed_at(self):
-        from career_os.services.ticktick_sync import _complete_follow_up
-
-        db = MagicMock()
+        follow_up = MagicMock(completed_at=None, application_id=5)
+        db = _mock_db(follow_up)
         sync_task = SimpleNamespace(profile_id=1, entity_id=10)
-        follow_up = MagicMock()
-        follow_up.completed_at = None
-        follow_up.application_id = 5
-        db.query.return_value.filter.return_value.first.return_value = follow_up
-
-        now = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
-        _complete_follow_up(db, sync_task, now)
-
-        assert follow_up.completed_at == now
-        db.add.assert_called_once()  # activity log added
+        _complete_follow_up(db, sync_task, NOW)
+        assert follow_up.completed_at == NOW
+        db.add.assert_called_once()
 
     def test_complete_follow_up_skips_already_completed(self):
-        from career_os.services.ticktick_sync import _complete_follow_up
-
-        db = MagicMock()
-        sync_task = SimpleNamespace(profile_id=1, entity_id=10)
-        follow_up = MagicMock()
-        follow_up.completed_at = datetime(2026, 1, 1, tzinfo=UTC)  # already done
-        db.query.return_value.filter.return_value.first.return_value = follow_up
-
-        _complete_follow_up(db, sync_task, datetime.now(UTC))
+        follow_up = MagicMock(completed_at=datetime(2026, 1, 1, tzinfo=UTC))
+        db = _mock_db(follow_up)
+        _complete_follow_up(db, SimpleNamespace(profile_id=1, entity_id=10), datetime.now(UTC))
         db.add.assert_not_called()
 
     def test_complete_follow_up_skips_missing_entity(self):
-        from career_os.services.ticktick_sync import _complete_follow_up
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = None
-        sync_task = SimpleNamespace(profile_id=1, entity_id=999)
-
-        _complete_follow_up(db, sync_task, datetime.now(UTC))
+        db = _mock_db(None)
+        _complete_follow_up(db, SimpleNamespace(profile_id=1, entity_id=999), datetime.now(UTC))
         db.add.assert_not_called()
 
     def test_complete_learning_goal_sets_completed(self):
-        from career_os.services.ticktick_sync import _complete_learning_goal
-
-        db = MagicMock()
-        sync_task = SimpleNamespace(entity_id=20)
-        goal = MagicMock()
-        goal.status = "in_progress"
-        db.query.return_value.filter.return_value.first.return_value = goal
-
-        now = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
-        _complete_learning_goal(db, sync_task, now)
-
+        goal = MagicMock(status="in_progress")
+        db = _mock_db(goal)
+        _complete_learning_goal(db, SimpleNamespace(entity_id=20), NOW)
         assert goal.status == "completed"
-        assert goal.updated_at == now
+        assert goal.updated_at == NOW
 
     def test_complete_learning_goal_skips_already_completed(self):
-        from career_os.services.ticktick_sync import _complete_learning_goal
-
-        db = MagicMock()
-        sync_task = SimpleNamespace(entity_id=20)
-        goal = MagicMock()
-        goal.status = "completed"
-        db.query.return_value.filter.return_value.first.return_value = goal
-
-        now = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
-        _complete_learning_goal(db, sync_task, now)
-        assert goal.status == "completed"  # unchanged
+        goal = MagicMock(status="completed")
+        db = _mock_db(goal)
+        _complete_learning_goal(db, SimpleNamespace(entity_id=20), NOW)
+        assert goal.status == "completed"
 
     def test_complete_pipeline_action_marks_next_step_done(self):
-        from career_os.services.ticktick_sync import _complete_pipeline_action
-
-        db = MagicMock()
+        app_obj = MagicMock(next_step="Send follow-up email", id=30)
+        db = _mock_db(app_obj)
         sync_task = SimpleNamespace(profile_id=1, entity_id=30, title="Apply to Acme")
-        app_obj = MagicMock()
-        app_obj.next_step = "Send follow-up email"
-        app_obj.id = 30
-        db.query.return_value.filter.return_value.first.return_value = app_obj
-
-        now = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
-        _complete_pipeline_action(db, sync_task, now)
-
+        _complete_pipeline_action(db, sync_task, NOW)
         assert app_obj.next_step == "[Done] Send follow-up email"
-        assert app_obj.updated_at == now
+        assert app_obj.updated_at == NOW
         db.add.assert_called_once()
 
     def test_complete_pipeline_action_handles_no_next_step(self):
-        from career_os.services.ticktick_sync import _complete_pipeline_action
-
-        db = MagicMock()
-        sync_task = SimpleNamespace(profile_id=1, entity_id=30, title="Task")
-        app_obj = MagicMock()
-        app_obj.next_step = None
-        app_obj.id = 30
-        db.query.return_value.filter.return_value.first.return_value = app_obj
-
-        _complete_pipeline_action(db, sync_task, datetime.now(UTC))
-        assert app_obj.next_step is None  # unchanged, not "[Done] None"
+        app_obj = MagicMock(next_step=None, id=30)
+        db = _mock_db(app_obj)
+        _complete_pipeline_action(
+            db, SimpleNamespace(profile_id=1, entity_id=30, title="Task"), datetime.now(UTC)
+        )
+        assert app_obj.next_step is None
 
     def test_complete_pipeline_action_skips_missing_entity(self):
-        from career_os.services.ticktick_sync import _complete_pipeline_action
-
-        db = MagicMock()
-        db.query.return_value.filter.return_value.first.return_value = None
-        sync_task = SimpleNamespace(profile_id=1, entity_id=999, title="Task")
-
-        _complete_pipeline_action(db, sync_task, datetime.now(UTC))
+        db = _mock_db(None)
+        _complete_pipeline_action(
+            db, SimpleNamespace(profile_id=1, entity_id=999, title="Task"), datetime.now(UTC)
+        )
         db.add.assert_not_called()
 
     def test_apply_completion_dispatches_to_correct_handler(self):
-        """Integration test: _apply_completion routes to the right handler via the dict."""
-        from career_os.services.ticktick_sync import _apply_completion
-
-        db = MagicMock()
-        sync_task = SimpleNamespace(entity_type="follow_up", profile_id=1, entity_id=10)
-        follow_up = MagicMock()
-        follow_up.completed_at = None
-        follow_up.application_id = 5
-        db.query.return_value.filter.return_value.first.return_value = follow_up
-
-        _apply_completion(db, sync_task)
+        """_apply_completion routes to the right handler via the dispatch dict."""
+        follow_up = MagicMock(completed_at=None, application_id=5)
+        db = _mock_db(follow_up)
+        _apply_completion(db, SimpleNamespace(entity_type="follow_up", profile_id=1, entity_id=10))
         assert follow_up.completed_at is not None
 
     def test_apply_completion_unknown_type_is_noop(self):
-        """Unknown entity types should not raise — just be silently ignored."""
-        from career_os.services.ticktick_sync import _apply_completion
-
         db = MagicMock()
-        sync_task = SimpleNamespace(entity_type="unknown_thing", profile_id=1, entity_id=10)
-
-        _apply_completion(db, sync_task)  # should not raise
+        _apply_completion(db, SimpleNamespace(entity_type="unknown", profile_id=1, entity_id=10))
         db.query.assert_not_called()
 
 
@@ -345,55 +319,27 @@ class TestCompletionHandlers:
 class TestFetchEntity:
     """Tests for the generic entity fetcher in ticktick API."""
 
-    @staticmethod
-    def _make_model():
-        """Create a mock SQLAlchemy model class with id and profile_id columns."""
-        model = MagicMock()
-        model.id = MagicMock()
-        model.profile_id = MagicMock()
-        return model
-
     def test_returns_entity_when_found(self):
-        from career_os.api.ticktick import _fetch_entity
-
-        db = MagicMock()
-        model = self._make_model()
         mock_obj = SimpleNamespace(id=1, profile_id=1)
-        db.query.return_value.filter.return_value.first.return_value = mock_obj
-
-        result = _fetch_entity(db, model, 1, 1, "Follow-up")
-        assert result is mock_obj
+        db = _mock_db(mock_obj)
+        assert _fetch_entity(db, _mock_sa_model(), 1, 1, "Follow-up") is mock_obj
 
     def test_raises_404_when_not_found(self):
-        from fastapi import HTTPException
-
-        from career_os.api.ticktick import _fetch_entity
-
-        db = MagicMock()
-        model = self._make_model()
-        db.query.return_value.filter.return_value.first.return_value = None
-
+        db = _mock_db(None)
         with pytest.raises(HTTPException) as exc_info:
-            _fetch_entity(db, model, 999, 1, "Follow-up")
+            _fetch_entity(db, _mock_sa_model(), 999, 1, "Follow-up")
         assert exc_info.value.status_code == 404
         assert "Follow-up not found" in exc_info.value.detail
 
     def test_404_message_uses_label(self):
-        from fastapi import HTTPException
-
-        from career_os.api.ticktick import _fetch_entity
-
-        db = MagicMock()
-        model = self._make_model()
-        db.query.return_value.filter.return_value.first.return_value = None
-
+        db = _mock_db(None)
         with pytest.raises(HTTPException) as exc_info:
-            _fetch_entity(db, model, 1, 1, "Learning goal")
+            _fetch_entity(db, _mock_sa_model(), 1, 1, "Learning goal")
         assert "Learning goal not found" in exc_info.value.detail
 
 
 # ---------------------------------------------------------------------------
-# Batch 2 helpers
+# _extract_error_detail (openrouter)
 # ---------------------------------------------------------------------------
 
 
@@ -401,68 +347,42 @@ class TestExtractErrorDetail:
     """Tests for OpenRouter error detail extraction."""
 
     def test_extracts_message_from_valid_json(self):
-        from career_os.ai.openrouter_provider import _extract_error_detail
-
         response = MagicMock()
         response.json.return_value = {"error": {"message": "Insufficient credits"}}
         assert _extract_error_detail(response) == "Insufficient credits"
 
     def test_returns_empty_on_json_error(self):
-        from career_os.ai.openrouter_provider import _extract_error_detail
-
         response = MagicMock()
         response.json.side_effect = ValueError("bad json")
         assert _extract_error_detail(response) == ""
 
     def test_returns_empty_when_no_error_key(self):
-        from career_os.ai.openrouter_provider import _extract_error_detail
-
         response = MagicMock()
         response.json.return_value = {"status": "fail"}
         assert _extract_error_detail(response) == ""
+
+
+# ---------------------------------------------------------------------------
+# _handle_status_transition / _apply_field_updates
+# ---------------------------------------------------------------------------
 
 
 class TestHandleStatusTransition:
     """Tests for application status transition handler."""
 
     def test_skips_when_no_status_in_data(self):
-        from career_os.services.applications import _handle_status_transition
-
-        db = MagicMock()
-        app_obj = MagicMock()
-        update_data = {"notes": "updated"}
-        _handle_status_transition(db, app_obj, update_data)
-        # No activity logged for non-status changes
+        db = _mock_db()
+        _handle_status_transition(db, _mock_app_obj(), {"notes": "updated"})
         db.add.assert_not_called()
 
     def test_normalizes_and_validates_status(self):
-        from career_os.services.applications import (
-            _handle_status_transition,
-        )
-
-        db = MagicMock()
-        app_obj = MagicMock()
-        app_obj.status = "discovered"
-        app_obj.profile_id = 1
-        app_obj.id = 10
-
-        # discovered → interested is a valid transition
         update_data = {"status": "  Interested  "}
-        _handle_status_transition(db, app_obj, update_data)
+        _handle_status_transition(_mock_db(), _mock_app_obj(), update_data)
         assert update_data["status"] == "interested"
 
     def test_sets_date_applied_on_applied_transition(self):
-        from career_os.services.applications import _handle_status_transition
-
-        db = MagicMock()
-        app_obj = MagicMock()
-        # interested → applied is a valid transition
-        app_obj.status = "interested"
-        app_obj.profile_id = 1
-        app_obj.id = 10
-        app_obj.date_applied = None
-
-        _handle_status_transition(db, app_obj, {"status": "applied"})
+        app_obj = _mock_app_obj(status="interested", date_applied=None)
+        _handle_status_transition(_mock_db(), app_obj, {"status": "applied"})
         assert app_obj.date_applied is not None
 
 
@@ -470,142 +390,91 @@ class TestApplyFieldUpdates:
     """Tests for application field update tracker."""
 
     def test_tracks_changed_fields(self):
-        from career_os.services.applications import _apply_field_updates
-
-        db = MagicMock()
-        app_obj = MagicMock()
+        app_obj = _mock_app_obj()
         app_obj.notes = "old"
-        app_obj.url = "https://old.com"
-
-        _apply_field_updates(db, app_obj, {"notes": "new"})
-        # Should have called setattr and logged
+        _apply_field_updates(_mock_db(), app_obj, {"notes": "new"})
         assert app_obj.notes == "new"
 
     def test_sets_status_without_logging(self):
-        from career_os.services.applications import _apply_field_updates
+        app_obj = _mock_app_obj()
+        _apply_field_updates(_mock_db(), app_obj, {"status": "applied"})
 
-        db = MagicMock()
-        app_obj = MagicMock()
-        app_obj.status = "discovered"
-        app_obj.profile_id = 1
-        app_obj.id = 10
 
-        # Status field should be set but not counted as a changed field
-        _apply_field_updates(db, app_obj, {"status": "applied"})
+# ---------------------------------------------------------------------------
+# _apply_status_timestamps (learning)
+# ---------------------------------------------------------------------------
 
 
 class TestApplyStatusTimestamps:
     """Tests for learning resource status timestamp handler."""
 
     def test_in_progress_sets_started_at(self):
-        from career_os.services.learning import _apply_status_timestamps
-
-        db = MagicMock()
-        resource = MagicMock()
-        resource.started_at = None
-        now = datetime(2026, 4, 10, tzinfo=UTC)
-
-        _apply_status_timestamps(db, resource, "in_progress", now)
+        resource = MagicMock(started_at=None)
+        _apply_status_timestamps(MagicMock(), resource, "in_progress", NOW)
         assert resource.status == "in_progress"
-        assert resource.started_at == now
+        assert resource.started_at == NOW
 
     def test_in_progress_preserves_existing_started_at(self):
-        from career_os.services.learning import _apply_status_timestamps
-
-        db = MagicMock()
-        resource = MagicMock()
         old_time = datetime(2026, 1, 1, tzinfo=UTC)
-        resource.started_at = old_time
-        now = datetime(2026, 4, 10, tzinfo=UTC)
-
-        _apply_status_timestamps(db, resource, "in_progress", now)
-        assert resource.started_at == old_time  # preserved
+        resource = MagicMock(started_at=old_time)
+        _apply_status_timestamps(MagicMock(), resource, "in_progress", NOW)
+        assert resource.started_at == old_time
 
     def test_completed_sets_both_timestamps(self):
-        from career_os.services.learning import _apply_status_timestamps
-
-        db = MagicMock()
-        resource = MagicMock()
-        resource.started_at = None
-        now = datetime(2026, 4, 10, tzinfo=UTC)
-
-        _apply_status_timestamps(db, resource, "completed", now)
+        resource = MagicMock(started_at=None)
+        _apply_status_timestamps(MagicMock(), resource, "completed", NOW)
         assert resource.status == "completed"
-        assert resource.started_at == now
-        assert resource.completed_at == now
+        assert resource.started_at == NOW
+        assert resource.completed_at == NOW
 
     def test_not_started_clears_timestamps(self):
-        from career_os.services.learning import _apply_status_timestamps
-
-        db = MagicMock()
-        resource = MagicMock()
-        resource.started_at = datetime(2026, 1, 1, tzinfo=UTC)
-        resource.completed_at = datetime(2026, 2, 1, tzinfo=UTC)
-        now = datetime(2026, 4, 10, tzinfo=UTC)
-
-        _apply_status_timestamps(db, resource, "not_started", now)
+        resource = MagicMock(
+            started_at=datetime(2026, 1, 1, tzinfo=UTC),
+            completed_at=datetime(2026, 2, 1, tzinfo=UTC),
+        )
+        _apply_status_timestamps(MagicMock(), resource, "not_started", NOW)
         assert resource.status == "not_started"
         assert resource.started_at is None
         assert resource.completed_at is None
+
+
+# ---------------------------------------------------------------------------
+# _deliver_single_notification (pushover)
+# ---------------------------------------------------------------------------
 
 
 class TestDeliverSingleNotification:
     """Tests for the individual notification delivery helper."""
 
     def test_successful_delivery(self):
-        from career_os.services.pushover import _deliver_single_notification
-
         client = MagicMock()
-        log_entry = MagicMock()
-        log_entry.error_message = None
-        log_entry.message = "Test notification"
-        log_entry.title = "Test"
-
-        result = _deliver_single_notification(client, log_entry)
+        entry = _mock_log_entry(message="Test notification")
+        result = _deliver_single_notification(client, entry)
         assert result is True
-        assert log_entry.status == "sent"
-        assert log_entry.error_message is None
+        assert entry.status == "sent"
+        assert entry.error_message is None
         client.send_notification.assert_called_once()
 
     def test_failed_delivery(self):
-        from career_os.services.pushover import PushoverAPIError, _deliver_single_notification
-
         client = MagicMock()
         client.send_notification.side_effect = PushoverAPIError("API down")
-        log_entry = MagicMock()
-        log_entry.error_message = None
-        log_entry.message = "Test"
-        log_entry.title = "Test"
-
-        result = _deliver_single_notification(client, log_entry)
+        entry = _mock_log_entry()
+        result = _deliver_single_notification(client, entry)
         assert result is False
-        assert log_entry.status == "failed"
-        assert "API down" in log_entry.error_message
+        assert entry.status == "failed"
+        assert "API down" in entry.error_message
 
     def test_parses_metadata_from_error_message_json(self):
-        import json
-
-        from career_os.services.pushover import _deliver_single_notification
-
         client = MagicMock()
-        log_entry = MagicMock()
-        log_entry.error_message = json.dumps({"url": "https://example.com", "priority": 1})
-        log_entry.message = "Test"
-        log_entry.title = "Test"
-
-        _deliver_single_notification(client, log_entry)
+        entry = _mock_log_entry(
+            error_message=json.dumps({"url": "https://example.com", "priority": 1})
+        )
+        _deliver_single_notification(client, entry)
         call_kwargs = client.send_notification.call_args.kwargs
         assert call_kwargs["url"] == "https://example.com"
         assert call_kwargs["priority"] == 1
 
     def test_handles_invalid_json_metadata(self):
-        from career_os.services.pushover import _deliver_single_notification
-
         client = MagicMock()
-        log_entry = MagicMock()
-        log_entry.error_message = "not valid json {{"
-        log_entry.message = "Test"
-        log_entry.title = "Test"
-
-        result = _deliver_single_notification(client, log_entry)
-        assert result is True  # should still send successfully
+        entry = _mock_log_entry(error_message="not valid json {{")
+        assert _deliver_single_notification(client, entry) is True
