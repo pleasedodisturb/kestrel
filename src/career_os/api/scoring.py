@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from career_os.ai.openrouter_provider import CreditsExhaustedError
-from career_os.api.constants import DESC_PROFILE_ID
+from career_os.api.constants import DESC_PROFILE_ID, RESP_NOT_FOUND
 from career_os.database import get_db
 from career_os.schemas.scoring import (
     BatchScoreRequest,
@@ -47,7 +47,7 @@ router = APIRouter(tags=["scoring"])
     status_code=201,
     responses={
         402: {"description": "Payment required"},
-        404: {"description": "Not found"},
+        404: {"description": RESP_NOT_FOUND},
         422: {"description": "Profile incomplete"},
         500: {"description": "Internal server error"},
         502: {"description": "Bad gateway"},
@@ -98,7 +98,7 @@ async def score_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/scoring-weights", responses={404: {"description": "Not found"}})
+@router.get("/api/scoring-weights", responses={404: {"description": RESP_NOT_FOUND}})
 async def get_weights_endpoint(
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
@@ -112,7 +112,7 @@ async def get_weights_endpoint(
     return ScoringWeightsResponse.model_validate(weights)
 
 
-@router.put("/api/scoring-weights", responses={404: {"description": "Not found"}})
+@router.put("/api/scoring-weights", responses={404: {"description": RESP_NOT_FOUND}})
 async def update_weights_endpoint(
     payload: ScoringWeightsUpdate,
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
@@ -142,7 +142,7 @@ async def update_weights_endpoint(
 @router.post(
     "/api/score/batch",
     responses={
-        404: {"description": "Not found"},
+        404: {"description": RESP_NOT_FOUND},
         422: {"description": "Profile incomplete"},
         500: {"description": "Internal server error"},
     },
@@ -196,7 +196,7 @@ async def batch_score_endpoint(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/score/job/{discovered_job_id}", responses={404: {"description": "Not found"}})
+@router.get("/api/score/job/{discovered_job_id}", responses={404: {"description": RESP_NOT_FOUND}})
 async def get_job_score_endpoint(
     discovered_job_id: int,
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
@@ -211,7 +211,7 @@ async def get_job_score_endpoint(
 
 @router.get(
     "/api/score/application/{application_id}",
-    responses={404: {"description": "Not found"}},
+    responses={404: {"description": RESP_NOT_FOUND}},
 )
 async def get_application_score_endpoint(
     application_id: int,

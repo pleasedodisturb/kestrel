@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_NOT_FOUND
 from career_os.database import get_db
 from career_os.schemas.applications import (
     ActivityLogResponse,
@@ -31,7 +32,6 @@ from career_os.services.follow_ups import (
     is_ghost_application,
 )
 from career_os.services.gap_analysis import get_readiness_score
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -44,7 +44,7 @@ def _enrich_with_readiness(app_response: ApplicationResponse, db: Session) -> Ap
     return app_response
 
 
-@router.post("", status_code=201, responses={404: {"description": "Not found"}})
+@router.post("", status_code=201, responses={404: {"description": RESP_NOT_FOUND}})
 async def create(
     payload: ApplicationCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -129,7 +129,7 @@ async def list_apps(
     )
 
 
-@router.get("/{application_id}", responses={404: {"description": "Not found"}})
+@router.get("/{application_id}", responses={404: {"description": RESP_NOT_FOUND}})
 async def get_detail(
     application_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -191,7 +191,7 @@ async def get_detail(
 
 @router.patch(
     "/{application_id}",
-    responses={404: {"description": "Not found"}, 422: {"description": "Validation error"}},
+    responses={404: {"description": RESP_NOT_FOUND}, 422: {"description": "Validation error"}},
 )
 async def update(
     application_id: int,
@@ -218,7 +218,7 @@ async def update(
     return ApplicationResponse.model_validate(app_obj)
 
 
-@router.delete("/{application_id}", responses={404: {"description": "Not found"}})
+@router.delete("/{application_id}", responses={404: {"description": RESP_NOT_FOUND}})
 async def delete(
     application_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],

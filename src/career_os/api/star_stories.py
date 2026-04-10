@@ -12,7 +12,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_PROFILE_ID
+from career_os.api.constants import DESC_PROFILE_ID, RESP_NOT_FOUND
 from career_os.database import get_db
 from career_os.schemas.star_stories import (
     RecommendedStoriesResponse,
@@ -45,7 +45,7 @@ router = APIRouter(prefix="/api/star-stories", tags=["star-stories"])
 # ---------------------------------------------------------------------------
 
 
-@router.post("", status_code=201, responses={404: {"description": "Not found"}})
+@router.post("", status_code=201, responses={404: {"description": RESP_NOT_FOUND}})
 async def create_star_story_endpoint(
     body: StarStoryCreate,
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
@@ -58,7 +58,7 @@ async def create_star_story_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("", responses={404: {"description": "Not found"}})
+@router.get("", responses={404: {"description": RESP_NOT_FOUND}})
 async def list_star_stories_endpoint(
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
@@ -70,7 +70,7 @@ async def list_star_stories_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{story_id}", responses={404: {"description": "Not found"}})
+@router.get("/{story_id}", responses={404: {"description": RESP_NOT_FOUND}})
 async def get_star_story_endpoint(
     story_id: int,
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
@@ -85,7 +85,7 @@ async def get_star_story_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.put("/{story_id}", responses={404: {"description": "Not found"}})
+@router.put("/{story_id}", responses={404: {"description": RESP_NOT_FOUND}})
 async def update_star_story_endpoint(
     story_id: int,
     body: StarStoryUpdate,
@@ -101,7 +101,7 @@ async def update_star_story_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.delete("/{story_id}", status_code=204, responses={404: {"description": "Not found"}})
+@router.delete("/{story_id}", status_code=204, responses={404: {"description": RESP_NOT_FOUND}})
 async def delete_star_story_endpoint(
     story_id: int,
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
@@ -125,7 +125,7 @@ app_router = APIRouter(prefix="/api/applications", tags=["star-stories"])
 
 @app_router.get(
     "/{application_id}/recommended-stories",
-    responses={404: {"description": "Not found"}},
+    responses={404: {"description": RESP_NOT_FOUND}},
 )
 async def get_recommended_stories_endpoint(
     application_id: int,
@@ -146,7 +146,7 @@ async def get_recommended_stories_endpoint(
 
 @app_router.get(
     "/{application_id}/story-gaps",
-    responses={404: {"description": "Not found"}},
+    responses={404: {"description": RESP_NOT_FOUND}},
 )
 async def get_story_gaps_endpoint(
     application_id: int,

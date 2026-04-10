@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_NOT_FOUND
 from career_os.database import get_db
 from career_os.schemas.learning import (
     GapRecommendationsResponse,
@@ -29,7 +29,7 @@ router = APIRouter(tags=["learning"])
 
 @router.get(
     "/api/gaps/{gap_id}/recommendations",
-    responses={404: {"description": "Not found"}},
+    responses={404: {"description": RESP_NOT_FOUND}},
 )
 async def get_recommendations(
     gap_id: int,
@@ -73,7 +73,7 @@ async def get_recommendations(
 @router.post(
     "/api/gaps/{gap_id}/recommendations",
     status_code=201,
-    responses={404: {"description": "Not found"}},
+    responses={404: {"description": RESP_NOT_FOUND}},
 )
 async def add_recommendation(
     gap_id: int,
@@ -109,7 +109,7 @@ async def add_recommendation(
 
 @router.patch(
     "/api/learning/{resource_id}/status",
-    responses={404: {"description": "Not found"}, 422: {"description": "Validation error"}},
+    responses={404: {"description": RESP_NOT_FOUND}, 422: {"description": "Validation error"}},
 )
 async def update_status(
     resource_id: int,
