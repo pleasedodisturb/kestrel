@@ -73,7 +73,7 @@ def test_profile(test_db: Session) -> Profile:
 @pytest.fixture
 def second_profile(test_db: Session) -> Profile:
     """Create a second profile for scoping tests."""
-    profile = Profile(name="Other User", email="other@example.com")
+    profile = Profile(name="Other User", email="other@example.com", job_family="Software Engineering")
     test_db.add(profile)
     test_db.commit()
     test_db.refresh(profile)
