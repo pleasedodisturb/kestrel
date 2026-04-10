@@ -17,6 +17,22 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 
 
+# Shared Profile data used across test fixtures to avoid duplicating
+# the same constructor kwargs in every test module.
+DEFAULT_PROFILE_KWARGS = dict(
+    name="Test User",
+    email="test@example.com",
+    location="Frankfurt",
+    job_family="Software Engineering",
+)
+SECOND_PROFILE_KWARGS = dict(
+    name="Other User",
+    email="other@example.com",
+    location="Berlin",
+    job_family="Software Engineering",
+)
+
+
 @pytest.fixture
 def client() -> TestClient:
     """Create a FastAPI test client."""
@@ -68,7 +84,7 @@ def db_session(db_engine) -> Session:
 @pytest.fixture
 def profile(db_session: Session) -> Profile:
     """Seed a default test profile."""
-    p = Profile(id=1, name="Test User", email="test@example.com", location="Frankfurt")
+    p = Profile(id=1, **DEFAULT_PROFILE_KWARGS)
     db_session.add(p)
     db_session.commit()
     return p
