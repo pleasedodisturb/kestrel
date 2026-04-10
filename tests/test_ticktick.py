@@ -35,7 +35,7 @@ from career_os.services.ticktick_sync import (
     sync_learning_goal_to_ticktick,
     sync_pipeline_action_to_ticktick,
 )
-from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 client = TestClient(app)
 

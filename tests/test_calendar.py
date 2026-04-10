@@ -34,7 +34,7 @@ from career_os.services.calendar import (
     list_calendar_events,
     update_calendar_event,
 )
-from tests.conftest import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 client = TestClient(app)
 
