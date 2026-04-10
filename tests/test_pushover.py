@@ -699,7 +699,9 @@ class TestInterviewReminders:
         assert result["skipped"] == 1
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_custom_lead_time(self, mock_client_cls, db_session, profile, pushover_config, application):
+    def test_custom_lead_time(
+        self, mock_client_cls, db_session, profile, pushover_config, application
+    ):
         """Custom lead time is respected — short lead time misses far-future interview."""
         # Set very short lead time (30 minutes)
         update_preferences(
@@ -900,7 +902,13 @@ class TestCrossArea:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_category_disable_honored(
-        self, mock_client_cls, db_session, profile, pushover_config, due_follow_up, ghost_application
+        self,
+        mock_client_cls,
+        db_session,
+        profile,
+        pushover_config,
+        due_follow_up,
+        ghost_application,
     ):
         """VAL-CROSS-018: Per-category disable prevents notification."""
         mock_instance = MagicMock()
