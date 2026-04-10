@@ -31,6 +31,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "bg-red-100 text-red-700",
+  "nice-to-have": "bg-yellow-100 text-yellow-700",
+};
+const DEFAULT_SEVERITY_COLOR = "bg-gray-100 text-gray-600";
+
 interface StarStoriesSectionProps {
   readonly applicationId: number;
   readonly profileId: number;
@@ -474,11 +480,7 @@ export function StarStoriesSection({
                       <span
                         className={cn(
                           "text-xs px-1.5 py-0.5 rounded-full",
-                          gap.severity === "critical"
-                            ? "bg-red-100 text-red-700"
-                            : gap.severity === "nice-to-have"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-gray-100 text-gray-600",
+                          SEVERITY_COLORS[gap.severity] ?? DEFAULT_SEVERITY_COLOR,
                         )}
                       >
                         {gap.severity}

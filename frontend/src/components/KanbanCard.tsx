@@ -12,6 +12,12 @@ import { Ghost } from "lucide-react";
 import type { Application } from "@/api/types";
 import { cn } from "@/lib/utils";
 
+function scoreColor(value: number, high: number, mid: number): string {
+  if (value >= high) return "bg-green-100 text-green-800";
+  if (value >= mid) return "bg-yellow-100 text-yellow-800";
+  return "bg-red-100 text-red-800";
+}
+
 interface KanbanCardProps {
   readonly application: Application;
 }
@@ -92,11 +98,7 @@ export function KanbanCard({ application }: KanbanCardProps) {
             data-testid={`score-badge-${application.id}`}
             className={cn(
               "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
-              application.fit_score >= 8
-                ? "bg-green-100 text-green-800"
-                : application.fit_score >= 5
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-red-100 text-red-800",
+              scoreColor(application.fit_score, 8, 5),
             )}
           >
             {application.fit_score.toFixed(1)}
@@ -110,11 +112,7 @@ export function KanbanCard({ application }: KanbanCardProps) {
               title={`Readiness: ${rounded}%`}
               className={cn(
                 "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
-                rounded >= 80
-                  ? "bg-green-100 text-green-800"
-                  : rounded >= 50
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-red-100 text-red-800",
+                scoreColor(rounded, 80, 50),
               )}
             >
               {rounded}%
