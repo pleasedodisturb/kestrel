@@ -276,6 +276,28 @@ class TestScoreEndpoint:
         assert scored is not None
         assert scored.fit_score > 0
 
+    def test_score_response_surfaces_red_flags(self, client):
+        """A staffing-agency JD should produce a red_flags entry (#73)."""
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": (
+                    "We are a staffing agency hiring on behalf of our client. "
+                    "This is a contract-to-hire role. " + JOB_DESCRIPTION_A
+                ),
+                "job_title": "Senior Technical Program Manager",
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert "red_flags" in data
+        flag_types = {f["flag_type"] for f in data["red_flags"]}
+        assert "staffing_agency" in flag_types
+        # Every flag has the canonical shape.
+        for flag in data["red_flags"]:
+            assert set(flag.keys()) >= {"flag_type", "severity", "description"}
+
     def test_score_nonexistent_profile_returns_404(self, client):
         """Scoring with non-existent profile returns 404."""
         resp = client.post(
