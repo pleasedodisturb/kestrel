@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a reproducible problem in Kestrel
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much
+        detail as you can — this makes it much faster to diagnose.
+
+  - type: input
+    id: version
+    attributes:
+      label: Kestrel version
+      description: Run `kestrel --version` or paste the commit SHA you built from.
+      placeholder: "0.1.0 or commit abc1234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Install method
+      options:
+        - pip / PyPI
+        - npm package
+        - Docker / docker-compose
+        - Built from source
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS / environment
+      placeholder: "macOS 15.2 / Ubuntu 24.04 / Windows 11"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reproduce the issue.
+      placeholder: |
+        1. Run `kestrel ...`
+        2. Click on ...
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: |
+        Paste relevant log output, stack traces, or screenshots.
+        **Redact any personal data, API keys, or tokens before posting.**
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I have redacted personal data and secrets from any logs I pasted
+          required: true

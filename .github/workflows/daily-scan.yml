@@ -105,7 +105,7 @@ jobs:
             fi
 
             # Count review queue items
-            REVIEW_COUNT=$(sed -n '/## Review Queue/,/^---/p' "$DIGEST" | grep "^|" | grep -v "Score" | wc -l | tr -d ' ')
+            REVIEW_COUNT=$(sed -n '/## Review Queue/,/^---/p' "$DIGEST" | grep "^|" | grep -vc "Score" | tr -d ' ')
             if [ "$REVIEW_COUNT" -gt 0 ]; then
               REVIEW_MSG="+ ${REVIEW_COUNT} wildcards in review queue"
             else
