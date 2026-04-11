@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/illustrations/hero-tropical.webp" alt="Kestrel" width="300"></p>
+
 # AI Provider Guide
 
 Kestrel uses AI for job scoring, skills analysis, interview prep, company research, and coaching. This guide explains your options.

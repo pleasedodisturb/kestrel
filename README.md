@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/illustrations/hero-navy.webp" alt="Kestrel" width="280">
+</p>
+
 <h1 align="center">Kestrel</h1>
 
 <p align="center">

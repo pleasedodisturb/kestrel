@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/illustrations/hero-bauhaus.webp" alt="Kestrel" width="300"></p>
+
 # Contributing to Kestrel
 
 Note: The Python package is internally named `career_os` (from the original project). The PyPI package name is `kestrel-app`.
