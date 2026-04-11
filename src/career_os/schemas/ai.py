@@ -1,6 +1,7 @@
 """Pydantic schemas for AI provider layer."""
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -59,6 +60,44 @@ class ScoreBreakdownFactor(BaseModel):
     description: str = Field(..., description="Explanation of this factor's impact")
 
 
+class DimensionalScores(BaseModel):
+    """Six dimensional sub-scores for a job fit (0-10 each).
+
+    Maps to the scoring weight factors on a per-dimension basis:
+
+    * ``technical_fit`` — skills/tools match and experience alignment
+    * ``seniority_alignment`` — over/under-qualified detection
+    * ``compensation_fit`` — salary range vs expectations
+    * ``location_fit`` — remote policy, commute, relocation
+    * ``career_trajectory`` — does the role advance stated goals
+    * ``company_fit`` — company stage, industry, culture signals
+    """
+
+    technical_fit: float = Field(..., ge=0, le=10)
+    seniority_alignment: float = Field(..., ge=0, le=10)
+    compensation_fit: float = Field(..., ge=0, le=10)
+    location_fit: float = Field(..., ge=0, le=10)
+    career_trajectory: float = Field(..., ge=0, le=10)
+    company_fit: float = Field(..., ge=0, le=10)
+
+
+ATSKeywordCategory = Literal["technical", "soft_skill", "tool", "certification", "domain"]
+
+
+class ATSKeyword(BaseModel):
+    """A single ATS keyword extracted from a job description.
+
+    Each keyword is categorized and marked as matched or unmatched against the
+    candidate's profile.
+    """
+
+    keyword: str = Field(..., description="The extracted keyword or phrase")
+    category: ATSKeywordCategory = Field(..., description="Keyword category bucket")
+    matched: bool = Field(
+        ..., description="True if the candidate profile demonstrates this keyword"
+    )
+
+
 class ScoreResult(BaseModel):
     """Structured scoring response."""
 
@@ -74,6 +113,14 @@ class ScoreResult(BaseModel):
         ...,
         min_length=3,
         description="Detailed breakdown of scoring factors with +/- contributions (≥3 factors)",
+    )
+    dimensional_scores: DimensionalScores | None = Field(
+        default=None,
+        description="Six dimensional sub-scores (0-10). None when the AI did not provide them.",
+    )
+    ats_keywords: list[ATSKeyword] = Field(
+        default_factory=list,
+        description="10-15 ATS keywords extracted from the JD, categorized and matched",
     )
 
 

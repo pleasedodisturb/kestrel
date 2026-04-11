@@ -298,6 +298,108 @@ class TestScoreEndpoint:
         for flag in data["red_flags"]:
             assert set(flag.keys()) >= {"flag_type", "severity", "description"}
 
+    def test_score_response_surfaces_dimensional_scores(self, client):
+        """Scoring should return six dimensional sub-scores (0-10 each) (#74)."""
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert "dimensional_scores" in data
+        dim = data["dimensional_scores"]
+        assert dim is not None
+        for key in (
+            "technical_fit",
+            "seniority_alignment",
+            "compensation_fit",
+            "location_fit",
+            "career_trajectory",
+            "company_fit",
+        ):
+            assert key in dim
+            assert 0.0 <= dim[key] <= 10.0
+
+    def test_score_persists_dimensional_scores_in_db(self, client, db_session):
+        """Dimensional scores are persisted on the ScoredJob row (#74)."""
+        resp = client.post(
+            "/api/score",
+            json={"profile_id": 1, "job_description": JOB_DESCRIPTION_A},
+        )
+        assert resp.status_code == 201
+        scored = db_session.query(ScoredJob).filter(ScoredJob.profile_id == 1).first()
+        assert scored is not None
+        assert scored.dim_technical_fit is not None
+        assert scored.dim_seniority_alignment is not None
+        assert scored.dim_compensation_fit is not None
+        assert scored.dim_location_fit is not None
+        assert scored.dim_career_trajectory is not None
+        assert scored.dim_company_fit is not None
+
+    def test_score_response_null_dims_for_legacy_row(self, db_session):
+        """Legacy rows with null dim_* columns produce dimensional_scores=None (#74)."""
+        from career_os.schemas.scoring import ScoreResponse
+
+        legacy = ScoredJob(
+            profile_id=1,
+            fit_score=7.0,
+            readiness_score=50.0,
+            career_alignment=6.0,
+            reasoning="Legacy row without dimensional scores. " * 5,
+            estimated_salary="100,000 EUR",
+            effort_flag="medium",
+            prep_level="moderate",
+            prep_notes="none",
+            is_stale=False,
+            # dim_* all default to None
+        )
+        resp = ScoreResponse.model_validate(legacy)
+        assert resp.dimensional_scores is None
+
+    def test_score_response_surfaces_ats_keywords(self, client):
+        """Scoring should return 10-15 categorized ATS keywords (#75)."""
+        resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert "ats_keywords" in data
+        keywords = data["ats_keywords"]
+        assert 10 <= len(keywords) <= 15
+        categories = {kw["category"] for kw in keywords}
+        assert len(categories) >= 2
+        for kw in keywords:
+            assert set(kw.keys()) >= {"keyword", "category", "matched"}
+            assert kw["category"] in {
+                "technical",
+                "soft_skill",
+                "tool",
+                "certification",
+                "domain",
+            }
+            assert isinstance(kw["matched"], bool)
+
+    def test_score_persists_ats_keywords_in_db(self, client, db_session):
+        """ATS keywords are persisted as JSON on the ScoredJob row (#75)."""
+        resp = client.post(
+            "/api/score",
+            json={"profile_id": 1, "job_description": JOB_DESCRIPTION_A},
+        )
+        assert resp.status_code == 201
+        scored = db_session.query(ScoredJob).filter(ScoredJob.profile_id == 1).first()
+        assert scored is not None
+        assert scored.ats_keywords is not None
+        payload = json.loads(scored.ats_keywords)
+        assert isinstance(payload, list)
+        assert 10 <= len(payload) <= 15
+
     def test_score_nonexistent_profile_returns_404(self, client):
         """Scoring with non-existent profile returns 404."""
         resp = client.post(
