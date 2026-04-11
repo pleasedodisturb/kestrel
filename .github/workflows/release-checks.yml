@@ -76,6 +76,8 @@ jobs:
           npm install --no-save --legacy-peer-deps http-server @axe-core/cli
           npx http-server dist -p 4173 --silent &
           SERVER_PID=$!
-          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+          # Single-quote trap body so $SERVER_PID is evaluated at trap
+          # fire time (shellcheck SC2064).
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
           sleep 2
           npx @axe-core/cli http://127.0.0.1:4173 --exit
