@@ -19,6 +19,7 @@ import type {
 } from "@/api/types";
 import { GradeBadge } from "@/components/GradeBadge";
 import { RedFlagBadge } from "@/components/RedFlagBadge";
+import { CreditsExhaustedBanner } from "@/components/CreditsExhaustedBanner";
 import {
   Search,
   Loader2,
@@ -508,9 +509,6 @@ export function Discovery() {
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [creditsExhausted, setCreditsExhausted] = useState(
-    () => sessionStorage.getItem("credits_exhausted") === "true",
-  );
   const [profileIncomplete, setProfileIncomplete] = useState(
     () => sessionStorage.getItem("profile_incomplete") !== null,
   );
@@ -755,42 +753,8 @@ export function Discovery() {
         />
       )}
 
-      {/* Credits exhausted banner */}
-      {creditsExhausted && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
-              <div>
-                <h3 className="text-sm font-semibold text-amber-800">
-                  AI Scoring Stopped
-                </h3>
-                <p className="mt-1 text-sm text-amber-700">
-                  OpenRouter credits have been exhausted. Some jobs may not have
-                  scores.{" "}
-                  <a
-                    href="https://openrouter.ai"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium underline hover:text-amber-900"
-                  >
-                    Add credits at openrouter.ai
-                  </a>
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                setCreditsExhausted(false);
-                sessionStorage.removeItem("credits_exhausted");
-              }}
-              className="ml-4 text-amber-400 hover:text-amber-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Credits exhausted banner (shared with Kanban / AI Health) */}
+      <CreditsExhaustedBanner />
 
       {/* Profile incomplete banner */}
       {profileIncomplete && (

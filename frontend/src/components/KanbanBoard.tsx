@@ -25,6 +25,15 @@ import { KanbanCard } from "@/components/KanbanCard";
 import { CreateApplicationDialog } from "@/components/CreateApplicationDialog";
 import { PipelineFilters, type FilterState } from "@/components/PipelineFilters";
 import { OverdueBanner } from "@/components/OverdueBanner";
+import { CreditsExhaustedBanner } from "@/components/CreditsExhaustedBanner";
+import {
+  OnboardingWizard,
+  WIZARD_DISMISSED_KEY,
+} from "@/components/OnboardingWizard";
+import {
+  DiscoveryNudge,
+  NUDGE_DISMISSED_KEY,
+} from "@/components/DiscoveryNudge";
 import { useApplications, useUpdateApplication } from "@/hooks/useApplications";
 import { Briefcase, Plus } from "lucide-react";
 
@@ -50,6 +59,12 @@ export function KanbanBoard() {
   const updateMutation = useUpdateApplication();
   const [activeApp, setActiveApp] = useState<Application | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showWizard, setShowWizard] = useState(
+    () => localStorage.getItem(WIZARD_DISMISSED_KEY) !== "true",
+  );
+  const [nudgeDismissed, setNudgeDismissed] = useState(
+    () => localStorage.getItem(NUDGE_DISMISSED_KEY) === "true",
+  );
   // Track which column the dragged card is currently over (needed because
   // closestCorners may resolve over.id to a sibling card's sortable ID
   // instead of the column droppable ID).
@@ -185,6 +200,15 @@ export function KanbanBoard() {
 
   const totalCount = data?.total ?? 0;
 
+  // Discovery nudge: user has added 10+ applications but has never opened
+  // the Discovery page (no `lastDiscoveryVisit` key — set by Discovery.tsx
+  // on every visit). Once dismissed, never reappears.
+  const showDiscoveryNudge =
+    !nudgeDismissed &&
+    totalCount >= 10 &&
+    typeof window !== "undefined" &&
+    localStorage.getItem("lastDiscoveryVisit") === null;
+
   // Empty board CTA
   if (totalCount === 0 && !filters.status && !filters.search && !filters.sort) {
     return (
@@ -205,6 +229,12 @@ export function KanbanBoard() {
             Add Application
           </button>
         </div>
+        {showWizard && (
+          <OnboardingWizard
+            onClose={() => setShowWizard(false)}
+            onAddApplication={() => setShowCreateDialog(true)}
+          />
+        )}
         <CreateApplicationDialog
           open={showCreateDialog}
           onClose={() => setShowCreateDialog(false)}
@@ -236,8 +266,16 @@ export function KanbanBoard() {
         </div>
       </header>
 
+      {/* Credits exhausted banner (402/429 from OpenRouter) */}
+      <CreditsExhaustedBanner />
+
       {/* Overdue follow-ups banner */}
       <OverdueBanner />
+
+      {/* Discovery nudge for users who haven't tried Discovery yet */}
+      {showDiscoveryNudge && (
+        <DiscoveryNudge onDismiss={() => setNudgeDismissed(true)} />
+      )}
 
       {/* Filter and sort controls */}
       <div className="mb-4">

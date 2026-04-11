@@ -331,6 +331,22 @@ class TestProviderFactory:
         provider = get_ai_provider("  mock  ")
         assert isinstance(provider, MockProvider)
 
+    def test_demo_alias_returns_mock(self) -> None:
+        """AI_PROVIDER=demo returns MockProvider (alias for mock)."""
+        provider = get_ai_provider("demo")
+        assert isinstance(provider, MockProvider)
+
+    def test_demo_env_var(self) -> None:
+        """AI_PROVIDER=demo env var resolves to MockProvider."""
+        with patch.dict(os.environ, {"AI_PROVIDER": "demo"}):
+            provider = get_ai_provider()
+            assert isinstance(provider, MockProvider)
+
+    def test_demo_case_insensitive(self) -> None:
+        """Demo alias is case-insensitive and whitespace-trimmed."""
+        assert isinstance(get_ai_provider("Demo"), MockProvider)
+        assert isinstance(get_ai_provider("  DEMO  "), MockProvider)
+
     def test_openrouter_without_key_raises(self) -> None:
         """OpenRouter without API key raises ValueError."""
         with (

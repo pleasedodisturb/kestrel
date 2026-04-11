@@ -10,6 +10,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchAIHealth } from "@/api/aiHealth";
 import type { ProviderHealthStatus } from "@/api/aiHealth";
+import { CreditsExhaustedBanner } from "@/components/CreditsExhaustedBanner";
 import {
   RefreshCw,
   CheckCircle2,
@@ -69,6 +70,8 @@ export function AIHealthDashboard() {
 
   return (
     <section data-testid="ai-health-dashboard" className="space-y-6">
+      <CreditsExhaustedBanner />
+
       {/* Header */}
       <header className="flex items-center justify-between">
         <div>

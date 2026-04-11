@@ -48,10 +48,10 @@ export async function batchScore(
     body: JSON.stringify(params),
   });
 
-  if (resp.status === 402) {
+  if (resp.status === 402 || resp.status === 429) {
     sessionStorage.setItem("credits_exhausted", "true");
     throw new Error(
-      "AI scoring credits exhausted. Add credits at openrouter.ai",
+      "AI scoring stopped — add credits at openrouter.ai",
     );
   }
 
@@ -67,6 +67,12 @@ export async function batchScore(
 
   if (data.credits_exhausted) {
     sessionStorage.setItem("credits_exhausted", "true");
+  } else {
+    // A fully-successful scoring run means credits are flowing again;
+    // clear the flag + any prior dismissal so the banner can resurface
+    // next time scoring breaks.
+    sessionStorage.removeItem("credits_exhausted");
+    sessionStorage.removeItem("credits_exhausted_dismissed");
   }
 
   return data;
