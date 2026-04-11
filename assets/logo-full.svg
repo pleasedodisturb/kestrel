@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-label="Kestrel wordmark with falcon logo">
+  <title>Kestrel</title>
+  <!--
+    Full horizontal wordmark: falcon icon + "KESTREL" type + tagline.
+    Designed for the README header and marketing surfaces.
+  -->
+
+  <!-- Falcon icon at left, same paths as logo-icon scaled to 80x80 -->
+  <g transform="translate(8 8) scale(1.25)">
+    <path d="M 30 24 L 6 8 L 10 24 L 22 28 Z"
+          fill="#D4572A" stroke="#1E293B" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M 34 24 L 58 10 L 56 28 L 42 30 Z"
+          fill="#D4572A" stroke="#1E293B" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M 32 22 Q 22 34 26 50 L 32 58 L 38 50 Q 42 34 32 22 Z"
+          fill="#D4572A" stroke="#1E293B" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M 28 52 L 32 58 L 36 52" fill="none" stroke="#1E293B" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M 32 12 Q 42 12 44 22 L 40 26 L 28 26 Q 24 20 32 12 Z"
+          fill="#D4572A" stroke="#1E293B" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M 44 20 L 52 19 L 49 24 L 44 24 Z"
+          fill="#1E293B" stroke="#1E293B" stroke-width="0.8" stroke-linejoin="round"/>
+    <circle cx="38" cy="19" r="2" fill="#F5A623"/>
+    <circle cx="38.5" cy="19" r="0.9" fill="#1E293B"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text
+    x="108"
+    y="52"
+    font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Inter, sans-serif"
+    font-size="42"
+    font-weight="800"
+    letter-spacing="2"
+    fill="#1E293B"
+  >KESTREL</text>
+
+  <!-- Tagline -->
+  <text
+    x="110"
+    y="74"
+    font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Inter, sans-serif"
+    font-size="12"
+    font-weight="400"
+    letter-spacing="1.5"
+    fill="#D4572A"
+  >A JOB SEARCH SYSTEM THAT RUNS ON YOUR COMPUTER</text>
+</svg>

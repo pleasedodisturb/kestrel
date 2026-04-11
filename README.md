@@ -28,7 +28,7 @@ Pick whichever feels right. They all give you the same app.
 curl -fsSL https://raw.githubusercontent.com/pleasedodisturb/kestrel/main/install.sh | bash
 ```
 
-Detects your OS, checks for Python 3.13+, installs Kestrel, and opens it in your browser.
+Detects your OS, checks for Python 3.12+, installs Kestrel, and opens it in your browser.
 
 Or if you have Node.js:
 ```bash
@@ -50,7 +50,7 @@ kestrel start
 
 Opens your browser automatically. Data stored in `~/.kestrel/`.
 
-Requires Python 3.13+. Don't have Python? Install it from [python.org/downloads](https://www.python.org/downloads/) (Mac/Windows installer, takes 2 minutes). Or use Option 2 or 3 below instead.
+Requires Python 3.12+. Don't have Python? Install it from [python.org/downloads](https://www.python.org/downloads/) (Mac/Windows installer, takes 2 minutes). Or use Option 2 or 3 below instead.
 
 ### Option 2: Docker (isolated, nothing touches your system)
 

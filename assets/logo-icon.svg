@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Kestrel falcon logo">
+  <title>Kestrel</title>
+  <!--
+    Kestrel falcon in a stooping dive pose.
+    Palette: #D4572A (rusty orange), #1E293B (navy outline), #F5A623 (gold eye).
+    Designed to read at 16x16 favicon size — minimal detail, high contrast
+    outline, and a clearly hooked beak so it doesn't get mistaken for a fish.
+  -->
+
+  <!-- Left wing: swept back and upward like a folded diving wing -->
+  <path
+    d="M 30 24
+       L 6 8
+       L 10 24
+       L 22 28
+       Z"
+    fill="#D4572A"
+    stroke="#1E293B"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+  />
+
+  <!-- Right wing: mirrored, slightly more open -->
+  <path
+    d="M 34 24
+       L 58 10
+       L 56 28
+       L 42 30
+       Z"
+    fill="#D4572A"
+    stroke="#1E293B"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+  />
+
+  <!-- Body: compact teardrop, pointed tail -->
+  <path
+    d="M 32 22
+       Q 22 34 26 50
+       L 32 58
+       L 38 50
+       Q 42 34 32 22
+       Z"
+    fill="#D4572A"
+    stroke="#1E293B"
+    stroke-width="1.8"
+    stroke-linejoin="round"
+  />
+
+  <!-- Tail feathers: small split at base -->
+  <path
+    d="M 28 52 L 32 58 L 36 52"
+    fill="none"
+    stroke="#1E293B"
+    stroke-width="1.2"
+    stroke-linecap="round"
+  />
+
+  <!-- Head: profile facing right, slightly forward of body -->
+  <path
+    d="M 32 12
+       Q 42 12 44 22
+       L 40 26
+       L 28 26
+       Q 24 20 32 12
+       Z"
+    fill="#D4572A"
+    stroke="#1E293B"
+    stroke-width="1.8"
+    stroke-linejoin="round"
+  />
+
+  <!-- Hooked beak: a clear raptor curve, not a rounded snout -->
+  <path
+    d="M 44 20
+       L 52 19
+       L 49 24
+       L 44 24
+       Z"
+    fill="#1E293B"
+    stroke="#1E293B"
+    stroke-width="0.8"
+    stroke-linejoin="round"
+  />
+
+  <!-- Eye: amber iris with navy pupil, positioned just behind the beak -->
+  <circle cx="38" cy="19" r="2" fill="#F5A623" />
+  <circle cx="38.5" cy="19" r="0.9" fill="#1E293B" />
+</svg>

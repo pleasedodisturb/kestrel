@@ -2,7 +2,26 @@
  * API client functions for AI scoring.
  */
 
+import type { ScoreResponseShape } from "./types";
+
 const SCORE_API = "/api/score";
+
+/**
+ * Fetch the most recent score for an application. Returns `null` when no
+ * score has been computed yet (404 from the backend).
+ */
+export async function getApplicationScore(
+  applicationId: number,
+  profileId: number,
+): Promise<ScoreResponseShape | null> {
+  const resp = await fetch(
+    `${SCORE_API}/application/${applicationId}?profile_id=${profileId}`,
+  );
+  if (resp.status === 404) return null;
+  if (!resp.ok) throw new Error(`Failed to fetch score: ${resp.status}`);
+  return (await resp.json()) as ScoreResponseShape;
+}
+
 
 export interface BatchScoreRequest {
   profile_id: number;
