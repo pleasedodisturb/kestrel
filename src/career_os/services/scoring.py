@@ -397,6 +397,38 @@ async def score_job(
     )
     red_flags_json = json.dumps(red_flags) if red_flags else None
 
+    # Dimensional sub-scores: six nullable floats stored as individual columns
+    # so they can be queried/aggregated later. When the AI provider didn't
+    # return dimensional_scores, all six columns stay NULL.
+    dim = score_data.dimensional_scores
+    dim_columns: dict[str, float | None] = (
+        {
+            "dim_technical_fit": dim.technical_fit,
+            "dim_seniority_alignment": dim.seniority_alignment,
+            "dim_compensation_fit": dim.compensation_fit,
+            "dim_location_fit": dim.location_fit,
+            "dim_career_trajectory": dim.career_trajectory,
+            "dim_company_fit": dim.company_fit,
+        }
+        if dim is not None
+        else {
+            "dim_technical_fit": None,
+            "dim_seniority_alignment": None,
+            "dim_compensation_fit": None,
+            "dim_location_fit": None,
+            "dim_career_trajectory": None,
+            "dim_company_fit": None,
+        }
+    )
+
+    # ATS keywords: serialize the list of {keyword, category, matched} to JSON
+    # text. Empty list → NULL so legacy rows remain unchanged.
+    ats_keywords_json = (
+        json.dumps([kw.model_dump() for kw in score_data.ats_keywords])
+        if score_data.ats_keywords
+        else None
+    )
+
     # Persist the score
     scored_job = ScoredJob(
         profile_id=profile_id,
@@ -412,8 +444,10 @@ async def score_job(
         prep_notes=score_data.prep_notes,
         score_breakdown=breakdown_json,
         red_flags=red_flags_json,
+        ats_keywords=ats_keywords_json,
         is_stale=False,
         weights_snapshot=json.dumps(profile_data["weights"]),
+        **dim_columns,
     )
     db.add(scored_job)
 
