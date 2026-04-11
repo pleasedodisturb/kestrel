@@ -43,11 +43,14 @@ jobs:
 
       - name: Alembic migration check
         run: |
-          # Ensure exactly one migration head exists (catches merge conflicts).
-          heads=$(alembic heads | grep -c '(head)' || true)
-          if [ "$heads" -ne 1 ]; then
-            echo "::error::Expected exactly 1 alembic head, found $heads"
-            alembic heads
+          # Capture alembic heads output separately so real alembic errors
+          # surface with their actual message instead of being masked by
+          # the pipeline-count step below.
+          alembic_heads_output=$(alembic heads)
+          heads_count=$(printf '%s\n' "$alembic_heads_output" | grep -c '(head)' || true)
+          if [ "$heads_count" -ne 1 ]; then
+            echo "::error::Expected exactly 1 alembic head, found $heads_count"
+            printf '%s\n' "$alembic_heads_output"
             exit 1
           fi
           # Apply migrations against a fresh SQLite DB (path set in alembic.ini).
@@ -62,7 +65,10 @@ jobs:
 
       - name: API smoke test
         run: |
-          uvicorn career_os.main:app --host 127.0.0.1 --port 8100 &
+          # Start uvicorn with logs captured to a file so we can dump them
+          # on failure — otherwise crash reasons are invisible in CI.
+          uvicorn career_os.main:app --host 127.0.0.1 --port 8100 \
+            > uvicorn.log 2>&1 &
           APP_PID=$!
           trap "kill $APP_PID 2>/dev/null || true" EXIT
           for i in 1 2 3 4 5 6 7 8 9 10; do
@@ -70,15 +76,33 @@ jobs:
               echo "Health check passed."
               exit 0
             fi
+            # If uvicorn died early, surface the logs and stop waiting.
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "::error::uvicorn exited before becoming healthy"
+              cat uvicorn.log
+              exit 1
+            fi
             sleep 1
           done
           echo "::error::API did not become healthy within 10s"
+          cat uvicorn.log
           exit 1
 
       - name: Security audit (dependencies)
+        # Strict: any advisory fails the build. If an upstream advisory has
+        # no fix yet, add the vuln ID to .pip-audit-ignore (one per line,
+        # with a comment) as a temporary escape hatch.
         run: |
           pip install pip-audit
-          pip-audit
+          IGNORE_ARGS=""
+          if [ -f .pip-audit-ignore ]; then
+            while IFS= read -r line; do
+              [[ "$line" =~ ^[[:space:]]*# || -z "${line// }" ]] && continue
+              id=$(echo "$line" | awk '{print $1}')
+              IGNORE_ARGS="$IGNORE_ARGS --ignore-vuln $id"
+            done < .pip-audit-ignore
+          fi
+          pip-audit $IGNORE_ARGS
 
       - name: PII leak check
         run: |

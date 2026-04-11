@@ -21,8 +21,10 @@ repos:
       - id: ruff-format
         files: ^(src|tests)/
 
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
+  # pre-commit/mirrors-prettier was archived in March 2024.
+  # rbubley/mirrors-prettier is the actively-maintained fork.
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.3.3
     hooks:
       - id: prettier
         files: ^frontend/src/.*\.(ts|tsx|js|jsx|css|json|md)$

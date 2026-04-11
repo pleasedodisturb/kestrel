@@ -12,7 +12,6 @@ paths = [
   '''config/personal\.yaml\.example$''',
   '''tests/fixtures/.*''',
   '''docs/.*''',
-  '''.*\.md$''',
 ]
 
 regexes = [
