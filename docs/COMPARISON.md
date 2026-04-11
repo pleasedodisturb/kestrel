@@ -6,7 +6,7 @@ The job search tool space splits into two camps: polished SaaS trackers that hel
 
 ## The Landscape
 
-Job search tools fall into four categories:
+Job search tools fall into five categories:
 
 **Commercial trackers** (Huntr, Teal) - Polished SaaS with Chrome extensions, kanban boards, and AI resume builders. Good UX, cloud-only, $25-40/month for full features. Manual job discovery - you clip jobs yourself.
 
@@ -14,50 +14,54 @@ Job search tools fall into four categories:
 
 **Open source tools** (Career-Ops, JobSync, Kestrel) - Self-hosted, data stays with you, free or near-free. Each takes a different approach: Career-Ops is a prompt framework, JobSync is a tracker with AI review, Kestrel adds automated discovery and scoring.
 
-**AI assistants** (ChatGPT, Claude, Perplexity) - Can do any individual task well (evaluate a JD, draft a cover letter) but cannot maintain state across sessions, run daily scans, or manage a pipeline over weeks.
+**AI assistants** (ChatGPT, Claude, vanilla Perplexity) - Can do any individual task well (evaluate a JD, draft a cover letter) but cannot maintain state across sessions, run daily scans, or manage a pipeline over weeks.
+
+**Agentic AI** (Perplexity Computer) - The new middle ground: a cloud-hosted multi-model agent with persistent memory, scheduled tasks, and a companion browser (Comet) that can auto-fill applications. Covers most of Kestrel's workflow at a premium price ($200/month), but closed, US-centric, and has no structured scoring rubric or pipeline/kanban model.
 
 ## Comparison Table
 
-| Dimension | Huntr | Teal | Simplify | Career-Ops | JobSync | Kestrel | AI Assistants |
-|-----------|-------|------|----------|------------|---------|---------|---------------|
-| **Cost** | $40/mo | $29/mo | $25-39/mo | Free (needs Claude sub ~$20/mo) | Free | Free (AI: $0-3/mo) | $0-20/mo |
-| **Self-hosted** | No | No | No | Yes (terminal) | Yes (Docker) | Yes (Docker) | No |
-| **Data ownership** | Vendor-held | Vendor-held | Vendor-held | Local files | Local SQLite | Local SQLite | Session-only |
-| **Web UI** | Yes (polished) | Yes (polished) | Minimal | No (TUI only) | Yes (Shadcn) | Yes (React) | Chat interface |
-| **Mobile app** | Yes | No | No | No | No | No | Yes (chat) |
-| **Chrome extension** | Yes (1000+ ATS) | Yes | Yes (1000+ ATS) | No | No | No | No |
-| **Job discovery** | Manual clip | Manual clip | Curated board | Company pages only | Basic | Multi-board automated | Ad-hoc search |
-| **Daily auto-scan** | No | No | No | No | No | Yes (GitHub Actions) | No |
-| **AI scoring** | Resume-vs-JD | Job match score | No | A-F evaluation (6 blocks) | Job matching | Custom profile rubric | Conversational |
-| **Custom scoring rubric** | No | No | No | Yes (prompt-based) | No | Yes (profile YAML) | Sort of |
-| **Cover letter gen** | No | No | No | Yes | No | Yes | Yes (one-off) |
-| **CV tailoring** | AI resume builder | AI resume builder | AI resume (premium) | Yes (excellent) | Resume review | Yes | Yes (one-off) |
-| **Auto-fill/apply** | Yes (killer feature) | No | Yes (killer feature) | No | No | Experimental (Playwright) | No |
-| **Interview prep** | No | No | No | Yes | No | Yes | Yes (one-off) |
-| **EU job boards** | No | No | No (US-focused) | No | No | Yes (Arbeitsagentur) | No |
-| **REST API** | No | No | No | No | Yes | Yes | API exists but different |
-| **Setup effort** | 2 min | 2 min | 2 min | 15 min | 10 min (Docker) | 10 min (Docker) | 0 min |
-| **Community** | Large (commercial) | Large (commercial) | Large (commercial) | 23k GitHub stars | 499 stars | 0 stars (new) | Massive |
+| Dimension | Huntr | Teal | Simplify | Career-Ops | JobSync | Kestrel | Perplexity Computer | AI Assistants |
+|-----------|-------|------|----------|------------|---------|---------|---------------------|---------------|
+| **Cost** | $40/mo | $29/mo | $25-39/mo | Free (needs Claude sub ~$20/mo) | Free | Free (AI: $0-3/mo) | $200/mo (Max) | $0-20/mo |
+| **Self-hosted** | No | No | No | Yes (terminal) | Yes (Docker) | Yes (Docker) | No (cloud sandbox) | No |
+| **Data ownership** | Vendor-held | Vendor-held | Vendor-held | Local files | Local SQLite | Local SQLite | Vendor-held (no training) | Session-only |
+| **Web UI** | Yes (polished) | Yes (polished) | Minimal | No (TUI only) | Yes (Shadcn) | Yes (React) | Yes (Max app) | Chat interface |
+| **Mobile app** | Yes | No | No | No | No | No | Yes | Yes (chat) |
+| **Chrome extension** | Yes (1000+ ATS) | Yes | Yes (1000+ ATS) | No | No | No | Comet browser (integrated) | No |
+| **Job discovery** | Manual clip | Manual clip | Curated board | Company pages only | Basic | Multi-board automated | Ad-hoc (web + LinkedIn via Comet) | Ad-hoc search |
+| **Daily auto-scan** | No | No | No | No | No | Yes (GitHub Actions) | Yes (scheduled tasks) | No |
+| **AI scoring** | Resume-vs-JD | Job match score | No | A-F evaluation (6 blocks) | Job matching | Custom profile rubric | Conversational | Conversational |
+| **Custom scoring rubric** | No | No | No | Yes (prompt-based) | No | Yes (profile YAML) | No (prompt-based) | Sort of |
+| **Cover letter gen** | No | No | No | Yes | No | Yes | Yes | Yes (one-off) |
+| **CV tailoring** | AI resume builder | AI resume builder | AI resume (premium) | Yes (excellent) | Resume review | Yes | Yes | Yes (one-off) |
+| **Auto-fill/apply** | Yes (killer feature) | No | Yes (killer feature) | No | No | Experimental (Playwright) | Yes (Comet, killer feature) | No |
+| **Interview prep** | No | No | No | Yes | No | Yes | Yes | Yes (one-off) |
+| **EU job boards** | No | No | No (US-focused) | No | No | Yes (Arbeitsagentur) | No | No |
+| **REST API** | No | No | No | No | Yes | Yes | No (closed platform) | API exists but different |
+| **Setup effort** | 2 min | 2 min | 2 min | 15 min | 10 min (Docker) | 10 min (Docker) | 0 min | 0 min |
+| **Community** | Large (commercial) | Large (commercial) | Large (commercial) | 23k GitHub stars | 499 stars | 0 stars (new) | Massive (Perplexity) | Massive |
 
 ## "Can't ChatGPT/Perplexity Do This?"
 
 Honest answer: for any single task, yes. AI assistants are excellent at one-off work. Here is where they fall short for systematic job searching:
 
-| Capability | AI Assistant | Dedicated Tool (any) |
-|-----------|-------------|---------------------|
-| Evaluate one JD against your resume | Great | Great |
-| Draft a cover letter | Great | Good to great |
-| Search for jobs right now | Good (web search) | Good (board APIs) |
-| Remember your pipeline state tomorrow | No | Yes |
-| Run a daily scan while you sleep | No | Some (Kestrel yes) |
-| Track 50 applications across stages | No (resets each session) | Yes |
-| Score 20 new postings against your profile automatically | No | Some (Kestrel yes) |
-| Auto-fill application forms | No | Some (Huntr, Simplify) |
-| Export your history for analysis | No persistent history | Yes |
+| Capability | AI Chatbot (ChatGPT/Claude/vanilla Perplexity) | Perplexity Computer | Dedicated Tool (any) |
+|-----------|-----------------------------------------------|---------------------|---------------------|
+| Evaluate one JD against your resume | Great | Great | Great |
+| Draft a cover letter | Great | Great | Good to great |
+| Search for jobs right now | Good (web search) | Good (Comet + LinkedIn) | Good (board APIs) |
+| Remember your pipeline state tomorrow | No | Yes (persistent memory) | Yes |
+| Run a daily scan while you sleep | No | Yes (scheduled tasks) | Some (Kestrel yes) |
+| Track 50 applications across stages | No (resets each session) | Partial (memory, no kanban) | Yes |
+| Score 20 new postings against your profile automatically | No | Partial (no structured rubric) | Some (Kestrel yes) |
+| Auto-fill application forms | No | Yes (Comet browser) | Some (Huntr, Simplify) |
+| Export your history for analysis | No persistent history | No (closed sandbox) | Yes |
+| EU job board coverage (Arbeitsagentur) | No | No | Some (Kestrel yes) |
+| Monthly cost | $0-20 | $200 | $0-40 |
 
-The gap is not intelligence - it is persistence and automation. AI assistants are stateless. Job searching is a weeks-long stateful process.
+The gap is not intelligence - it is persistence, domain-specific rubrics, data ownership, and price. Vanilla AI chatbots are stateless. Perplexity Computer fixes persistence and even automates recurring tasks, but it runs in a vendor sandbox at $200/month, has no structured rubric scoring, no pipeline/kanban model, and no EU board coverage. Job searching is a weeks-long stateful process that rewards a tool shaped for it.
 
-If you are applying to fewer than 10 jobs total, ChatGPT is probably enough. If you are running a sustained search across dozens of positions over weeks, you need something that remembers and automates.
+If you are applying to fewer than 10 jobs total, ChatGPT is probably enough. If you are running a sustained search across dozens of positions over weeks and want a SaaS agent with zero setup, Perplexity Computer will cover most of the workflow at a premium. If you want ownership of your data, rubric-driven scoring, EU board support, or near-zero cost, a dedicated tool is the better fit.
 
 <details>
 <summary><strong>Want to try the Kestrel approach with just a chatbot?</strong></summary>
@@ -228,3 +232,4 @@ Not necessarily better - structurally different in ways that matter to some user
 | Applying to fewer than 10 jobs | **ChatGPT/Claude** | A dedicated tool is overkill - just use AI directly |
 | Want a proven tool with community support | **Huntr**, **Teal**, or **Career-Ops** | Established, documented, battle-tested |
 | Want maximum automation end-to-end | **Kestrel** (with caveats) | Discovery + scoring + tracking + apply in one pipeline, but auto-apply is experimental |
+| Willing to pay premium for an all-in-one cloud agent | **Perplexity Computer** ($200/mo) | Persistent memory, scheduled tasks, and Comet browser auto-fill in one product - closest SaaS analog to Kestrel's pipeline, minus the rubric, EU boards, and data ownership |

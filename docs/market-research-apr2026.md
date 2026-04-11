@@ -36,6 +36,9 @@ Tools that automate job searching, scoring, and applying.
 | **Careery** | One-time purchase (varies) | Up to 250 apps/day within 1-3 hours of posting, smart matching, no subscription | Closed SaaS |
 | **JobHire.ai** | $19/wk (100 apps) / $49/mo | Auto-apply with AI, but **BBB rating of F**, billing disputes | Closed SaaS |
 | **JobCopilot** | ~$20-30/mo | Scans 500K+ company career pages directly, auto-apply | Closed SaaS |
+| **Perplexity Computer** (+ Comet) | $200/mo (Max) / $325/seat/mo (Enterprise) | Cloud agent orchestrating 19 models (Opus 4.6 core, Gemini, ChatGPT 5.2, etc.); persistent sandbox memory across sessions; scheduled/recurring tasks with condition triggers; Comet browser auto-fills LinkedIn and ATS forms from resume + LinkedIn profile; template tasks for job search (e.g. `/gen/computer/accounting-jobs`); "no training on your data" guarantee | Closed SaaS (launched Feb 25, 2026) |
+
+**Note on Perplexity Computer:** Unlike the other copilots in this section, Perplexity Computer is a general-purpose agentic platform that happens to cover the job-search workflow as one of many templates. It's the first mainstream tool to combine persistent memory, scheduled tasks, and browser-level auto-fill in one product — plugging the "AI assistants are stateless" gap that CareerOS's positioning has historically exploited against ChatGPT/Claude/vanilla Perplexity. At $200/month it's ~10× the price of dedicated copilots and ~50-200× CareerOS, it has no structured scoring rubric, no pipeline/kanban model, no EU board coverage (Arbeitsagentur, StepStone), and no data export — so it covers the workflow broadly but shallowly compared to a purpose-built tool. It should be treated as a serious competitor on the "premium SaaS agent" axis, distinct from both stateless chatbots and dedicated job-search tools.
 
 ### 1.4 Human-Assisted Services
 
@@ -198,7 +201,7 @@ CareerOS is not another auto-apply bot. It's a **career operations platform** - 
 
 | Capability | CareerOS | Closest Competitor |
 |-----------|----------|-------------------|
-| Multi-board scraping (python-jobspy) + AI scoring + SQLite tracking + browser auto-apply in one pipeline | Yes | ApplyPilot (partial) |
+| Multi-board scraping (python-jobspy) + AI scoring + SQLite tracking + browser auto-apply in one pipeline | Yes | ApplyPilot (partial); Perplexity Computer + Comet (cloud, $200/mo, no rubric/EU/export) |
 | Configurable AI scoring with explicit criteria (target-roles.md) | Yes | None - all are black boxes |
 | YAML-based CV with Git-tracked versions (RenderCV) | Yes | None |
 | Per-application tailored CVs (12 variants) | Yes | Massive (closed) |
