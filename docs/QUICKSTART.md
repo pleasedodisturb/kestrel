@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/illustrations/hero-coral.webp" alt="Kestrel" width="300"></p>
+
 # Getting Started with Kestrel
 
 This guide assumes you have never used a terminal before. Every step is explained. If you get stuck, check the [Common Problems](#common-problems) section at the bottom or the [FAQ](FAQ.md).
