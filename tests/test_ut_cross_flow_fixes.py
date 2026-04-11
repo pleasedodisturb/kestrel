@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from career_os.database import Base, get_db
 from career_os.main import app
 from career_os.models.models import Application, FollowUp, Profile
+from tests.conftest import DEFAULT_PROFILE_KWARGS
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -51,7 +52,7 @@ def test_db(_db_engine):
 
 @pytest.fixture
 def profile(test_db: Session) -> Profile:
-    p = Profile(name="Test User", email="test@example.com", location="Frankfurt", job_family="Software Engineering")
+    p = Profile(**DEFAULT_PROFILE_KWARGS)
     test_db.add(p)
     test_db.commit()
     test_db.refresh(p)

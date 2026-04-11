@@ -12,6 +12,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID, RESP_404_500
 from career_os.database import get_db
 from career_os.schemas.role_intelligence import (
     InterviewFormatResponse,
@@ -24,7 +25,6 @@ from career_os.services.role_intelligence import (
     get_interview_patterns,
     get_salary_benchmarks,
 )
-from career_os.api.constants import DESC_PROFILE_ID
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ router = APIRouter(prefix="/api/intelligence", tags=["role-intelligence"])
 
 @router.get(
     "/interview-format",
-    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+    responses=RESP_404_500,
 )
 async def interview_format_endpoint(
     company: Annotated[str, Query(min_length=1, description="Company name")],
@@ -77,7 +77,7 @@ async def interview_format_endpoint(
 
 @router.get(
     "/salary",
-    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+    responses=RESP_404_500,
 )
 async def salary_benchmark_endpoint(
     role: Annotated[str, Query(min_length=1, description="Role type to benchmark")],
@@ -119,7 +119,7 @@ async def salary_benchmark_endpoint(
 
 @router.get(
     "/patterns",
-    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+    responses=RESP_404_500,
 )
 async def interview_patterns_endpoint(
     role: Annotated[str, Query(min_length=1, description="Role type")],

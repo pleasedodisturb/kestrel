@@ -41,6 +41,7 @@ from career_os.services.pushover_client import (
     PushoverAuthError,
     PushoverClient,
 )
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 client = TestClient(app)
 
@@ -81,7 +82,7 @@ def db_session():
 @pytest.fixture()
 def profile(db_session):
     """Create a test profile."""
-    p = Profile(name="Test User", email="test@example.com", location="Frankfurt", job_family="Software Engineering")
+    p = Profile(**DEFAULT_PROFILE_KWARGS)
     db_session.add(p)
     db_session.commit()
     db_session.refresh(p)
@@ -91,7 +92,7 @@ def profile(db_session):
 @pytest.fixture()
 def profile_b(db_session):
     """Create a second test profile for isolation tests."""
-    p = Profile(name="Other User", email="other@example.com", location="Berlin", job_family="Software Engineering")
+    p = Profile(**SECOND_PROFILE_KWARGS)
     db_session.add(p)
     db_session.commit()
     db_session.refresh(p)
@@ -388,12 +389,12 @@ class TestFollowUpReminders:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_due_follow_up_triggers_notification(
-        self, MockClient, db_session, profile, pushover_config, due_follow_up, application
+        self, mock_client_cls, db_session, profile, pushover_config, due_follow_up, application
     ):
         """Due follow-up triggers Pushover notification with company, role."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         result = trigger_follow_up_reminders(db_session, profile.id)
         assert result["triggered"] == 1
@@ -408,12 +409,12 @@ class TestFollowUpReminders:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_follow_up_logged(
-        self, MockClient, db_session, profile, pushover_config, due_follow_up
+        self, mock_client_cls, db_session, profile, pushover_config, due_follow_up
     ):
         """Follow-up notification creates a log entry."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         trigger_follow_up_reminders(db_session, profile.id)
 
@@ -446,10 +447,10 @@ class TestFollowUpReminders:
 
     def test_follow_up_api_trigger(self, db_session, profile, pushover_config, due_follow_up):
         """POST /api/notifications/trigger/follow-ups works via API."""
-        with patch("career_os.services.pushover.PushoverClient") as MockClient:
+        with patch("career_os.services.pushover.PushoverClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-            MockClient.return_value = mock_instance
+            mock_client_cls.return_value = mock_instance
 
             resp = client.post(f"/api/notifications/trigger/follow-ups?profile_id={profile.id}")
             assert resp.status_code == 200
@@ -467,12 +468,12 @@ class TestGhostAlerts:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_ghost_triggers_notification_with_days(
-        self, MockClient, db_session, profile, pushover_config, ghost_application
+        self, mock_client_cls, db_session, profile, pushover_config, ghost_application
     ):
         """Ghost application triggers notification with company, role, days count."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         result = trigger_ghost_alerts(db_session, profile.id)
         assert result["triggered"] >= 1
@@ -486,12 +487,12 @@ class TestGhostAlerts:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_ghost_notification_logged(
-        self, MockClient, db_session, profile, pushover_config, ghost_application
+        self, mock_client_cls, db_session, profile, pushover_config, ghost_application
     ):
         """Ghost notification creates a log entry with application_id."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         trigger_ghost_alerts(db_session, profile.id)
 
@@ -529,12 +530,12 @@ class TestDiscoveryAlerts:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_high_score_triggers_notification(
-        self, MockClient, db_session, profile, pushover_config
+        self, mock_client_cls, db_session, profile, pushover_config
     ):
         """High-scoring discovery sends notification with company, role, score."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         result = trigger_discovery_alert(
             db_session,
@@ -552,7 +553,7 @@ class TestDiscoveryAlerts:
         assert "High-Scoring" in call_args.kwargs["title"]
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_below_threshold_skipped(self, MockClient, db_session, profile, pushover_config):
+    def test_below_threshold_skipped(self, mock_client_cls, db_session, profile, pushover_config):
         """Score below threshold is skipped."""
         result = trigger_discovery_alert(
             db_session,
@@ -565,11 +566,11 @@ class TestDiscoveryAlerts:
         assert result["skipped"] == 1
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_custom_threshold(self, MockClient, db_session, profile, pushover_config):
+    def test_custom_threshold(self, mock_client_cls, db_session, profile, pushover_config):
         """Custom threshold is respected."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         # Set threshold to 9
         update_preferences(
@@ -616,10 +617,10 @@ class TestDiscoveryAlerts:
 
     def test_discovery_api_trigger(self, db_session, profile, pushover_config):
         """POST /api/notifications/trigger/discovery works via API."""
-        with patch("career_os.services.pushover.PushoverClient") as MockClient:
+        with patch("career_os.services.pushover.PushoverClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-            MockClient.return_value = mock_instance
+            mock_client_cls.return_value = mock_instance
 
             resp = client.post(
                 "/api/notifications/trigger/discovery"
@@ -639,12 +640,12 @@ class TestInterviewReminders:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_upcoming_interview_triggers_reminder(
-        self, MockClient, db_session, profile, pushover_config, interview_event
+        self, mock_client_cls, db_session, profile, pushover_config, interview_event
     ):
         """Upcoming interview within lead time triggers notification."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         result = trigger_interview_reminders(db_session, profile.id)
         assert result["triggered"] == 1
@@ -656,12 +657,12 @@ class TestInterviewReminders:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_interview_includes_meeting_link(
-        self, MockClient, db_session, profile, pushover_config, interview_event
+        self, mock_client_cls, db_session, profile, pushover_config, interview_event
     ):
         """Interview reminder includes meeting link."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         trigger_interview_reminders(db_session, profile.id)
 
@@ -670,12 +671,12 @@ class TestInterviewReminders:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_no_duplicate_interview_reminders(
-        self, MockClient, db_session, profile, pushover_config, interview_event, application
+        self, mock_client_cls, db_session, profile, pushover_config, interview_event, application
     ):
         """Already-notified interview is skipped on second trigger."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         # First trigger sends
         result1 = trigger_interview_reminders(db_session, profile.id)
@@ -699,7 +700,9 @@ class TestInterviewReminders:
         assert result["skipped"] == 1
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_custom_lead_time(self, MockClient, db_session, profile, pushover_config, application):
+    def test_custom_lead_time(
+        self, mock_client_cls, db_session, profile, pushover_config, application
+    ):
         """Custom lead time is respected — short lead time misses far-future interview."""
         # Set very short lead time (30 minutes)
         update_preferences(
@@ -738,12 +741,12 @@ class TestAuthFailure:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_auth_error_logged_not_crash(
-        self, MockClient, db_session, profile, pushover_config, due_follow_up
+        self, mock_client_cls, db_session, profile, pushover_config, due_follow_up
     ):
         """Auth failure is logged, doesn't crash, surfaces in integration status."""
         mock_instance = MagicMock()
         mock_instance.send_notification.side_effect = PushoverAuthError("Invalid credentials", 401)
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         # Should not raise
         result = trigger_follow_up_reminders(db_session, profile.id)
@@ -763,12 +766,12 @@ class TestAuthFailure:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_auth_error_updates_integration_status(
-        self, MockClient, db_session, profile, pushover_config, due_follow_up
+        self, mock_client_cls, db_session, profile, pushover_config, due_follow_up
     ):
         """Auth failure updates the integration status to 'error'."""
         mock_instance = MagicMock()
         mock_instance.send_notification.side_effect = PushoverAuthError("Invalid", 401)
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         trigger_follow_up_reminders(db_session, profile.id)
 
@@ -786,10 +789,10 @@ class TestAuthFailure:
 
     def test_send_test_with_invalid_creds(self, db_session, profile, pushover_config):
         """Send test notification with invalid creds logs failure."""
-        with patch("career_os.services.pushover.PushoverClient") as MockClient:
+        with patch("career_os.services.pushover.PushoverClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.send_notification.side_effect = PushoverAuthError("Bad creds", 401)
-            MockClient.return_value = mock_instance
+            mock_client_cls.return_value = mock_instance
 
             result = send_test_notification(
                 db_session,
@@ -803,10 +806,10 @@ class TestAuthFailure:
 
     def test_auth_error_surfaced_in_api(self, db_session, profile, pushover_config, due_follow_up):
         """Auth error is visible via integration config API."""
-        with patch("career_os.services.pushover.PushoverClient") as MockClient:
+        with patch("career_os.services.pushover.PushoverClient") as mock_client_cls:
             mock_instance = MagicMock()
             mock_instance.send_notification.side_effect = PushoverAuthError("Invalid key", 401)
-            MockClient.return_value = mock_instance
+            mock_client_cls.return_value = mock_instance
 
             # Trigger to create the error state
             client.post(f"/api/notifications/trigger/follow-ups?profile_id={profile.id}")
@@ -829,12 +832,12 @@ class TestNotificationLog:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_log_entries_created(
-        self, MockClient, db_session, profile, pushover_config, due_follow_up
+        self, mock_client_cls, db_session, profile, pushover_config, due_follow_up
     ):
         """Sending notifications creates log entries."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         trigger_follow_up_reminders(db_session, profile.id)
 
@@ -876,12 +879,12 @@ class TestCrossArea:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_ghost_detection_notification_chain(
-        self, MockClient, db_session, profile, pushover_config, ghost_application
+        self, mock_client_cls, db_session, profile, pushover_config, ghost_application
     ):
         """VAL-CROSS-008: Ghost detection triggers Pushover with same application_id."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         result = trigger_ghost_alerts(db_session, profile.id)
         assert result["triggered"] >= 1
@@ -900,12 +903,18 @@ class TestCrossArea:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_category_disable_honored(
-        self, MockClient, db_session, profile, pushover_config, due_follow_up, ghost_application
+        self,
+        mock_client_cls,
+        db_session,
+        profile,
+        pushover_config,
+        due_follow_up,
+        ghost_application,
     ):
         """VAL-CROSS-018: Per-category disable prevents notification."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         # Disable ghost alerts
         update_preferences(
@@ -925,12 +934,12 @@ class TestCrossArea:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_quiet_hours_queues_notifications(
-        self, MockClient, db_session, profile, pushover_config, due_follow_up
+        self, mock_client_cls, db_session, profile, pushover_config, due_follow_up
     ):
         """VAL-CROSS-018: Quiet hours queue notifications instead of dropping them."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         # Set quiet hours covering current hour
         now_hour = datetime.now(UTC).hour
@@ -972,12 +981,12 @@ class TestDeliverQueuedNotifications:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_deliver_queued_sends_and_marks_sent(
-        self, MockClient, db_session, profile, pushover_config, due_follow_up
+        self, mock_client_cls, db_session, profile, pushover_config, due_follow_up
     ):
         """Queued notifications are delivered and marked as sent."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         # Set quiet hours covering current hour to queue notifications
         now_hour = datetime.now(UTC).hour
@@ -1069,12 +1078,12 @@ class TestProfileIsolation:
 
     @patch("career_os.services.pushover.PushoverClient")
     def test_follow_ups_only_for_own_profile(
-        self, MockClient, db_session, profile, profile_b, pushover_config
+        self, mock_client_cls, db_session, profile, profile_b, pushover_config
     ):
         """Follow-up trigger only fires for the requesting profile's follow-ups."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         # Create application and follow-up for profile A
         app_obj = Application(profile_id=profile.id, company="ACo", role="Dev", status="applied")
@@ -1110,11 +1119,11 @@ class TestConnectionTest:
         assert data["success"] is False
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_test_connection_success(self, MockClient, db_session, pushover_config):
+    def test_test_connection_success(self, mock_client_cls, db_session, pushover_config):
         """Test connection with valid credentials succeeds."""
         mock_instance = MagicMock()
         mock_instance.validate_credentials.return_value = True
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         resp = client.post("/api/notifications/test-connection")
         assert resp.status_code == 200
@@ -1122,11 +1131,11 @@ class TestConnectionTest:
         assert data["success"] is True
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_test_connection_auth_failure(self, MockClient, db_session, pushover_config):
+    def test_test_connection_auth_failure(self, mock_client_cls, db_session, pushover_config):
         """Test connection with invalid credentials shows error."""
         mock_instance = MagicMock()
         mock_instance.validate_credentials.side_effect = PushoverAuthError("Bad key", 401)
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         resp = client.post("/api/notifications/test-connection")
         assert resp.status_code == 200
@@ -1148,11 +1157,11 @@ class TestSendNotificationAPI:
     """Tests for the manual send notification endpoint."""
 
     @patch("career_os.services.pushover.PushoverClient")
-    def test_send_notification_api(self, MockClient, db_session, profile, pushover_config):
+    def test_send_notification_api(self, mock_client_cls, db_session, profile, pushover_config):
         """POST /api/notifications/send sends a notification."""
         mock_instance = MagicMock()
         mock_instance.send_notification.return_value = {"status": 1, "request": "r1"}
-        MockClient.return_value = mock_instance
+        mock_client_cls.return_value = mock_instance
 
         resp = client.post(
             "/api/notifications/send",

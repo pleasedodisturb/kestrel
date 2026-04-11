@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404, RESP_404_422
 from career_os.database import get_db
 from career_os.schemas.voice import (
     VoiceMessageCreate,
@@ -33,7 +33,7 @@ router = APIRouter(prefix="/api/voice", tags=["voice"])
 @router.post(
     "/sessions",
     status_code=201,
-    responses={404: {"description": "Not found"}, 422: {"description": "Validation error"}},
+    responses=RESP_404_422,
 )
 async def create_voice_session(
     data: VoiceSessionCreate,
@@ -78,7 +78,7 @@ async def list_voice_sessions(
     )
 
 
-@router.get("/sessions/{session_id}", responses={404: {"description": "Not found"}})
+@router.get("/sessions/{session_id}", responses=RESP_404)
 async def get_voice_session(
     session_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -95,7 +95,7 @@ async def get_voice_session(
 
 @router.post(
     "/sessions/{session_id}/messages",
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def send_voice_message(
     session_id: int,
@@ -128,7 +128,7 @@ async def send_voice_message(
 
 @router.post(
     "/sessions/{session_id}/complete",
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def complete_voice_session(
     session_id: int,

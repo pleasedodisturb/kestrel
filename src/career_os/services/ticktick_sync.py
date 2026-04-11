@@ -10,6 +10,7 @@ Handles:
 import contextlib
 import json
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import or_ as db_or
@@ -421,48 +422,59 @@ def sync_completions_from_ticktick(
     return stats
 
 
+def _complete_follow_up(db: Session, sync_task: TickTickSyncTask, now: datetime) -> None:
+    follow_up = db.query(FollowUp).filter(FollowUp.id == sync_task.entity_id).first()
+    if not follow_up or follow_up.completed_at is not None:
+        return
+    follow_up.completed_at = now
+    db.add(
+        ActivityLog(
+            profile_id=sync_task.profile_id,
+            application_id=follow_up.application_id,
+            action="follow_up_completed",
+            details="Completed via TickTick sync",
+            source="ticktick_sync",
+        )
+    )
+
+
+def _complete_learning_goal(db: Session, sync_task: TickTickSyncTask, now: datetime) -> None:
+    goal = db.query(Goal).filter(Goal.id == sync_task.entity_id).first()
+    if goal and goal.status != "completed":
+        goal.status = "completed"
+        goal.updated_at = now
+
+
+def _complete_pipeline_action(db: Session, sync_task: TickTickSyncTask, now: datetime) -> None:
+    app_obj = db.query(Application).filter(Application.id == sync_task.entity_id).first()
+    if not app_obj:
+        return
+    if app_obj.next_step:
+        app_obj.next_step = f"[Done] {app_obj.next_step}"
+    app_obj.updated_at = now
+    db.add(
+        ActivityLog(
+            profile_id=sync_task.profile_id,
+            application_id=app_obj.id,
+            action="pipeline_action_completed",
+            details=f"TickTick task completed: {sync_task.title}",
+            source="ticktick_sync",
+        )
+    )
+
+
+_COMPLETION_HANDLERS: dict[str, Callable[[Session, TickTickSyncTask, datetime], None]] = {
+    "follow_up": _complete_follow_up,
+    "learning_goal": _complete_learning_goal,
+    "pipeline_action": _complete_pipeline_action,
+}
+
+
 def _apply_completion(db: Session, sync_task: TickTickSyncTask) -> None:
     """Apply a TickTick completion to the corresponding Career OS entity."""
-    now = datetime.now(UTC)
-
-    if sync_task.entity_type == "follow_up":
-        follow_up = db.query(FollowUp).filter(FollowUp.id == sync_task.entity_id).first()
-        if follow_up and follow_up.completed_at is None:
-            follow_up.completed_at = now
-            # Log activity
-            log = ActivityLog(
-                profile_id=sync_task.profile_id,
-                application_id=follow_up.application_id,
-                action="follow_up_completed",
-                details="Completed via TickTick sync",
-                source="ticktick_sync",
-            )
-            db.add(log)
-
-    elif sync_task.entity_type == "learning_goal":
-        goal = db.query(Goal).filter(Goal.id == sync_task.entity_id).first()
-        if goal and goal.status != "completed":
-            goal.status = "completed"
-            goal.updated_at = now
-
-    elif sync_task.entity_type == "pipeline_action":
-        # Completing a pipeline action task updates the Career OS
-        # application state (marks the action as done) and logs activity.
-        app_obj = db.query(Application).filter(Application.id == sync_task.entity_id).first()
-        if app_obj:
-            # Update application's next_step to reflect the action is done
-            if app_obj.next_step:
-                app_obj.next_step = f"[Done] {app_obj.next_step}"
-            app_obj.updated_at = now
-
-            log = ActivityLog(
-                profile_id=sync_task.profile_id,
-                application_id=app_obj.id,
-                action="pipeline_action_completed",
-                details=f"TickTick task completed: {sync_task.title}",
-                source="ticktick_sync",
-            )
-            db.add(log)
+    handler = _COMPLETION_HANDLERS.get(sync_task.entity_type)
+    if handler:
+        handler(db, sync_task, datetime.now(UTC))
 
 
 # ---------------------------------------------------------------------------

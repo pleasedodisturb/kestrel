@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.schemas.coaching import (
     CoachingSuggestionResponse,
@@ -15,12 +16,11 @@ from career_os.services.coaching import (
     ProfileNotFoundError,
     get_coaching_suggestions,
 )
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api/coaching", tags=["coaching"])
 
 
-@router.get("/suggestions", responses={404: {"description": "Not found"}})
+@router.get("/suggestions", responses=RESP_404)
 async def get_suggestions(
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
