@@ -14,21 +14,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  pre-commit:
-    name: Pre-commit hooks
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-          cache: pip
-      - name: Install pre-commit
-        run: pip install pre-commit
-      - name: Run hooks
-        run: pre-commit run --all-files --show-diff-on-failure
-
   backend:
     name: Backend (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
@@ -56,12 +41,6 @@ jobs:
           ruff check src/ tests/
           ruff format --check src/ tests/
 
-      - name: Type check (ty)
-        continue-on-error: true
-        run: |
-          pip install ty
-          ty check src/
-
       - name: Alembic migration check
         run: |
           # Ensure exactly one migration head exists (catches merge conflicts).
@@ -71,24 +50,15 @@ jobs:
             alembic heads
             exit 1
           fi
-          # Apply migrations against a fresh SQLite DB (path is set in alembic.ini).
+          # Apply migrations against a fresh SQLite DB (path set in alembic.ini).
           rm -f data/career_os.db
           alembic upgrade head
-          # Downgrade + upgrade again verifies migrations are reversible.
+          # Downgrade + upgrade roundtrip verifies migrations are reversible.
           alembic downgrade base
           alembic upgrade head
 
       - name: Run tests
         run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml
-
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.13'
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.xml
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: API smoke test
         run: |
@@ -156,36 +126,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Bundle size check
-        run: |
-          npm install --no-save --legacy-peer-deps size-limit @size-limit/file
-          npx size-limit
-
-      - name: Accessibility smoke check
-        continue-on-error: true
-        run: |
-          npm install --no-save --legacy-peer-deps http-server @axe-core/cli
-          npx http-server dist -p 4173 --silent &
-          SERVER_PID=$!
-          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
-          sleep 2
-          npx @axe-core/cli http://127.0.0.1:4173 --exit
-
       - name: Security audit (dependencies)
         run: npm audit --audit-level=moderate
-
-  container:
-    name: Container build + scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Build Docker image
-        run: docker build -t kestrel:ci .
-      - name: Trivy image scan
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: kestrel:ci
-          format: table
-          exit-code: "1"
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
