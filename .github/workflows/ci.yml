@@ -29,7 +29,11 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          # pip<26.0 is flagged by CVE-2026-1703 (pip-audit); ensure the
+          # installer itself is patched before auditing project deps.
+          python -m pip install --upgrade 'pip>=26.0'
+          pip install -e ".[dev]"
 
       - name: Setup test config
         run: |

@@ -30,6 +30,7 @@ from career_os.schemas.timingsapp import (
 )
 from career_os.services.timingsapp import (
     ConcurrentSessionError,
+    InvalidAnalyticsRangeError,
     TimeSessionAlreadyStoppedError,
     TimeSessionNotFoundError,
     check_timingsapp_connection,
@@ -165,7 +166,10 @@ async def get_analytics(
     weeks: Annotated[int, Query(ge=1, le=52, description="Number of weeks to analyze")] = 4,
 ) -> TimeAnalyticsResponse:
     """Get time analytics with total hours, category breakdown, and weekly trend."""
-    return get_time_analytics(db, profile_id=profile_id, weeks=weeks)
+    try:
+        return get_time_analytics(db, profile_id=profile_id, weeks=weeks)
+    except InvalidAnalyticsRangeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/test")

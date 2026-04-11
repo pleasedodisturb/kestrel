@@ -1051,3 +1051,96 @@ class TestSanitizeForLog:
         result = _sanitize_for_log(RuntimeError("boom\ninjected"))
         assert "\n" not in result
         assert "boom\\ninjected" in result
+
+
+# ===========================================================================
+# Log injection wiring regression tests (#25)
+# ===========================================================================
+
+
+class TestLogInjectionWiring:
+    """Verify that each user-data logger call site actually funnels its input
+    through ``_sanitize_for_log`` — not just that the helper exists and works
+    in isolation.
+
+    Each test mocks ``logger.warning`` on the module, triggers the exception
+    branch that logs user input, and asserts no raw CR/LF reaches the logger.
+    A regression (e.g. someone removes ``_sanitize_for_log(...)`` while
+    refactoring) would show up here.
+    """
+
+    INJECTION = "Evil\nFAKE LOG ENTRY\rtail"
+
+    @pytest.mark.asyncio
+    async def test_interview_format_sanitizes_company(
+        self, test_db: Session, test_profile: Profile
+    ):
+        from career_os.services import role_intelligence
+
+        with (
+            patch.object(role_intelligence, "get_ai_provider") as mock_factory,
+            patch.object(role_intelligence, "logger") as mock_logger,
+        ):
+            mock_provider = AsyncMock()
+            mock_provider.complete.side_effect = RuntimeError("boom\ninjected-exc")
+            mock_factory.return_value = mock_provider
+
+            await role_intelligence.get_interview_format(
+                test_db,
+                company=self.INJECTION,
+                role=None,
+                profile_id=test_profile.id,
+            )
+
+        mock_logger.warning.assert_called_once()
+        args = mock_logger.warning.call_args.args
+        # args = (fmt, sanitized_company, sanitized_exc)
+        assert "\n" not in args[1] and "\r" not in args[1]
+        assert args[1] == "Evil\\nFAKE LOG ENTRY\\rtail"
+        assert "\n" not in args[2] and "\r" not in args[2]
+
+    def test_market_salary_fallback_sanitizes_role(self, test_db: Session, test_profile: Profile):
+        from career_os.services import role_intelligence
+
+        with (
+            patch.object(role_intelligence, "get_salary_trends") as mock_trends,
+            patch.object(role_intelligence, "logger") as mock_logger,
+        ):
+            mock_trends.side_effect = RuntimeError("db\rexploded")
+
+            result = role_intelligence._salary_fallback_from_market(
+                test_db,
+                role=self.INJECTION,
+                profile_id=test_profile.id,
+            )
+
+        assert result is None
+        mock_logger.warning.assert_called_once()
+        args = mock_logger.warning.call_args.args
+        assert "\n" not in args[1] and "\r" not in args[1]
+        assert args[1] == "Evil\\nFAKE LOG ENTRY\\rtail"
+        assert "\n" not in args[2] and "\r" not in args[2]
+
+    @pytest.mark.asyncio
+    async def test_interview_patterns_sanitizes_role(self, test_db: Session, test_profile: Profile):
+        from career_os.services import role_intelligence
+
+        with (
+            patch.object(role_intelligence, "get_ai_provider") as mock_factory,
+            patch.object(role_intelligence, "logger") as mock_logger,
+        ):
+            mock_provider = AsyncMock()
+            mock_provider.complete.side_effect = RuntimeError("boom\ninjected-exc")
+            mock_factory.return_value = mock_provider
+
+            await role_intelligence.get_interview_patterns(
+                test_db,
+                role=self.INJECTION,
+                profile_id=test_profile.id,
+            )
+
+        mock_logger.warning.assert_called_once()
+        args = mock_logger.warning.call_args.args
+        assert "\n" not in args[1] and "\r" not in args[1]
+        assert args[1] == "Evil\\nFAKE LOG ENTRY\\rtail"
+        assert "\n" not in args[2] and "\r" not in args[2]
