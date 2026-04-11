@@ -1,3 +1,8 @@
+---
+layout: default
+title: Features and API Reference
+---
+
 <h1 align="center">
   <br>
   Kestrel

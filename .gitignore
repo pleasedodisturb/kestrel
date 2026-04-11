@@ -85,3 +85,6 @@ tmp/
 jobspy-mcp-server/
 .browser-profile/
 .claude/worktrees/
+
+# Internal business docs
+docs/pricing-strategy.md
