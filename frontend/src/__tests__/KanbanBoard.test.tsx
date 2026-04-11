@@ -122,6 +122,11 @@ function makeApp(
 describe("KanbanBoard", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+    // Onboarding wizard auto-appears on empty boards; pre-dismiss it for
+    // tests that aren't about the wizard so existing assertions stay clean.
+    localStorage.setItem("kestrel.wizard_dismissed", "true");
   });
 
   it("shows loading state while fetching", () => {
@@ -468,6 +473,111 @@ describe("KanbanBoard", () => {
       });
 
       expect(mockUpdateApplication).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---- Onboarding wizard (#20) ----
+  describe("onboarding wizard", () => {
+    beforeEach(() => {
+      mockFetchApplications.mockResolvedValue({
+        applications: [],
+        total: 0,
+      });
+      // Undo the global pre-dismiss so wizard can appear.
+      localStorage.removeItem("kestrel.wizard_dismissed");
+    });
+
+    it("shows wizard on first visit with empty board", async () => {
+      renderBoard();
+      expect(
+        await screen.findByTestId("onboarding-wizard"),
+      ).toBeInTheDocument();
+    });
+
+    it("does not show wizard when dismiss flag is set in localStorage", async () => {
+      localStorage.setItem("kestrel.wizard_dismissed", "true");
+      renderBoard();
+      await screen.findByTestId("kanban-empty");
+      expect(
+        screen.queryByTestId("onboarding-wizard"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("dismiss button persists flag and hides wizard", async () => {
+      const { getByTestId, queryByTestId } = renderBoard();
+      const dismiss = await screen.findByTestId("onboarding-dismiss");
+      act(() => {
+        dismiss.click();
+      });
+      await waitFor(() => {
+        expect(queryByTestId("onboarding-wizard")).not.toBeInTheDocument();
+      });
+      expect(localStorage.getItem("kestrel.wizard_dismissed")).toBe("true");
+      // Empty-state CTA is still present
+      expect(getByTestId("kanban-empty")).toBeInTheDocument();
+    });
+  });
+
+  // ---- Discovery nudge (#30) ----
+  describe("discovery nudge", () => {
+    function manyApps(n: number): Application[] {
+      return Array.from({ length: n }, (_, i) =>
+        makeApp({ id: i + 1, company: `Co${i}`, status: "applied" }),
+      );
+    }
+
+    it("appears when total >= 10 and user has never visited Discovery", async () => {
+      const apps = manyApps(10);
+      mockFetchApplications.mockResolvedValue({
+        applications: apps,
+        total: apps.length,
+      });
+      renderBoard();
+      expect(await screen.findByTestId("discovery-nudge")).toBeInTheDocument();
+    });
+
+    it("is hidden when user has visited Discovery (lastDiscoveryVisit set)", async () => {
+      localStorage.setItem("lastDiscoveryVisit", new Date().toISOString());
+      const apps = manyApps(10);
+      mockFetchApplications.mockResolvedValue({
+        applications: apps,
+        total: apps.length,
+      });
+      renderBoard();
+      await screen.findByTestId("kanban-board");
+      expect(screen.queryByTestId("discovery-nudge")).not.toBeInTheDocument();
+    });
+
+    it("is hidden when total < 10", async () => {
+      const apps = manyApps(5);
+      mockFetchApplications.mockResolvedValue({
+        applications: apps,
+        total: apps.length,
+      });
+      renderBoard();
+      await screen.findByTestId("kanban-board");
+      expect(screen.queryByTestId("discovery-nudge")).not.toBeInTheDocument();
+    });
+
+    it("dismiss persists the flag and hides the nudge", async () => {
+      const apps = manyApps(12);
+      mockFetchApplications.mockResolvedValue({
+        applications: apps,
+        total: apps.length,
+      });
+      renderBoard();
+      const dismiss = await screen.findByTestId("discovery-nudge-dismiss");
+      act(() => {
+        dismiss.click();
+      });
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("discovery-nudge"),
+        ).not.toBeInTheDocument();
+      });
+      expect(
+        localStorage.getItem("kestrel.discovery_nudge_dismissed"),
+      ).toBe("true");
     });
   });
 });

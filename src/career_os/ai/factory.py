@@ -6,8 +6,9 @@ from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
 
-# Registry of supported provider names → constructors
-_SUPPORTED_PROVIDERS = {"mock", "openrouter"}
+# Registry of supported provider names → constructors.
+# "demo" is a user-facing alias for "mock" — both resolve to MockProvider.
+_SUPPORTED_PROVIDERS = {"mock", "demo", "openrouter"}
 
 
 class UnsupportedProviderError(Exception):
@@ -19,7 +20,8 @@ class UnsupportedProviderError(Exception):
         super().__init__(
             f"Unsupported AI provider: '{provider_name}'. "
             f"Supported providers: {supported}. "
-            f"Set AI_PROVIDER env var to one of: {supported}"
+            f"Set AI_PROVIDER env var to one of: {supported} "
+            f"('demo' is an alias for 'mock')"
         )
 
 
@@ -31,13 +33,16 @@ def get_ai_provider(provider_name: str | None = None) -> AIProvider:
     2. AI_PROVIDER env var
     3. Default: "mock"
 
+    Both "mock" and "demo" resolve to MockProvider — "demo" is a friendlier
+    user-facing alias so non-technical users don't think "mock" means broken.
+
     Raises:
         UnsupportedProviderError: If the provider name is not recognized.
     """
     name = provider_name or os.getenv("AI_PROVIDER", "mock")
     name = name.strip().lower()
 
-    if name == "mock":
+    if name in ("mock", "demo"):
         return MockProvider()
 
     if name == "openrouter":

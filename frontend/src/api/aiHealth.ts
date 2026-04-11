@@ -31,10 +31,22 @@ export interface AIHealthResponse {
 
 const API_BASE = "/api/ai";
 
+/**
+ * Record a credits-exhausted / rate-limited response so the UI banner
+ * (CreditsExhaustedBanner) can surface it. Called from any endpoint that
+ * could trip OpenRouter's 402/429.
+ */
+function markCreditsIssue(status: number): void {
+  if (status === 402 || status === 429) {
+    sessionStorage.setItem("credits_exhausted", "true");
+  }
+}
+
 /** Fetch health status for all AI providers. */
 export async function fetchAIHealth(): Promise<AIHealthResponse> {
   const res = await fetch(`${API_BASE}/health`);
   if (!res.ok) {
+    markCreditsIssue(res.status);
     throw new Error(`Failed to fetch AI health: ${res.status}`);
   }
   return res.json() as Promise<AIHealthResponse>;
@@ -46,6 +58,7 @@ export async function fetchProviderHealth(
 ): Promise<ProviderHealthStatus> {
   const res = await fetch(`${API_BASE}/health/check?provider=${encodeURIComponent(provider)}`);
   if (!res.ok) {
+    markCreditsIssue(res.status);
     throw new Error(`Failed to check provider health: ${res.status}`);
   }
   return res.json() as Promise<ProviderHealthStatus>;

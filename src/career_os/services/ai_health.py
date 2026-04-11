@@ -31,7 +31,7 @@ RUNTIME_SUPPORTED_PROVIDERS = {"mock", "openrouter"}
 
 # Provider display names
 _PROVIDER_DISPLAY_NAMES = {
-    "mock": "Mock (Development)",
+    "mock": "Demo Mode",
     "openrouter": "OpenRouter",
 }
 
@@ -50,7 +50,7 @@ async def _check_mock() -> ProviderHealthStatus:
     """Mock provider is always reachable."""
     return ProviderHealthStatus(
         name="mock",
-        display_name="Mock (Development)",
+        display_name="Demo Mode",
         status="reachable",
         is_default=False,
         error_message=None,
@@ -218,7 +218,7 @@ async def check_all_providers(db: Session | None = None) -> AIHealthResponse:
     except Exception as exc:
         status = ProviderHealthStatus(
             name="mock",
-            display_name="Mock (Development)",
+            display_name="Demo Mode",
             status="error",
             error_message=str(exc),
         )

@@ -53,7 +53,7 @@ const MOCK_HEALTH_DATA: AIHealthResponse = {
   providers: [
     {
       name: "mock",
-      display_name: "Mock (Development)",
+      display_name: "Demo Mode",
       status: "reachable",
       is_default: true,
       error_message: null,
@@ -130,6 +130,7 @@ const MOCK_HEALTH_DATA: AIHealthResponse = {
 describe("AIHealthDashboard", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    sessionStorage.clear();
   });
 
   it("shows loading state while fetching", () => {
@@ -164,7 +165,7 @@ describe("AIHealthDashboard", () => {
     mockFetchAIHealth.mockResolvedValue(MOCK_HEALTH_DATA);
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByText("Mock (Development)")).toBeInTheDocument();
+      expect(screen.getByText("Demo Mode")).toBeInTheDocument();
       expect(screen.getByText("OpenRouter")).toBeInTheDocument();
       expect(screen.getByText("Anthropic")).toBeInTheDocument();
       expect(screen.getByText("OpenAI")).toBeInTheDocument();
