@@ -29,16 +29,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
     steps:
       - uses: actions/checkout@v6
-      - name: Run zizmor
-        uses: zizmorcore/zizmor-action@v0
+      - uses: actions/setup-python@v6
         with:
-          advanced-security: auto
-          # Only block CI on high-severity findings. Pre-existing
-          # `secrets-outside-env` warnings in publish*.yml (medium) are
-          # acknowledged design trade-offs for a solo-maintainer repo;
-          # `artipacked` (low) is informational. Tighten once the
-          # publish workflows are moved behind named environments.
-          min-severity: high
+          python-version: "3.13"
+      - name: Install zizmor
+        run: pip install zizmor
+      - name: Run zizmor
+        # Only block CI on high-severity findings. Pre-existing
+        # `secrets-outside-env` warnings in publish*.yml (medium) and
+        # `artipacked` (low) are acknowledged trade-offs for a
+        # solo-maintainer public repo. Config at .github/zizmor.yml
+        # also suppresses `cache-poisoning` for publish workflows and
+        # accepts ref-pin (tag) instead of hash-pin.
+        run: zizmor --min-severity=high .github/workflows/
