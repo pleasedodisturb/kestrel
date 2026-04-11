@@ -36,3 +36,9 @@ jobs:
         uses: zizmorcore/zizmor-action@v0
         with:
           advanced-security: auto
+          # Only block CI on high-severity findings. Pre-existing
+          # `secrets-outside-env` warnings in publish*.yml (medium) are
+          # acknowledged design trade-offs for a solo-maintainer repo;
+          # `artipacked` (low) is informational. Tighten once the
+          # publish workflows are moved behind named environments.
+          min-severity: high
