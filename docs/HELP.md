@@ -1,3 +1,5 @@
+<p align="center"><img src="../assets/illustrations/hero-closeup.webp" alt="Kestrel" width="300"></p>
+
 # Help - Troubleshooting Kestrel
 
 ## Quick diagnosis
