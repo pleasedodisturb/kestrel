@@ -359,6 +359,90 @@ class TestScoreEndpoint:
         resp = ScoreResponse.model_validate(legacy)
         assert resp.dimensional_scores is None
 
+    def test_score_response_partial_dims_stays_null(self, db_session):
+        """Partial-legacy rows (some dims populated, some NULL) → dimensional_scores=None (#74).
+
+        The after-validator only collapses when all six dims are non-null.
+        A row migrated mid-flight should stay safe.
+        """
+        from career_os.schemas.scoring import ScoreResponse
+
+        partial = ScoredJob(
+            profile_id=1,
+            fit_score=7.0,
+            readiness_score=50.0,
+            career_alignment=6.0,
+            reasoning="Partially populated row. " * 10,
+            estimated_salary="100,000 EUR",
+            effort_flag="medium",
+            prep_level="moderate",
+            prep_notes="none",
+            is_stale=False,
+            dim_technical_fit=8.0,
+            dim_seniority_alignment=7.0,
+            # other four dims default to None
+        )
+        resp = ScoreResponse.model_validate(partial)
+        assert resp.dimensional_scores is None
+
+    def test_score_response_excludes_dim_raw_fields_from_json(self, client):
+        """dim_* hidden fields must not leak into the JSON response body (#74)."""
+        resp = client.post(
+            "/api/score",
+            json={"profile_id": 1, "job_description": JOB_DESCRIPTION_A},
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        for hidden in (
+            "dim_technical_fit",
+            "dim_seniority_alignment",
+            "dim_compensation_fit",
+            "dim_location_fit",
+            "dim_career_trajectory",
+            "dim_company_fit",
+        ):
+            assert hidden not in data, f"{hidden} leaked into response body"
+
+    def test_get_application_score_endpoint_surfaces_new_fields(self, client, db_session):
+        """GET /api/score/application/{id} returns dimensional_scores + ats_keywords round-trip (#74, #75)."""
+        app_row = Application(
+            profile_id=1,
+            company="Round-Trip Co",
+            role="Engineer",
+            status="discovered",
+        )
+        db_session.add(app_row)
+        db_session.commit()
+
+        post_resp = client.post(
+            "/api/score",
+            json={
+                "profile_id": 1,
+                "job_description": JOB_DESCRIPTION_A,
+                "application_id": app_row.id,
+            },
+        )
+        assert post_resp.status_code == 201
+
+        get_resp = client.get(
+            f"/api/score/application/{app_row.id}?profile_id=1",
+        )
+        assert get_resp.status_code == 200
+        data = get_resp.json()
+        assert data["dimensional_scores"] is not None
+        for key in (
+            "technical_fit",
+            "seniority_alignment",
+            "compensation_fit",
+            "location_fit",
+            "career_trajectory",
+            "company_fit",
+        ):
+            assert key in data["dimensional_scores"]
+        assert 10 <= len(data["ats_keywords"]) <= 15
+        # Hidden dim_* fields still absent on the GET path too
+        assert "dim_technical_fit" not in data
+
     def test_score_response_surfaces_ats_keywords(self, client):
         """Scoring should return 10-15 categorized ATS keywords (#75)."""
         resp = client.post(

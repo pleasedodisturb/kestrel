@@ -31,7 +31,9 @@ const CATEGORY_ORDER: ATSKeywordCategory[] = [
 export function ATSKeywordChecklist({ keywords }: ATSKeywordChecklistProps) {
   if (!keywords || keywords.length === 0) return null;
 
-  // Group keywords by category
+  // Group keywords by category. Defensive: if the backend adds a new
+  // category before the frontend type is updated, `groups[cat]` would be
+  // undefined — we silently drop unknown categories rather than crash.
   const groups: Record<ATSKeywordCategory, ATSKeyword[]> = {
     technical: [],
     soft_skill: [],
@@ -40,7 +42,8 @@ export function ATSKeywordChecklist({ keywords }: ATSKeywordChecklistProps) {
     domain: [],
   };
   for (const kw of keywords) {
-    groups[kw.category].push(kw);
+    const bucket = groups[kw.category];
+    if (bucket) bucket.push(kw);
   }
 
   const matchedCount = keywords.filter((k) => k.matched).length;
@@ -57,9 +60,9 @@ export function ATSKeywordChecklist({ keywords }: ATSKeywordChecklistProps) {
               {CATEGORY_LABELS[cat]}
             </h4>
             <ul className="space-y-1">
-              {groups[cat].map((kw) => (
+              {groups[cat].map((kw, idx) => (
                 <li
-                  key={`${cat}-${kw.keyword}`}
+                  key={`${cat}-${idx}-${kw.keyword}`}
                   className="flex items-center gap-2 text-sm"
                 >
                   {kw.matched ? (

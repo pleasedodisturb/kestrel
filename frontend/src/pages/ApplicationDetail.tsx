@@ -54,8 +54,17 @@ export function ApplicationDetail() {
   // red flags) for this application. Falls back to null when the app has
   // not been scored yet — in that case the score-specific UI sections are
   // simply hidden.
+  //
+  // Note: we intentionally do NOT refetch when the inline `fit_score` edit
+  // saves. That override lives on the Application row, not on ScoredJob —
+  // the dimensional scores and ATS keywords in `scoreData` are independent
+  // of it and would return identical values after the override.
   useEffect(() => {
     if (!data?.profile_id || !data?.id) return;
+    // Clear previous application's score data so it doesn't flash during
+    // navigation between two applications with different scores.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset state when the id changes
+    setScoreData(null);
     let cancelled = false;
     getApplicationScore(data.id, data.profile_id)
       .then((resp) => {

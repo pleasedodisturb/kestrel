@@ -44,4 +44,20 @@ describe("ATSKeywordChecklist", () => {
     render(<ATSKeywordChecklist keywords={sampleKeywords} />);
     expect(screen.getByText("2 of 4 keywords matched")).toBeInTheDocument();
   });
+
+  it("silently drops keywords with an unknown category instead of crashing", () => {
+    // Simulate the backend adding a new category before the frontend
+    // union is updated — defensive behavior must not throw.
+    const withUnknown = [
+      ...sampleKeywords,
+      // Force an invalid category past the type system to prove the
+      // runtime guard. This mimics a wire payload from an older build.
+      { keyword: "Ghost", category: "experience", matched: true } as unknown as ATSKeyword,
+    ];
+    expect(() => render(<ATSKeywordChecklist keywords={withUnknown} />)).not.toThrow();
+    // Unknown keyword is dropped from the rendered list
+    expect(screen.queryByText("Ghost")).not.toBeInTheDocument();
+    // Known keywords still render
+    expect(screen.getByText("Python")).toBeInTheDocument();
+  });
 });
