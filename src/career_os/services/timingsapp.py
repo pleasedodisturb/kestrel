@@ -34,6 +34,11 @@ from career_os.services.timingsapp_client import (
 
 logger = logging.getLogger(__name__)
 
+# Upper bound for the `weeks` parameter on analytics endpoints. Beyond this,
+# the caller has almost certainly supplied a garbage/malicious value and the
+# service rejects the request instead of burning CPU on an oversized loop.
+MAX_ANALYTICS_WEEKS = 1000
+
 
 class TimingsAppNotConfiguredError(Exception):
     """Raised when TimingsApp integration is not configured or disabled."""
@@ -49,6 +54,10 @@ class TimeSessionAlreadyStoppedError(Exception):
 
 class ConcurrentSessionError(Exception):
     """Raised when trying to start a session while another is already running."""
+
+
+class InvalidAnalyticsRangeError(ValueError):
+    """Raised when the requested analytics window is out of bounds."""
 
 
 # ---------------------------------------------------------------------------
@@ -505,9 +514,14 @@ def get_time_analytics(
     """Compute time analytics for a profile.
 
     Returns total hours, category breakdown, and weekly trend.
+
+    Raises:
+        InvalidAnalyticsRangeError: If ``weeks`` is outside ``[1, MAX_ANALYTICS_WEEKS]``.
     """
-    _max_weeks = 1000
-    weeks = max(1, min(weeks, _max_weeks))
+    if weeks < 1 or weeks > MAX_ANALYTICS_WEEKS:
+        raise InvalidAnalyticsRangeError(
+            f"weeks must be between 1 and {MAX_ANALYTICS_WEEKS}, got {weeks}"
+        )
     now = datetime.now(UTC)
     start_of_period = now - timedelta(weeks=weeks)
 

@@ -27,7 +27,9 @@ from career_os.schemas.timingsapp import (
     TimeSessionUpdate,
 )
 from career_os.services.timingsapp import (
+    MAX_ANALYTICS_WEEKS,
     ConcurrentSessionError,
+    InvalidAnalyticsRangeError,
     TimeSessionAlreadyStoppedError,
     TimeSessionNotFoundError,
     auto_categorize,
@@ -1144,19 +1146,39 @@ class TestConnectionTest:
 
 
 class TestWeeksLoopBounds:
-    """Verify that get_time_analytics clamps the weeks parameter."""
+    """Verify that get_time_analytics rejects out-of-bound weeks values.
 
-    def test_weeks_clamped_to_max(self, db_session, profile):
-        """Extremely large weeks value is clamped, no hang or OOM."""
-        analytics = get_time_analytics(db_session, profile_id=profile.id, weeks=999_999)
-        # Should succeed (clamped to 1000) and return a result
+    Protects against CPU/DoS via user-controlled loop iteration counts
+    (SonarCloud CRITICAL, issue #24).
+    """
+
+    def test_weeks_exceeding_max_raises(self, db_session, profile):
+        """A massive weeks value is rejected, not silently clamped."""
+        with pytest.raises(InvalidAnalyticsRangeError):
+            get_time_analytics(db_session, profile_id=profile.id, weeks=999_999)
+
+    def test_weeks_at_max_succeeds(self, db_session, profile):
+        """Boundary: MAX_ANALYTICS_WEEKS is accepted."""
+        analytics = get_time_analytics(db_session, profile_id=profile.id, weeks=MAX_ANALYTICS_WEEKS)
         assert analytics.total_hours == pytest.approx(0.0)
-        assert len(analytics.weekly_trend) == 1000
+        assert len(analytics.weekly_trend) == MAX_ANALYTICS_WEEKS
 
-    def test_weeks_clamped_to_min(self, db_session, profile):
-        """Zero or negative weeks is clamped to 1."""
-        analytics = get_time_analytics(db_session, profile_id=profile.id, weeks=0)
+    def test_weeks_one_over_max_raises(self, db_session, profile):
+        """Boundary: MAX_ANALYTICS_WEEKS + 1 is rejected."""
+        with pytest.raises(InvalidAnalyticsRangeError):
+            get_time_analytics(db_session, profile_id=profile.id, weeks=MAX_ANALYTICS_WEEKS + 1)
+
+    def test_weeks_zero_raises(self, db_session, profile):
+        """Zero weeks is rejected."""
+        with pytest.raises(InvalidAnalyticsRangeError):
+            get_time_analytics(db_session, profile_id=profile.id, weeks=0)
+
+    def test_weeks_negative_raises(self, db_session, profile):
+        """Negative weeks is rejected."""
+        with pytest.raises(InvalidAnalyticsRangeError):
+            get_time_analytics(db_session, profile_id=profile.id, weeks=-5)
+
+    def test_weeks_one_succeeds(self, db_session, profile):
+        """Boundary: weeks=1 is accepted."""
+        analytics = get_time_analytics(db_session, profile_id=profile.id, weeks=1)
         assert len(analytics.weekly_trend) == 1
-
-        analytics_neg = get_time_analytics(db_session, profile_id=profile.id, weeks=-5)
-        assert len(analytics_neg.weekly_trend) == 1
