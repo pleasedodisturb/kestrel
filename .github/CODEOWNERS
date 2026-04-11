@@ -1,0 +1,17 @@
+# Default reviewer for everything in the repo.
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+*                               @pleasedodisturb
+
+# CI / build / release plumbing
+/.github/                       @pleasedodisturb
+/Dockerfile                     @pleasedodisturb
+/pyproject.toml                 @pleasedodisturb
+/alembic.ini                    @pleasedodisturb
+/alembic/                       @pleasedodisturb
+
+# Backend
+/src/career_os/                 @pleasedodisturb
+/tests/                         @pleasedodisturb
+
+# Frontend
+/frontend/                      @pleasedodisturb
