@@ -13,7 +13,7 @@ import {
   useUpdateApplication,
   useArchiveApplication,
 } from "@/hooks/useApplications";
-import type { ApplicationUpdate } from "@/api/types";
+import type { ApplicationUpdate, ScoreResponseShape } from "@/api/types";
 import { STATUS_LABELS, STATUS_COLORS, normalizeStatus } from "@/api/types";
 import {
   ArrowLeft,
@@ -29,10 +29,13 @@ import {
 import { cn } from "@/lib/utils";
 import { GradeBadge } from "@/components/GradeBadge";
 import { RedFlagBadge } from "@/components/RedFlagBadge";
+import { ScoreRadarChart } from "@/components/ScoreRadarChart";
+import { ATSKeywordChecklist } from "@/components/ATSKeywordChecklist";
 import { CalendarSection } from "@/components/CalendarSection";
 import { FollowUpSection } from "@/components/FollowUpSection";
 import { InterviewPrepSection } from "@/components/InterviewPrepSection";
 import { StarStoriesSection } from "@/components/StarStoriesSection";
+import { getApplicationScore } from "@/api/scoring";
 
 export function ApplicationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +48,35 @@ export function ApplicationDetail() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<ApplicationUpdate>({});
+  const [scoreData, setScoreData] = useState<ScoreResponseShape | null>(null);
+
+  // Fetch the latest scoring details (dimensional scores, ATS keywords,
+  // red flags) for this application. Falls back to null when the app has
+  // not been scored yet — in that case the score-specific UI sections are
+  // simply hidden.
+  //
+  // Note: we intentionally do NOT refetch when the inline `fit_score` edit
+  // saves. That override lives on the Application row, not on ScoredJob —
+  // the dimensional scores and ATS keywords in `scoreData` are independent
+  // of it and would return identical values after the override.
+  useEffect(() => {
+    if (!data?.profile_id || !data?.id) return;
+    // Clear previous application's score data so it doesn't flash during
+    // navigation between two applications with different scores.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset state when the id changes
+    setScoreData(null);
+    let cancelled = false;
+    getApplicationScore(data.id, data.profile_id)
+      .then((resp) => {
+        if (!cancelled) setScoreData(resp);
+      })
+      .catch(() => {
+        if (!cancelled) setScoreData(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [data?.id, data?.profile_id]);
 
   // Sync edit data from server data when it changes
   useEffect(() => {
@@ -445,6 +477,30 @@ export function ApplicationDetail() {
                     mode="expanded"
                     testId="red-flags-detail"
                   />
+                </div>
+              </div>
+            )}
+
+            {/* Dimensional score breakdown (radar chart) */}
+            {scoreData?.dimensional_scores && (
+              <div className="mt-4">
+                <div className="block text-sm font-medium text-gray-500">
+                  Score Breakdown
+                </div>
+                <div className="mt-2">
+                  <ScoreRadarChart scores={scoreData.dimensional_scores} />
+                </div>
+              </div>
+            )}
+
+            {/* ATS keyword checklist */}
+            {scoreData?.ats_keywords && scoreData.ats_keywords.length > 0 && (
+              <div className="mt-4">
+                <div className="block text-sm font-medium text-gray-500">
+                  ATS Keywords
+                </div>
+                <div className="mt-2">
+                  <ATSKeywordChecklist keywords={scoreData.ats_keywords} />
                 </div>
               </div>
             )}

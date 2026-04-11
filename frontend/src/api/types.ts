@@ -110,6 +110,45 @@ export interface RedFlag {
   description: string;
 }
 
+/** Six dimensional sub-scores (0-10 each) returned by the scoring engine. */
+export interface DimensionalScores {
+  technical_fit: number;
+  seniority_alignment: number;
+  compensation_fit: number;
+  location_fit: number;
+  career_trajectory: number;
+  company_fit: number;
+}
+
+export type ATSKeywordCategory =
+  | "technical"
+  | "soft_skill"
+  | "tool"
+  | "certification"
+  | "domain";
+
+export interface ATSKeyword {
+  keyword: string;
+  category: ATSKeywordCategory;
+  matched: boolean;
+}
+
+/**
+ * Shape of the /api/score/application/{id} response. Mirrors the backend
+ * `ScoreResponse` pydantic schema — only the fields we actively consume on
+ * the application detail page are listed.
+ */
+export interface ScoreResponseShape {
+  fit_score: number;
+  readiness_score: number;
+  career_alignment: number;
+  letter_grade?: string | null;
+  dimensional_scores?: DimensionalScores | null;
+  ats_keywords?: ATSKeyword[];
+  red_flags?: RedFlag[];
+  reasoning: string;
+}
+
 export interface Application {
   id: number;
   profile_id: number;

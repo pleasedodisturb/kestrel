@@ -58,6 +58,16 @@ export function KanbanCard({ application }: KanbanCardProps) {
     [navigate, application.id],
   );
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        navigate(`/applications/${application.id}`);
+      }
+    },
+    [navigate, application.id],
+  );
+
   return (
     <div
       ref={setNodeRef}
@@ -70,8 +80,11 @@ export function KanbanCard({ application }: KanbanCardProps) {
         isDragging && "opacity-50 shadow-lg",
         application.is_ghost && "border-orange-300 bg-orange-50",
       )}
+      role="button"
+      tabIndex={0}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
     >
       <div className="flex items-start justify-between gap-1">
         <p className="text-sm font-semibold text-gray-900 truncate">

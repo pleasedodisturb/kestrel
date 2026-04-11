@@ -10,8 +10,10 @@ from career_os.ai.base import AIProvider
 from career_os.schemas.ai import (
     AIFeature,
     AIResponse,
+    ATSKeyword,
     CoachingResult,
     CompanyResearchResult,
+    DimensionalScores,
     GapAnalysisResult,
     GoalRecalibrationResult,
     InterviewFormatResult,
@@ -20,6 +22,23 @@ from career_os.schemas.ai import (
     LearningRecommendationsResult,
     ScoreBreakdownFactor,
     ScoreResult,
+)
+
+# Static pool of 12 keywords used by the mock provider to build a deterministic
+# ATS checklist. Distinct categories so the UI checklist has variety to show.
+_MOCK_ATS_KEYWORDS: tuple[tuple[str, str], ...] = (
+    ("Python", "technical"),
+    ("React", "technical"),
+    ("TypeScript", "technical"),
+    ("FastAPI", "technical"),
+    ("PostgreSQL", "technical"),
+    ("Docker", "tool"),
+    ("Kubernetes", "tool"),
+    ("AWS", "tool"),
+    ("Terraform", "tool"),
+    ("Communication", "soft_skill"),
+    ("Agile/Scrum", "domain"),
+    ("AWS Solutions Architect", "certification"),
 )
 
 
@@ -192,6 +211,32 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
     ]
     reasoning = ". ".join(factors) + f". Overall a solid fit with score {fit}/10."
 
+    # Dimensional sub-scores: six deterministic floats derived from the seed.
+    # Each dimension gets a distinct seed offset so they're not all the same
+    # value, but they're all bounded to [0, 10].
+    def _dim(offset: int) -> float:
+        return round(((seed + offset * 7) % 101) / 10.0, 1)
+
+    dimensional = DimensionalScores(
+        technical_fit=_dim(0),
+        seniority_alignment=_dim(1),
+        compensation_fit=_dim(2),
+        location_fit=_dim(3),
+        career_trajectory=_dim(4),
+        company_fit=_dim(5),
+    )
+
+    # ATS keywords: all 12 from the static pool, with seed-derived matched flag
+    # and the category pre-assigned in the pool.
+    ats_keywords = [
+        ATSKeyword(
+            keyword=keyword,
+            category=category,  # type: ignore[arg-type]
+            matched=((seed + idx) % 2 == 0),
+        )
+        for idx, (keyword, category) in enumerate(_MOCK_ATS_KEYWORDS)
+    ]
+
     structured = ScoreResult(
         fit_score=fit,
         reasoning=reasoning,
@@ -204,6 +249,8 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
         readiness_score=readiness,
         career_alignment=career,
         score_breakdown=breakdown_factors,
+        dimensional_scores=dimensional,
+        ats_keywords=ats_keywords,
     )
     return AIResponse(
         content=structured.reasoning,

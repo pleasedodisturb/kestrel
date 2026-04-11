@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from career_os.schemas.ai import ScoreBreakdownFactor
+from career_os.schemas.ai import ATSKeywordCategory, ScoreBreakdownFactor
 
 
 def _ensure_utc(v: Any) -> datetime | None:
@@ -80,6 +80,25 @@ class RedFlag(BaseModel):
     description: str = Field(..., description="Human-readable explanation of the flag")
 
 
+class DimensionalScoresResponse(BaseModel):
+    """Six dimensional sub-scores surfaced on the API."""
+
+    technical_fit: float = Field(..., ge=0, le=10)
+    seniority_alignment: float = Field(..., ge=0, le=10)
+    compensation_fit: float = Field(..., ge=0, le=10)
+    location_fit: float = Field(..., ge=0, le=10)
+    career_trajectory: float = Field(..., ge=0, le=10)
+    company_fit: float = Field(..., ge=0, le=10)
+
+
+class ATSKeywordItem(BaseModel):
+    """An ATS keyword surfaced on the API response."""
+
+    keyword: str
+    category: ATSKeywordCategory
+    matched: bool
+
+
 class ScoreResponse(BaseModel):
     """Full scoring breakdown response."""
 
@@ -108,6 +127,25 @@ class ScoreResponse(BaseModel):
         default_factory=list,
         description="Rule-based red flags detected in the JD (zero AI cost)",
     )
+    dimensional_scores: DimensionalScoresResponse | None = Field(
+        default=None,
+        description="Six dimensional sub-scores (0-10). None for legacy rows.",
+    )
+    ats_keywords: list[ATSKeywordItem] = Field(
+        default_factory=list,
+        description="ATS keywords extracted by the AI, categorized and matched",
+    )
+
+    # Hidden fields — pydantic populates these from the ``ScoredJob`` ORM row
+    # via ``from_attributes=True``, and an after-validator collapses them into
+    # ``dimensional_scores``. They are excluded from serialized output so
+    # clients only see the nested object.
+    dim_technical_fit: float | None = Field(default=None, exclude=True)
+    dim_seniority_alignment: float | None = Field(default=None, exclude=True)
+    dim_compensation_fit: float | None = Field(default=None, exclude=True)
+    dim_location_fit: float | None = Field(default=None, exclude=True)
+    dim_career_trajectory: float | None = Field(default=None, exclude=True)
+    dim_company_fit: float | None = Field(default=None, exclude=True)
     reasoning: str = Field(
         ..., min_length=100, description="Scoring explanation (≥100 chars, ≥3 factors)"
     )
@@ -150,6 +188,20 @@ class ScoreResponse(BaseModel):
                 return []
         return v
 
+    @field_validator("ats_keywords", mode="before")
+    @classmethod
+    def _parse_ats_keywords(cls, v: Any) -> list[ATSKeywordItem]:
+        """Parse ats_keywords from JSON string if it comes from DB."""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                parsed = json_mod.loads(v)
+                return [ATSKeywordItem(**item) for item in parsed]
+            except (json_mod.JSONDecodeError, TypeError):
+                return []
+        return v
+
     @field_validator("created_at", "updated_at", mode="before")
     @classmethod
     def _ensure_utc(cls, v: Any) -> datetime | None:
@@ -160,6 +212,35 @@ class ScoreResponse(BaseModel):
         """Derive letter_grade from fit_score whenever it is not set."""
         if self.letter_grade is None:
             self.letter_grade = score_to_letter_grade(self.fit_score)
+        return self
+
+    @model_validator(mode="after")
+    def _assemble_dimensional_scores(self) -> "ScoreResponse":
+        """Collapse the six ``dim_*`` hidden fields into ``dimensional_scores``.
+
+        Only fires when ``dimensional_scores`` was not already provided and
+        all six dimensional columns are populated. Legacy rows with any NULL
+        dimension leave ``dimensional_scores`` as ``None``.
+        """
+        if self.dimensional_scores is not None:
+            return self
+        dims = (
+            self.dim_technical_fit,
+            self.dim_seniority_alignment,
+            self.dim_compensation_fit,
+            self.dim_location_fit,
+            self.dim_career_trajectory,
+            self.dim_company_fit,
+        )
+        if all(d is not None for d in dims):
+            self.dimensional_scores = DimensionalScoresResponse(
+                technical_fit=self.dim_technical_fit,  # type: ignore[arg-type]
+                seniority_alignment=self.dim_seniority_alignment,  # type: ignore[arg-type]
+                compensation_fit=self.dim_compensation_fit,  # type: ignore[arg-type]
+                location_fit=self.dim_location_fit,  # type: ignore[arg-type]
+                career_trajectory=self.dim_career_trajectory,  # type: ignore[arg-type]
+                company_fit=self.dim_company_fit,  # type: ignore[arg-type]
+            )
         return self
 
 
