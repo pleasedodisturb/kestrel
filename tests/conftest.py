@@ -17,6 +17,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 
 
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
+
+
 @pytest.fixture
 def client() -> TestClient:
     """Create a FastAPI test client."""
@@ -68,7 +71,7 @@ def db_session(db_engine) -> Session:
 @pytest.fixture
 def profile(db_session: Session) -> Profile:
     """Seed a default test profile."""
-    p = Profile(id=1, name="Test User", email="test@example.com", location="Frankfurt")
+    p = Profile(id=1, **DEFAULT_PROFILE_KWARGS)
     db_session.add(p)
     db_session.commit()
     return p

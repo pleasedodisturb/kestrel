@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.schemas.follow_ups import (
     FollowUpComplete,
@@ -22,12 +23,11 @@ from career_os.services.follow_ups import (
     get_overdue_count,
     list_follow_ups,
 )
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api/follow-ups", tags=["follow-ups"])
 
 
-@router.post("", status_code=201, responses={404: {"description": "Not found"}})
+@router.post("", status_code=201, responses=RESP_404)
 async def create(
     payload: FollowUpCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -96,7 +96,7 @@ async def list_all(
     )
 
 
-@router.patch("/{follow_up_id}", responses={404: {"description": "Not found"}})
+@router.patch("/{follow_up_id}", responses=RESP_404)
 async def complete(
     follow_up_id: int,
     payload: FollowUpComplete,

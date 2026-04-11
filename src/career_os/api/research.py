@@ -12,6 +12,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import RESP_404
 from career_os.database import get_db
 from career_os.schemas.research import (
     CompanyResearchReport,
@@ -31,7 +32,7 @@ router = APIRouter(prefix="/api/research", tags=["research"])
 @router.post(
     "/company",
     responses={
-        404: {"description": "Not found"},
+        **RESP_404,
         500: {"description": "Internal server error"},
         502: {"description": "Bad gateway"},
     },

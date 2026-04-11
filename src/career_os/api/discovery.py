@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.schemas.discovery import (
     DiscoveredJobResponse,
@@ -29,7 +30,6 @@ from career_os.services.discovery import (
     run_discovery,
     update_search_profile,
 )
-from career_os.api.constants import DESC_PROFILE_ID
 
 router = APIRouter(tags=["discovery"])
 
@@ -39,7 +39,7 @@ router = APIRouter(tags=["discovery"])
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/discover", responses={404: {"description": "Not found"}})
+@router.post("/api/discover", responses=RESP_404)
 async def discover(
     payload: DiscoverRequest,
     db: Annotated[Session, Depends(get_db)],
@@ -84,7 +84,7 @@ async def discover(
 @router.post(
     "/api/search-profiles",
     status_code=201,
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def create_search_profile_endpoint(
     payload: SearchProfileCreate,
@@ -121,7 +121,7 @@ async def list_search_profiles_endpoint(
 
 @router.get(
     "/api/search-profiles/{sp_id}",
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def get_search_profile_endpoint(
     sp_id: int,
@@ -138,7 +138,7 @@ async def get_search_profile_endpoint(
 
 @router.put(
     "/api/search-profiles/{sp_id}",
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def update_search_profile_endpoint(
     sp_id: int,
@@ -162,7 +162,7 @@ async def update_search_profile_endpoint(
 @router.delete(
     "/api/search-profiles/{sp_id}",
     status_code=204,
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def delete_search_profile_endpoint(
     sp_id: int,
@@ -196,8 +196,8 @@ async def list_discovery_runs_endpoint(
 
 @router.get("/api/discovery-runs/latest")
 async def get_latest_discovery_run_endpoint(
-    profile_id: int = Query(..., description=DESC_PROFILE_ID),
-    db: Session = Depends(get_db),
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> DiscoveryRunResponse | None:
     """Get the most recent completed discovery run for a profile."""
     run = get_latest_discovery_run(db, profile_id)

@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.schemas.contacts import (
     ContactApplicationCreate,
@@ -35,7 +36,6 @@ from career_os.services.contacts import (
     unlink_contact_from_application,
     update_contact,
 )
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api", tags=["contacts"])
 
@@ -45,7 +45,7 @@ router = APIRouter(prefix="/api", tags=["contacts"])
 # ---------------------------------------------------------------------------
 
 
-@router.post("/contacts", status_code=201, responses={404: {"description": "Not found"}})
+@router.post("/contacts", status_code=201, responses=RESP_404)
 async def create(
     payload: ContactCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -98,7 +98,7 @@ async def contacts_at_company(
     )
 
 
-@router.get("/contacts/{contact_id}", responses={404: {"description": "Not found"}})
+@router.get("/contacts/{contact_id}", responses=RESP_404)
 async def get_detail(
     contact_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -122,7 +122,7 @@ async def get_detail(
     )
 
 
-@router.patch("/contacts/{contact_id}", responses={404: {"description": "Not found"}})
+@router.patch("/contacts/{contact_id}", responses=RESP_404)
 async def update(
     contact_id: int,
     payload: ContactUpdate,
@@ -140,7 +140,7 @@ async def update(
 @router.delete(
     "/contacts/{contact_id}",
     status_code=204,
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def delete(
     contact_id: int,
@@ -162,7 +162,7 @@ async def delete(
 @router.post(
     "/contacts/{contact_id}/interactions",
     status_code=201,
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def log_interaction(
     contact_id: int,
@@ -180,7 +180,7 @@ async def log_interaction(
 
 @router.get(
     "/contacts/{contact_id}/interactions",
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def get_interactions(
     contact_id: int,
@@ -206,7 +206,7 @@ async def get_interactions(
 @router.post(
     "/contacts/{contact_id}/applications",
     status_code=201,
-    responses={404: {"description": "Not found"}, 409: {"description": "Conflict"}},
+    responses={**RESP_404, 409: {"description": "Conflict"}},
 )
 async def link_application(
     contact_id: int,
@@ -226,7 +226,7 @@ async def link_application(
     return ContactApplicationResponse.model_validate(link)
 
 
-@router.get("/contacts/{contact_id}/applications", responses={404: {"description": "Not found"}})
+@router.get("/contacts/{contact_id}/applications", responses=RESP_404)
 async def get_linked_applications(
     contact_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -247,7 +247,7 @@ async def get_linked_applications(
 @router.delete(
     "/contacts/{contact_id}/applications/{application_id}",
     status_code=204,
-    responses={404: {"description": "Not found"}},
+    responses=RESP_404,
 )
 async def unlink_application(
     contact_id: int,

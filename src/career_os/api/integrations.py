@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import RESP_404
 from career_os.database import get_db
 from career_os.schemas.integrations import (
     IntegrationConfigResponse,
@@ -31,7 +32,7 @@ async def list_all_integrations(
     return IntegrationListResponse(integrations=integrations, count=len(integrations))
 
 
-@router.get("/{name}/config", responses={404: {"description": "Not found"}})
+@router.get("/{name}/config", responses=RESP_404)
 async def get_integration_config(
     name: str,
     db: Annotated[Session, Depends(get_db)],
@@ -43,7 +44,7 @@ async def get_integration_config(
     return result
 
 
-@router.put("/{name}/config", responses={404: {"description": "Not found"}})
+@router.put("/{name}/config", responses=RESP_404)
 async def update_integration_config(
     name: str,
     payload: IntegrationConfigUpdate,
@@ -59,7 +60,7 @@ async def update_integration_config(
     return result
 
 
-@router.post("/{name}/test", responses={404: {"description": "Not found"}})
+@router.post("/{name}/test", responses=RESP_404)
 async def test_integration(
     name: str,
     db: Annotated[Session, Depends(get_db)],
