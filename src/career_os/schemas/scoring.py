@@ -69,6 +69,17 @@ class ScoreRequest(BaseModel):
     application_id: int | None = Field(default=None, description="Link to application record")
 
 
+class RedFlag(BaseModel):
+    """A single rule-based red flag detected in a job description."""
+
+    flag_type: str = Field(..., description="Rule identifier, e.g. 'stale_posting'")
+    severity: str = Field(
+        ...,
+        description="Severity bucket: info | caution | warning | dealbreaker",
+    )
+    description: str = Field(..., description="Human-readable explanation of the flag")
+
+
 class ScoreResponse(BaseModel):
     """Full scoring breakdown response."""
 
@@ -92,6 +103,10 @@ class ScoreResponse(BaseModel):
     score_breakdown: list[ScoreBreakdownFactor] = Field(
         default_factory=list,
         description="Breakdown of scoring factors with +/- contributions (≥3 factors)",
+    )
+    red_flags: list[RedFlag] = Field(
+        default_factory=list,
+        description="Rule-based red flags detected in the JD (zero AI cost)",
     )
     reasoning: str = Field(
         ..., min_length=100, description="Scoring explanation (≥100 chars, ≥3 factors)"
@@ -117,6 +132,20 @@ class ScoreResponse(BaseModel):
             try:
                 parsed = json_mod.loads(v)
                 return [ScoreBreakdownFactor(**item) for item in parsed]
+            except (json_mod.JSONDecodeError, TypeError):
+                return []
+        return v
+
+    @field_validator("red_flags", mode="before")
+    @classmethod
+    def _parse_red_flags(cls, v: Any) -> list[RedFlag]:
+        """Parse red_flags from JSON string if it comes from DB."""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                parsed = json_mod.loads(v)
+                return [RedFlag(**item) for item in parsed]
             except (json_mod.JSONDecodeError, TypeError):
                 return []
         return v

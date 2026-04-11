@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GradeBadge } from "@/components/GradeBadge";
+import { RedFlagBadge } from "@/components/RedFlagBadge";
 import { CalendarSection } from "@/components/CalendarSection";
 import { FollowUpSection } from "@/components/FollowUpSection";
 import { InterviewPrepSection } from "@/components/InterviewPrepSection";
@@ -431,6 +432,22 @@ export function ApplicationDetail() {
                 </p>
               )}
             </div>
+
+            {/* Red flags (rule-based JD signals) */}
+            {data.red_flags && data.red_flags.length > 0 && (
+              <div className="mt-4">
+                <div className="block text-sm font-medium text-gray-500">
+                  Red Flags
+                </div>
+                <div className="mt-2">
+                  <RedFlagBadge
+                    flags={data.red_flags}
+                    mode="expanded"
+                    testId="red-flags-detail"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Dates */}

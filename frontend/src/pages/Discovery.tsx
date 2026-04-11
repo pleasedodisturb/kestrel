@@ -18,6 +18,7 @@ import type {
   JobSearchParams,
 } from "@/api/types";
 import { GradeBadge } from "@/components/GradeBadge";
+import { RedFlagBadge } from "@/components/RedFlagBadge";
 import {
   Search,
   Loader2,
@@ -310,11 +311,17 @@ function JobCard({ job }: Readonly<{ job: DiscoveredJob }>) {
           </div>
         </div>
         <div className="ml-4 flex flex-col items-end gap-1">
-          <GradeBadge
-            score={job.fit_score}
-            letterGrade={job.letter_grade}
-            testId={`grade-badge-${job.id}`}
-          />
+          <div className="flex items-center gap-1.5">
+            <GradeBadge
+              score={job.fit_score}
+              letterGrade={job.letter_grade}
+              testId={`grade-badge-${job.id}`}
+            />
+            <RedFlagBadge
+              flags={job.red_flags}
+              testId={`red-flags-${job.id}`}
+            />
+          </div>
           {job.readiness_score !== null && (
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${readinessColor(job.readiness_score)}`}

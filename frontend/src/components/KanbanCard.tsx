@@ -12,6 +12,7 @@ import { Ghost } from "lucide-react";
 import type { Application } from "@/api/types";
 import { cn, scoreColor } from "@/lib/utils";
 import { GradeBadge } from "@/components/GradeBadge";
+import { RedFlagBadge } from "@/components/RedFlagBadge";
 
 interface KanbanCardProps {
   readonly application: Application;
@@ -92,6 +93,10 @@ export function KanbanCard({ application }: KanbanCardProps) {
           score={application.fit_score}
           letterGrade={application.letter_grade}
           testId={`score-badge-${application.id}`}
+        />
+        <RedFlagBadge
+          flags={application.red_flags}
+          testId={`red-flags-${application.id}`}
         />
         {application.readiness_score != null && (() => {
           const rounded = Math.round(application.readiness_score);
