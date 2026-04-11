@@ -10,41 +10,13 @@ Complementary to `tests/test_profiles_crud.py`. Covers edge cases:
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-
-from career_os.database import Base, get_db
-from career_os.main import app
 
 
+# Pull in the shared `db_session` fixture from conftest.py so the FastAPI
+# `get_db` dependency is overridden for every test in this module.
 @pytest.fixture(autouse=True)
-def db_session():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def _pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    connection = engine.connect()
-    session = sessionmaker(bind=connection, autocommit=False, autoflush=False)()
-
-    def override():
-        yield session
-
-    app.dependency_overrides[get_db] = override
-    yield session
-    session.close()
-    connection.close()
-    engine.dispose()
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+def _auto_db(db_session):
+    return db_session
 
 
 # ---------------------------------------------------------------------------

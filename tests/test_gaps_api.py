@@ -9,11 +9,7 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from career_os.database import Base, get_db
-from career_os.main import app
 from career_os.models.models import Application, Profile
 from career_os.services.gap_analysis import (
     ApplicationNotFoundError,
@@ -22,47 +18,23 @@ from career_os.services.gap_analysis import (
 )
 
 
+# Seed a profile + application used by every test in this module. Relies on
+# the shared `db_session` fixture from conftest.py (which overrides get_db).
 @pytest.fixture(autouse=True)
-def db_session():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def _pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    connection = engine.connect()
-    session = sessionmaker(bind=connection, autocommit=False, autoflush=False)()
-
-    profile = Profile(id=1, name="P", email="p@p.com")
-    session.add(profile)
-    session.commit()
-    application = Application(
-        id=10,
-        profile_id=1,
-        company="Acme",
-        role="Senior PM",
-        status="discovered",
+def _seed_profile_and_app(db_session):
+    db_session.add(Profile(id=1, name="P", email="p@p.com"))
+    db_session.commit()
+    db_session.add(
+        Application(
+            id=10,
+            profile_id=1,
+            company="Acme",
+            role="Senior PM",
+            status="discovered",
+        )
     )
-    session.add(application)
-    session.commit()
-
-    def override():
-        yield session
-
-    app.dependency_overrides[get_db] = override
-    yield session
-    session.close()
-    connection.close()
-    engine.dispose()
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+    db_session.commit()
+    return db_session
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +68,7 @@ def test_get_application_gaps_happy_path(client: TestClient):
     assert resp.status_code == 200
     body = resp.json()
     assert body["application_id"] == 10
-    assert body["readiness_score"] == 60.0
+    assert body["readiness_score"] == pytest.approx(60.0)
     assert body["gaps"][0]["skill_name"] == "Roadmapping"
     assert body["gaps_count"] == 1
 

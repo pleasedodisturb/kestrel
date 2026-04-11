@@ -8,10 +8,8 @@ paths and side effects (history rows, profile validation).
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
-from career_os.database import Base
 from career_os.models.models import Profile
 from career_os.models.skills import Skill, SkillHistory
 from career_os.services.skills import (
@@ -26,27 +24,12 @@ from career_os.services.skills import (
 )
 
 
+# Reuse the shared `db_session` from conftest.py and seed a default profile.
 @pytest.fixture()
-def db() -> Session:
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def _pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    connection = engine.connect()
-    session = sessionmaker(bind=connection, autocommit=False, autoflush=False)()
-
-    session.add(Profile(id=1, name="P", email="p@p.com"))
-    session.commit()
-
-    yield session
-    session.close()
-    connection.close()
-    engine.dispose()
+def db(db_session: Session) -> Session:
+    db_session.add(Profile(id=1, name="P", email="p@p.com"))
+    db_session.commit()
+    return db_session
 
 
 # ---------------------------------------------------------------------------

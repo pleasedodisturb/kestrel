@@ -9,11 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
-from career_os.database import Base, get_db
-from career_os.main import app
 from career_os.models.models import Profile
 from career_os.schemas.research import (
     CompanyResearchReport,
@@ -26,36 +22,10 @@ from career_os.services.company_research import (
 
 
 @pytest.fixture(autouse=True)
-def db_session():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def _pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    connection = engine.connect()
-    session = sessionmaker(bind=connection, autocommit=False, autoflush=False)()
-
-    session.add(Profile(id=1, name="P", email="p@p.com"))
-    session.commit()
-
-    def override():
-        yield session
-
-    app.dependency_overrides[get_db] = override
-    yield session
-    session.close()
-    connection.close()
-    engine.dispose()
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+def _seed_profile(db_session):
+    db_session.add(Profile(id=1, name="P", email="p@p.com"))
+    db_session.commit()
+    return db_session
 
 
 def _build_report(name: str = "Acme") -> CompanyResearchReport:
@@ -79,7 +49,7 @@ def test_research_company_happy_path(client: TestClient):
     assert resp.status_code == 200
     body = resp.json()
     assert body["company_name"] == "Mistral"
-    assert body["values_alignment"]["score"] == 7.5
+    assert body["values_alignment"]["score"] == pytest.approx(7.5)
     research.assert_awaited_once()
     kwargs = research.await_args.kwargs
     assert kwargs["company_name"] == "Mistral"

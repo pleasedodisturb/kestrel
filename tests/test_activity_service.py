@@ -12,35 +12,18 @@ effects not covered there:
 """
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
-from career_os.database import Base
 from career_os.models.models import ActivityLog, Application, Profile
 from career_os.services.activity import log_activity
 
 
+# Reuse the shared `db_session` from conftest.py and seed a default profile.
 @pytest.fixture()
-def db() -> Session:
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def _pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    connection = engine.connect()
-    session = sessionmaker(bind=connection, autocommit=False, autoflush=False)()
-
-    session.add(Profile(id=1, name="A", email="a@a.com"))
-    session.commit()
-
-    yield session
-    session.close()
-    connection.close()
-    engine.dispose()
+def db(db_session: Session) -> Session:
+    db_session.add(Profile(id=1, name="A", email="a@a.com"))
+    db_session.commit()
+    return db_session
 
 
 def test_log_activity_default_source(db: Session):

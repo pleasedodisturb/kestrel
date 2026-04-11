@@ -18,10 +18,8 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
-from career_os.database import Base
 from career_os.models.integrations import IntegrationConfig
 from career_os.models.models import Profile
 from career_os.services import ticktick_scheduler as scheduler_mod
@@ -55,23 +53,10 @@ def _mock_response(status_code: int = 200, payload=None, text: str = ""):
     return resp
 
 
+# Alias the shared `db_session` fixture from conftest.py.
 @pytest.fixture()
-def db() -> Session:
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def _pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    connection = engine.connect()
-    session = sessionmaker(bind=connection, autocommit=False, autoflush=False)()
-    yield session
-    session.close()
-    connection.close()
-    engine.dispose()
+def db(db_session: Session) -> Session:
+    return db_session
 
 
 # ---------------------------------------------------------------------------

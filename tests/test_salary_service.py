@@ -62,14 +62,15 @@ def test_parse_salary_range_returns_tuple_of_floats():
     low, high = parse_salary_range("100k")
     assert isinstance(low, float)
     assert isinstance(high, float)
-    assert low == high == 100_000.0
+    assert low == pytest.approx(100_000.0)
+    assert high == pytest.approx(100_000.0)
 
 
 def test_parse_salary_range_min_max_ordering():
     """Reversed input → min/max ordering preserved."""
     low, high = parse_salary_range("160k-120k")
-    assert low == 120_000.0
-    assert high == 160_000.0
+    assert low == pytest.approx(120_000.0)
+    assert high == pytest.approx(160_000.0)
 
 
 # ---------------------------------------------------------------------------
@@ -96,4 +97,4 @@ def test_salary_midpoint_unparseable_returns_none(falsy):
 
 def test_salary_midpoint_single_value():
     """A single salary value returns itself as the midpoint."""
-    assert salary_midpoint("90k") == 90_000.0
+    assert salary_midpoint("90k") == pytest.approx(90_000.0)
