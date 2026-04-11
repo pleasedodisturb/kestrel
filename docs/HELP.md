@@ -85,23 +85,57 @@ Docker might have stopped. Check:
 
 This is a known macOS issue. Docker containers sometimes fail to recover after sleep/wake.
 
-**Quick fix (works most of the time):**
+**1. Check what's happening**
+
+Open Terminal, `cd` to your Kestrel folder, and run:
+
 ```
-cd ~/Downloads/kestrel-main
+docker ps
+```
+
+- If you see the Kestrel containers listed with status `Up`, they're running but may be unresponsive — skip to step 2.
+- If the list is empty or the containers show `Exited`, they stopped — skip to step 3.
+- If the command itself hangs or errors with "Cannot connect to the Docker daemon," Docker Desktop isn't running. Open it, wait for the whale icon in the menu bar to stop animating (about 30 seconds), then try again.
+
+For more detail on why a container is unhappy, look at its logs:
+
+```
+docker compose logs backend
+docker compose logs frontend
+```
+
+Recent errors appear at the bottom.
+
+**2. Nudge the containers (fastest)**
+
+If the containers are `Up` but the page won't load, restart them in place:
+
+```
+docker compose restart
+```
+
+Wait 30 seconds, then open http://localhost:8101.
+
+**3. Bring them back up**
+
+If the containers are stopped, or restart didn't help:
+
+```
 docker compose up -d
 ```
 
-**If that didn't work:**
+Wait 30 seconds, then open http://localhost:8101.
 
-1. Check if Docker Desktop is running (whale icon in menu bar). If not, open it and wait 30 seconds.
-2. Then run:
-   ```
-   docker compose down
-   docker compose up -d
-   ```
-3. Wait 30 seconds, then open http://localhost:8101
+**4. Full reset (last resort)**
 
-**Automatic monitoring (optional):**
+If nothing above works, tear down and recreate the containers. Your data is safe — it lives in a volume, not the container.
+
+```
+docker compose down
+docker compose up -d
+```
+
+**Automatic monitoring (optional)**
 
 Kestrel includes a watchdog script that checks and restarts containers for you:
 
@@ -113,6 +147,16 @@ To run it continuously in the background:
 ```
 bash scripts/docker-watchdog.sh --watch
 ```
+
+**When to file a bug**
+
+If none of the above gets Kestrel back, it's worth reporting. Open an issue at https://github.com/pleasedodisturb/kestrel/issues and include:
+
+- The output of `docker ps`
+- The last ~50 lines of `docker compose logs backend`
+- Your macOS version (Apple menu > About This Mac)
+- Your Docker Desktop version (Docker Desktop > About)
+- Roughly how long the laptop was asleep before this started
 
 Your data is never lost during sleep/wake — it's saved in a database file on your computer, not in Docker's memory.
 

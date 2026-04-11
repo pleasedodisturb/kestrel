@@ -13,6 +13,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8100:8100"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8100/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
     volumes:
       - career-data:/app/data
     environment:
