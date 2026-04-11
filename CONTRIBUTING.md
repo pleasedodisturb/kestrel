@@ -1,3 +1,8 @@
+---
+layout: default
+title: Contributing to Kestrel
+---
+
 <p align="center"><img src="assets/illustrations/hero-bauhaus.webp" alt="Kestrel" width="300"></p>
 
 # Contributing to Kestrel
