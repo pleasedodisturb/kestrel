@@ -1,5 +1,41 @@
 title: Kestrel
-description: A job search system that runs on your computer. Finds jobs. Scores them. Tracks your pipeline. Your data stays yours.
+description: A job search system that runs on your computer.
 theme: jekyll-theme-minimal
 logo: assets/illustrations/logo-icon.webp
 show_downloads: false
+markdown: kramdown
+kramdown:
+  input: GFM
+include:
+  - docs
+  - DEPLOY.md
+  - CONTRIBUTING.md
+exclude:
+  - src
+  - tests
+  - tools
+  - frontend
+  - alembic
+  - scripts
+  - worker
+  - automation
+  - config
+  - tracking
+  - cv
+  - profile
+  - mcp-configs
+  - dashboard
+  - Dockerfile
+  - Dockerfile.frontend
+  - docker-compose.yml
+  - docker-compose.prod.yml
+  - pyproject.toml
+  - requirements.txt
+  - setup.sh
+  - install.sh
+  - alembic.ini
+  - nginx.conf
+  - MANIFEST.in
+  - node_modules
+  - .venv
+  - data
