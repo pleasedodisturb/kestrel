@@ -412,13 +412,23 @@ DELETE  /api/star-stories/{id}          Delete story
 <summary><strong>Integrations</strong></summary>
 
 ```
-GET     /api/integrations/status        All integration statuses
-PUT     /api/integrations/configure     Update integration config
+GET    /api/integrations                 List all integrations
+GET    /api/integrations/{name}/config   Get integration config
+PUT    /api/integrations/{name}/config   Update integration config
+POST   /api/integrations/{name}/test     Test integration connection
+
+--- TimingsApp ---
+POST   /api/timingsapp/sessions              Start session
+GET    /api/timingsapp/sessions              List sessions
+GET    /api/timingsapp/sessions/running      Running session
+GET    /api/timingsapp/sessions/{id}         Session details
+PUT    /api/timingsapp/sessions/{id}         Stop session
+PATCH  /api/timingsapp/sessions/{id}         Update session
+GET    /api/timingsapp/analytics             Time analytics
+POST   /api/timingsapp/test                  Test connection
 GET     /api/calendar/feed.ics          iCal calendar feed
 POST    /api/ticktick/sync              Trigger TickTick sync
 GET     /api/ticktick/status            Sync status
-POST    /api/timingsapp/track           Log time entry
-GET     /api/timingsapp/summary         Time tracking summary
 POST    /api/pushover/test              Test notification
 POST    /api/voice/session              Start voice session
 GET     /api/ai/health                  AI provider health check
