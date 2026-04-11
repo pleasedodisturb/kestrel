@@ -301,8 +301,10 @@ describe("KanbanBoard", () => {
     });
   });
 
-  describe("score badge colors", () => {
-    it("high score (≥8) shows green badge", async () => {
+  describe("grade badge colors", () => {
+    // Score-to-grade mapping lives in ``lib/gradeUtils.ts``:
+    //   A/A-  -> green, B+/B -> emerald, C+/C -> yellow, D -> orange, F -> red
+    it("A grade (≥9) shows green badge", async () => {
       mockFetchApplications.mockResolvedValue({
         applications: [makeApp({ id: 1, fit_score: 9.0 })],
         total: 1,
@@ -310,26 +312,40 @@ describe("KanbanBoard", () => {
       renderBoard();
       const badge = await screen.findByTestId("score-badge-1");
       expect(badge.className).toContain("bg-green-100");
+      expect(badge.textContent).toContain("A");
     });
 
-    it("medium score (5-7.9) shows yellow badge", async () => {
+    it("B grade (6-6.9) shows emerald badge", async () => {
       mockFetchApplications.mockResolvedValue({
         applications: [makeApp({ id: 1, fit_score: 6.5 })],
         total: 1,
       });
       renderBoard();
       const badge = await screen.findByTestId("score-badge-1");
-      expect(badge.className).toContain("bg-yellow-100");
+      expect(badge.className).toContain("bg-emerald-100");
+      expect(badge.textContent).toContain("B");
     });
 
-    it("low score (<5) shows red badge", async () => {
+    it("D grade (3-3.9) shows orange badge", async () => {
       mockFetchApplications.mockResolvedValue({
         applications: [makeApp({ id: 1, fit_score: 3.0 })],
         total: 1,
       });
       renderBoard();
       const badge = await screen.findByTestId("score-badge-1");
+      expect(badge.className).toContain("bg-orange-100");
+      expect(badge.textContent).toContain("D");
+    });
+
+    it("F grade (<3) shows red badge", async () => {
+      mockFetchApplications.mockResolvedValue({
+        applications: [makeApp({ id: 1, fit_score: 2.0 })],
+        total: 1,
+      });
+      renderBoard();
+      const badge = await screen.findByTestId("score-badge-1");
       expect(badge.className).toContain("bg-red-100");
+      expect(badge.textContent).toContain("F");
     });
   });
 

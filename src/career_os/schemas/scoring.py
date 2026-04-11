@@ -4,7 +4,7 @@ import json as json_mod
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from career_os.schemas.ai import ScoreBreakdownFactor
 
@@ -16,6 +16,40 @@ def _ensure_utc(v: Any) -> datetime | None:
     if isinstance(v, datetime) and v.tzinfo is None:
         return v.replace(tzinfo=UTC)
     return v
+
+
+def score_to_letter_grade(score: float | None) -> str | None:
+    """Map a 0-10 fit score to a letter grade (A through F).
+
+    Boundaries are inclusive on the lower bound:
+        9.0-10.0 -> A     (dream job)
+        8.0-8.9  -> A-    (strong fit, top tier)
+        7.0-7.9  -> B+    (strong fit)
+        6.0-6.9  -> B     (good fit)
+        5.0-5.9  -> C+    (maybe)
+        4.0-4.9  -> C     (weak fit)
+        3.0-3.9  -> D     (poor fit)
+        0.0-2.9  -> F     (no fit)
+
+    Returns ``None`` when ``score`` is ``None``.
+    """
+    if score is None:
+        return None
+    if score >= 9.0:
+        return "A"
+    if score >= 8.0:
+        return "A-"
+    if score >= 7.0:
+        return "B+"
+    if score >= 6.0:
+        return "B"
+    if score >= 5.0:
+        return "C+"
+    if score >= 4.0:
+        return "C"
+    if score >= 3.0:
+        return "D"
+    return "F"
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +81,12 @@ class ScoreResponse(BaseModel):
     fit_score: float = Field(..., ge=0, le=10, description="Overall fit 1-10")
     readiness_score: float = Field(..., ge=0, le=100, description="Skills readiness 0-100")
     career_alignment: float = Field(..., ge=0, le=10, description="Career alignment 0-10")
+
+    # Letter grade derived from fit_score (A, A-, B+, B, C+, C, D, F)
+    letter_grade: str | None = Field(
+        default=None,
+        description="Letter grade derived from fit_score (computed automatically)",
+    )
 
     # Detailed breakdown
     score_breakdown: list[ScoreBreakdownFactor] = Field(
@@ -85,6 +125,13 @@ class ScoreResponse(BaseModel):
     @classmethod
     def _ensure_utc(cls, v: Any) -> datetime | None:
         return _ensure_utc(v)
+
+    @model_validator(mode="after")
+    def _populate_letter_grade(self) -> "ScoreResponse":
+        """Derive letter_grade from fit_score whenever it is not set."""
+        if self.letter_grade is None:
+            self.letter_grade = score_to_letter_grade(self.fit_score)
+        return self
 
 
 # ---------------------------------------------------------------------------

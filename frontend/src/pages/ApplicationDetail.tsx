@@ -27,6 +27,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GradeBadge } from "@/components/GradeBadge";
 import { CalendarSection } from "@/components/CalendarSection";
 import { FollowUpSection } from "@/components/FollowUpSection";
 import { InterviewPrepSection } from "@/components/InterviewPrepSection";
@@ -331,27 +332,42 @@ export function ApplicationDetail() {
                 testId="field-contact"
                 onChange={(v) => handleFieldChange("contact", v)}
               />
-              <FieldRow
-                label="Fit Score"
-                value={
-                  isEditing
-                    ? editData.fit_score != null
-                      ? String(editData.fit_score)
-                      : ""
-                    : data.fit_score != null
-                      ? String(data.fit_score)
-                      : ""
-                }
-                isEditing={isEditing}
-                testId="field-score"
-                inputType="number"
-                onChange={(v) =>
-                  handleFieldChange(
-                    "fit_score",
-                    v === "" ? undefined : Number(v),
-                  )
-                }
-              />
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <FieldRow
+                    label="Fit Score"
+                    value={
+                      isEditing
+                        ? editData.fit_score != null
+                          ? String(editData.fit_score)
+                          : ""
+                        : data.fit_score != null
+                          ? String(data.fit_score)
+                          : ""
+                    }
+                    isEditing={isEditing}
+                    testId="field-score"
+                    inputType="number"
+                    onChange={(v) =>
+                      handleFieldChange(
+                        "fit_score",
+                        v === "" ? undefined : Number(v),
+                      )
+                    }
+                  />
+                </div>
+                <div className="pt-6">
+                  <GradeBadge
+                    score={
+                      isEditing
+                        ? editData.fit_score ?? null
+                        : data.fit_score
+                    }
+                    letterGrade={data.letter_grade}
+                    testId="grade-badge-detail"
+                  />
+                </div>
+              </div>
               <FieldRow
                 label="Status"
                 value={data.status}

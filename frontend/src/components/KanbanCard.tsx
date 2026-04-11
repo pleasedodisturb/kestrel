@@ -11,6 +11,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Ghost } from "lucide-react";
 import type { Application } from "@/api/types";
 import { cn, scoreColor } from "@/lib/utils";
+import { GradeBadge } from "@/components/GradeBadge";
 
 interface KanbanCardProps {
   readonly application: Application;
@@ -87,17 +88,11 @@ export function KanbanCard({ application }: KanbanCardProps) {
       </div>
       <p className="mt-0.5 text-xs text-gray-600 truncate">{application.role}</p>
       <div className="mt-2 flex items-center gap-1.5">
-        {application.fit_score != null && (
-          <span
-            data-testid={`score-badge-${application.id}`}
-            className={cn(
-              "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
-              scoreColor(application.fit_score, 8, 5),
-            )}
-          >
-            {application.fit_score.toFixed(1)}
-          </span>
-        )}
+        <GradeBadge
+          score={application.fit_score}
+          letterGrade={application.letter_grade}
+          testId={`score-badge-${application.id}`}
+        />
         {application.readiness_score != null && (() => {
           const rounded = Math.round(application.readiness_score);
           return (

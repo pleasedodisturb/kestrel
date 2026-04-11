@@ -116,6 +116,7 @@ export interface Application {
   notes: string | null;
   fit_score: number | null;
   readiness_score: number | null;
+  letter_grade?: string | null;
   date_applied: string | null;
   created_at: string;
   updated_at: string;
@@ -379,6 +380,7 @@ export interface DiscoveredJob {
   source_urls: string[];
   fit_score: number | null;
   readiness_score: number | null;
+  letter_grade?: string | null;
   application_id: number | null;
   created_at: string;
   updated_at: string;
