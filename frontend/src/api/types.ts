@@ -110,6 +110,21 @@ export interface RedFlag {
   description: string;
 }
 
+export interface DimensionalScores {
+  technical_fit: number;
+  seniority_alignment: number;
+  compensation_fit: number;
+  location_fit: number;
+  career_trajectory: number;
+  company_fit: number;
+}
+
+export interface ATSKeyword {
+  keyword: string;
+  category: "technical" | "soft_skill" | "tool" | "certification" | "domain";
+  matched: boolean;
+}
+
 export interface Application {
   id: number;
   profile_id: number;
@@ -126,6 +141,8 @@ export interface Application {
   readiness_score: number | null;
   letter_grade?: string | null;
   red_flags?: RedFlag[] | null;
+  dimensional_scores?: DimensionalScores | null;
+  ats_keywords?: ATSKeyword[] | null;
   date_applied: string | null;
   created_at: string;
   updated_at: string;
@@ -391,6 +408,8 @@ export interface DiscoveredJob {
   readiness_score: number | null;
   letter_grade?: string | null;
   red_flags?: RedFlag[] | null;
+  dimensional_scores?: DimensionalScores | null;
+  ats_keywords?: ATSKeyword[] | null;
   application_id: number | null;
   created_at: string;
   updated_at: string;

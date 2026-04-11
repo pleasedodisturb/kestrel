@@ -27,8 +27,10 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ATSKeywordChecklist from "@/components/ATSKeywordChecklist";
 import { GradeBadge } from "@/components/GradeBadge";
 import { RedFlagBadge } from "@/components/RedFlagBadge";
+import ScoreRadarChart from "@/components/ScoreRadarChart";
 import { CalendarSection } from "@/components/CalendarSection";
 import { FollowUpSection } from "@/components/FollowUpSection";
 import { InterviewPrepSection } from "@/components/InterviewPrepSection";
@@ -446,6 +448,20 @@ export function ApplicationDetail() {
                     testId="red-flags-detail"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Dimensional score radar chart */}
+            {data.dimensional_scores && (
+              <div className="mt-4">
+                <ScoreRadarChart dimensionalScores={data.dimensional_scores} />
+              </div>
+            )}
+
+            {/* ATS keyword checklist */}
+            {data.ats_keywords && data.ats_keywords.length > 0 && (
+              <div className="mt-4">
+                <ATSKeywordChecklist keywords={data.ats_keywords} />
               </div>
             )}
           </div>
