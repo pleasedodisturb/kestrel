@@ -278,7 +278,7 @@ AIFeature
 Switch providers with a single environment variable:
 
 ```bash
-AI_PROVIDER=mock              # Offline, deterministic (default)
+AI_PROVIDER=mock              # Demo Mode — offline, deterministic (default; "demo" is an accepted alias)
 AI_PROVIDER=openrouter        # Claude, GPT via OpenRouter
 AI_PROVIDER=anthropic         # Direct Anthropic API
 AI_PROVIDER=openai            # Direct OpenAI API
