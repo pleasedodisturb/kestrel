@@ -108,6 +108,20 @@ class ScoredJob(Base):
     # Weights snapshot at scoring time (JSON)
     weights_snapshot: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Rule-based red flags detected in JD (JSON array of {flag_type, severity, description})
+    red_flags: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ATS keywords extracted by AI (JSON array of {keyword, category, matched})
+    ats_keywords: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Dimensional sub-scores (0-10, each may be null on legacy rows)
+    dim_technical_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dim_seniority_alignment: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dim_compensation_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dim_location_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dim_career_trajectory: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dim_company_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

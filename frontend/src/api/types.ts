@@ -102,6 +102,14 @@ export const STATUS_COLORS: Record<
   },
 };
 
+export type RedFlagSeverity = "info" | "caution" | "warning" | "dealbreaker";
+
+export interface RedFlag {
+  flag_type: string;
+  severity: RedFlagSeverity;
+  description: string;
+}
+
 export interface Application {
   id: number;
   profile_id: number;
@@ -116,6 +124,8 @@ export interface Application {
   notes: string | null;
   fit_score: number | null;
   readiness_score: number | null;
+  letter_grade?: string | null;
+  red_flags?: RedFlag[] | null;
   date_applied: string | null;
   created_at: string;
   updated_at: string;
@@ -379,6 +389,8 @@ export interface DiscoveredJob {
   source_urls: string[];
   fit_score: number | null;
   readiness_score: number | null;
+  letter_grade?: string | null;
+  red_flags?: RedFlag[] | null;
   application_id: number | null;
   created_at: string;
   updated_at: string;

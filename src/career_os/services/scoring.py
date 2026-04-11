@@ -20,6 +20,7 @@ from career_os.models.models import Application, Profile
 from career_os.models.scoring import ScoredJob, ScoringWeights
 from career_os.models.skills import Goal, Skill
 from career_os.schemas.ai import ScoreResult
+from career_os.services.red_flags import detect_red_flags
 
 logger = logging.getLogger(__name__)
 
@@ -373,6 +374,29 @@ async def score_job(
         else None
     )
 
+    # Rule-based red flags (zero AI cost). Pull richer metadata from the
+    # linked DiscoveredJob when available so rules like stale_posting and
+    # missing_salary can evaluate.
+    rf_posted_at = None
+    rf_title = job_title
+    rf_salary = None
+    rf_location = None
+    if discovered_job_id is not None:
+        dj_meta = db.query(DiscoveredJob).filter(DiscoveredJob.id == discovered_job_id).first()
+        if dj_meta is not None:
+            rf_posted_at = dj_meta.posted_at
+            rf_title = rf_title or dj_meta.title
+            rf_salary = dj_meta.salary_range
+            rf_location = dj_meta.location
+    red_flags = detect_red_flags(
+        job_description,
+        posted_at=rf_posted_at,
+        title=rf_title,
+        salary_range=rf_salary,
+        location=rf_location,
+    )
+    red_flags_json = json.dumps(red_flags) if red_flags else None
+
     # Persist the score
     scored_job = ScoredJob(
         profile_id=profile_id,
@@ -387,6 +411,7 @@ async def score_job(
         prep_level=score_data.prep_level,
         prep_notes=score_data.prep_notes,
         score_breakdown=breakdown_json,
+        red_flags=red_flags_json,
         is_stale=False,
         weights_snapshot=json.dumps(profile_data["weights"]),
     )

@@ -17,6 +17,8 @@ import type {
   SavedSearchConfig,
   JobSearchParams,
 } from "@/api/types";
+import { GradeBadge } from "@/components/GradeBadge";
+import { RedFlagBadge } from "@/components/RedFlagBadge";
 import {
   Search,
   Loader2,
@@ -52,13 +54,6 @@ const PAGE_SIZE = 20;
 function remoteFilterValue(remote: boolean | undefined): string {
   if (remote === undefined) return "";
   return remote ? "true" : "false";
-}
-
-function scoreColor(score: number | null): string {
-  if (score === null) return "text-gray-400";
-  if (score >= 8) return "text-green-600";
-  if (score >= 5) return "text-yellow-600";
-  return "text-red-600";
 }
 
 function readinessColor(score: number | null): string {
@@ -316,14 +311,17 @@ function JobCard({ job }: Readonly<{ job: DiscoveredJob }>) {
           </div>
         </div>
         <div className="ml-4 flex flex-col items-end gap-1">
-          {job.fit_score !== null && (
-            <span
-              className={`flex items-center gap-1 text-sm font-semibold ${scoreColor(job.fit_score)}`}
-            >
-              <Star className="h-3.5 w-3.5" />
-              {job.fit_score.toFixed(1)}
-            </span>
-          )}
+          <div className="flex items-center gap-1.5">
+            <GradeBadge
+              score={job.fit_score}
+              letterGrade={job.letter_grade}
+              testId={`grade-badge-${job.id}`}
+            />
+            <RedFlagBadge
+              flags={job.red_flags}
+              testId={`red-flags-${job.id}`}
+            />
+          </div>
           {job.readiness_score !== null && (
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${readinessColor(job.readiness_score)}`}
