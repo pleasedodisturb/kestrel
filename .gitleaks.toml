@@ -1,0 +1,23 @@
+# Gitleaks configuration for Kestrel.
+# Extends the default ruleset with project-specific allowlists.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlisted paths and regexes for Kestrel"
+
+paths = [
+  '''\.github/pii-patterns\.txt$''',
+  '''config/personal\.yaml\.example$''',
+  '''tests/fixtures/.*''',
+  '''docs/.*''',
+  '''.*\.md$''',
+]
+
+regexes = [
+  # Example placeholder API keys used in docs/examples
+  '''(?i)your[-_]?api[-_]?key[-_]?here''',
+  '''(?i)sk-example''',
+  '''(?i)example[-_]?token''',
+]

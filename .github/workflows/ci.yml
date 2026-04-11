@@ -9,15 +9,38 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
-  backend:
-    name: Backend (Python)
+  pre-commit:
+    name: Pre-commit hooks
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+          cache: pip
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run hooks
+        run: pre-commit run --all-files --show-diff-on-failure
+
+  backend:
+    name: Backend (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Install dependencies
@@ -25,7 +48,7 @@ jobs:
 
       - name: Setup test config
         run: |
-          mkdir -p config
+          mkdir -p config data
           cp config/personal.yaml.example config/personal.yaml
 
       - name: Lint
@@ -33,12 +56,59 @@ jobs:
           ruff check src/ tests/
           ruff format --check src/ tests/
 
+      - name: Type check (ty)
+        continue-on-error: true
+        run: |
+          pip install ty
+          ty check src/
+
+      - name: Alembic migration check
+        run: |
+          # Ensure exactly one migration head exists (catches merge conflicts).
+          heads=$(alembic heads | grep -c '(head)' || true)
+          if [ "$heads" -ne 1 ]; then
+            echo "::error::Expected exactly 1 alembic head, found $heads"
+            alembic heads
+            exit 1
+          fi
+          # Apply migrations against a fresh SQLite DB (path is set in alembic.ini).
+          rm -f data/career_os.db
+          alembic upgrade head
+          # Downgrade + upgrade again verifies migrations are reversible.
+          alembic downgrade base
+          alembic upgrade head
+
       - name: Run tests
         run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml
 
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.13'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: API smoke test
+        run: |
+          uvicorn career_os.main:app --host 127.0.0.1 --port 8100 &
+          APP_PID=$!
+          trap "kill $APP_PID 2>/dev/null || true" EXIT
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -sf http://127.0.0.1:8100/health > /dev/null; then
+              echo "Health check passed."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::API did not become healthy within 10s"
+          exit 1
+
       - name: Security audit (dependencies)
-        continue-on-error: true
-        run: pip install pip-audit && pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit
 
       - name: PII leak check
         run: |
@@ -77,24 +147,45 @@ jobs:
       - name: Lint
         run: npx eslint src/
 
+      - name: Type check
+        run: npx tsc --noEmit -p tsconfig.app.json
+
       - name: Run tests
         run: npx vitest run
 
-      - name: Security audit (dependencies)
-        run: npm audit --audit-level=moderate || true
+      - name: Build
+        run: npm run build
 
-  codeql:
-    name: CodeQL Analysis
+      - name: Bundle size check
+        run: |
+          npm install --no-save --legacy-peer-deps size-limit @size-limit/file
+          npx size-limit
+
+      - name: Accessibility smoke check
+        continue-on-error: true
+        run: |
+          npm install --no-save --legacy-peer-deps http-server @axe-core/cli
+          npx http-server dist -p 4173 --silent &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+          sleep 2
+          npx @axe-core/cli http://127.0.0.1:4173 --exit
+
+      - name: Security audit (dependencies)
+        run: npm audit --audit-level=moderate
+
+  container:
+    name: Container build + scan
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    strategy:
-      matrix:
-        language: [python, javascript-typescript]
     steps:
       - uses: actions/checkout@v6
-      - uses: github/codeql-action/init@v4
+      - name: Build Docker image
+        run: docker build -t kestrel:ci .
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          languages: ${{ matrix.language }}
-      - uses: github/codeql-action/autobuild@v4
-      - uses: github/codeql-action/analyze@v4
+          image-ref: kestrel:ci
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
