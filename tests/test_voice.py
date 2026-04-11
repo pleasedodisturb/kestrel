@@ -75,7 +75,12 @@ def profile(test_db: Session) -> Profile:
 
 @pytest.fixture
 def profile_b(test_db: Session) -> Profile:
-    p = Profile(name="Other User", email="other@test.com", location="Berlin", job_family="Software Engineering")
+    p = Profile(
+        name="Other User",
+        email="other@test.com",
+        location="Berlin",
+        job_family="Software Engineering",
+    )
     test_db.add(p)
     test_db.commit()
     test_db.refresh(p)

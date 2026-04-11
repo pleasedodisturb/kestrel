@@ -189,6 +189,47 @@ def list_applications(
     return applications, total
 
 
+def _handle_status_transition(db: Session, app_obj: Application, update_data: dict) -> None:
+    """Validate and log a status transition if present in update_data."""
+    if "status" not in update_data:
+        return
+    new_status = update_data["status"].strip().lower()
+    update_data["status"] = new_status
+    old_status = app_obj.status.strip().lower()
+    if not is_valid_transition(old_status, new_status):
+        raise InvalidStatusTransitionError(old_status, new_status)
+    _log_activity(
+        db,
+        profile_id=app_obj.profile_id,
+        application_id=app_obj.id,
+        action="status_changed",
+        details=f"Status changed from '{old_status}' to '{new_status}'",
+    )
+    if new_status == "applied" and app_obj.date_applied is None:
+        app_obj.date_applied = datetime.now(UTC)
+
+
+def _apply_field_updates(db: Session, app_obj: Application, update_data: dict) -> None:
+    """Set fields on the application and log non-status changes."""
+    changed_fields = []
+    for field, value in update_data.items():
+        if field == "status":
+            setattr(app_obj, field, value)
+        else:
+            old_val = getattr(app_obj, field, None)
+            if old_val != value:
+                changed_fields.append(field)
+                setattr(app_obj, field, value)
+    if changed_fields:
+        _log_activity(
+            db,
+            profile_id=app_obj.profile_id,
+            application_id=app_obj.id,
+            action="updated",
+            details=f"Updated fields: {', '.join(changed_fields)}",
+        )
+
+
 def update_application(
     db: Session,
     application_id: int,
@@ -203,58 +244,15 @@ def update_application(
     does not belong to that profile.
     """
     app_obj = _get_active_application(db, application_id, profile_id=profile_id)
-
     update_data = payload.model_dump(exclude_unset=True)
 
-    # Handle status transition validation
-    if "status" in update_data:
-        new_status = update_data["status"].strip().lower()
-        update_data["status"] = new_status  # ensure stored value is canonical
-        old_status = app_obj.status.strip().lower()
-        if not is_valid_transition(old_status, new_status):
-            raise InvalidStatusTransitionError(old_status, new_status)
+    _handle_status_transition(db, app_obj, update_data)
+    _apply_field_updates(db, app_obj, update_data)
 
-        # Log status change separately
-        _log_activity(
-            db,
-            profile_id=app_obj.profile_id,
-            application_id=app_obj.id,
-            action="status_changed",
-            details=f"Status changed from '{old_status}' to '{new_status}'",
-        )
-
-        # If transitioning to applied, set date_applied
-        if new_status == "applied" and app_obj.date_applied is None:
-            app_obj.date_applied = datetime.now(UTC)
-
-    # Track non-status changes
-    changed_fields = []
-    for field, value in update_data.items():
-        if field == "status":
-            setattr(app_obj, field, value)
-        else:
-            old_val = getattr(app_obj, field, None)
-            if old_val != value:
-                changed_fields.append(field)
-                setattr(app_obj, field, value)
-
-    # Log field updates (not status — that's logged above)
-    if changed_fields:
-        _log_activity(
-            db,
-            profile_id=app_obj.profile_id,
-            application_id=app_obj.id,
-            action="updated",
-            details=f"Updated fields: {', '.join(changed_fields)}",
-        )
-
-    # Capture status change for auto-sync before commit
     status_changed = "status" in update_data
-
     db.commit()
     db.refresh(app_obj)
 
-    # Auto-push status change to TickTick (no-op if not configured)
     if status_changed:
         from career_os.services.ticktick_sync import try_auto_push_pipeline_action
 

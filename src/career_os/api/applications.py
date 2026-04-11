@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404, RESP_404_422
 from career_os.database import get_db
 from career_os.schemas.applications import (
     ActivityLogResponse,
@@ -31,7 +32,6 @@ from career_os.services.follow_ups import (
     is_ghost_application,
 )
 from career_os.services.gap_analysis import get_readiness_score
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -44,7 +44,28 @@ def _enrich_with_readiness(app_response: ApplicationResponse, db: Session) -> Ap
     return app_response
 
 
-@router.post("", status_code=201, responses={404: {"description": "Not found"}})
+def _derive_package_type(pkg) -> str:
+    if pkg.cover_letter_path and pkg.cv_path:
+        return "full"
+    if pkg.cover_letter_path:
+        return "cover_letter"
+    if pkg.cv_path:
+        return "cv"
+    return "directory"
+
+
+def _build_package_summary(pkg) -> ApplicationPackageSummaryResponse:
+    pkg_dir = pkg.package_dir or ""
+    package_name = pkg_dir.rstrip("/").split("/")[-1] if pkg_dir else "Unknown"
+    return ApplicationPackageSummaryResponse(
+        id=pkg.id,
+        package_name=package_name,
+        file_path=pkg_dir,
+        package_type=_derive_package_type(pkg),
+    )
+
+
+@router.post("", status_code=201, responses=RESP_404)
 async def create(
     payload: ApplicationCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -129,7 +150,7 @@ async def list_apps(
     )
 
 
-@router.get("/{application_id}", responses={404: {"description": "Not found"}})
+@router.get("/{application_id}", responses=RESP_404)
 async def get_detail(
     application_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -150,29 +171,7 @@ async def get_detail(
     # Include follow-ups sorted by due date
     follow_ups_sorted = sorted(app_obj.follow_ups, key=lambda x: x.due_date)
 
-    # Build packages list with derived fields
-    packages_list = []
-    for pkg in app_obj.packages:
-        # Derive a readable package_name from the directory path
-        pkg_dir = pkg.package_dir or ""
-        package_name = pkg_dir.rstrip("/").split("/")[-1] if pkg_dir else "Unknown"
-        # Determine package_type from available files
-        if pkg.cover_letter_path and pkg.cv_path:
-            package_type = "full"
-        elif pkg.cover_letter_path:
-            package_type = "cover_letter"
-        elif pkg.cv_path:
-            package_type = "cv"
-        else:
-            package_type = "directory"
-        packages_list.append(
-            ApplicationPackageSummaryResponse(
-                id=pkg.id,
-                package_name=package_name,
-                file_path=pkg_dir,
-                package_type=package_type,
-            )
-        )
+    packages_list = [_build_package_summary(pkg) for pkg in app_obj.packages]
 
     # Compute readiness score if requirements exist
     readiness = get_readiness_score(db, app_obj.id, app_obj.profile_id)
@@ -191,7 +190,7 @@ async def get_detail(
 
 @router.patch(
     "/{application_id}",
-    responses={404: {"description": "Not found"}, 422: {"description": "Validation error"}},
+    responses=RESP_404_422,
 )
 async def update(
     application_id: int,
@@ -218,7 +217,7 @@ async def update(
     return ApplicationResponse.model_validate(app_obj)
 
 
-@router.delete("/{application_id}", responses={404: {"description": "Not found"}})
+@router.delete("/{application_id}", responses=RESP_404)
 async def delete(
     application_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],

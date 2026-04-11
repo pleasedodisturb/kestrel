@@ -13,7 +13,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from career_os.api.constants import DESC_FILTER_BY_CATEGORY, DESC_PROFILE_ID, TIME_SESSION_NOT_FOUND
+from career_os.api.constants import (
+    DESC_FILTER_BY_CATEGORY,
+    DESC_PROFILE_ID,
+    RESP_404,
+    TIME_SESSION_NOT_FOUND,
+)
 from career_os.database import get_db
 from career_os.schemas.timingsapp import (
     TimeAnalyticsResponse,
@@ -63,7 +68,7 @@ async def create_session(
 
 @router.put(
     "/sessions/{session_id}/stop",
-    responses={400: {"description": "Bad request"}, 404: {"description": "Not found"}},
+    responses={**RESP_404, 400: {"description": "Bad request"}},
 )
 async def stop_session_endpoint(
     session_id: int,
@@ -124,7 +129,7 @@ async def get_running_session_endpoint(
     return TimeSessionResponse.model_validate(session_record)
 
 
-@router.get("/sessions/{session_id}", responses={404: {"description": "Not found"}})
+@router.get("/sessions/{session_id}", responses=RESP_404)
 async def get_session_endpoint(
     session_id: int,
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
@@ -138,7 +143,7 @@ async def get_session_endpoint(
         raise HTTPException(status_code=404, detail=TIME_SESSION_NOT_FOUND) from exc
 
 
-@router.patch("/sessions/{session_id}", responses={404: {"description": "Not found"}})
+@router.patch("/sessions/{session_id}", responses=RESP_404)
 async def update_session_endpoint(
     session_id: int,
     payload: TimeSessionUpdate,

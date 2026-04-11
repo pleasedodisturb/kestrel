@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.schemas.goals import (
     AlternativePath,
@@ -32,7 +33,6 @@ from career_os.services.goals import (
     recalibrate_goal,
     update_goal,
 )
-from career_os.api.constants import DESC_ACTIVE_PROFILE_ID
 
 router = APIRouter(prefix="/api/goals", tags=["goals"])
 
@@ -52,7 +52,7 @@ async def list_goals_endpoint(
     )
 
 
-@router.get("/{goal_id}", responses={404: {"description": "Not found"}})
+@router.get("/{goal_id}", responses=RESP_404)
 async def get_goal_endpoint(
     goal_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -66,7 +66,7 @@ async def get_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.post("", status_code=201, responses={404: {"description": "Not found"}})
+@router.post("", status_code=201, responses=RESP_404)
 async def create_goal_endpoint(
     payload: GoalCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -89,7 +89,7 @@ async def create_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.put("/{goal_id}", responses={404: {"description": "Not found"}})
+@router.put("/{goal_id}", responses=RESP_404)
 async def update_goal_endpoint(
     goal_id: int,
     payload: GoalUpdate,
@@ -110,7 +110,7 @@ async def update_goal_endpoint(
     return GoalResponse.model_validate(goal)
 
 
-@router.delete("/{goal_id}", status_code=204, responses={404: {"description": "Not found"}})
+@router.delete("/{goal_id}", status_code=204, responses=RESP_404)
 async def delete_goal_endpoint(
     goal_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -123,7 +123,7 @@ async def delete_goal_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{goal_id}/reality-map", responses={404: {"description": "Not found"}})
+@router.get("/{goal_id}/reality-map", responses=RESP_404)
 async def get_reality_map_endpoint(
     goal_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -148,7 +148,7 @@ async def get_reality_map_endpoint(
     )
 
 
-@router.get("/{goal_id}/progress", responses={404: {"description": "Not found"}})
+@router.get("/{goal_id}/progress", responses=RESP_404)
 async def get_progress_endpoint(
     goal_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -168,7 +168,7 @@ async def get_progress_endpoint(
     )
 
 
-@router.put("/{goal_id}/recalibrate", responses={404: {"description": "Not found"}})
+@router.put("/{goal_id}/recalibrate", responses=RESP_404)
 async def recalibrate_goal_endpoint(
     goal_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
@@ -189,7 +189,7 @@ async def recalibrate_goal_endpoint(
     )
 
 
-@router.get("/{goal_id}/alternatives", responses={404: {"description": "Not found"}})
+@router.get("/{goal_id}/alternatives", responses=RESP_404)
 async def get_alternatives_endpoint(
     goal_id: int,
     profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],

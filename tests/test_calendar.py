@@ -34,6 +34,7 @@ from career_os.services.calendar import (
     list_calendar_events,
     update_calendar_event,
 )
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS
 
 client = TestClient(app)
 
@@ -79,7 +80,7 @@ def db_session():
 @pytest.fixture()
 def profile(db_session) -> Profile:
     """Create a test profile."""
-    p = Profile(name="Test User", email="test@example.com", location="Frankfurt", job_family="Software Engineering")
+    p = Profile(**DEFAULT_PROFILE_KWARGS)
     db_session.add(p)
     db_session.commit()
     db_session.refresh(p)
@@ -89,7 +90,7 @@ def profile(db_session) -> Profile:
 @pytest.fixture()
 def profile_b(db_session) -> Profile:
     """Second profile for isolation tests."""
-    p = Profile(name="Other User", email="other@example.com", location="Berlin", job_family="Software Engineering")
+    p = Profile(**SECOND_PROFILE_KWARGS)
     db_session.add(p)
     db_session.commit()
     db_session.refresh(p)
