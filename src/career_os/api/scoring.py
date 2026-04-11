@@ -90,7 +90,7 @@ async def score_endpoint(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Scoring error: {exc}") from exc
 
-    return ScoreResponse.model_validate(scored)
+    return ScoreResponse.from_orm_with_dimensions(scored)
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ async def batch_score_endpoint(
     return BatchScoreResponse(
         scored_count=result["scored_count"],
         total_time_seconds=result["total_time_seconds"],
-        scores=[ScoreResponse.model_validate(s) for s in result["scores"]],
+        scores=[ScoreResponse.from_orm_with_dimensions(s) for s in result["scores"]],
         errors=result["errors"],
         credits_exhausted=credits_exhausted,
     )
@@ -206,7 +206,7 @@ async def get_job_score_endpoint(
     scored = get_score_for_job(db, profile_id, discovered_job_id)
     if not scored:
         raise HTTPException(status_code=404, detail="No score found for this job")
-    return ScoreResponse.model_validate(scored)
+    return ScoreResponse.from_orm_with_dimensions(scored)
 
 
 @router.get(
@@ -222,7 +222,7 @@ async def get_application_score_endpoint(
     scored = get_score_for_application(db, profile_id, application_id)
     if not scored:
         raise HTTPException(status_code=404, detail="No score found for this application")
-    return ScoreResponse.model_validate(scored)
+    return ScoreResponse.from_orm_with_dimensions(scored)
 
 
 # ---------------------------------------------------------------------------

@@ -59,6 +59,28 @@ class ScoreBreakdownFactor(BaseModel):
     description: str = Field(..., description="Explanation of this factor's impact")
 
 
+class DimensionalScores(BaseModel):
+    """Six-axis dimensional sub-scores (0-10 each)."""
+
+    technical_fit: float = Field(..., ge=0, le=10, description="Skill/tool match and experience alignment")
+    seniority_alignment: float = Field(..., ge=0, le=10, description="Over/under-qualified detection")
+    compensation_fit: float = Field(..., ge=0, le=10, description="Salary range vs expectations")
+    location_fit: float = Field(..., ge=0, le=10, description="Remote policy, commute, relocation")
+    career_trajectory: float = Field(..., ge=0, le=10, description="Does this role advance stated goals?")
+    company_fit: float = Field(..., ge=0, le=10, description="Company stage, industry, culture signals")
+
+
+class ATSKeyword(BaseModel):
+    """A single ATS keyword extracted from a JD."""
+
+    keyword: str = Field(..., description="The keyword or skill term")
+    category: str = Field(
+        ...,
+        description="Category: technical, soft_skill, tool, certification, or domain",
+    )
+    matched: bool = Field(..., description="True if the candidate profile demonstrates this keyword")
+
+
 class ScoreResult(BaseModel):
     """Structured scoring response."""
 
@@ -74,6 +96,14 @@ class ScoreResult(BaseModel):
         ...,
         min_length=3,
         description="Detailed breakdown of scoring factors with +/- contributions (≥3 factors)",
+    )
+    dimensional_scores: DimensionalScores | None = Field(
+        default=None,
+        description="Six-axis dimensional sub-scores (0-10 each)",
+    )
+    ats_keywords: list[ATSKeyword] = Field(
+        default_factory=list,
+        description="Top 10-15 ATS keywords from the JD with match status",
     )
 
 

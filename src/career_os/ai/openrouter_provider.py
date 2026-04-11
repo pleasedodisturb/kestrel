@@ -137,7 +137,12 @@ class OpenRouterProvider(AIProvider):
             f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
             f"readiness_score (0-100), career_alignment (0-10), "
             f"score_breakdown (array of ≥3 objects, each with: factor (string), "
-            f"contribution (positive or negative float), description (string)).\n\n"
+            f"contribution (positive or negative float), description (string)), "
+            f"dimensional_scores (object with 6 floats 0-10: technical_fit, "
+            f"seniority_alignment, compensation_fit, location_fit, career_trajectory, company_fit), "
+            f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
+            f"category (one of: technical, soft_skill, tool, certification, domain), "
+            f"matched (boolean - true if candidate profile demonstrates this keyword)).\n\n"
             f"Job Description:\n{job_description}\n\n"
             f"Profile:\n{json.dumps(profile_data, indent=2)}"
         )
@@ -154,7 +159,13 @@ def _system_prompt_for_feature(feature: AIFeature) -> str | None:
             "readiness_score (0-100), career_alignment (0-10), "
             "score_breakdown (REQUIRED array of ≥3 objects, each with: "
             "factor (string), contribution (positive or negative float), "
-            "description (string explaining impact))."
+            "description (string explaining impact)), "
+            "dimensional_scores (REQUIRED object with 6 floats 0-10: "
+            "technical_fit, seniority_alignment, compensation_fit, "
+            "location_fit, career_trajectory, company_fit), "
+            "ats_keywords (REQUIRED array of 10-15 objects, each with: "
+            "keyword (string), category (technical|soft_skill|tool|certification|domain), "
+            "matched (boolean — true if candidate profile demonstrates this keyword))."
         ),
         AIFeature.gap_analysis: (
             "You are a skills gap analysis AI. Return valid JSON with: gaps (list of "

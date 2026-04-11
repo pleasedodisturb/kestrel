@@ -10,8 +10,10 @@ from career_os.ai.base import AIProvider
 from career_os.schemas.ai import (
     AIFeature,
     AIResponse,
+    ATSKeyword,
     CoachingResult,
     CompanyResearchResult,
+    DimensionalScores,
     GapAnalysisResult,
     GoalRecalibrationResult,
     InterviewFormatResult,
@@ -192,6 +194,36 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
     ]
     reasoning = ". ".join(factors) + f". Overall a solid fit with score {fit}/10."
 
+    # Dimensional sub-scores (deterministic from seed, 0-10 each)
+    dimensional = DimensionalScores(
+        technical_fit=round(2.0 + (seed % 80) / 10.0, 1),
+        seniority_alignment=round(3.0 + ((seed >> 3) % 70) / 10.0, 1),
+        compensation_fit=round(2.0 + ((seed >> 5) % 80) / 10.0, 1),
+        location_fit=round(4.0 + ((seed >> 7) % 60) / 10.0, 1),
+        career_trajectory=round(2.0 + ((seed >> 9) % 80) / 10.0, 1),
+        company_fit=round(3.0 + ((seed >> 11) % 70) / 10.0, 1),
+    )
+
+    # Mock ATS keywords (deterministic selection from a pool)
+    _keyword_pool = [
+        ("Python", "technical"), ("React", "technical"), ("TypeScript", "technical"),
+        ("Docker", "tool"), ("Kubernetes", "tool"), ("AWS", "tool"),
+        ("FastAPI", "technical"), ("PostgreSQL", "tool"), ("REST APIs", "technical"),
+        ("CI/CD", "tool"), ("Git", "tool"), ("Agile", "soft_skill"),
+        ("Leadership", "soft_skill"), ("Communication", "soft_skill"),
+        ("System Design", "technical"), ("Machine Learning", "domain"),
+        ("Data Analysis", "domain"), ("PMP", "certification"),
+    ]
+    kw_count = 10 + (seed % 6)  # 10-15 keywords
+    ats_kws = [
+        ATSKeyword(
+            keyword=_keyword_pool[i % len(_keyword_pool)][0],
+            category=_keyword_pool[i % len(_keyword_pool)][1],
+            matched=((seed + i) % 3 != 0),  # ~67% matched
+        )
+        for i in range(kw_count)
+    ]
+
     structured = ScoreResult(
         fit_score=fit,
         reasoning=reasoning,
@@ -204,6 +236,8 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
         readiness_score=readiness,
         career_alignment=career,
         score_breakdown=breakdown_factors,
+        dimensional_scores=dimensional,
+        ats_keywords=ats_kws,
     )
     return AIResponse(
         content=structured.reasoning,

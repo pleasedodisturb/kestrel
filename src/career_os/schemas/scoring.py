@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from career_os.schemas.ai import ScoreBreakdownFactor
+from career_os.schemas.ai import ATSKeyword, DimensionalScores, ScoreBreakdownFactor
 
 
 def _ensure_utc(v: Any) -> datetime | None:
@@ -50,6 +50,27 @@ def score_to_letter_grade(score: float | None) -> str | None:
     if score >= 3.0:
         return "D"
     return "F"
+
+
+_DIM_FIELD_MAP = {
+    "technical_fit": "dim_technical_fit",
+    "seniority_alignment": "dim_seniority_alignment",
+    "compensation_fit": "dim_compensation_fit",
+    "location_fit": "dim_location_fit",
+    "career_trajectory": "dim_career_trajectory",
+    "company_fit": "dim_company_fit",
+}
+
+
+def _assemble_dimensional(source: Any) -> DimensionalScores | None:
+    """Try to build DimensionalScores from an object with dim_* attributes."""
+    vals = {}
+    for short_name, db_col in _DIM_FIELD_MAP.items():
+        v = getattr(source, db_col, None) if not isinstance(source, dict) else source.get(db_col)
+        if v is None:
+            return None
+        vals[short_name] = v
+    return DimensionalScores(**vals)
 
 
 # ---------------------------------------------------------------------------
@@ -102,14 +123,22 @@ class ScoreResponse(BaseModel):
     # Detailed breakdown
     score_breakdown: list[ScoreBreakdownFactor] = Field(
         default_factory=list,
-        description="Breakdown of scoring factors with +/- contributions (≥3 factors)",
+        description="Breakdown of scoring factors with +/- contributions (\u22653 factors)",
     )
     red_flags: list[RedFlag] = Field(
         default_factory=list,
         description="Rule-based red flags detected in the JD (zero AI cost)",
     )
+    dimensional_scores: DimensionalScores | None = Field(
+        default=None,
+        description="Six-axis dimensional sub-scores (0-10 each)",
+    )
+    ats_keywords: list[ATSKeyword] = Field(
+        default_factory=list,
+        description="Top 10-15 ATS keywords from the JD with match status",
+    )
     reasoning: str = Field(
-        ..., min_length=100, description="Scoring explanation (≥100 chars, ≥3 factors)"
+        ..., min_length=100, description="Scoring explanation (\u2265100 chars, \u22653 factors)"
     )
     estimated_salary: str = Field(..., description="Estimated salary range")
     effort_flag: str = Field(..., description="Effort level: low / medium / high")
@@ -150,17 +179,39 @@ class ScoreResponse(BaseModel):
                 return []
         return v
 
+    @field_validator("ats_keywords", mode="before")
+    @classmethod
+    def _parse_ats_keywords(cls, v: Any) -> list[ATSKeyword]:
+        """Parse ats_keywords from JSON string if it comes from DB."""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            try:
+                parsed = json_mod.loads(v)
+                return [ATSKeyword(**item) for item in parsed]
+            except (json_mod.JSONDecodeError, TypeError):
+                return []
+        return v
+
     @field_validator("created_at", "updated_at", mode="before")
     @classmethod
     def _ensure_utc(cls, v: Any) -> datetime | None:
         return _ensure_utc(v)
 
     @model_validator(mode="after")
-    def _populate_letter_grade(self) -> "ScoreResponse":
-        """Derive letter_grade from fit_score whenever it is not set."""
+    def _populate_computed_fields(self) -> "ScoreResponse":
+        """Derive letter_grade from fit_score when not explicitly set."""
         if self.letter_grade is None:
             self.letter_grade = score_to_letter_grade(self.fit_score)
         return self
+
+    @classmethod
+    def from_orm_with_dimensions(cls, obj: Any) -> "ScoreResponse":
+        """Build ScoreResponse from a ScoredJob ORM object, assembling dim_* into dimensional_scores."""
+        response = cls.model_validate(obj)
+        if response.dimensional_scores is None:
+            response.dimensional_scores = _assemble_dimensional(obj)
+        return response
 
 
 # ---------------------------------------------------------------------------
