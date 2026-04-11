@@ -1,3 +1,8 @@
+---
+layout: default
+title: AI Provider Guide
+---
+
 <p align="center"><img src="../assets/illustrations/hero-tropical.webp" alt="Kestrel" width="300"></p>
 
 # AI Provider Guide
