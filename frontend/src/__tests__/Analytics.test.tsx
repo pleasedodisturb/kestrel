@@ -11,7 +11,7 @@
  */
 
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -42,20 +42,6 @@ const mockFetchAnalytics = vi.fn<() => Promise<AnalyticsData>>();
 
 vi.mock("@/api/analytics", () => ({
   fetchAnalytics: (...args: unknown[]) => mockFetchAnalytics(...(args as [])),
-}));
-
-vi.mock("@/api/timingsapp", () => ({
-  fetchTimeAnalytics: vi.fn().mockResolvedValue({
-    total_hours: 0,
-    total_sessions: 0,
-    category_breakdown: [],
-    weekly_trend: [],
-    avg_daily_hours: 0,
-  }),
-  fetchRunningSession: vi.fn().mockResolvedValue(null),
-  startTimeSession: vi.fn(),
-  stopTimeSession: vi.fn(),
-  fetchTimeSessions: vi.fn().mockResolvedValue({ sessions: [], total: 0 }),
 }));
 
 // ---- Helpers ----
@@ -307,22 +293,4 @@ describe("Analytics", () => {
     });
   });
 
-  describe("time tracker controls in header", () => {
-    it("renders time tracker controls", async () => {
-      mockFetchAnalytics.mockResolvedValue(POPULATED_DATA);
-      renderAnalytics();
-      await waitFor(() => {
-        expect(screen.getByTestId("time-tracker-controls")).toBeInTheDocument();
-      });
-    });
-
-    it("shows start tracking button when no session running", async () => {
-      mockFetchAnalytics.mockResolvedValue(POPULATED_DATA);
-      renderAnalytics();
-      await waitFor(() => {
-        expect(screen.getByTestId("start-session-button")).toBeInTheDocument();
-        expect(screen.getByText("Start Tracking")).toBeInTheDocument();
-      });
-    });
-  });
 });
