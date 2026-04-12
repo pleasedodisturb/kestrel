@@ -66,9 +66,9 @@ wait_for_docker() {
         fi
         if [ "$elapsed" -eq 0 ]; then
             log "Waiting for Docker to start..."
-            # Try to launch Docker Desktop on macOS
+            # Try to launch Docker runtime on macOS (prefer OrbStack, fall back to Docker Desktop)
             if [[ "$(uname 2>/dev/null)" == "Darwin" ]]; then
-                open -a Docker 2>/dev/null || true
+                open -a OrbStack 2>/dev/null || open -a Docker 2>/dev/null || true
             fi
         fi
         sleep 5

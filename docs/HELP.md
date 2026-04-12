@@ -25,13 +25,13 @@ title: Help - Troubleshooting Kestrel
 ### "Docker not found" or "Docker is not installed"
 
 Docker is a free app that Kestrel needs to run. Install it:
-- **Mac:** https://www.docker.com/products/docker-desktop/
-- **Windows:** Same link, pick the Windows version
-- Install it like any normal app. You do NOT need a Docker account.
+- **Mac:** [OrbStack](https://orbstack.dev) (recommended) or [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- **Windows:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- Install it like any normal app. You do NOT need an account.
 
 ### "Docker is installed but not running"
 
-Open the Docker Desktop app. On Mac, look for a whale icon in your menu bar (top of screen). Wait for it to stop animating. Then try again.
+Open OrbStack or Docker Desktop. On Mac, look for the OrbStack icon or Docker whale in your menu bar (top of screen). Wait for it to stop animating. Then try again.
 
 ### "permission denied" when running setup.sh
 
@@ -80,12 +80,12 @@ Then open http://localhost:8101. Your data is still there.
 
 ### "I restarted my computer"
 
-Same as above - you just need to start Docker Desktop and then run `docker compose up -d`.
+Same as above — you just need to start OrbStack or Docker Desktop and then run `docker compose up -d`.
 
 ### "The page won't load (connection refused)"
 
 Docker might have stopped. Check:
-1. Is Docker Desktop running? (whale icon in menu bar)
+1. Is your Docker runtime running? (OrbStack icon or Docker whale in menu bar)
 2. Open Terminal and type: `docker compose up -d`
 3. Wait 30 seconds, then try http://localhost:8101 again
 
@@ -103,7 +103,7 @@ docker ps
 
 - If you see the Kestrel containers listed with status `Up`, they're running but may be unresponsive — skip to step 2.
 - If the list is empty or the containers show `Exited`, they stopped — skip to step 3.
-- If the command itself hangs or errors with "Cannot connect to the Docker daemon," Docker Desktop isn't running. Open it, wait for the whale icon in the menu bar to stop animating (about 30 seconds), then try again.
+- If the command itself hangs or errors with "Cannot connect to the Docker daemon," your Docker runtime isn't running. Open OrbStack or Docker Desktop, wait for it to finish starting (about 30 seconds), then try again.
 
 For more detail on why a container is unhappy, look at its logs:
 
@@ -163,7 +163,7 @@ If none of the above gets Kestrel back, it's worth reporting. Open an issue at h
 - The output of `docker ps`
 - The last ~50 lines of `docker compose logs backend`
 - Your macOS version (Apple menu > About This Mac)
-- Your Docker Desktop version (Docker Desktop > About)
+- Your Docker runtime and version (OrbStack > About OrbStack, or Docker Desktop > About)
 - Roughly how long the laptop was asleep before this started
 
 Your data is never lost during sleep/wake — it's saved in a database file on your computer, not in Docker's memory.

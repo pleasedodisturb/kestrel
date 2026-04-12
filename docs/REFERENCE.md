@@ -47,7 +47,7 @@ Named after the small falcon that hovers with precision before striking. The phi
 
 ## Quick Start
 
-No coding required. You just need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (free).
+No coding required. You just need [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows). Both are free.
 
 ### If you're comfortable with the command line
 
@@ -58,8 +58,8 @@ git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 
 ### If you've never used a terminal before
 
-1. **Install Docker Desktop** - download from [docker.com](https://www.docker.com/products/docker-desktop/), install like any other app. Free for personal use, skip the account creation if it asks.
-2. **Open Docker Desktop** and wait for the whale icon in your menu bar to stop animating. Keep it running.
+1. **Install a Docker runtime** — [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Desktop](https://www.docker.com/products/docker-desktop/). Both are free, no account needed.
+2. **Open the app** and wait for it to finish starting. Keep it running.
 3. **Download Kestrel** - click the green **Code** button at the top of this page, then **Download ZIP**. Unzip the file.
 4. **Open Terminal** - press Cmd+Space, type "Terminal", press Enter.
 5. **Type these two commands** (press Enter after each):
@@ -74,7 +74,7 @@ That's it. Your job search dashboard is running.
 
 > **New to all this?** See the full [Quickstart Guide](docs/QUICKSTART.md) with detailed explanations at every step, or check the [FAQ](docs/FAQ.md) if you get stuck.
 
-If `setup.sh` fails, it will tell you what went wrong and how to fix it. The most common issue is Docker not running - just open Docker Desktop and try again.
+If `setup.sh` fails, it will tell you what went wrong and how to fix it. The most common issue is Docker not running — just open OrbStack or Docker Desktop and try again.
 
 ---
 
@@ -511,10 +511,10 @@ At minimum you need `OPENAI_API_KEY` for the scoring to work. Everything else is
 ## Troubleshooting
 
 **"docker: command not found"**
-Install [Docker Desktop](https://docker.com) or [OrbStack](https://orbstack.dev) (Mac). Then run `./setup.sh` again.
+Install [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Desktop](https://docker.com). Then run `./setup.sh` again.
 
 **"Cannot connect to Docker daemon"**
-Docker is installed but not running. Open Docker Desktop or OrbStack and wait for it to start.
+Docker is installed but not running. Open OrbStack or Docker Desktop and wait for it to start.
 
 **"Port 8100 already in use"**
 Something else is using that port. Either stop it, or change `PORT` in your `.env` file and restart with `docker compose up -d`.

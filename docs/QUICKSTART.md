@@ -18,37 +18,47 @@ This guide assumes you have never used a terminal before. Every step is explaine
 - About 15 minutes for first-time setup
 - 2 GB of free disk space
 - An internet connection (for the initial download)
-- **Docker Desktop** - a free app that runs Kestrel on your computer. Think of Docker as a box that keeps everything Kestrel needs bundled together, so you don't have to install a dozen separate things. You install Docker once, and it handles the rest.
+- **A Docker runtime** — [OrbStack](https://orbstack.dev) (recommended on Mac) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows). Both are free. Think of it as a box that keeps everything Kestrel needs bundled together, so you don't have to install a dozen separate things. You install it once, and it handles the rest.
 
 That's it. You don't need to know how to code.
 
 ---
 
-## Step 1: Install Docker Desktop
+## Step 1: Install a Docker Runtime
 
-Docker Desktop is free for personal use. Download it, install it like any other app.
+You need a Docker runtime to run Kestrel. We recommend **OrbStack** on Mac — it's lighter, faster, and starts in seconds. If you prefer Docker Desktop, everything works exactly the same way.
 
-**Mac (Apple Silicon - M1, M2, M3, M4):**
+### Mac (recommended): OrbStack
+
+Download from **https://orbstack.dev**. Open the downloaded file, drag OrbStack to your Applications folder, and open it. That's it — no account needed. You'll see an OrbStack icon in your menu bar when it's ready.
+
+### Mac (alternative): Docker Desktop
+
+If you prefer Docker Desktop, download it here:
+
+**Apple Silicon (M1, M2, M3, M4):**
 https://desktop.docker.com/mac/main/arm64/Docker.dmg
 
-**Mac (Intel):**
+**Intel:**
 https://desktop.docker.com/mac/main/amd64/Docker.dmg
 
 Not sure which Mac you have? Click the Apple menu in the top-left corner of your screen, then "About This Mac." If it says "Apple M1" or "Apple M2" (or M3, M4), use the Apple Silicon link. If it says "Intel," use the Intel link.
 
-**Windows:**
+Open the .dmg file. Drag Docker to your Applications folder. Open Docker Desktop from Applications. If macOS says it can't open it because it's from an unidentified developer, go to System Settings > Privacy & Security and click "Open Anyway."
+
+### Windows: Docker Desktop
+
 https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe
 
-### After downloading
+Run the installer. Follow the prompts. It may ask you to enable WSL2 — say yes (WSL2 helps Docker run on Windows). Restart your computer if it asks.
 
-- **Mac:** Open the .dmg file. Drag Docker to your Applications folder. Open Docker Desktop from Applications. If macOS says it can't open it because it's from an unidentified developer, go to System Settings > Privacy & Security and click "Open Anyway."
-- **Windows:** Run the installer. Follow the prompts. It may ask you to enable WSL2 - say yes (WSL2 helps Docker run on Windows). Restart your computer if it asks.
+### After installing
 
-Docker will take a minute or two to start up the first time. You'll see a whale icon in your menu bar (Mac) or system tray (Windows). Wait for it to stop animating - that means it's ready.
+Your Docker runtime may take a minute or two to start up the first time. You'll see an icon in your menu bar (Mac) or system tray (Windows) — the OrbStack icon or the Docker whale. Wait for it to stop animating — that means it's ready.
 
-**Skip the account creation if Docker asks you to sign in. You don't need an account.**
+**You don't need to create an account.** Skip the sign-in screen if one appears.
 
-Keep Docker Desktop running in the background while using Kestrel. It's the engine that powers everything.
+Keep your Docker runtime (OrbStack or Docker Desktop) running in the background while using Kestrel. It's the engine that powers everything.
 
 ---
 
@@ -194,7 +204,7 @@ Kestrel starts in **Demo Mode**, which means AI features show example data so yo
 
 **What you see:** An error mentioning Docker is not installed or not running.
 
-**What to do:** Make sure Docker Desktop is installed (Step 1) and actually open. Look for the whale icon in your menu bar (Mac) or system tray (Windows). If the whale is still animating, Docker is still starting up - wait for it to finish.
+**What to do:** Make sure OrbStack or Docker Desktop is installed (Step 1) and actually open. Look for the OrbStack icon or Docker whale in your menu bar (Mac) or system tray (Windows). If the icon is still animating, it's still starting up — wait for it to finish.
 
 ### "Permission denied"
 
@@ -238,11 +248,11 @@ Skip git entirely. Use the ZIP download method in Step 2, Option A. It does the 
 
 **What to do:** Go to System Settings > Privacy & Security. Scroll down and click "Open Anyway" next to the Docker message. This is a standard Mac security prompt for apps downloaded from the internet.
 
-### Docker Desktop asks for a lot of memory
+### Docker feels slow or uses a lot of memory
 
-**What you see:** Docker might feel slow or your Mac's fans spin up.
+**What you see:** Your Mac's fans spin up or things feel sluggish.
 
-**What to do:** Docker uses 2GB of memory by default. If your Mac only has 8GB, this can feel tight. Open Docker Desktop > Settings > Resources and lower the memory to 1.5GB. Kestrel runs fine with less.
+**What to do:** If you're using OrbStack, memory is managed automatically — no action needed. If you're using Docker Desktop, it uses 2GB of memory by default. If your Mac only has 8GB, this can feel tight. Open Docker Desktop > Settings > Resources and lower the memory to 1.5GB. Kestrel runs fine with less.
 
 ### Discovery finds zero jobs
 
@@ -328,4 +338,4 @@ docker compose down
 
 Stopping Kestrel does not delete anything. Your profile, applications, scores - all of it is saved in a database file on your computer. When you start Kestrel again, everything is exactly where you left it.
 
-You can also close the terminal window after running `docker compose up -d`. Kestrel keeps running in the background. It only stops when you explicitly run `docker compose down` or when you quit Docker Desktop.
+You can also close the terminal window after running `docker compose up -d`. Kestrel keeps running in the background. It only stops when you explicitly run `docker compose down` or when you quit OrbStack / Docker Desktop.
