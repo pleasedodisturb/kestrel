@@ -62,6 +62,26 @@ cd frontend && npx eslint src/
 - TypeScript: ESLint with strict mode. Run `npx eslint --fix src/`.
 - Write tests alongside code, not after.
 
+## Commit Messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) format. A CI check (`commitlint`) enforces this on all PRs.
+
+```
+<type>: <description>
+
+feat:     new feature (bumps minor version)
+fix:      bug fix (bumps patch version)
+docs:     documentation only
+refactor: code restructuring
+perf:     performance improvement
+test:     adding or fixing tests
+ci:       CI/CD changes
+chore:    maintenance
+deps:     dependency updates
+```
+
+For breaking changes, add `!` after the type: `feat!: remove legacy API`
+
 ## Pull Request Guidelines
 
 - Keep PRs focused - one feature or fix per PR
