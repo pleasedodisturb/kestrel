@@ -65,7 +65,7 @@ Someone posted on r/jobsearchhacks: "I built an open-source tool that scores job
 ### Step 1: Landing on the GitHub Repository
 
 **What Alex sees:**
-A page that looks like... a document? There's a green button that says "Code," a bunch of folders with weird names like `src/` and `alembic/`, some colored badges that say "Python 3.13+" and "Docker Ready." The main content is a formatted document (the README).
+A page that looks like... a document? There's a green button that says "Code," a bunch of folders with weird names like `src/` and `alembic/`, some colored badges that say "Python 3.11+" and "Docker Ready." The main content is a formatted document (the README).
 
 **What Alex thinks:**
 "Okay this looks like a developer website. I see a logo and description - 'A self-hosted job search platform. Precision over volume.' That sounds cool. But what is all this other stuff? Why are there folders? Is this the app? Where do I click to start?"
