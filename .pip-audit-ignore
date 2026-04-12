@@ -10,4 +10,4 @@
 # python-jobspy 1.1.82 pins markdownify<0.14.0 which contains this CVE.
 # Remove when jobspy relaxes its markdownify pin to allow >=0.14.1.
 # Upstream: https://github.com/Bunsly/JobSpy
-CVE-2025-46656  # markdownify XSS — blocked by python-jobspy's pin of markdownify<0.14
+CVE-2025-46656  # markdownify XSS — blocked by python-jobspy<0.14 pin (remove by 2026-07-01)
