@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /docs/QUICKSTART
 title: Getting Started with Kestrel
 ---
 

@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /docs/FAQ
 title: Frequently Asked Questions
 ---
 
