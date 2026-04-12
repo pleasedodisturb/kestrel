@@ -1,3 +1,8 @@
+---
+title: Mobile UX Findings
+description: Design system, interaction patterns, and UX decisions from the Kestrel Mobile exploration
+---
+
 # Mobile UX Findings — Kestrel Mobile Exploration
 
 **Source:** `feat/lovable-app-version` branch (React Native/Expo mobile app, parked 2026-04-12)
