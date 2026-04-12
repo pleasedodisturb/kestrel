@@ -1,3 +1,9 @@
+---
+layout: default
+title: CareerOS Market Research - April 2026
+permalink: /docs/market-research-apr2026
+---
+
 # CareerOS Market Research - April 2026
 
 Deep competitive landscape analysis for positioning CareerOS as an open-source career operations platform.

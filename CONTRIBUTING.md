@@ -1,3 +1,11 @@
+---
+layout: default
+permalink: /CONTRIBUTING
+title: Contributing to Kestrel
+---
+
+<p align="center"><img src="assets/illustrations/hero-bauhaus.webp" alt="Kestrel" width="300"></p>
+
 # Contributing to Kestrel
 
 Note: The Python package is internally named `career_os` (from the original project). The PyPI package name is `kestrel-app`.
@@ -60,6 +68,15 @@ cd frontend && npx eslint src/
 - Include a clear description of what changed and why
 - All CI checks must pass
 - Tests are required for new features
+
+## Merging
+
+The `main` branch is protected with required status checks and a merge queue.
+
+- **PRs must be up-to-date with main** before merging. If main has moved since your last CI run, GitHub will ask you to update your branch and re-run checks. This prevents untested merge combinations from landing.
+- **Use the "Merge when ready" button** (not direct merge). This adds your PR to the merge queue, which tests the merge result before actually pushing to main.
+- **Squash merge only** — keeps the main branch history clean and bisectable.
+- If CI fails after an update, investigate before re-pushing. The failure likely means your changes conflict with something that landed while your PR was in review.
 
 ## AI Provider Changes
 

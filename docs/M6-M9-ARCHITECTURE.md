@@ -1,3 +1,9 @@
+---
+layout: default
+title: Phase 2 Architecture
+permalink: /docs/architecture
+---
+
 # Career OS — Phase 2 Architecture & Milestone Specs (M6–M9)
 
 > Phase 1 (M1–M5): Core platform, discovery, scoring, skills, integrations, voice.

@@ -290,3 +290,30 @@ class TestStoredConfigIntegration:
         assert "anthropic" not in names
         assert "openai" not in names
         assert "droid_exec" not in names
+
+
+# ---------------------------------------------------------------------------
+# Registry-derived provider list
+# ---------------------------------------------------------------------------
+
+
+class TestHealthRegistryIntegration:
+    """Health endpoint provider list tracks the factory registry."""
+
+    def test_health_providers_match_factory_registry(self, client: TestClient) -> None:
+        """Every non-alias provider in the factory registry has a health check."""
+        from career_os.ai.factory import _PROVIDER_REGISTRY
+
+        with patch.dict(os.environ, {"AI_PROVIDER": "mock"}):
+            resp = client.get("/api/ai/health")
+        names = {p["name"] for p in resp.json()["providers"]}
+        # "demo" is an alias for "mock", so we exclude it
+        real_providers = {k for k in _PROVIDER_REGISTRY if k != "demo"}
+        assert real_providers <= names
+
+    def test_runtime_supported_derived_from_factory(self) -> None:
+        """RUNTIME_SUPPORTED_PROVIDERS is the same object as _SUPPORTED_PROVIDERS."""
+        from career_os.ai.factory import _SUPPORTED_PROVIDERS
+        from career_os.services.ai_health import RUNTIME_SUPPORTED_PROVIDERS
+
+        assert RUNTIME_SUPPORTED_PROVIDERS is _SUPPORTED_PROVIDERS

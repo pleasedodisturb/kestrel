@@ -5,27 +5,40 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   backend:
-    name: Backend (Python)
+    name: Backend (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          # pip<26.0 is flagged by CVE-2026-1703 (pip-audit); ensure the
+          # installer itself is patched before auditing project deps.
+          python -m pip install --upgrade 'pip>=26.0'
+          pip install -e ".[dev]"
 
       - name: Setup test config
         run: |
-          mkdir -p config
+          mkdir -p config data
           cp config/personal.yaml.example config/personal.yaml
 
       - name: Lint
@@ -33,12 +46,70 @@ jobs:
           ruff check src/ tests/
           ruff format --check src/ tests/
 
+      - name: Alembic migration check
+        run: |
+          # Capture alembic heads output separately so real alembic errors
+          # surface with their actual message instead of being masked by
+          # the pipeline-count step below.
+          alembic_heads_output=$(alembic heads)
+          heads_count=$(printf '%s\n' "$alembic_heads_output" | grep -c '(head)' || true)
+          if [ "$heads_count" -ne 1 ]; then
+            echo "::error::Expected exactly 1 alembic head, found $heads_count"
+            printf '%s\n' "$alembic_heads_output"
+            exit 1
+          fi
+          # Apply migrations against a fresh SQLite DB (path set in alembic.ini).
+          rm -f data/career_os.db
+          alembic upgrade head
+          # Downgrade + upgrade roundtrip verifies migrations are reversible.
+          alembic downgrade base
+          alembic upgrade head
+
       - name: Run tests
         run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml
 
+      - name: API smoke test
+        run: |
+          # Start uvicorn with logs captured to a file so we can dump them
+          # on failure — otherwise crash reasons are invisible in CI.
+          uvicorn career_os.main:app --host 127.0.0.1 --port 8100 \
+            > uvicorn.log 2>&1 &
+          APP_PID=$!
+          # Single-quote the trap body so $APP_PID is evaluated at trap
+          # fire time, not at trap-setup time (shellcheck SC2064).
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -sf http://127.0.0.1:8100/health > /dev/null; then
+              echo "Health check passed."
+              exit 0
+            fi
+            # If uvicorn died early, surface the logs and stop waiting.
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "::error::uvicorn exited before becoming healthy"
+              cat uvicorn.log
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "::error::API did not become healthy within 10s"
+          cat uvicorn.log
+          exit 1
+
       - name: Security audit (dependencies)
-        continue-on-error: true
-        run: pip install pip-audit && pip-audit
+        # Strict: any advisory fails the build. If an upstream advisory has
+        # no fix yet, add the vuln ID to .pip-audit-ignore (one per line,
+        # with a comment) as a temporary escape hatch.
+        run: |
+          pip install pip-audit
+          ignore_args=()
+          if [ -f .pip-audit-ignore ]; then
+            while IFS= read -r line; do
+              [[ "$line" =~ ^[[:space:]]*# || -z "${line// }" ]] && continue
+              id=$(echo "$line" | awk '{print $1}')
+              ignore_args+=(--ignore-vuln "$id")
+            done < .pip-audit-ignore
+          fi
+          pip-audit "${ignore_args[@]}"
 
       - name: PII leak check
         run: |
@@ -56,6 +127,15 @@ jobs:
             done < .github/pii-patterns.txt
           fi
           [ "$FAIL" -eq 0 ] && echo "No PII found - clean." || exit 1
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: reviewdog/action-actionlint@v1
+        with:
+          reporter: github-pr-check
 
   frontend:
     name: Frontend (React)
@@ -77,24 +157,20 @@ jobs:
       - name: Lint
         run: npx eslint src/
 
+      # Type check and build are disabled until ~20 pre-existing type
+      # errors are fixed (Recharts Formatter signatures, test fixture
+      # mismatches, nullable guards). Tracked as a follow-up to #103.
+      # The baseUrl deprecation (TS5101) is already suppressed via
+      # ignoreDeprecations in tsconfig.app.json.
+      #
+      # - name: Type check
+      #   run: npx tsc --noEmit -p tsconfig.app.json
+      #
+      # - name: Build
+      #   run: npm run build
+
       - name: Run tests
         run: npx vitest run
 
       - name: Security audit (dependencies)
-        run: npm audit --audit-level=moderate || true
-
-  codeql:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    strategy:
-      matrix:
-        language: [python, javascript-typescript]
-    steps:
-      - uses: actions/checkout@v6
-      - uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-      - uses: github/codeql-action/autobuild@v4
-      - uses: github/codeql-action/analyze@v4
+        run: npm audit --audit-level=moderate

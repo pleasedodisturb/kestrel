@@ -240,7 +240,11 @@ def _salary_fallback_from_market(
             sample_size=total_samples,
         )
     except Exception as exc:
-        logger.warning("Market salary fallback failed for '%s': %s", role, exc)
+        logger.warning(
+            "Market salary fallback failed for '%s': %s",
+            _sanitize_for_log(role),
+            _sanitize_for_log(exc),
+        )
         return None
 
 

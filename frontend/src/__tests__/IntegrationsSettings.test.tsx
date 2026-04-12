@@ -131,12 +131,11 @@ const ALL_INTEGRATIONS: IntegrationListResponse = {
   integrations: [
     SAMPLE_TICKTICK,
     { ...SAMPLE_PUSHOVER, name: "calendar", display_name: "Calendar", description: "Calendar integration", credential_fields: [], credentials_set: {} },
-    { ...SAMPLE_PUSHOVER, name: "timingsapp", display_name: "TimingsApp", description: "Time tracking", credential_fields: [], credentials_set: {} },
     SAMPLE_PUSHOVER,
     { ...SAMPLE_PUSHOVER, name: "voice", display_name: "Voice Mode", description: "Voice interaction", credential_fields: [], credentials_set: {} },
     { ...SAMPLE_PUSHOVER, name: "ai_providers", display_name: "AI Providers", description: "AI config", credential_fields: [], credentials_set: {} },
   ],
-  count: 6,
+  count: 5,
 };
 
 // ---- tests ----
@@ -172,9 +171,6 @@ describe("IntegrationsSettings", () => {
       ).toBeInTheDocument();
       expect(
         screen.getByTestId("integration-panel-calendar"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByTestId("integration-panel-timingsapp"),
       ).toBeInTheDocument();
       expect(
         screen.getByTestId("integration-panel-voice"),
