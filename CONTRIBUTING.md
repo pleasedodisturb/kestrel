@@ -69,6 +69,15 @@ cd frontend && npx eslint src/
 - All CI checks must pass
 - Tests are required for new features
 
+## Merging
+
+The `main` branch is protected with required status checks and a merge queue.
+
+- **PRs must be up-to-date with main** before merging. If main has moved since your last CI run, GitHub will ask you to update your branch and re-run checks. This prevents untested merge combinations from landing.
+- **Use the "Merge when ready" button** (not direct merge). This adds your PR to the merge queue, which tests the merge result before actually pushing to main.
+- **Squash merge only** — keeps the main branch history clean and bisectable.
+- If CI fails after an update, investigate before re-pushing. The failure likely means your changes conflict with something that landed while your PR was in review.
+
 ## AI Provider Changes
 
 If you add a new AI provider:
