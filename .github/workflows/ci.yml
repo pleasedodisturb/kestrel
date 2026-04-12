@@ -147,14 +147,11 @@ jobs:
       - name: Lint
         run: npx eslint src/
 
-      # Type check and production build are intentionally NOT run here.
-      # Both surfaced pre-existing type errors in application code
-      # (Recharts Formatter signatures, nullable guards, test fixtures)
-      # that are out of scope for this CI-hygiene PR. Re-enable both as
-      # blocking once a follow-up fixes the type errors in src/.
-      #
-      # - run: npx tsc --noEmit -p tsconfig.app.json
-      # - run: npm run build
+      - name: Type check
+        run: npx tsc --noEmit -p tsconfig.app.json
+
+      - name: Build
+        run: npm run build
 
       - name: Run tests
         run: npx vitest run
