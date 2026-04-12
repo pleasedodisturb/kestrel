@@ -17,6 +17,15 @@ class AIProvider(ABC):
         """Provider name (e.g. 'mock', 'openrouter')."""
         ...
 
+    @property
+    def privacy_tier(self) -> str:
+        """Privacy tier for this provider (default: yellow).
+
+        Subclasses may override to report their actual tier.
+        See :class:`career_os.schemas.privacy.PrivacyTier` for values.
+        """
+        return "yellow"
+
     @abstractmethod
     async def complete(
         self,
