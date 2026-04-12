@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /CONTRIBUTING
 title: Contributing to Kestrel
 ---
 

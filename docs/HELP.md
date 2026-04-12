@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /docs/HELP
 title: Help - Troubleshooting Kestrel
 ---
 

@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /DEPLOY
 title: Kestrel Deployment Guide
 ---
 

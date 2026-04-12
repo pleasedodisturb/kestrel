@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /docs/AI-PROVIDERS
 title: AI Provider Guide
 ---
 

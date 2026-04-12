@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /docs/REFERENCE
 title: Features and API Reference
 ---
 
