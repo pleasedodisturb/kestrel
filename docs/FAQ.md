@@ -22,9 +22,9 @@ If you've ever used a web app like Notion, Trello, or Google Sheets, you can use
 
 Docker is an app you install on your computer. Think of it as a box that runs Kestrel inside it, keeping everything tidy and self-contained. Without Docker, you'd need to install Python, Node.js, a database, and a bunch of other developer tools separately. Docker bundles all of that together so you don't have to deal with it.
 
-Docker Desktop is free for personal use. You don't need to create an account - skip the sign-up screen if it shows one.
+To use Docker, you install a runtime app: [OrbStack](https://orbstack.dev) (recommended on Mac — lighter and faster) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows). Both are free for personal use. You don't need to create an account — skip the sign-up screen if one appears.
 
-It uses about 1-2 GB of disk space. You can quit Docker Desktop when you're not using Kestrel to free up memory.
+It uses about 1-2 GB of disk space. You can quit OrbStack or Docker Desktop when you're not using Kestrel to free up memory.
 
 ---
 
@@ -96,7 +96,7 @@ cd ~/Downloads/kestrel-main
 Then run `bash setup.sh` again.
 
 **"Docker not found" or "Cannot connect to Docker daemon"**
-Docker Desktop isn't installed or isn't running. Install it from https://docker.com, open it, and wait for the whale icon in your menu bar to stop animating before trying again.
+Your Docker runtime isn't installed or isn't running. On Mac, install OrbStack from https://orbstack.dev (recommended) or Docker Desktop from https://docker.com. Open the app and wait for it to start before trying again.
 
 **It just sits there doing nothing**
 The Docker build can take 2-5 minutes, especially the first time. It's downloading things. Don't close the window. If it's been more than 10 minutes with no new text appearing, something might be wrong - try pressing Ctrl+C to stop it and running `bash setup.sh` again.
@@ -246,7 +246,7 @@ cd ~/Downloads/kestrel-main
 docker compose up -d
 ```
 
-If that doesn't work, make sure Docker Desktop is running (whale icon in the menu bar), then try `docker compose down && docker compose up -d`.
+If that doesn't work, make sure your Docker runtime is running (OrbStack or Docker Desktop), then try `docker compose down && docker compose up -d`.
 
 Kestrel also includes a watchdog script that checks and restarts containers automatically: `bash scripts/docker-watchdog.sh`. See the [troubleshooting guide](HELP.md#my-mac-went-to-sleep-and-kestrel-stopped-working) for details.
 
