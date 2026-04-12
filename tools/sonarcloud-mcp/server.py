@@ -14,11 +14,13 @@ from sonarcloud_client import SonarCloudClient, SonarCloudAPIError
 # ---- Configuration ----
 
 SONAR_TOKEN = os.environ.get("SONAR_TOKEN", "")
-PROJECT_KEY = os.environ.get("SONAR_PROJECT_KEY", "pleasedodisturb_kestrel")
-ORGANIZATION = os.environ.get("SONAR_ORGANIZATION", "pleasedodisturb")
+PROJECT_KEY = os.environ.get("SONAR_PROJECT_KEY", "")
+ORGANIZATION = os.environ.get("SONAR_ORGANIZATION", "")
 
-if not SONAR_TOKEN:
-    print("ERROR: SONAR_TOKEN environment variable is required", file=sys.stderr)
+_missing = [name for name, val in [("SONAR_TOKEN", SONAR_TOKEN), ("SONAR_PROJECT_KEY", PROJECT_KEY),
+            ("SONAR_ORGANIZATION", ORGANIZATION)] if not val]
+if _missing:
+    print(f"ERROR: required environment variables not set: {', '.join(_missing)}", file=sys.stderr)
     sys.exit(1)
 
 client = SonarCloudClient(SONAR_TOKEN, PROJECT_KEY, ORGANIZATION)
