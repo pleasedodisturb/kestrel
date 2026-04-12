@@ -374,6 +374,24 @@ def _build_ical_multi(events: list[CalendarEvent]) -> str:
     return cal.to_ical().decode("utf-8")
 
 
+def _build_event_description(event: CalendarEvent) -> str:
+    """Build rich description string from calendar event fields."""
+    parts: list[str] = []
+    if event.company:
+        parts.append(f"Company: {event.company}")
+    if event.role:
+        parts.append(f"Role: {event.role}")
+    if event.interview_type:
+        parts.append(f"Type: {event.interview_type}")
+    if event.meeting_link:
+        parts.append(f"Link: {event.meeting_link}")
+    if event.prep_notes:
+        parts.append(f"\nPrep Notes:\n{event.prep_notes}")
+    if event.description:
+        parts.append(f"\n{event.description}")
+    return "\n".join(parts)
+
+
 def _event_to_vevent(event: CalendarEvent) -> Event:
     """Convert a CalendarEvent to an iCal VEVENT component."""
     vevent = Event()
@@ -382,23 +400,9 @@ def _event_to_vevent(event: CalendarEvent) -> Event:
     vevent.add("dtend", event.end_time)
     vevent.add("summary", event.title)
 
-    # Build rich description
-    desc_parts = []
-    if event.company:
-        desc_parts.append(f"Company: {event.company}")
-    if event.role:
-        desc_parts.append(f"Role: {event.role}")
-    if event.interview_type:
-        desc_parts.append(f"Type: {event.interview_type}")
-    if event.meeting_link:
-        desc_parts.append(f"Link: {event.meeting_link}")
-    if event.prep_notes:
-        desc_parts.append(f"\nPrep Notes:\n{event.prep_notes}")
-    if event.description:
-        desc_parts.append(f"\n{event.description}")
-
-    if desc_parts:
-        vevent.add("description", "\n".join(desc_parts))
+    description = _build_event_description(event)
+    if description:
+        vevent.add("description", description)
 
     if event.location:
         vevent.add("location", event.location)
@@ -440,22 +444,7 @@ def _build_google_calendar_url(event: CalendarEvent) -> str:
     start_str = event.start_time.strftime("%Y%m%dT%H%M%SZ")
     end_str = event.end_time.strftime("%Y%m%dT%H%M%SZ")
 
-    # Build description
-    desc_parts = []
-    if event.company:
-        desc_parts.append(f"Company: {event.company}")
-    if event.role:
-        desc_parts.append(f"Role: {event.role}")
-    if event.interview_type:
-        desc_parts.append(f"Type: {event.interview_type}")
-    if event.meeting_link:
-        desc_parts.append(f"Link: {event.meeting_link}")
-    if event.prep_notes:
-        desc_parts.append(f"\nPrep Notes:\n{event.prep_notes}")
-    if event.description:
-        desc_parts.append(f"\n{event.description}")
-
-    description = "\n".join(desc_parts) if desc_parts else ""
+    description = _build_event_description(event)
     location = event.location or event.meeting_link or ""
 
     params = {
@@ -488,22 +477,7 @@ def _build_fantastical_url(event: CalendarEvent) -> str:
     # Fantastical uses x-fantastical3://add with query params
     base_url = "x-fantastical3://add"
 
-    # Build notes
-    notes_parts = []
-    if event.company:
-        notes_parts.append(f"Company: {event.company}")
-    if event.role:
-        notes_parts.append(f"Role: {event.role}")
-    if event.interview_type:
-        notes_parts.append(f"Type: {event.interview_type}")
-    if event.meeting_link:
-        notes_parts.append(f"Link: {event.meeting_link}")
-    if event.prep_notes:
-        notes_parts.append(f"\nPrep Notes:\n{event.prep_notes}")
-    if event.description:
-        notes_parts.append(f"\n{event.description}")
-
-    notes = "\n".join(notes_parts) if notes_parts else ""
+    notes = _build_event_description(event)
     location = event.location or event.meeting_link or ""
 
     params: dict[str, str] = {
