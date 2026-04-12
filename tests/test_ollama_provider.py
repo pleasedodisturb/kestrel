@@ -26,7 +26,6 @@ from career_os.ai.ollama_provider import (
 )
 from career_os.schemas.ai import AIFeature, AIResponse
 
-
 # ---------------------------------------------------------------------------
 # OllamaProvider unit tests
 # ---------------------------------------------------------------------------

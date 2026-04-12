@@ -5,9 +5,8 @@ from __future__ import annotations
 import pytest
 
 from career_os.ai.base import AIProvider
-from career_os.ai.pii_masking import MaskMapping, MaskedProvider, PIIMasker
+from career_os.ai.pii_masking import MaskedProvider, MaskMapping, PIIMasker
 from career_os.schemas.ai import AIFeature, AIResponse, ScoreResult
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -82,10 +81,7 @@ class TestMaskURL:
 
 class TestMaskMultiplePIITypes:
     def test_mixed_pii(self, masker: PIIMasker) -> None:
-        text = (
-            "Email alice@example.com, call +49 170 1234567, "
-            "see https://linkedin.com/in/alice"
-        )
+        text = "Email alice@example.com, call +49 170 1234567, see https://linkedin.com/in/alice"
         masked, mapping = masker.mask(text)
         assert "[EMAIL_1]" in masked
         assert "[PHONE_1]" in masked
@@ -200,13 +196,39 @@ class TestMaskedProviderComplete:
         assert provider.name == "stub"
 
 
+class _RecordingProvider(_StubProvider):
+    """Stub that records the job_description passed to score()."""
+
+    def __init__(self) -> None:
+        self.last_jd: str | None = None
+
+    async def score(
+        self,
+        job_description: str,
+        profile_data: dict,
+        **kwargs: object,
+    ) -> AIResponse:
+        self.last_jd = job_description
+        return await super().score(job_description, profile_data, **kwargs)
+
+
 class TestMaskedProviderScore:
     @pytest.mark.asyncio
-    async def test_score_delegates_without_unmasking_structured(self) -> None:
+    async def test_score_masks_pii_in_job_description(self) -> None:
+        """PII in job_description should be masked before reaching the inner provider."""
+        inner = _RecordingProvider()
+        provider = MaskedProvider(inner)
+        await provider.score("Contact alice@example.com to apply", {"profile": "data"})
+        assert inner.last_jd is not None
+        assert "alice@example.com" not in inner.last_jd
+        assert "[EMAIL_1]" in inner.last_jd
+
+    @pytest.mark.asyncio
+    async def test_score_preserves_structured_data(self) -> None:
         stub = _StubProvider()
         provider = MaskedProvider(stub)
         resp = await provider.score("job desc with alice@example.com", {"profile": "data"})
-        # score() delegates directly — structured data untouched
+        # Structured data untouched
         assert resp.structured is not None
         assert isinstance(resp.structured, ScoreResult)
         assert resp.structured.fit_score == 7.5

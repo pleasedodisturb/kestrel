@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from career_os.ai.base import AIProvider
 from career_os.schemas.ai import AIFeature, AIResponse
 
-
 # ---------------------------------------------------------------------------
 # Regex patterns for PII categories
 # ---------------------------------------------------------------------------
@@ -74,6 +73,7 @@ class PIIMasker:
         seen: dict[str, str] = {}
 
         for category, pattern in _PATTERNS:
+
             def _replacer(match: re.Match[str], _cat: str = category) -> str:
                 value = match.group(0)
                 if value in seen:
@@ -140,7 +140,9 @@ class MaskedProvider(AIProvider):
         profile_data: dict,
         **kwargs: object,
     ) -> AIResponse:
-        return await self._inner.score(job_description, profile_data, **kwargs)
+        masked_jd, mapping = self._masker.mask(job_description)
+        response = await self._inner.score(masked_jd, profile_data, **kwargs)
+        return self._unmask_response(response, mapping)
 
     # -- helpers -------------------------------------------------------------
 

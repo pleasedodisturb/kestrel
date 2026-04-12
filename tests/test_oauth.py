@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import time
 from base64 import urlsafe_b64encode
 from unittest.mock import AsyncMock, patch
 
@@ -9,7 +10,12 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from career_os.api.oauth import _generate_pkce_pair, _pending_verifiers
+from career_os.api.oauth import (
+    _MAX_PENDING,
+    _VERIFIER_TTL_SECONDS,
+    _generate_pkce_pair,
+    _pending_verifiers,
+)
 from career_os.main import app
 
 
@@ -78,7 +84,16 @@ class TestStartEndpoint:
         resp = client.get("/api/auth/openrouter/start")
         state = resp.json()["state"]
         assert state in _pending_verifiers
-        assert len(_pending_verifiers[state]) > 40
+        verifier, created_at = _pending_verifiers[state]
+        assert len(verifier) > 40
+        assert created_at <= time.time()
+
+    def test_rejects_when_max_pending_reached(self, client):
+        """Should return 429 when too many pending OAuth flows exist."""
+        for i in range(_MAX_PENDING):
+            _pending_verifiers[f"state-{i}"] = ("verifier", time.time())
+        resp = client.get("/api/auth/openrouter/start")
+        assert resp.status_code == 429
 
 
 # ---------------------------------------------------------------------------
@@ -94,14 +109,26 @@ class TestCallbackEndpoint:
         assert resp.status_code == 400
         assert "Invalid or expired state" in resp.json()["detail"]
 
-    def test_missing_state_returns_400(self, client):
+    def test_missing_state_returns_422(self, client):
+        """State is now a required query parameter — omitting it is a validation error."""
         resp = client.get("/api/auth/openrouter/callback", params={"code": "test"})
+        assert resp.status_code == 422
+
+    def test_expired_verifier_returns_400(self, client):
+        """A verifier that has exceeded the TTL should be rejected."""
+        expired_ts = time.time() - _VERIFIER_TTL_SECONDS - 1
+        _pending_verifiers["old-state"] = ("old-verifier", expired_ts)
+        resp = client.get(
+            "/api/auth/openrouter/callback",
+            params={"code": "test", "state": "old-state"},
+        )
         assert resp.status_code == 400
+        assert "expired" in resp.json()["detail"].lower()
 
     def test_successful_exchange(self, client):
         """Mock a successful code-for-key exchange with OpenRouter."""
         # Pre-populate a pending verifier.
-        _pending_verifiers["test-state"] = "test-verifier"
+        _pending_verifiers["test-state"] = ("test-verifier", time.time())
 
         mock_response = httpx.Response(
             200,
@@ -134,7 +161,7 @@ class TestCallbackEndpoint:
 
     def test_exchange_http_error_returns_502(self, client):
         """OpenRouter returning a non-2xx should yield a 502."""
-        _pending_verifiers["err-state"] = "verifier"
+        _pending_verifiers["err-state"] = ("verifier", time.time())
 
         mock_response = httpx.Response(
             401,
@@ -158,7 +185,7 @@ class TestCallbackEndpoint:
 
     def test_exchange_network_error_returns_502(self, client):
         """Network failure contacting OpenRouter should yield a 502."""
-        _pending_verifiers["net-state"] = "verifier"
+        _pending_verifiers["net-state"] = ("verifier", time.time())
 
         with patch("career_os.api.oauth.httpx.AsyncClient") as mock_cls:
             mock_client = AsyncMock()
@@ -176,7 +203,7 @@ class TestCallbackEndpoint:
 
     def test_empty_key_returns_502(self, client):
         """OpenRouter returning an empty key should be treated as an error."""
-        _pending_verifiers["empty-state"] = "verifier"
+        _pending_verifiers["empty-state"] = ("verifier", time.time())
 
         mock_response = httpx.Response(
             200,
@@ -229,8 +256,9 @@ class TestStatusEndpoint:
         assert resp.status_code == 200
         data = resp.json()
         assert data["connected"] is True
-        assert data["key_preview"].startswith("sk-or-")
-        assert "secret123" not in data["key_preview"]
+        # Key preview now shows only the last 4 characters to avoid leaking the prefix.
+        assert data["key_preview"] == "...t123"
+        assert "sk-or" not in data["key_preview"]
 
 
 # Constant used in test mocks

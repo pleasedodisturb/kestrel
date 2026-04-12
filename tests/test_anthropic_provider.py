@@ -12,13 +12,12 @@ Covers:
 
 import json
 import os
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import httpx
 import pytest
 
 from career_os.ai.anthropic_provider import (
-    ANTHROPIC_API_URL,
     ANTHROPIC_VERSION,
     AnthropicProvider,
 )
@@ -26,7 +25,6 @@ from career_os.ai.base import AIProvider
 from career_os.ai.factory import _PROVIDER_REGISTRY, get_ai_provider
 from career_os.ai.openrouter_provider import CreditsExhaustedError
 from career_os.schemas.ai import AIFeature, AIResponse
-
 
 # ---------------------------------------------------------------------------
 # AnthropicProvider unit tests
@@ -259,7 +257,9 @@ class TestAnthropicErrorHandling:
         async def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 402,
-                json={"error": {"type": "invalid_request_error", "message": "Insufficient credits"}},
+                json={
+                    "error": {"type": "invalid_request_error", "message": "Insufficient credits"}
+                },
                 request=httpx.Request("POST", url),
             )
 
@@ -318,21 +318,23 @@ class TestAnthropicScore:
         provider = AnthropicProvider(api_key="sk-ant-test")
         captured_payload = {}
 
-        score_json = json.dumps({
-            "fit_score": 7.5,
-            "reasoning": "x" * 100,
-            "estimated_salary": "120k EUR",
-            "effort_flag": "medium",
-            "prep_level": "moderate",
-            "prep_notes": "Study X.",
-            "readiness_score": 72.0,
-            "career_alignment": 8.0,
-            "score_breakdown": [
-                {"factor": "Technical", "contribution": 2.0, "description": "Strong match"},
-                {"factor": "Culture", "contribution": 1.5, "description": "Good alignment"},
-                {"factor": "Location", "contribution": -0.5, "description": "Remote pref"},
-            ],
-        })
+        score_json = json.dumps(
+            {
+                "fit_score": 7.5,
+                "reasoning": "x" * 100,
+                "estimated_salary": "120k EUR",
+                "effort_flag": "medium",
+                "prep_level": "moderate",
+                "prep_notes": "Study X.",
+                "readiness_score": 72.0,
+                "career_alignment": 8.0,
+                "score_breakdown": [
+                    {"factor": "Technical", "contribution": 2.0, "description": "Strong match"},
+                    {"factor": "Culture", "contribution": 1.5, "description": "Good alignment"},
+                    {"factor": "Location", "contribution": -0.5, "description": "Remote pref"},
+                ],
+            }
+        )
 
         async def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
