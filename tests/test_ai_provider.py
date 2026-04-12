@@ -774,3 +774,55 @@ class TestAICompleteEndpoint:
         assert resp.status_code == 422
         data = resp.json()
         assert "OPENROUTER_API_KEY" in data["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Provider registry unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestProviderRegistry:
+    """Unit tests for the _PROVIDER_REGISTRY data structure."""
+
+    def test_registry_keys_match_supported_set(self) -> None:
+        """_SUPPORTED_PROVIDERS is derived from registry keys, not hardcoded."""
+        from career_os.ai.factory import _PROVIDER_REGISTRY, _SUPPORTED_PROVIDERS
+
+        assert set(_PROVIDER_REGISTRY.keys()) == _SUPPORTED_PROVIDERS
+
+    def test_all_registry_entries_are_callable(self) -> None:
+        """Every registry value is a callable."""
+        from career_os.ai.factory import _PROVIDER_REGISTRY
+
+        assert all(callable(v) for v in _PROVIDER_REGISTRY.values())
+
+    def test_demo_alias_points_to_mock(self) -> None:
+        """'demo' and 'mock' registry entries both produce MockProvider."""
+        from career_os.ai.factory import _PROVIDER_REGISTRY
+
+        mock_instance = _PROVIDER_REGISTRY["mock"]()
+        demo_instance = _PROVIDER_REGISTRY["demo"]()
+        assert type(mock_instance) is type(demo_instance)
+        assert isinstance(mock_instance, MockProvider)
+
+    def test_registry_has_minimum_providers(self) -> None:
+        """Registry contains at least mock, demo, openrouter."""
+        from career_os.ai.factory import _PROVIDER_REGISTRY
+
+        assert {"mock", "demo", "openrouter"} <= set(_PROVIDER_REGISTRY.keys())
+
+    def test_mock_entry_returns_ai_provider(self) -> None:
+        """Mock registry entry produces a valid AIProvider."""
+        from career_os.ai.factory import _PROVIDER_REGISTRY
+
+        provider = _PROVIDER_REGISTRY["mock"]()
+        assert isinstance(provider, AIProvider)
+        assert provider.name == "mock"
+
+    def test_openrouter_entry_requires_api_key(self) -> None:
+        """OpenRouter registry entry raises ValueError without API key."""
+        from career_os.ai.factory import _PROVIDER_REGISTRY
+
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}):
+            with pytest.raises(ValueError, match="OPENROUTER_API_KEY"):
+                _PROVIDER_REGISTRY["openrouter"]()

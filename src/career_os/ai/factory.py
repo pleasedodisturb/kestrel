@@ -1,14 +1,29 @@
 """AI provider factory — selects provider based on AI_PROVIDER env var."""
 
 import os
+from collections.abc import Callable
 
 from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
 
-# Registry of supported provider names → constructors.
-# "demo" is a user-facing alias for "mock" — both resolve to MockProvider.
-_SUPPORTED_PROVIDERS = {"mock", "demo", "openrouter"}
+# ---------------------------------------------------------------------------
+# Provider registry: name → factory callable.
+# To add a new provider, add one entry here (+ its module).
+# "demo" is a user-facing alias for "mock" so non-technical users don't
+# think "mock" means broken.
+# ---------------------------------------------------------------------------
+
+_PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
+    "mock": lambda: MockProvider(),
+    "demo": lambda: MockProvider(),
+    "openrouter": lambda: OpenRouterProvider(
+        api_key=os.getenv("OPENROUTER_API_KEY", ""),
+        model=os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4"),
+    ),
+}
+
+_SUPPORTED_PROVIDERS = set(_PROVIDER_REGISTRY.keys())
 
 
 class UnsupportedProviderError(Exception):
@@ -39,15 +54,9 @@ def get_ai_provider(provider_name: str | None = None) -> AIProvider:
     Raises:
         UnsupportedProviderError: If the provider name is not recognized.
     """
-    name = provider_name or os.getenv("AI_PROVIDER", "mock")
-    name = name.strip().lower()
+    name = (provider_name or os.getenv("AI_PROVIDER", "mock")).strip().lower()
 
-    if name in ("mock", "demo"):
-        return MockProvider()
-
-    if name == "openrouter":
-        api_key = os.getenv("OPENROUTER_API_KEY", "")
-        model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4")
-        return OpenRouterProvider(api_key=api_key, model=model)
-
-    raise UnsupportedProviderError(name)
+    factory_fn = _PROVIDER_REGISTRY.get(name)
+    if factory_fn is None:
+        raise UnsupportedProviderError(name)
+    return factory_fn()
