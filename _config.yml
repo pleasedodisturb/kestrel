@@ -39,3 +39,6 @@ exclude:
   - node_modules
   - .venv
   - data
+
+# Serve pages without .html extension
+permalink: pretty

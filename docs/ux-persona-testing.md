@@ -1,3 +1,9 @@
+---
+layout: default
+title: Kestrel UX Research: Persona-Based Journey Analysis
+permalink: /docs/ux-persona-testing
+---
+
 # Kestrel UX Research: Persona-Based Journey Analysis
 
 **Author:** UX Research Team
