@@ -1,0 +1,39 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on Monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "platformAutomerge": true,
+  "ignorePaths": [
+    "requirements.txt",
+    "worker/**",
+    "dashboard/**"
+  ],
+  "packageRules": [
+    {
+      "description": "Python patch and minor — automerge if CI passes",
+      "matchManagers": ["pip_requirements", "pip_setup", "pep621"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "groupName": "python-minor-patch",
+      "commitMessagePrefix": "deps:"
+    },
+    {
+      "description": "Node patch and minor — automerge if CI passes",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "groupName": "node-minor-patch",
+      "commitMessagePrefix": "deps:"
+    },
+    {
+      "description": "All major version bumps — require manual approval",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "major-update"],
+      "commitMessagePrefix": "deps:"
+    }
+  ]
+}
