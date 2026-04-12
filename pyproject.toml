@@ -44,8 +44,6 @@ dev = [
     "pandas>=2.2.0,<3",
     "python-jobspy>=1.1.82,<1.2",
     "fpdf2>=2.8.0",
-    # Override python-jobspy's transitive pin — resolve CVE-2025-46656.
-    "markdownify>=1.2.2",
 ]
 
 [project.scripts]
