@@ -8,7 +8,7 @@ class Kestrel < Formula
   license "MIT"
   head "https://github.com/pleasedodisturb/kestrel.git", branch: "main"
 
-  depends_on "python@3.13"
+  depends_on "python@3.11"
 
   def install
     virtualenv_install_with_resources

@@ -9,7 +9,7 @@ description = "AI-powered job search platform. Self-hosted, open-source, privacy
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Kestrel Contributors"}]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
@@ -38,11 +38,12 @@ dev = [
     "pytest-cov>=6.1.0",
     "ruff>=0.11.0",
     "httpx>=0.28.0",
-    "pandas>=2.2.0",
-    "python-jobspy>=1.1.0",
+    # pandas 3.0 evaluation (G-251): blocked by python-jobspy which pins
+    # pandas<3.0.0. Kestrel's own usage is compatible (tested), but the
+    # transitive constraint prevents upgrading. Revisit when jobspy relaxes.
+    "pandas>=2.2.0,<3",
+    "python-jobspy>=1.1.82,<1.2",
     "fpdf2>=2.8.0",
-    # Override python-jobspy's transitive pin — resolve CVE-2025-46656.
-    "markdownify>=1.2.2",
 ]
 
 [project.scripts]
@@ -63,7 +64,7 @@ career_os = [
 ]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py311"
 line-length = 100
 src = ["src", "tests"]
 
