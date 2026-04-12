@@ -55,7 +55,6 @@ mcps/
 .kilocode/
 .mcp.json
 AGENTS.md
-CLAUDE.md
 GEMINI.md
 
 # Pre-existing tool scripts (not part of this repo)
