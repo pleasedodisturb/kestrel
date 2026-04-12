@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Component | Location | Stack | Dev Port |
 |-----------|----------|-------|----------|
-| Backend API | `src/career_os/` | Python 3.13, FastAPI, SQLAlchemy, SQLite | 8100 |
+| Backend API | `src/career_os/` | Python 3.11+, FastAPI, SQLAlchemy, SQLite | 8100 |
 | Web Frontend | `frontend/` | React 19, Vite, TypeScript, Tailwind CSS | 8101 |
 | Mobile App | `mobile/` | React Native 0.81, Expo 54, Tamagui 2.0 RC | Expo DevTools |
 
