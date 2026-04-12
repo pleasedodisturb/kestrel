@@ -3,8 +3,6 @@
 import re
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -66,11 +64,7 @@ class TestDocumentationLinks:
             for img in img_links:
                 if img.startswith("http"):  # Skip external URLs
                     continue
-                # Resolve relative to the doc file's directory
-                if img.startswith("../"):
-                    img_path = ROOT / img[3:]
-                else:
-                    img_path = ROOT / "docs" / img
+                img_path = ROOT / img[3:] if img.startswith("../") else ROOT / "docs" / img
                 assert img_path.exists(), f"Broken image in {f.name}: {img} -> {img_path}"
 
     def test_readme_illustration_exists(self) -> None:
