@@ -35,7 +35,6 @@ from career_os.models.skills import (
 )
 from career_os.models.star_stories import StarStory
 from career_os.models.ticktick_sync import TickTickSyncTask
-from career_os.models.timingsapp import TimeSession
 from career_os.models.voice import VoiceMessage, VoiceSession
 
 __all__ = [
@@ -67,7 +66,6 @@ __all__ = [
     "SkillHistory",
     "StarStory",
     "TickTickSyncTask",
-    "TimeSession",
     "VoiceMessage",
     "VoiceSession",
 ]

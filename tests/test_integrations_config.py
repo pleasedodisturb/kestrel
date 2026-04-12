@@ -63,7 +63,7 @@ class TestListIntegrations:
     """Tests for GET /api/integrations."""
 
     def test_list_returns_all_known_integrations(self):
-        """All 6 known integrations are returned."""
+        """All known integrations are returned."""
         resp = client.get("/api/integrations")
         assert resp.status_code == 200
         data = resp.json()
@@ -350,11 +350,6 @@ class TestIntegrationPanels:
         assert data["display_name"] == "Calendar"
         field_keys = [f["key"] for f in data["credential_fields"]]
         assert "provider" in field_keys
-
-    def test_timingsapp_panel(self):
-        resp = client.get("/api/integrations/timingsapp/config")
-        data = resp.json()
-        assert data["display_name"] == "TimingsApp"
 
     def test_pushover_panel(self):
         resp = client.get("/api/integrations/pushover/config")
