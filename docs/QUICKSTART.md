@@ -1,3 +1,9 @@
+---
+layout: default
+permalink: /docs/QUICKSTART
+title: Getting Started with Kestrel
+---
+
 <p align="center"><img src="../assets/illustrations/hero-coral.webp" alt="Kestrel" width="300"></p>
 
 # Getting Started with Kestrel

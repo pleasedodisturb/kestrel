@@ -1,15 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAnalytics } from "@/api/analytics";
 import type { AnalyticsData } from "@/api/analytics";
-import { fetchTimeAnalytics } from "@/api/timingsapp";
-import type { TimeAnalyticsData } from "@/api/timingsapp";
 import { ConversionFunnel } from "@/components/analytics/ConversionFunnel";
 import { ResponseRate } from "@/components/analytics/ResponseRate";
 import { TimeInStage } from "@/components/analytics/TimeInStage";
 import { ApplicationsOverTime } from "@/components/analytics/ApplicationsOverTime";
 import { ScoreDistribution } from "@/components/analytics/ScoreDistribution";
-import { TimeTracking } from "@/components/analytics/TimeTracking";
-import { TimeTrackerControls } from "@/components/TimeTrackerControls";
 
 export function Analytics() {
   const {
@@ -19,11 +15,6 @@ export function Analytics() {
   } = useQuery<AnalyticsData>({
     queryKey: ["analytics"],
     queryFn: fetchAnalytics,
-  });
-
-  const { data: timeAnalytics } = useQuery<TimeAnalyticsData>({
-    queryKey: ["timeAnalytics"],
-    queryFn: () => fetchTimeAnalytics(4),
   });
 
   if (isLoading) {
@@ -55,14 +46,11 @@ export function Analytics() {
 
   return (
     <section>
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Your application pipeline analytics and insights.
-          </p>
-        </div>
-        <TimeTrackerControls />
+      <header>
+        <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Your application pipeline analytics and insights.
+        </p>
       </header>
 
       {totalApplications === 0 ? (
@@ -201,13 +189,6 @@ export function Analytics() {
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Time Tracking Section — always shown regardless of applications */}
-      {timeAnalytics && (
-        <div className="mt-8">
-          <TimeTracking data={timeAnalytics} />
         </div>
       )}
     </section>

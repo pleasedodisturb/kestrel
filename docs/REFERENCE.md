@@ -1,3 +1,9 @@
+---
+layout: default
+permalink: /docs/REFERENCE
+title: Features and API Reference
+---
+
 <h1 align="center">
   <br>
   Kestrel
@@ -162,7 +168,6 @@ OpenRouter gives you access to Claude, GPT, Gemini, and others through a single 
 |:---|:---|
 | TickTick Sync | Bi-directional task synchronization with automatic follow-up to task mapping |
 | Calendar Export | iCal feed generation for interviews, deadlines, and follow-ups |
-| TimingsApp | Time tracking integration for job search effort analytics |
 | Pushover Notifications | Push alerts for overdue follow-ups, status changes, and discovery results |
 | Voice Mode | Real-time AI voice discussions - cover letter review, coaching, and job evaluation |
 | AI Health Monitor | Provider status dashboard with latency tracking and feature availability |
@@ -216,7 +221,6 @@ kestrel/
 │   │   ├── ticktick.py        #   TickTick integration
 │   │   ├── calendar.py        #   iCal export
 │   │   ├── pushover.py        #   Push notifications
-│   │   ├── timingsapp.py      #   Time tracking
 │   │   └── ...                #   analytics, market, research, etc.
 │   ├── cli/main.py            # Typer CLI (full-featured)
 │   ├── discovery/             # Background job scheduler
@@ -417,8 +421,6 @@ PUT     /api/integrations/configure     Update integration config
 GET     /api/calendar/feed.ics          iCal calendar feed
 POST    /api/ticktick/sync              Trigger TickTick sync
 GET     /api/ticktick/status            Sync status
-POST    /api/timingsapp/track           Log time entry
-GET     /api/timingsapp/summary         Time tracking summary
 POST    /api/pushover/test              Test notification
 POST    /api/voice/session              Start voice session
 GET     /api/ai/health                  AI provider health check

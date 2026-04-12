@@ -1,3 +1,9 @@
+---
+layout: default
+permalink: /DEPLOY
+title: Kestrel Deployment Guide
+---
+
 # Kestrel Deployment Guide
 
 Single-container deployment: FastAPI serves both the API (`/api/*`, `/health`, `/docs`) and the React frontend (all other routes) on **one port** (8100).

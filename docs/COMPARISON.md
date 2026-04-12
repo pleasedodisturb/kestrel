@@ -1,3 +1,9 @@
+---
+layout: default
+permalink: /docs/COMPARISON
+title: Competitive Landscape
+---
+
 <p align="center"><img src="../assets/illustrations/hero-sky.webp" alt="Kestrel" width="300"></p>
 
 # Competitive Landscape

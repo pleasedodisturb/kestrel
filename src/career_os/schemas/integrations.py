@@ -132,27 +132,6 @@ KNOWN_INTEGRATIONS: list[IntegrationDef] = [
         ],
     ),
     IntegrationDef(
-        name="timingsapp",
-        display_name="TimingsApp",
-        description="Track time spent on job search activities",
-        credential_fields=[
-            IntegrationFieldDef(
-                key="api_url",
-                label="API URL",
-                field_type="url",
-                placeholder="http://localhost:PORT or TimingsApp endpoint",
-                required=False,
-            ),
-            IntegrationFieldDef(
-                key="api_token",
-                label="API Token",
-                field_type="password",
-                placeholder="TimingsApp API token",
-                required=False,
-            ),
-        ],
-    ),
-    IntegrationDef(
         name="pushover",
         display_name="Pushover",
         description="Push notifications for follow-ups, ghost alerts, and discoveries",

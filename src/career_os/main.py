@@ -33,7 +33,6 @@ from career_os.api.skills import router as skills_router
 from career_os.api.star_stories import app_router as star_stories_app_router
 from career_os.api.star_stories import router as star_stories_router
 from career_os.api.ticktick import router as ticktick_router
-from career_os.api.timingsapp import router as timingsapp_router
 from career_os.api.voice import router as voice_router
 from career_os.config import settings
 from career_os.database import SessionLocal
@@ -188,7 +187,6 @@ app.include_router(skills_router)
 app.include_router(star_stories_router)
 app.include_router(star_stories_app_router)
 app.include_router(ticktick_router)
-app.include_router(timingsapp_router)
 app.include_router(voice_router)
 
 

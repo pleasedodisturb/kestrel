@@ -1,3 +1,9 @@
+---
+layout: default
+permalink: /docs/FAQ
+title: Frequently Asked Questions
+---
+
 <p align="center"><img src="../assets/illustrations/hero-yellow.webp" alt="Kestrel" width="300"></p>
 
 # Frequently Asked Questions
