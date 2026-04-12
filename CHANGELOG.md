@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/pleasedodisturb/kestrel/compare/v0.2.0...v0.2.1) (2026-04-12)
+
+
+### Documentation
+
+* rewrite CLAUDE.md with dev commands and mobile coverage ([#123](https://github.com/pleasedodisturb/kestrel/issues/123)) ([c16b62b](https://github.com/pleasedodisturb/kestrel/commit/c16b62b6565524786b65769e1a53d3bfe8c7c32a))
+
 ## [0.2.0](https://github.com/pleasedodisturb/kestrel/compare/v0.1.0...v0.2.0) (2026-04-12)
 
 
