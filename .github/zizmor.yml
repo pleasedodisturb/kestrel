@@ -1,0 +1,28 @@
+# Zizmor configuration
+# https://docs.zizmor.sh/configuration/
+#
+# We deliberately accept version-tag pins (e.g. `@v4`) instead of SHA pins.
+# SHA pinning is stricter but would require touching every action reference
+# across all workflows and is ops-heavy to maintain. Dependabot's
+# `github-actions` ecosystem already tracks these, and the repo is public
+# OSS with a single maintainer — the risk/effort tradeoff favors ref pins.
+# Re-tighten to `hash-pin` once the repo grows team/CI maturity.
+
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "*": ref-pin
+
+  # cache-poisoning fires on setup-node `cache: npm` in workflows that
+  # publish artifacts (publish.yml, publish-npm.yml, release-checks.yml).
+  # The threat model — an attacker writes to the GHA cache via a poisoned
+  # PR run, then a later publish picks it up — requires write access to
+  # PRs, which this single-maintainer public repo does not grant. The
+  # rule is pre-existing in the publish workflows and the tradeoff of
+  # disabling the cache everywhere is ~1min per release build.
+  cache-poisoning:
+    ignore:
+      - publish.yml
+      - publish-npm.yml
+      - release-checks.yml
