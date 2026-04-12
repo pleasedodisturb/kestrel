@@ -41,11 +41,8 @@ dev = [
     "pandas>=2.2.0",
     "python-jobspy>=1.1.0",
     "fpdf2>=2.8.0",
-    # Override python-jobspy's transitive pin of markdownify<0.14 — that
-    # range contains CVE-2025-46656. jobspy's tests pass with 0.14.x on
-    # the code paths kestrel exercises; we stay in the 0.14.x line to
-    # minimize API drift from the 0.13 baseline jobspy expects.
-    "markdownify>=0.14.1,<0.15",
+    # Override python-jobspy's transitive pin — resolve CVE-2025-46656.
+    "markdownify>=1.2.2",
 ]
 
 [project.scripts]
