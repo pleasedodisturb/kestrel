@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import threading
 import time
 from pathlib import Path
 
@@ -64,10 +65,11 @@ class CachedProvider(AIProvider):
         # Ensure parent directory exists so sqlite3.connect doesn't fail.
         Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        self._conn = sqlite3.connect(self._db_path)
+        self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute(_CREATE_TABLE_SQL)
         self._conn.commit()
+        self._lock = threading.Lock()
 
         # Internal counters for stats.
         self._hits = 0
@@ -124,10 +126,11 @@ class CachedProvider(AIProvider):
 
     def _get(self, key: str) -> AIResponse | None:
         """Return cached response if present and not expired."""
-        row = self._conn.execute(
-            "SELECT response_json FROM ai_cache WHERE key = ? AND expires_at > ?",
-            (key, time.time()),
-        ).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT response_json FROM ai_cache WHERE key = ? AND expires_at > ?",
+                (key, time.time()),
+            ).fetchone()
         if row is None:
             return None
         return AIResponse.model_validate_json(row[0])
@@ -135,12 +138,14 @@ class CachedProvider(AIProvider):
     def _put(self, key: str, response: AIResponse, feature: str) -> None:
         """Insert or replace a cache entry."""
         now = time.time()
-        self._conn.execute(
-            "INSERT OR REPLACE INTO ai_cache (key, response_json, feature, created_at, expires_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (key, response.model_dump_json(), feature, now, now + self._ttl),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO ai_cache "
+                "(key, response_json, feature, created_at, expires_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (key, response.model_dump_json(), feature, now, now + self._ttl),
+            )
+            self._conn.commit()
 
     # ------------------------------------------------------------------
     # Public cache management
@@ -148,20 +153,21 @@ class CachedProvider(AIProvider):
 
     def get_stats(self) -> dict[str, int]:
         """Return cache statistics."""
-        total = self._conn.execute("SELECT COUNT(*) FROM ai_cache").fetchone()[0]
+        with self._lock:
+            total = self._conn.execute("SELECT COUNT(*) FROM ai_cache").fetchone()[0]
         return {"total": total, "hits": self._hits, "misses": self._misses}
 
     def clear(self) -> None:
         """Delete all cache entries."""
-        self._conn.execute("DELETE FROM ai_cache")
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute("DELETE FROM ai_cache")
+            self._conn.commit()
 
     def cleanup_expired(self) -> int:
         """Remove expired entries and return the number deleted."""
-        cur = self._conn.execute(
-            "DELETE FROM ai_cache WHERE expires_at <= ?", (time.time(),)
-        )
-        self._conn.commit()
+        with self._lock:
+            cur = self._conn.execute("DELETE FROM ai_cache WHERE expires_at <= ?", (time.time(),))
+            self._conn.commit()
         return cur.rowcount
 
     def close(self) -> None:
