@@ -16,5 +16,7 @@ rules:
       - revert
       - style
       - test
+  subject-case:
+    - 0
   body-max-line-length:
     - 0
