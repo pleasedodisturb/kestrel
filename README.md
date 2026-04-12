@@ -63,7 +63,7 @@ git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 bash setup.sh
 ```
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (free). Don't know what Docker is? The [step-by-step guide](docs/QUICKSTART.md) explains everything.
+Requires [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows). Both are free. Don't know what Docker is? The [step-by-step guide](docs/QUICKSTART.md) explains everything.
 
 ### Option 3: Try in your browser (zero install)
 
