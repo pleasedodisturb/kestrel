@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.1](https://github.com/pleasedodisturb/kestrel/compare/v0.2.0...v0.2.1) (2026-04-12)
+
+
+### Bug Fixes
+
+* update markdownify to &gt;=1.2.2 to resolve CVE-2025-46656 ([#133](https://github.com/pleasedodisturb/kestrel/issues/133)) ([643f755](https://github.com/pleasedodisturb/kestrel/commit/643f7558ad3dbff6e8ce9a7d2cc2901cd7d74c25))
+
+
+### Documentation
+
+* rewrite CLAUDE.md with dev commands and mobile coverage ([#123](https://github.com/pleasedodisturb/kestrel/issues/123)) ([c16b62b](https://github.com/pleasedodisturb/kestrel/commit/c16b62b6565524786b65769e1a53d3bfe8c7c32a))
+
 ## [0.2.0](https://github.com/pleasedodisturb/kestrel/compare/v0.1.0...v0.2.0) (2026-04-12)
 
 
