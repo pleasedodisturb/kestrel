@@ -6,6 +6,7 @@ from collections.abc import Callable
 from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
+from career_os.ai.ollama_provider import OllamaProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
 
 # ---------------------------------------------------------------------------
@@ -25,6 +26,10 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "anthropic": lambda: AnthropicProvider(
         api_key=os.getenv("ANTHROPIC_API_KEY", ""),
         model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
+    ),
+    "ollama": lambda: OllamaProvider(
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        model=os.getenv("OLLAMA_MODEL", "llama3.3"),
     ),
 }
 
