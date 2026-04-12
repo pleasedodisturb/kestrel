@@ -1,0 +1,26 @@
+# Socket.dev supply-chain security configuration
+#
+# The Socket.dev GitHub App must be installed manually by a repo admin:
+# https://github.com/apps/socket-security
+#
+# Free for open-source projects. Scans PRs for typosquatting, install
+# scripts, maintainer takeovers, and other supply-chain threats.
+
+issueRules:
+  # Hard errors — block merge
+  installScripts: error
+  typosquatting: error
+  emptyPackage: error
+  binScriptConfusion: error
+  protestware: error
+
+  # Warnings — flag for review but don't block
+  maintainerChange: warn
+  filesystemAccess: warn
+  networkAccess: warn
+  shellAccess: warn
+
+githubApp:
+  enabled: true
+  pullRequestAlertsEnabled: true
+  pullRequestAlertsScore: 0.4
