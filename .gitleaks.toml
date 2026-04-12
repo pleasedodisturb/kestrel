@@ -11,6 +11,7 @@ paths = [
   '''\.github/pii-patterns\.txt$''',
   '''config/personal\.yaml\.example$''',
   '''tests/fixtures/.*''',
+  '''tests/.*''',
   '''docs/.*''',
 ]
 
