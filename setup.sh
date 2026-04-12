@@ -12,27 +12,31 @@ if ! command -v docker &>/dev/null; then
     echo "Docker is not installed."
     echo ""
     echo "  Docker is a free app that runs Kestrel on your computer."
-    echo "  Download it from: https://www.docker.com/products/docker-desktop/"
+    if [[ "$(uname)" == "Darwin" ]]; then
+        echo "  Install OrbStack (recommended): https://orbstack.dev"
+        echo "  Or Docker Desktop if you prefer: https://www.docker.com/products/docker-desktop/"
+    else
+        echo "  Download it from: https://www.docker.com/products/docker-desktop/"
+    fi
     echo ""
     echo "  Install it like any other app (drag to Applications on Mac)."
-    echo "  You do NOT need to create a Docker account."
+    echo "  You do NOT need to create an account."
     echo ""
-    echo "After installing, open Docker Desktop, then run this script again."
+    echo "After installing, open OrbStack (or Docker Desktop), then run this script again."
     exit 1
 fi
 
 if ! docker info &>/dev/null 2>&1; then
     echo "Docker is installed but not running."
     echo ""
-    echo "  Open the Docker Desktop app from your Applications folder."
-    echo "  Wait for the whale icon in your menu bar to stop animating."
-    echo "  Then run this script again."
+    echo "  Open OrbStack or Docker Desktop from your Applications folder."
+    echo "  Wait for it to finish starting, then run this script again."
     echo ""
-    # Try to start Docker on macOS
+    # Try to start Docker runtime on macOS (prefer OrbStack, fall back to Docker Desktop)
     if [[ "$(uname)" == "Darwin" ]]; then
-        echo "  Trying to start Docker for you..."
-        open -a Docker 2>/dev/null || true
-        echo "  Docker is starting. Wait about 30 seconds, then run this script again."
+        echo "  Trying to start your Docker runtime..."
+        open -a OrbStack 2>/dev/null || open -a Docker 2>/dev/null || true
+        echo "  Starting up. Wait about 30 seconds, then run this script again."
     fi
     exit 1
 fi

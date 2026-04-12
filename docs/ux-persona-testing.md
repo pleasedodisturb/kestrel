@@ -123,7 +123,7 @@ This is the first major wall. The README assumes the reader knows what Docker is
 
 **What would help:**
 - A "Never used a terminal before?" expandable section right below Quick Start
-- Step-by-step instructions: "1. Install Docker Desktop (click here, download, drag to Applications). 2. Open the Terminal app on your Mac (it's in Applications > Utilities). 3. Paste this command and press Enter."
+- Step-by-step instructions: "1. Install OrbStack (click here, download, drag to Applications). 2. Open the Terminal app on your Mac (it's in Applications > Utilities). 3. Paste this command and press Enter."
 - A screenshot of what Terminal looks like with the commands typed in
 - Reassurance: "You won't need to write any code. These 2 commands are the only thing you'll type."
 
@@ -141,7 +141,7 @@ The word "Docker" with a link to docker.com and an alternative called "OrbStack.
 Anxiety. Installing unfamiliar software is a trust decision. Alex doesn't know if Docker is reputable, if it's free, or if it'll slow down their MacBook.
 
 **What Alex does:**
-Clicks the Docker link, lands on docker.com, sees "Docker Desktop" - it looks like a real company with a real product. Slightly reassured. Clicks Download.
+Clicks the OrbStack link, lands on orbstack.dev, sees a clean simple page. Slightly reassured. Clicks Download.
 
 **Friction level:** 3/5
 Docker.com is professional enough that Alex trusts it. But they still don't understand WHY they need it.
@@ -155,11 +155,11 @@ Docker.com is professional enough that Alex trusts it. But they still don't unde
 **What would help:**
 - One sentence explaining Docker in human terms: "Docker is like a box that runs Kestrel on your computer without installing a bunch of separate pieces. Think of it as the thing that makes setup a one-click process."
 - Direct download link to the correct Mac version (detect Apple Silicon vs Intel)
-- "Docker Desktop is free for personal use. You do NOT need to create an account."
+- "OrbStack is free for personal use. You do NOT need to create an account. Docker Desktop also works if you prefer."
 
 ---
 
-### Step 4: Installing Docker Desktop
+### Step 4: Installing OrbStack (or Docker Desktop)
 
 **What Alex sees:**
 A .dmg file downloads. They open it, see the standard macOS "drag to Applications" screen.
@@ -180,11 +180,11 @@ Standard Mac install. Docker's own onboarding might be slightly confusing (it wa
 - macOS blocks the install ("app from unidentified developer") - Alex needs to go to System Settings > Privacy
 - Docker asks to install a "kernel extension" or similar - Alex doesn't know if they should allow it
 - Docker takes 3-5 minutes to initialize and Alex thinks it's frozen
-- Alex closes Docker Desktop and the daemon stops
+- Alex closes OrbStack / Docker Desktop and the daemon stops
 
 **What would help:**
-- Kestrel README note: "After installing Docker Desktop, open it and wait for the whale icon in your menu bar to stop animating. That means it's ready."
-- Note: "Keep Docker Desktop running in the background while using Kestrel."
+- Kestrel README note: "After installing OrbStack (or Docker Desktop), open it and wait for the icon in your menu bar to stop animating. That means it's ready."
+- Note: "Keep OrbStack (or Docker Desktop) running in the background while using Kestrel."
 
 ---
 
@@ -300,7 +300,7 @@ The wait is manageable because setup.sh sets expectations ("2-3 minutes the firs
 - Build takes longer than 3 minutes on a slower connection (downloading Docker images)
 - A build step fails with a cryptic npm or pip error
 - Alex gets impatient and Ctrl+C's the process
-- Docker Desktop runs out of disk space
+- Docker runtime runs out of disk space
 
 **What would help:**
 - Progress indicators during the build (setup.sh currently pipes to `tail -5`, which is good but could be better)
@@ -571,7 +571,7 @@ Alex runs `./setup.sh` and gets:
 ```
 Docker is installed but not running.
 
-  Start Docker Desktop or OrbStack, then run this script again.
+  Start OrbStack or Docker Desktop, then run this script again.
 ```
 
 **What Alex sees:**
@@ -581,10 +581,10 @@ An error message, but a clear one.
 "Oh, I need to start Docker first. Where is it?" Mild annoyance but not panic.
 
 **Current recovery path:**
-The error message tells them to start Docker Desktop. This is good - it's clear and actionable.
+The error message tells them to start OrbStack or Docker Desktop. This is good — it's clear and actionable.
 
 **Ideal recovery path:**
-Current path is actually solid. Could be improved with: "Look for the whale icon in your menu bar (top of screen). If it's not there, open Docker Desktop from your Applications folder." On Mac, `setup.sh` could attempt to start Docker automatically: `open -a Docker`.
+Current path is actually solid. Could be improved with: "Look for the OrbStack icon or whale icon in your menu bar (top of screen). If it's not there, open OrbStack (or Docker Desktop) from your Applications folder." On Mac, `setup.sh` attempts to start the Docker runtime automatically: `open -a OrbStack` or `open -a Docker`.
 
 ---
 
@@ -769,7 +769,7 @@ None. There's no "I'm lost" escape hatch.
 | 1 | Landing on GitHub | 2 | Low | README is readable | Add screenshot/GIF of dashboard, "no coding required" badge | P2 |
 | 2 | Reading README Quick Start | 4 | **Critical** | Clear 2-step instructions | Add "New to command line?" expandable section | P0 |
 | 3 | Understanding Docker | 3 | High | Link to docker.com | One-sentence human explanation of Docker | P1 |
-| 4 | Installing Docker Desktop | 2 | Medium | Standard Mac install | Note about waiting for whale icon, keeping Docker open | P2 |
+| 4 | Installing OrbStack / Docker Desktop | 2 | Medium | Standard Mac install | Note about waiting for icon, keeping Docker runtime open | P2 |
 | 5 | Getting code (clone/ZIP) | 4 | **Critical** | git clone command | Add Download ZIP path, explain Terminal basics | P0 |
 | 6 | Running setup.sh | 3 | High | Good error messages in script | Add "permission denied" fix, directory navigation help | P1 |
 | 7 | Waiting for build | 2 | Low | Time estimate in script | Add "don't close this window" note, periodic status | P3 |
@@ -832,7 +832,7 @@ No. You'll need to type a total of 2 commands in the Terminal app to get Kestrel
 
 Docker is an app you install on your computer. Think of it as a box that runs Kestrel inside it, keeping everything tidy and self-contained. Without Docker, you'd need to install Python, Node.js, and a bunch of other developer tools. Docker does all of that for you.
 
-Docker Desktop is free for personal use. You don't need to create an account (skip the sign-up screen if it shows one).
+OrbStack (recommended on Mac) and Docker Desktop are both free for personal use. You don't need to create an account (skip the sign-up screen if one appears).
 
 ### Is my data safe? Where does it go?
 
@@ -873,12 +873,12 @@ A few common issues:
 
 1. **"permission denied"** - Type `bash setup.sh` instead of `./setup.sh`
 2. **"No such file or directory"** - You're in the wrong folder. Type `ls` and press Enter. If you don't see `setup.sh` in the list, you need to navigate to the Kestrel folder first. Type `cd ~/Downloads/kestrel-main` (or wherever you put it).
-3. **"Docker not found"** - Install Docker Desktop from https://docker.com first.
-4. **"Docker is installed but not running"** - Open the Docker Desktop app and wait for the whale icon in your menu bar to stop animating.
+3. **"Docker not found"** - Install OrbStack from https://orbstack.dev (or Docker Desktop from https://docker.com) first.
+4. **"Docker is installed but not running"** - Open OrbStack or Docker Desktop and wait for the icon in your menu bar to stop animating.
 
 ### Can I use this on Windows?
 
-Yes. Install Docker Desktop for Windows (it's on the same docker.com download page). Instead of Terminal, you'll use PowerShell or Command Prompt. The setup commands are the same. Windows users might want to use WSL2 (Windows Subsystem for Linux) for the best experience - Docker Desktop for Windows will prompt you to enable it.
+Yes. Install Docker Desktop for Windows (it's on the docker.com download page — OrbStack is Mac-only). Instead of Terminal, you'll use PowerShell or Command Prompt. The setup commands are the same. Windows users might want to use WSL2 (Windows Subsystem for Linux) for the best experience — Docker Desktop for Windows will prompt you to enable it.
 
 ### What if I just want to try it without all the setup?
 
@@ -944,8 +944,8 @@ git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 \`\`\`
 
 ### Option B: I've never used a terminal before
-1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) - it's a free app, install it like any other Mac/Windows app
-2. Open Docker Desktop and wait for it to finish starting (whale icon in menu bar stops animating)
+1. Install [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) — it's a free app, install it like any other Mac/Windows app
+2. Open the app and wait for it to finish starting (icon in menu bar stops animating)
 3. Download Kestrel: click the green "Code" button above, then "Download ZIP"
 4. Unzip the downloaded file (double-click it)
 5. Open Terminal (Mac: press Cmd+Space, type "Terminal", press Enter)
@@ -1058,7 +1058,7 @@ git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 Pre-test: Provide tester with only the GitHub URL. No other instructions.
 
 - [ ] **M1:** Can the tester find the "how to install" instructions within 60 seconds of landing on the GitHub page?
-- [ ] **M2:** Can the tester install Docker Desktop without assistance? Note time taken.
+- [ ] **M2:** Can the tester install OrbStack (or Docker Desktop) without assistance? Note time taken.
 - [ ] **M3:** Can the tester download/clone Kestrel without assistance? Which method did they choose?
 - [ ] **M4:** Can the tester run setup.sh without assistance? Note any errors encountered.
 - [ ] **M5:** Does the tester open the correct URL after setup completes?
@@ -1095,7 +1095,7 @@ Add a persistent help icon (question mark) in the bottom-right corner of every p
 **Quick Help Panel:**
 
 1. **Kestrel isn't loading**
-   - "Make sure Docker Desktop is running (look for the whale icon in your menu bar)"
+   - "Make sure your Docker runtime is running (look for the OrbStack icon or Docker whale in your menu bar)"
    - "Open Terminal and type: `docker compose up -d`"
    - "Then reload this page"
 
@@ -1147,17 +1147,17 @@ Kestrel won't start
 |
 +-- Did setup.sh complete successfully?
 |   |
-|   +-- YES --> Is Docker Desktop running? (whale icon in menu bar)
+|   +-- YES --> Is your Docker runtime running? (OrbStack or Docker Desktop icon in menu bar)
 |   |           |
 |   |           +-- YES --> Open Terminal, type: docker compose up -d
 |   |           |           Then try http://localhost:8101 again
 |   |           |
-|   |           +-- NO --> Open Docker Desktop, wait 30 seconds, try again
+|   |           +-- NO --> Open OrbStack or Docker Desktop, wait 30 seconds, try again
 |   |
 |   +-- NO --> What error did you see?
 |       |
-|       +-- "Docker not found" --> Install Docker Desktop from docker.com
-|       +-- "Docker not running" --> Open Docker Desktop app, wait, retry
+|       +-- "Docker not found" --> Install OrbStack from orbstack.dev (or Docker Desktop from docker.com)
+|       +-- "Docker not running" --> Open OrbStack or Docker Desktop, wait, retry
 |       +-- "Permission denied" --> Use: bash setup.sh (instead of ./setup.sh)
 |       +-- "No such file" --> You're in the wrong folder. Use: cd ~/Downloads/kestrel-main
 |       +-- Something else --> Copy the error, paste it into ChatGPT with the prompt above
