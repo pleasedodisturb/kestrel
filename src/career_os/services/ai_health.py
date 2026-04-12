@@ -16,6 +16,7 @@ import time
 import httpx
 from sqlalchemy.orm import Session
 
+from career_os.ai.factory import _SUPPORTED_PROVIDERS
 from career_os.models.integrations import IntegrationConfig
 from career_os.schemas.ai_health import (
     AIHealthResponse,
@@ -26,8 +27,9 @@ from career_os.schemas.ai_health import (
 
 logger = logging.getLogger(__name__)
 
-# Runtime-supported providers (from ai/factory.py)
-RUNTIME_SUPPORTED_PROVIDERS = {"mock", "openrouter"}
+# Runtime-supported providers — derived from the factory registry so new
+# providers registered there are automatically recognised here.
+RUNTIME_SUPPORTED_PROVIDERS = _SUPPORTED_PROVIDERS
 
 # Provider display names
 _PROVIDER_DISPLAY_NAMES = {
