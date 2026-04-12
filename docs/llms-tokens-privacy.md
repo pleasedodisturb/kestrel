@@ -1,3 +1,9 @@
+---
+layout: default
+title: LLMs, Tokens, and Privacy
+permalink: /docs/llms-tokens-privacy
+---
+
 # The 2026 LLM API landscape for BYOK consumer apps
 
 **OpenRouter's OAuth PKCE flow is the strongest single integration point for a BYOK consumer app like Kestrel**, giving end users frictionless access to 300+ models without copying API keys, while per-key spending limits and zero-data-retention controls protect both wallet and privacy. For EU-conscious users, Mistral's La Plateforme is the clear sovereign default — French-hosted, GDPR-native, with self-serve DPAs. Direct keys to Anthropic, OpenAI, and Google should be offered as power-user options. DeepSeek's extraordinary pricing ($0.28/$0.42 per MTok) is tempting but legally radioactive for EU personal data. The broader market context: **LLM API prices dropped roughly 80% between early 2025 and early 2026**, driven by DeepSeek's disruption and aggressive competition. Prompt caching now delivers 90% input discounts at Anthropic, OpenAI, and Google, making system-prompt-heavy use cases like CV analysis dramatically cheaper than headline rates suggest.

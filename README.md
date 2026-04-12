@@ -123,7 +123,7 @@ Everything runs on your machine. No account needed. No data leaves your computer
 |-------|-------------------|
 | [How Kestrel Uses AI](docs/ai-providers-explained.md) | The electricity analogy — what AI providers are, what they cost, and which to pick |
 | [AI Provider Setup](docs/AI-PROVIDERS.md) | Technical details — API keys, privacy policies, provider comparison tables |
-| [LLM Landscape Research](docs/LLMs%20and%20tokens%20and%20privacy.md) | Deep dive — 2026 pricing, privacy audits, GDPR, EU sovereignty (for the curious) |
+| [LLM Landscape Research](docs/llms-tokens-privacy.md) | Deep dive — 2026 pricing, privacy audits, GDPR, EU sovereignty (for the curious) |
 
 **Going deeper:**
 
