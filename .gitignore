@@ -56,6 +56,7 @@ mcps/
 .mcp.json
 AGENTS.md
 GEMINI.md
+GSD-CLAUDE.md
 
 # Pre-existing tool scripts (not part of this repo)
 tools/mcp_sanity_check.py
