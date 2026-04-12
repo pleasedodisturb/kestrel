@@ -6,6 +6,7 @@ import json
 import logging
 import math
 from datetime import UTC, datetime
+from typing import Literal
 
 from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
@@ -55,7 +56,7 @@ _SQL_SORT_COLUMNS: dict = {
 }
 
 
-def _apply_date_filter(query, date_str: str | None, *, column, op: str):
+def _apply_date_filter(query, date_str: str | None, *, column, op: Literal["gte", "lte"]):
     """Parse an ISO date string and apply a >= or <= filter. Ignores invalid dates."""
     if not date_str:
         return query
