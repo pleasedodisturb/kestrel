@@ -3,6 +3,7 @@
 import os
 from collections.abc import Callable
 
+from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
@@ -20,6 +21,10 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "openrouter": lambda: OpenRouterProvider(
         api_key=os.getenv("OPENROUTER_API_KEY", ""),
         model=os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4"),
+    ),
+    "anthropic": lambda: AnthropicProvider(
+        api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+        model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
     ),
 }
 
