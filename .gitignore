@@ -84,7 +84,13 @@ tmp/
 # Third-party MCP (cloned, re-clone if needed)
 jobspy-mcp-server/
 .browser-profile/
-.claude/worktrees/
+
+# Claude Code and agent working directories
+.claude/
+
+# BMad workflow outputs (local only)
+_bmad/
+_bmad-output/
 
 # Internal business docs
 docs/pricing-strategy.md
