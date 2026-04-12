@@ -1,0 +1,8 @@
+# pip-audit vulnerability suppressions
+#
+# Add one vulnerability ID per line (e.g., GHSA-xxxx-xxxx-xxxx or PYSEC-YYYY-NNNNN).
+# Only suppress when no fix is available upstream. Remove entries when fixes land.
+# Each entry should include a comment explaining why and a target removal date.
+#
+# Example:
+# PYSEC-2024-12345  # no upstream fix; tracking: https://github.com/org/repo/issues/1
