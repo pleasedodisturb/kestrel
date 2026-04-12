@@ -6,3 +6,8 @@
 #
 # Example:
 # PYSEC-2024-12345  # no upstream fix; tracking: https://github.com/org/repo/issues/1
+
+# python-jobspy 1.1.82 pins markdownify<0.14.0 which contains this CVE.
+# Remove when jobspy relaxes its markdownify pin to allow >=0.14.1.
+# Upstream: https://github.com/Bunsly/JobSpy
+CVE-2025-46656  # markdownify XSS — blocked by python-jobspy's pin of markdownify<0.14
