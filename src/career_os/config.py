@@ -28,25 +28,31 @@ class Settings(BaseSettings):
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
+    # Per-provider API key requirements: provider → (settings_attr, expected_prefix).
+    # New providers add one entry here instead of a new if-block.
+    _PROVIDER_KEY_REQUIREMENTS: dict[str, tuple[str, str]] = {
+        "openrouter": ("openrouter_api_key", "sk-or-"),
+    }
+
     @model_validator(mode="after")
     def validate_api_keys(self) -> "Settings":
         """Fail fast if AI provider requires an API key that isn't set."""
-        if self.ai_provider == "openrouter" and not self.openrouter_api_key:
-            raise ValueError(
-                "OPENROUTER_API_KEY is required when AI_PROVIDER=openrouter. "
-                "Set it in your .env file or environment."
-            )
-        if (
-            self.ai_provider == "openrouter"
-            and self.openrouter_api_key
-            and not self.openrouter_api_key.startswith("sk-or-")
-        ):
-            import logging
+        req = self._PROVIDER_KEY_REQUIREMENTS.get(self.ai_provider)
+        if req:
+            attr, prefix = req
+            val = getattr(self, attr, "")
+            if not val:
+                raise ValueError(
+                    f"{attr.upper()} is required when AI_PROVIDER={self.ai_provider}. "
+                    f"Set it in your .env file or environment."
+                )
+            if prefix and val and not val.startswith(prefix):
+                import logging
 
-            logging.getLogger(__name__).warning(
-                "OPENROUTER_API_KEY doesn't start with 'sk-or-'. "
-                "It may be pasted incorrectly. Check for extra spaces or missing characters."
-            )
+                logging.getLogger(__name__).warning(
+                    f"{attr.upper()} doesn't start with '{prefix}'. "
+                    "It may be pasted incorrectly. Check for extra spaces or missing characters."
+                )
         if self.auth_enabled and not self.auth_api_key:
             raise ValueError(
                 "AUTH_API_KEY is required when AUTH_ENABLED=true. "
