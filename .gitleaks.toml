@@ -18,6 +18,9 @@ paths = [
   '''tests/test_ai_health\.py$''',
   '''tests/test_registry_integration\.py$''',
   '''tests/test_auth\.py$''',
+  # Claude skill knowledge bases contain example JWT/API tokens in documentation
+  '''\.claude/skills/.*''',
+  '''_bmad/.*''',
 ]
 
 regexes = [
