@@ -34,7 +34,26 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Forward-only: the feature is gone, no restore path is provided."""
-    raise NotImplementedError(
-        "time_sessions was dropped as part of the TimingsApp removal (d2e5a7f1b9c3)."
+    """Recreate time_sessions table (schema from i0d1e2f3g4h5)."""
+    op.create_table(
+        "time_sessions",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("profile_id", sa.Integer(), nullable=False),
+        sa.Column("activity_name", sa.String(length=500), nullable=False),
+        sa.Column("category", sa.String(length=50), nullable=False),
+        sa.Column("notes", sa.Text(), nullable=True),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("stopped_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("duration_seconds", sa.Float(), nullable=True),
+        sa.Column("timingsapp_entry_id", sa.String(length=255), nullable=True),
+        sa.Column("timingsapp_project", sa.String(length=255), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_time_sessions_profile_id"),
+        "time_sessions",
+        ["profile_id"],
+        unique=False,
     )
