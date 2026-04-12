@@ -25,6 +25,7 @@ from career_os.api.interview_prep import router as interview_prep_router
 from career_os.api.jobs import router as jobs_router
 from career_os.api.learning import router as learning_router
 from career_os.api.market import router as market_router
+from career_os.api.oauth import router as oauth_router
 from career_os.api.privacy import router as privacy_router
 from career_os.api.profiles import router as profiles_router
 from career_os.api.pushover import router as pushover_router
@@ -180,6 +181,7 @@ app.include_router(interview_prep_router)
 app.include_router(jobs_router)
 app.include_router(learning_router)
 app.include_router(market_router)
+app.include_router(oauth_router)
 app.include_router(privacy_router)
 app.include_router(profiles_router)
 app.include_router(pushover_router)
