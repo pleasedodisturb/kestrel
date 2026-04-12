@@ -10,7 +10,7 @@ npx kestrel-app
 
 This will:
 
-1. Check for Python 3.13+ (required)
+1. Check for Python 3.11+ (required)
 2. Install Kestrel via pip/pipx
 3. Launch the web interface in your browser
 
@@ -24,7 +24,7 @@ Kestrel discovers jobs, scores them with AI, tracks your pipeline, and preps you
 # curl one-liner
 curl -fsSL https://raw.githubusercontent.com/pleasedodisturb/kestrel/main/install.sh | bash
 
-# pip (if you have Python 3.13+)
+# pip (if you have Python 3.11+)
 pip install kestrel-app && kestrel start
 
 # Homebrew (macOS)
