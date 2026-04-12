@@ -219,6 +219,28 @@ def _extract_hiring_patterns(report_data: dict) -> object | None:
     return report_data.get("hiring_patterns")
 
 
+def _enrich_from_full_report(research_data: dict, full_report: dict) -> None:
+    """Enrich research_data dict with fields parsed from the full report JSON."""
+    tech_stack = _extract_tech_stack(full_report)
+    if tech_stack is not None:
+        research_data["tech_stack"] = tech_stack
+
+    culture = _extract_culture_keywords(full_report)
+    if culture is not None:
+        research_data["culture"] = culture
+
+    score, rationale = _extract_values_alignment(
+        full_report, research_data.get("values_alignment_score")
+    )
+    research_data["values_alignment_score"] = score
+    if rationale is not None:
+        research_data["values_rationale"] = rationale
+
+    hiring = _extract_hiring_patterns(full_report)
+    if hiring is not None:
+        research_data["hiring_patterns"] = hiring
+
+
 def _get_company_research_data(db: Session, company_name: str, profile_id: int) -> dict | None:
     """Fetch persisted company research data for inclusion in prep prompt.
 
@@ -260,24 +282,7 @@ def _get_company_research_data(db: Session, company_name: str, profile_id: int) 
         if not isinstance(full_report, dict):
             return research_data
 
-        tech_stack = _extract_tech_stack(full_report)
-        if tech_stack is not None:
-            research_data["tech_stack"] = tech_stack
-
-        culture = _extract_culture_keywords(full_report)
-        if culture is not None:
-            research_data["culture"] = culture
-
-        score, rationale = _extract_values_alignment(
-            full_report, research_data.get("values_alignment_score")
-        )
-        research_data["values_alignment_score"] = score
-        if rationale is not None:
-            research_data["values_rationale"] = rationale
-
-        hiring = _extract_hiring_patterns(full_report)
-        if hiring is not None:
-            research_data["hiring_patterns"] = hiring
+        _enrich_from_full_report(research_data, full_report)
 
         return research_data
     except Exception:
