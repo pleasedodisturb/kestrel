@@ -5,6 +5,18 @@ from abc import ABC, abstractmethod
 from career_os.schemas.ai import AIFeature, AIResponse
 
 
+class ProviderQuotaError(Exception):
+    """Raised when an AI provider returns 402/429 indicating quota exhaustion."""
+
+    def __init__(self, provider: str, status_code: int, detail: str = "") -> None:
+        self.provider = provider
+        self.status_code = status_code
+        message = f"{provider} quota/credits exhausted (HTTP {status_code})."
+        if detail:
+            message += f" {detail}"
+        super().__init__(message)
+
+
 class AIProvider(ABC):
     """Abstract AI provider interface.
 
@@ -16,6 +28,15 @@ class AIProvider(ABC):
     def name(self) -> str:
         """Provider name (e.g. 'mock', 'openrouter')."""
         ...
+
+    @property
+    def privacy_tier(self) -> str:
+        """Privacy tier for this provider (default: yellow).
+
+        Subclasses may override to report their actual tier.
+        See :class:`career_os.schemas.privacy.PrivacyTier` for values.
+        """
+        return "yellow"
 
     @abstractmethod
     async def complete(

@@ -7,7 +7,15 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 # Paths that bypass auth even when enabled
-_PUBLIC_PATHS = frozenset({"/health", "/docs", "/redoc", "/openapi.json"})
+_PUBLIC_PATHS = frozenset(
+    {
+        "/health",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        "/api/auth/openrouter/callback",  # browser redirect — PKCE state protects it
+    }
+)
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):

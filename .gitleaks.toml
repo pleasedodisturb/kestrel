@@ -19,4 +19,6 @@ regexes = [
   '''(?i)your[-_]?api[-_]?key[-_]?here''',
   '''(?i)sk-example''',
   '''(?i)example[-_]?token''',
+  # API key prefix/placeholder patterns in validation and schema code
+  '''sk-ant-\.\.\.''',
 ]

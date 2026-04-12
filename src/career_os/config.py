@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     ai_provider: str = "mock"
     openrouter_api_key: str = ""
     openrouter_model: str = "anthropic/claude-sonnet-4"
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-4-20250514"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.3"
     host: str = "0.0.0.0"
     port: int = 8100
     frontend_url: str = "http://localhost:8101"
@@ -32,6 +36,7 @@ class Settings(BaseSettings):
     # New providers add one entry here instead of a new if-block.
     _PROVIDER_KEY_REQUIREMENTS: dict[str, tuple[str, str]] = {
         "openrouter": ("openrouter_api_key", "sk-or-"),
+        "anthropic": ("anthropic_api_key", "sk-ant-"),
     }
 
     @model_validator(mode="after")
