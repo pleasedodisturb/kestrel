@@ -1,0 +1,13 @@
+# pip-audit vulnerability suppressions
+#
+# Add one vulnerability ID per line (e.g., GHSA-xxxx-xxxx-xxxx or PYSEC-YYYY-NNNNN).
+# Only suppress when no fix is available upstream. Remove entries when fixes land.
+# Each entry should include a comment explaining why and a target removal date.
+#
+# Example:
+# PYSEC-2024-12345  # no upstream fix; tracking: https://github.com/org/repo/issues/1
+
+# python-jobspy 1.1.82 pins markdownify<0.14.0 which contains this CVE.
+# Remove when jobspy relaxes its markdownify pin to allow >=0.14.1.
+# Upstream: https://github.com/Bunsly/JobSpy
+CVE-2025-46656  # markdownify XSS — blocked by python-jobspy<0.14 pin (remove by 2026-07-01)
