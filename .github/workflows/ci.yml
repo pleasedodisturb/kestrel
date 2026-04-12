@@ -174,3 +174,6 @@ jobs:
 
       - name: Security audit (dependencies)
         run: npm audit --audit-level=moderate
+
+      - name: Verify npm package signatures
+        run: npm audit signatures
