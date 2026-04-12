@@ -17,8 +17,6 @@ class Settings(BaseSettings):
     openrouter_model: str = "anthropic/claude-sonnet-4"
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-20250514"
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3.3"
     host: str = "0.0.0.0"
     port: int = 8100
     frontend_url: str = "http://localhost:8101"
