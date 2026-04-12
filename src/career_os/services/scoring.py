@@ -314,6 +314,61 @@ def _gather_scoring_context(db: Session, profile: Profile, profile_id: int) -> d
     return profile_data
 
 
+def _gather_red_flag_metadata(
+    db: Session,
+    discovered_job_id: int | None,
+    job_title: str | None,
+) -> dict:
+    """Gather metadata from linked DiscoveredJob for red-flag detection."""
+    rf: dict = {"posted_at": None, "title": job_title, "salary": None, "location": None}
+    if discovered_job_id is not None:
+        dj_meta = db.query(DiscoveredJob).filter(DiscoveredJob.id == discovered_job_id).first()
+        if dj_meta is not None:
+            rf["posted_at"] = dj_meta.posted_at
+            rf["title"] = rf["title"] or dj_meta.title
+            rf["salary"] = dj_meta.salary_range
+            rf["location"] = dj_meta.location
+    return rf
+
+
+def _build_dim_columns(dim) -> dict[str, float | None]:
+    """Build dimensional score columns dict from AI result."""
+    if dim is None:
+        return {
+            "dim_technical_fit": None,
+            "dim_seniority_alignment": None,
+            "dim_compensation_fit": None,
+            "dim_location_fit": None,
+            "dim_career_trajectory": None,
+            "dim_company_fit": None,
+        }
+    return {
+        "dim_technical_fit": dim.technical_fit,
+        "dim_seniority_alignment": dim.seniority_alignment,
+        "dim_compensation_fit": dim.compensation_fit,
+        "dim_location_fit": dim.location_fit,
+        "dim_career_trajectory": dim.career_trajectory,
+        "dim_company_fit": dim.company_fit,
+    }
+
+
+def _update_linked_scores(
+    db: Session,
+    fit_score: float,
+    discovered_job_id: int | None,
+    application_id: int | None,
+) -> None:
+    """Propagate fit_score to linked DiscoveredJob and/or Application."""
+    if discovered_job_id is not None:
+        dj = db.query(DiscoveredJob).filter(DiscoveredJob.id == discovered_job_id).first()
+        if dj:
+            dj.fit_score = fit_score
+    if application_id is not None:
+        app_record = db.query(Application).filter(Application.id == application_id).first()
+        if app_record:
+            app_record.fit_score = fit_score
+
+
 async def score_job(
     db: Session,
     profile_id: int,
@@ -374,52 +429,19 @@ async def score_job(
         else None
     )
 
-    # Rule-based red flags (zero AI cost). Pull richer metadata from the
-    # linked DiscoveredJob when available so rules like stale_posting and
-    # missing_salary can evaluate.
-    rf_posted_at = None
-    rf_title = job_title
-    rf_salary = None
-    rf_location = None
-    if discovered_job_id is not None:
-        dj_meta = db.query(DiscoveredJob).filter(DiscoveredJob.id == discovered_job_id).first()
-        if dj_meta is not None:
-            rf_posted_at = dj_meta.posted_at
-            rf_title = rf_title or dj_meta.title
-            rf_salary = dj_meta.salary_range
-            rf_location = dj_meta.location
+    # Rule-based red flags (zero AI cost)
+    rf = _gather_red_flag_metadata(db, discovered_job_id, job_title)
     red_flags = detect_red_flags(
         job_description,
-        posted_at=rf_posted_at,
-        title=rf_title,
-        salary_range=rf_salary,
-        location=rf_location,
+        posted_at=rf["posted_at"],
+        title=rf["title"],
+        salary_range=rf["salary"],
+        location=rf["location"],
     )
     red_flags_json = json.dumps(red_flags) if red_flags else None
 
-    # Dimensional sub-scores: six nullable floats stored as individual columns
-    # so they can be queried/aggregated later. When the AI provider didn't
-    # return dimensional_scores, all six columns stay NULL.
-    dim = score_data.dimensional_scores
-    dim_columns: dict[str, float | None] = (
-        {
-            "dim_technical_fit": dim.technical_fit,
-            "dim_seniority_alignment": dim.seniority_alignment,
-            "dim_compensation_fit": dim.compensation_fit,
-            "dim_location_fit": dim.location_fit,
-            "dim_career_trajectory": dim.career_trajectory,
-            "dim_company_fit": dim.company_fit,
-        }
-        if dim is not None
-        else {
-            "dim_technical_fit": None,
-            "dim_seniority_alignment": None,
-            "dim_compensation_fit": None,
-            "dim_location_fit": None,
-            "dim_career_trajectory": None,
-            "dim_company_fit": None,
-        }
-    )
+    # Dimensional sub-scores
+    dim_columns = _build_dim_columns(score_data.dimensional_scores)
 
     # ATS keywords: serialize the list of {keyword, category, matched} to JSON
     # text. Empty list → NULL so legacy rows remain unchanged.
@@ -451,21 +473,47 @@ async def score_job(
     )
     db.add(scored_job)
 
-    # Also update fit_score on the discovered job and/or application
-    if discovered_job_id is not None:
-        dj = db.query(DiscoveredJob).filter(DiscoveredJob.id == discovered_job_id).first()
-        if dj:
-            dj.fit_score = score_data.fit_score
-
-    if application_id is not None:
-        app_record = db.query(Application).filter(Application.id == application_id).first()
-        if app_record:
-            app_record.fit_score = score_data.fit_score
+    # Propagate fit_score to linked records
+    _update_linked_scores(db, score_data.fit_score, discovered_job_id, application_id)
 
     db.commit()
     db.refresh(scored_job)
 
     return scored_job
+
+
+def _format_skills_section(skills: list[dict]) -> list[str]:
+    """Format skills into prompt lines."""
+    if not skills:
+        return []
+    lines = ["\nSkills:"]
+    for skill in skills[:20]:  # Limit to avoid huge prompts
+        lines.append(f"  - {skill['name']} ({skill['category']}, {skill['proficiency']})")
+    return lines
+
+
+def _format_goals_section(goals: list[dict]) -> list[str]:
+    """Format goals into prompt lines."""
+    if not goals:
+        return []
+    lines = ["\nCareer Goals:"]
+    for goal in goals[:5]:
+        lines.append(f"  - {goal['title']} ({goal['type']})")
+    return lines
+
+
+def _format_market_section(market: dict) -> list[str]:
+    """Format market positioning into prompt lines (VAL-CROSS-010)."""
+    positions = market.get("positions", [])
+    if not positions:
+        return []
+    lines = ["\nMarket Positioning:"]
+    for pos in positions[:5]:
+        lines.append(
+            f"  - {pos['role_type']}: {pos['match_percentage']}% match "
+            f"({pos['total_roles_analyzed']} roles analyzed)"
+        )
+    return lines
 
 
 def _build_scoring_prompt(
@@ -492,26 +540,9 @@ def _build_scoring_prompt(
     parts.append(f"Location: {profile_data.get('location', 'Unknown')}")
     parts.append(f"Job Family: {profile_data.get('job_family', 'Unknown')}")
 
-    if profile_data.get("skills"):
-        parts.append("\nSkills:")
-        for skill in profile_data["skills"][:20]:  # Limit to avoid huge prompts
-            parts.append(f"  - {skill['name']} ({skill['category']}, {skill['proficiency']})")
-
-    if profile_data.get("goals"):
-        parts.append("\nCareer Goals:")
-        for goal in profile_data["goals"][:5]:
-            parts.append(f"  - {goal['title']} ({goal['type']})")
-
-    # Include market positioning data (VAL-CROSS-010)
-    market = profile_data.get("market_positioning", {})
-    positions = market.get("positions", [])
-    if positions:
-        parts.append("\nMarket Positioning:")
-        for pos in positions[:5]:
-            parts.append(
-                f"  - {pos['role_type']}: {pos['match_percentage']}% match "
-                f"({pos['total_roles_analyzed']} roles analyzed)"
-            )
+    parts.extend(_format_skills_section(profile_data.get("skills", [])))
+    parts.extend(_format_goals_section(profile_data.get("goals", [])))
+    parts.extend(_format_market_section(profile_data.get("market_positioning", {})))
 
     if profile_data.get("weights"):
         parts.append(f"\nScoring Weights: {json.dumps(profile_data['weights'])}")

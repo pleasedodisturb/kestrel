@@ -6,6 +6,7 @@ import json
 import logging
 import math
 from datetime import UTC, datetime
+from typing import Literal
 
 from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
@@ -55,6 +56,19 @@ _SQL_SORT_COLUMNS: dict = {
 }
 
 
+def _apply_date_filter(query, date_str: str | None, *, column, op: Literal["gte", "lte"]):
+    """Parse an ISO date string and apply a >= or <= filter. Ignores invalid dates."""
+    if not date_str:
+        return query
+    try:
+        dt = datetime.fromisoformat(date_str).replace(tzinfo=UTC)
+    except ValueError:
+        return query
+    if op == "gte":
+        return query.filter(column >= dt)
+    return query.filter(column <= dt)
+
+
 def _build_job_filters(
     query,
     q,
@@ -97,19 +111,8 @@ def _build_job_filters(
     if max_score is not None:
         query = query.filter(DiscoveredJob.fit_score <= max_score)
 
-    if date_from:
-        try:
-            dt_from = datetime.fromisoformat(date_from).replace(tzinfo=UTC)
-            query = query.filter(DiscoveredJob.created_at >= dt_from)
-        except ValueError:
-            pass  # ignore invalid date
-
-    if date_to:
-        try:
-            dt_to = datetime.fromisoformat(date_to).replace(tzinfo=UTC)
-            query = query.filter(DiscoveredJob.created_at <= dt_to)
-        except ValueError:
-            pass  # ignore invalid date
+    query = _apply_date_filter(query, date_from, column=DiscoveredJob.created_at, op="gte")
+    query = _apply_date_filter(query, date_to, column=DiscoveredJob.created_at, op="lte")
 
     return query
 
