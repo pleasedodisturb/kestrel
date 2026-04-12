@@ -62,28 +62,6 @@ Evidence: Screenshots of event in two different calendar apps; settings page sho
 
 ---
 
-## TimingsApp Integration
-
-### VAL-TIME-001: Time tracking records job search activities
-When the user starts a tracked session from Career OS (e.g., "Researching Stripe"), a corresponding time entry is created in TimingsApp with the activity name and category.
-**Pass:** TimingsApp shows a time entry matching the session name and category.
-**Fail:** No entry in TimingsApp or wrong category.
-Evidence: TimingsApp activity list showing the entry; Career OS session log.
-
-### VAL-TIME-002: Activity categorization by type
-Time entries are categorized into the defined types: applying, researching, prepping, networking, learning. The category is set automatically based on the Career OS activity context.
-**Pass:** Each time entry has one of the five valid categories.
-**Fail:** Category missing, incorrect, or not one of the defined types.
-Evidence: TimingsApp entries filtered by each category; Career OS activity type mapping.
-
-### VAL-TIME-003: Time analytics in dashboard
-The Career OS dashboard displays a time analytics section showing: total hours this week/month, breakdown by category (pie/bar chart), and trend over last 4 weeks.
-**Pass:** Dashboard renders analytics with correct totals matching TimingsApp data.
-**Fail:** Analytics section missing, totals incorrect, or chart not rendering.
-Evidence: Dashboard screenshot showing time analytics; cross-reference with TimingsApp totals.
-
----
-
 ## Pushover Integration
 
 ### VAL-PUSH-001: Follow-up reminder push notification
@@ -171,7 +149,7 @@ Evidence: Dashboard screenshot with one deliberately misconfigured provider; oth
 ## Cross-cutting: Configuration & Error Handling
 
 ### VAL-PUSH-006: Integration configuration UI
-Each integration (TickTick, Calendar, TimingsApp, Pushover, Voice, AI providers) has a configuration section in the settings UI where the user can enter credentials, toggle the integration on/off, and see the current connection status.
-**Pass:** Settings page lists all six integrations with credential fields, on/off toggle, and status indicator.
+Each integration (TickTick, Calendar, Pushover, Voice, AI providers) has a configuration section in the settings UI where the user can enter credentials, toggle the integration on/off, and see the current connection status.
+**Pass:** Settings page lists all integrations with credential fields, on/off toggle, and status indicator.
 **Fail:** Any integration missing from settings, or no way to configure credentials.
 Evidence: Settings page screenshot showing all integration panels.
