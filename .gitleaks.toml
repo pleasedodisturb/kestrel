@@ -11,7 +11,6 @@ paths = [
   '''\.github/pii-patterns\.txt$''',
   '''config/personal\.yaml\.example$''',
   '''tests/fixtures/.*''',
-  '''tests/.*''',
   '''docs/.*''',
 ]
 
@@ -20,4 +19,8 @@ regexes = [
   '''(?i)your[-_]?api[-_]?key[-_]?here''',
   '''(?i)sk-example''',
   '''(?i)example[-_]?token''',
+  # Test placeholder keys (sk-ant-test*, sk-or-v1-abc*, test-key-*)
+  '''sk-ant-test\S*''',
+  '''sk-or-v1-abc\S*''',
+  '''test-key-\S*''',
 ]

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from unittest.mock import AsyncMock
 
 import pytest
@@ -10,7 +9,6 @@ import pytest
 from career_os.ai.base import AIProvider
 from career_os.ai.cache import CachedProvider, _cache_key
 from career_os.schemas.ai import AIFeature, AIResponse
-
 
 # ---------------------------------------------------------------------------
 # Helpers

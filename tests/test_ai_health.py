@@ -74,9 +74,9 @@ class TestProviderHealthEndpoint:
         assert "providers" in data
         providers = data["providers"]
         assert isinstance(providers, list)
-        # Should list only runtime-supported providers (mock, openrouter)
+        # Should list all runtime-supported providers
         names = {p["name"] for p in providers}
-        expected = {"mock", "openrouter"}
+        expected = {"mock", "openrouter", "anthropic", "ollama"}
         assert expected == names
 
     def test_health_provider_fields(self, client: TestClient) -> None:
@@ -244,7 +244,7 @@ class TestProviderSwitching:
     def test_health_check_unsupported_provider(self, client: TestClient) -> None:
         """GET /api/ai/health/check with unsupported provider returns error."""
         with patch.dict(os.environ, {"AI_PROVIDER": "mock"}):
-            resp = client.get("/api/ai/health/check", params={"provider": "anthropic"})
+            resp = client.get("/api/ai/health/check", params={"provider": "nonexistent"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "error"
@@ -281,13 +281,12 @@ class TestStoredConfigIntegration:
         assert data["default_provider"] == "openrouter"
 
     def test_only_runtime_supported_providers_shown(self, client: TestClient, db_session) -> None:
-        """Dashboard only shows mock and openrouter, not unsupported providers."""
+        """Dashboard only shows runtime-supported providers."""
         resp = client.get("/api/ai/health")
         data = resp.json()
         names = {p["name"] for p in data["providers"]}
-        assert names == {"mock", "openrouter"}
-        # Verify anthropic, openai, gemini, together, droid_exec are NOT present
-        assert "anthropic" not in names
+        assert names == {"mock", "openrouter", "anthropic", "ollama"}
+        # Verify truly unsupported providers are NOT present
         assert "openai" not in names
         assert "droid_exec" not in names
 

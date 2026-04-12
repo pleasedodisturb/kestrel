@@ -4,6 +4,7 @@ import hashlib
 import logging
 import os
 import secrets
+import time
 from base64 import urlsafe_b64encode
 
 import httpx
@@ -16,11 +17,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # In-memory store for PKCE verifiers keyed by state token.
-# Entries are consumed on callback and never persisted (DB persistence is future work).
-_pending_verifiers: dict[str, str] = {}
+# Each entry is (code_verifier, created_at_timestamp).
+# Entries are consumed on callback; expired entries are purged on each /start call.
+_pending_verifiers: dict[str, tuple[str, float]] = {}
+
+# Limits to prevent memory exhaustion from abandoned OAuth flows.
+_MAX_PENDING = 1000
+_VERIFIER_TTL_SECONDS = 600  # 10 minutes
 
 OPENROUTER_AUTH_URL = "https://openrouter.ai/auth"
 OPENROUTER_KEYS_URL = "https://openrouter.ai/api/v1/auth/keys"
+
+
+def _cleanup_expired_verifiers() -> None:
+    """Remove expired PKCE verifiers from the in-memory store."""
+    now = time.time()
+    expired = [k for k, (_, ts) in _pending_verifiers.items() if now - ts > _VERIFIER_TTL_SECONDS]
+    for k in expired:
+        del _pending_verifiers[k]
 
 
 def _generate_pkce_pair() -> tuple[str, str]:
@@ -43,10 +57,18 @@ async def openrouter_auth_start() -> dict:
     The frontend should redirect or open this URL so the user can authorize
     Kestrel to use their OpenRouter account.
     """
+    # Purge expired entries and enforce size limit to prevent memory exhaustion.
+    _cleanup_expired_verifiers()
+    if len(_pending_verifiers) >= _MAX_PENDING:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many pending OAuth flows. Please try again later.",
+        )
+
     code_verifier, code_challenge = _generate_pkce_pair()
     state = secrets.token_urlsafe(32)
 
-    _pending_verifiers[state] = code_verifier
+    _pending_verifiers[state] = (code_verifier, time.time())
 
     # Build callback URL from the backend's own address.
     callback_url = f"{settings.frontend_url}/api/auth/openrouter/callback"
@@ -65,18 +87,25 @@ async def openrouter_auth_start() -> dict:
 @router.get("/openrouter/callback")
 async def openrouter_auth_callback(
     code: str = Query(..., description="Authorization code from OpenRouter"),
-    state: str = Query("", description="State token for PKCE verification"),
+    state: str = Query(..., description="State token for PKCE verification"),
 ) -> dict:
     """Exchange the authorization code for an OpenRouter API key.
 
     OpenRouter redirects here after the user authorizes.  We POST the code
     together with the original code_verifier to obtain a permanent API key.
     """
-    code_verifier = _pending_verifiers.pop(state, None)
-    if code_verifier is None:
+    entry = _pending_verifiers.pop(state, None)
+    if entry is None:
         raise HTTPException(
             status_code=400,
             detail="Invalid or expired state parameter. Please restart the OAuth flow.",
+        )
+
+    code_verifier, created_at = entry
+    if time.time() - created_at > _VERIFIER_TTL_SECONDS:
+        raise HTTPException(
+            status_code=400,
+            detail="OAuth flow expired. Please restart the authorization.",
         )
 
     try:
@@ -105,7 +134,13 @@ async def openrouter_auth_callback(
         raise HTTPException(status_code=502, detail="OpenRouter returned an empty API key.")
 
     # Store in environment (runtime only — DB persistence is future work).
+    # WARNING: This key is ephemeral — it will be lost on server restart and
+    # is not shared across workers in multi-process deployments.
     os.environ["OPENROUTER_API_KEY"] = api_key
+    logger.warning(
+        "OpenRouter API key stored in process environment (ephemeral). "
+        "It will be lost on restart. DB persistence is planned for a future release."
+    )
 
     return {"success": True, "provider": "openrouter"}
 
@@ -115,6 +150,7 @@ async def openrouter_auth_status() -> dict:
     """Check whether an OpenRouter API key is currently configured."""
     key = os.environ.get("OPENROUTER_API_KEY", "") or settings.openrouter_api_key
     connected = bool(key)
-    key_preview = f"{key[:6]}..." if connected and len(key) > 6 else ""
+    # Show only the last 4 characters to avoid leaking the key prefix.
+    key_preview = f"...{key[-4:]}" if connected and len(key) > 4 else ""
 
     return {"connected": connected, "provider": "openrouter", "key_preview": key_preview}
