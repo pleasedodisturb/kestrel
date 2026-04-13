@@ -5,6 +5,7 @@ import logging
 import secrets
 import time
 from base64 import urlsafe_b64encode
+from typing import Annotated
 from urllib.parse import urlencode
 
 import httpx
@@ -103,9 +104,9 @@ async def openrouter_auth_start(request: Request) -> dict:
 @limiter.limit("20/minute")
 async def openrouter_auth_callback(
     request: Request,
-    code: str = Query(..., description="Authorization code from OpenRouter"),
-    state: str = Query(..., min_length=1, description="State token for PKCE verification"),
-    db: Session = Depends(get_db),
+    code: Annotated[str, Query(description="Authorization code from OpenRouter")],
+    state: Annotated[str, Query(min_length=1, description="State token for PKCE verification")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """Exchange the authorization code for an OpenRouter API key.
 
@@ -183,7 +184,7 @@ def _get_stored_api_key(db: Session) -> str:
 
 
 @router.get("/openrouter/status")
-async def openrouter_auth_status(db: Session = Depends(get_db)) -> dict:
+async def openrouter_auth_status(db: Annotated[Session, Depends(get_db)]) -> dict:
     """Check whether an OpenRouter API key is currently configured."""
     key = _get_stored_api_key(db)
     connected = bool(key)
