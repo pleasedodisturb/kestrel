@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.3.0](https://github.com/pleasedodisturb/kestrel/compare/v0.2.0...v0.3.0) (2026-04-13)
+
+
+### Features
+
+* add OpenRouter OAuth PKCE backend endpoints ([7ec4446](https://github.com/pleasedodisturb/kestrel/commit/7ec4446e07a85209253ebe4a2c0a28cf3f2c58bb))
+* G-236 add client-side PII masking layer for AI prompts ([9282f95](https://github.com/pleasedodisturb/kestrel/commit/9282f95190a2bddc7ea3721896d3d3f1a4d5c24a))
+* multi-provider AI architecture — Wave 1 ([#132](https://github.com/pleasedodisturb/kestrel/issues/132)) ([3632eb7](https://github.com/pleasedodisturb/kestrel/commit/3632eb7aeac173b05386c2099a00f167c6b566c7))
+
+
+### Bug Fixes
+
+* add tests/ to gitleaks allowlist for placeholder API keys ([e2a6d81](https://github.com/pleasedodisturb/kestrel/commit/e2a6d818cc69e2b30735a3cd3b0dc2e22e6c4755))
+* **ci:** harden CI reliability — SonarCloud, commitlint, pytest-timeout ([#167](https://github.com/pleasedodisturb/kestrel/issues/167)) ([7cb2e6a](https://github.com/pleasedodisturb/kestrel/commit/7cb2e6ad897305d44e3125f098785eaa29588bbe))
+* **ci:** merge SonarCloud into CI workflow with coverage integration ([#163](https://github.com/pleasedodisturb/kestrel/issues/163)) ([156bf43](https://github.com/pleasedodisturb/kestrel/commit/156bf436c5d41ee19fa1eb6d88e774638b28f06c))
+* exclude Claude skill docs from gitleaks scanning ([f75a3d3](https://github.com/pleasedodisturb/kestrel/commit/f75a3d3341efc4d5e1a12efd9dd18879fdc333c6))
+* G-265 re-add BMAD/GSD gitignore entries dropped during merge ([#165](https://github.com/pleasedodisturb/kestrel/issues/165)) ([e984b47](https://github.com/pleasedodisturb/kestrel/commit/e984b4781ad6c2449128ba1f26d7860767713d72))
+* harden OAuth, PII masking, cache, and gitleaks config ([2d95d65](https://github.com/pleasedodisturb/kestrel/commit/2d95d65e4d8b9b5945132164931b844d987d6eb5))
+* pin GitHub Actions to full commit SHAs in SonarCloud workflow ([0224f97](https://github.com/pleasedodisturb/kestrel/commit/0224f9753b028e4d3a41afd61a3ded2b02d49bff))
+* remove hardcoded PII from SonarCloud MCP server defaults ([29dc9c9](https://github.com/pleasedodisturb/kestrel/commit/29dc9c9c4510b23a43537a448987afdb04f9281d))
+* resolve PR [#132](https://github.com/pleasedodisturb/kestrel/issues/132) conflicts — combine security features from both branches ([#160](https://github.com/pleasedodisturb/kestrel/issues/160)) ([9f9b31d](https://github.com/pleasedodisturb/kestrel/commit/9f9b31d3087f780500e1b0bcc646a03715faace2))
+* **security:** harden OAuth, cache, PII masking, and privacy registry ([e8199f5](https://github.com/pleasedodisturb/kestrel/commit/e8199f5c69ad197c825dccd4111ee5630dbe69c7))
+* setup SonarCloud CI properly and resolve ~420 issues ([#166](https://github.com/pleasedodisturb/kestrel/issues/166)) ([bb7355c](https://github.com/pleasedodisturb/kestrel/commit/bb7355c129bc535c225bf480daeb2f3aa0f9c5e4))
+* update markdownify to &gt;=1.2.2 to resolve CVE-2025-46656 ([#133](https://github.com/pleasedodisturb/kestrel/issues/133)) ([643f755](https://github.com/pleasedodisturb/kestrel/commit/643f7558ad3dbff6e8ce9a7d2cc2901cd7d74c25))
+
+
+### Documentation
+
+* add session summary for 2026-04-13 (BMAD installation) ([#169](https://github.com/pleasedodisturb/kestrel/issues/169)) ([8060d58](https://github.com/pleasedodisturb/kestrel/commit/8060d582f55a7a7d6a5c23d0c426da772bf71d6c))
+* rewrite CLAUDE.md with dev commands and mobile coverage ([#123](https://github.com/pleasedodisturb/kestrel/issues/123)) ([c16b62b](https://github.com/pleasedodisturb/kestrel/commit/c16b62b6565524786b65769e1a53d3bfe8c7c32a))
+
+
+### Dependencies
+
+* Update dependency lucide-react to v1 ([#149](https://github.com/pleasedodisturb/kestrel/issues/149)) ([5a62031](https://github.com/pleasedodisturb/kestrel/commit/5a620316f7933fa8b7f3ebdbe37e55b0a6ed51f4))
+* Update docker/build-push-action action to v7 ([#145](https://github.com/pleasedodisturb/kestrel/issues/145)) ([79bf055](https://github.com/pleasedodisturb/kestrel/commit/79bf055061a526748c9abcd9d6e6f39b6d7ef272))
+* Update docker/setup-buildx-action action to v4 ([b335352](https://github.com/pleasedodisturb/kestrel/commit/b335352aa6100bb13d26b8866a39a41ca6bb25c5))
+* Update GitHub Artifact Actions ([#147](https://github.com/pleasedodisturb/kestrel/issues/147)) ([5a39618](https://github.com/pleasedodisturb/kestrel/commit/5a39618b5280517dff7ea37e91a0e81483ec49fc))
+* update GitHub artifact actions to latest majors ([9b89464](https://github.com/pleasedodisturb/kestrel/commit/9b89464bac6a64a980d497dd057114ebfc2f8a6f))
+
 ## [0.2.0](https://github.com/pleasedodisturb/kestrel/compare/v0.1.0...v0.2.0) (2026-04-12)
 
 
