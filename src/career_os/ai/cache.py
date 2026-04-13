@@ -2,19 +2,21 @@
 
 Wraps any AIProvider to transparently cache complete() and score() results,
 keyed by a SHA-256 digest of the request parameters.  Storage is a single
-SQLite table using stdlib sqlite3 (no async driver needed — cache I/O is
-fast local disk).
+SQLite table using stdlib sqlite3.  Blocking I/O is delegated to a thread
+via ``asyncio.to_thread`` so the event loop is never blocked.
 
 Response data is encrypted at rest with Fernet symmetric encryption.
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import hashlib
 import json
 import logging
+import os
 import sqlite3
-import threading
 import time
 from pathlib import Path
 
@@ -105,7 +107,10 @@ class CachedProvider(AIProvider):
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute(_CREATE_TABLE_SQL)
         self._conn.commit()
-        self._lock = threading.Lock()
+
+        # Restrict file permissions to owner-only (0600).
+        with contextlib.suppress(OSError):
+            os.chmod(self._db_path, 0o600)
 
         # Internal counters for stats.
         self._hits = 0
@@ -128,14 +133,14 @@ class CachedProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         key = _cache_key(feature.value, prompt, context)
-        cached = self._get(key)
+        cached = await asyncio.to_thread(self._get, key)
         if cached is not None:
             self._hits += 1
             return cached
 
         self._misses += 1
         response = await self._inner.complete(prompt, feature=feature, context=context, **kwargs)
-        self._put(key, response, feature.value)
+        await asyncio.to_thread(self._put, key, response, feature.value)
         return response
 
     async def score(
@@ -146,14 +151,14 @@ class CachedProvider(AIProvider):
     ) -> AIResponse:
         feature = AIFeature.score
         key = _cache_key(feature.value, job_description, profile_data)
-        cached = self._get(key)
+        cached = await asyncio.to_thread(self._get, key)
         if cached is not None:
             self._hits += 1
             return cached
 
         self._misses += 1
         response = await self._inner.score(job_description, profile_data, **kwargs)
-        self._put(key, response, feature.value)
+        await asyncio.to_thread(self._put, key, response, feature.value)
         return response
 
     # ------------------------------------------------------------------
@@ -164,11 +169,10 @@ class CachedProvider(AIProvider):
         """Return cached response if present and not expired."""
         if not self._enabled:
             return None
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT response_json FROM ai_cache WHERE key = ? AND expires_at > ?",
-                (key, time.time()),
-            ).fetchone()
+        row = self._conn.execute(
+            "SELECT response_json FROM ai_cache WHERE key = ? AND expires_at > ?",
+            (key, time.time()),
+        ).fetchone()
         if row is None:
             return None
         try:
@@ -184,14 +188,13 @@ class CachedProvider(AIProvider):
             return
         now = time.time()
         encrypted = self._fernet.encrypt(response.model_dump_json().encode()).decode()
-        with self._lock:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO ai_cache "
-                "(key, response_json, feature, created_at, expires_at) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (key, encrypted, feature, now, now + self._ttl),
-            )
-            self._conn.commit()
+        self._conn.execute(
+            "INSERT OR REPLACE INTO ai_cache "
+            "(key, response_json, feature, created_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (key, encrypted, feature, now, now + self._ttl),
+        )
+        self._conn.commit()
 
     # ------------------------------------------------------------------
     # Public cache management
@@ -199,21 +202,18 @@ class CachedProvider(AIProvider):
 
     def get_stats(self) -> dict[str, int]:
         """Return cache statistics."""
-        with self._lock:
-            total = self._conn.execute("SELECT COUNT(*) FROM ai_cache").fetchone()[0]
+        total = self._conn.execute("SELECT COUNT(*) FROM ai_cache").fetchone()[0]
         return {"total": total, "hits": self._hits, "misses": self._misses}
 
     def clear(self) -> None:
         """Delete all cache entries."""
-        with self._lock:
-            self._conn.execute("DELETE FROM ai_cache")
-            self._conn.commit()
+        self._conn.execute("DELETE FROM ai_cache")
+        self._conn.commit()
 
     def cleanup_expired(self) -> int:
         """Remove expired entries and return the number deleted."""
-        with self._lock:
-            cur = self._conn.execute("DELETE FROM ai_cache WHERE expires_at <= ?", (time.time(),))
-            self._conn.commit()
+        cur = self._conn.execute("DELETE FROM ai_cache WHERE expires_at <= ?", (time.time(),))
+        self._conn.commit()
         return cur.rowcount
 
     def close(self) -> None:

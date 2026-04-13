@@ -13,7 +13,7 @@ _PUBLIC_PATHS = frozenset(
         "/docs",
         "/redoc",
         "/openapi.json",
-        "/api/auth/openrouter/callback",  # OAuth redirect cannot carry Bearer token
+        "/api/auth/openrouter/callback",  # browser redirect — PKCE state protects it
     }
 )
 

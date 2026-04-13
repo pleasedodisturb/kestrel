@@ -5,6 +5,18 @@ from abc import ABC, abstractmethod
 from career_os.schemas.ai import AIFeature, AIResponse
 
 
+class ProviderQuotaError(Exception):
+    """Raised when an AI provider returns 402/429 indicating quota exhaustion."""
+
+    def __init__(self, provider: str, status_code: int, detail: str = "") -> None:
+        self.provider = provider
+        self.status_code = status_code
+        message = f"{provider} quota/credits exhausted (HTTP {status_code})."
+        if detail:
+            message += f" {detail}"
+        super().__init__(message)
+
+
 class AIProvider(ABC):
     """Abstract AI provider interface.
 
