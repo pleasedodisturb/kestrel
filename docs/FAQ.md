@@ -229,7 +229,7 @@ Direct OpenAI or Anthropic API support may come in a future version, but OpenRou
 
 ### Is this really free? What's the catch?
 
-Kestrel is open source under the MIT license. The code is free, the tool is free, there's no company behind it selling your data or planning to charge you later.
+Kestrel is open source under the AGPL-3.0 license. The code is free, the tool is free, there's no company behind it selling your data or planning to charge you later.
 
 The only cost is if you choose to use real AI scoring through OpenRouter, which is a separate, third-party service. That's typically $1-3/month for normal job search usage. You can use Kestrel without it (Demo Mode works fine for tracking applications and searching job boards).
 
