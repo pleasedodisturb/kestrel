@@ -249,8 +249,8 @@ export function InterviewPrepSection({
         onToggle={() => toggleSection("topics")}
       >
         <div className="space-y-2">
-          {prep.topics.map((topic, i) => (
-            <TopicCard key={i} topic={topic} />
+          {prep.topics.map((topic) => (
+            <TopicCard key={topic.topic} topic={topic} />
           ))}
         </div>
       </CollapsibleSection>

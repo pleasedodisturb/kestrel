@@ -3,7 +3,7 @@
  * and provides "Add to Calendar" buttons with iCal download + Google Calendar link.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchCalendarEvents,
@@ -136,6 +136,60 @@ export function CalendarSection({
   const events = eventsData?.events ?? [];
   const upcomingEvents = events.filter((e) => isUpcoming(e.start_time));
   const pastEvents = events.filter((e) => !isUpcoming(e.start_time));
+
+  let eventsContent: ReactNode;
+  if (isLoading) {
+    eventsContent = <p className="text-sm text-gray-400">Loading events…</p>;
+  } else if (events.length === 0) {
+    eventsContent = (
+      <p
+        data-testid="calendar-events-empty"
+        className="text-sm text-gray-400"
+      >
+        No calendar events for this application
+      </p>
+    );
+  } else {
+    eventsContent = (
+      <div className="space-y-3">
+        {/* Upcoming events */}
+        {upcomingEvents.length > 0 && (
+          <div data-testid="upcoming-events">
+            <p className="mb-2 text-xs font-medium text-gray-500">
+              Upcoming
+            </p>
+            <div className="space-y-2">
+              {upcomingEvents.map((event) => (
+                <CalendarEventCard
+                  key={event.id}
+                  event={event}
+                  profileId={profileId}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Past events */}
+        {pastEvents.length > 0 && (
+          <div data-testid="past-events">
+            <p className="mb-2 text-xs font-medium text-gray-500">Past</p>
+            <div className="space-y-2 opacity-60">
+              {pastEvents.map((event) => (
+                <CalendarEventCard
+                  key={event.id}
+                  event={event}
+                  profileId={profileId}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -294,54 +348,7 @@ export function CalendarSection({
       )}
 
       {/* Events list */}
-      {isLoading ? (
-        <p className="text-sm text-gray-400">Loading events…</p>
-      ) : events.length === 0 ? (
-        <p
-          data-testid="calendar-events-empty"
-          className="text-sm text-gray-400"
-        >
-          No calendar events for this application
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {/* Upcoming events */}
-          {upcomingEvents.length > 0 && (
-            <div data-testid="upcoming-events">
-              <p className="mb-2 text-xs font-medium text-gray-500">
-                Upcoming
-              </p>
-              <div className="space-y-2">
-                {upcomingEvents.map((event) => (
-                  <CalendarEventCard
-                    key={event.id}
-                    event={event}
-                    profileId={profileId}
-                    onDelete={(id) => deleteMutation.mutate(id)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Past events */}
-          {pastEvents.length > 0 && (
-            <div data-testid="past-events">
-              <p className="mb-2 text-xs font-medium text-gray-500">Past</p>
-              <div className="space-y-2 opacity-60">
-                {pastEvents.map((event) => (
-                  <CalendarEventCard
-                    key={event.id}
-                    event={event}
-                    profileId={profileId}
-                    onDelete={(id) => deleteMutation.mutate(id)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {eventsContent}
     </div>
   );
 }

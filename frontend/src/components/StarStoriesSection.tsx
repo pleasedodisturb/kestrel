@@ -363,6 +363,102 @@ export function StarStoriesSection({
     );
   }
 
+  let recommendedContent: React.ReactNode;
+  if (recError) {
+    recommendedContent = (
+      <p className="text-sm text-red-500">
+        Failed to load recommendations.
+      </p>
+    );
+  } else if (recommended?.recommended_stories.length === 0) {
+    recommendedContent = (
+      <p className="text-sm text-gray-500 italic">
+        No matching stories found. Create stories with skill tags
+        matching this role&apos;s requirements.
+      </p>
+    );
+  } else {
+    recommendedContent = recommended?.recommended_stories.map((rec) => (
+      <StoryCard
+        key={rec.story.id}
+        story={rec.story}
+        profileId={profileId}
+        matchingSkills={rec.matching_skills}
+      />
+    ));
+  }
+
+  let gapsContent: React.ReactNode;
+  if (gapsError) {
+    gapsContent = (
+      <p className="text-sm text-red-500">
+        Failed to load story gaps.
+      </p>
+    );
+  } else if (gaps?.story_gaps.length === 0) {
+    gapsContent = (
+      <p className="text-sm text-green-600 italic">
+        All required skills are covered by STAR stories!
+      </p>
+    );
+  } else {
+    gapsContent = gaps?.story_gaps.map((gap) => (
+      <div
+        key={gap.skill_name}
+        className="flex items-center justify-between p-3 border rounded-lg bg-amber-50/50"
+      >
+        <div>
+          <div className="flex items-center gap-2">
+            <Tag className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-sm font-medium text-gray-900">
+              {gap.skill_name}
+            </span>
+            <span
+              className={cn(
+                "text-xs px-1.5 py-0.5 rounded-full",
+                SEVERITY_COLORS[gap.severity] ?? DEFAULT_SEVERITY_COLOR,
+              )}
+            >
+              {gap.severity}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {gap.create_prompt}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded hover:bg-amber-200 flex-shrink-0"
+        >
+          Create Story
+        </button>
+      </div>
+    ));
+  }
+
+  let allStoriesContent: React.ReactNode;
+  if (storiesError) {
+    allStoriesContent = (
+      <p className="text-sm text-red-500">
+        Failed to load stories.
+      </p>
+    );
+  } else if (allStories?.stories.length === 0) {
+    allStoriesContent = (
+      <p className="text-sm text-gray-500 italic">
+        No STAR stories yet. Create one to prepare for interviews!
+      </p>
+    );
+  } else {
+    allStoriesContent = allStories?.stories.map((story) => (
+      <StoryCard
+        key={story.id}
+        story={story}
+        profileId={profileId}
+      />
+    ));
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -410,25 +506,7 @@ export function StarStoriesSection({
 
         {expandedSections.recommended && (
           <div className="p-4 space-y-2">
-            {recError ? (
-              <p className="text-sm text-red-500">
-                Failed to load recommendations.
-              </p>
-            ) : recommended?.recommended_stories.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">
-                No matching stories found. Create stories with skill tags
-                matching this role&apos;s requirements.
-              </p>
-            ) : (
-              recommended?.recommended_stories.map((rec) => (
-                <StoryCard
-                  key={rec.story.id}
-                  story={rec.story}
-                  profileId={profileId}
-                  matchingSkills={rec.matching_skills}
-                />
-              ))
-            )}
+            {recommendedContent}
           </div>
         )}
       </div>
@@ -457,48 +535,7 @@ export function StarStoriesSection({
 
         {expandedSections.gaps && (
           <div className="p-4 space-y-2">
-            {gapsError ? (
-              <p className="text-sm text-red-500">
-                Failed to load story gaps.
-              </p>
-            ) : gaps?.story_gaps.length === 0 ? (
-              <p className="text-sm text-green-600 italic">
-                All required skills are covered by STAR stories!
-              </p>
-            ) : (
-              gaps?.story_gaps.map((gap) => (
-                <div
-                  key={gap.skill_name}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-amber-50/50"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Tag className="w-3.5 h-3.5 text-amber-500" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {gap.skill_name}
-                      </span>
-                      <span
-                        className={cn(
-                          "text-xs px-1.5 py-0.5 rounded-full",
-                          SEVERITY_COLORS[gap.severity] ?? DEFAULT_SEVERITY_COLOR,
-                        )}
-                      >
-                        {gap.severity}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {gap.create_prompt}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowCreate(true)}
-                    className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded hover:bg-amber-200 flex-shrink-0"
-                  >
-                    Create Story
-                  </button>
-                </div>
-              ))
-            )}
+            {gapsContent}
           </div>
         )}
       </div>
@@ -527,23 +564,7 @@ export function StarStoriesSection({
 
         {expandedSections.all && (
           <div className="p-4 space-y-2">
-            {storiesError ? (
-              <p className="text-sm text-red-500">
-                Failed to load stories.
-              </p>
-            ) : allStories?.stories.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">
-                No STAR stories yet. Create one to prepare for interviews!
-              </p>
-            ) : (
-              allStories?.stories.map((story) => (
-                <StoryCard
-                  key={story.id}
-                  story={story}
-                  profileId={profileId}
-                />
-              ))
-            )}
+            {allStoriesContent}
           </div>
         )}
       </div>

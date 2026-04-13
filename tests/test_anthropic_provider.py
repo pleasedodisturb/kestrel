@@ -107,7 +107,7 @@ class TestPromptCaching:
         provider = AnthropicProvider(api_key="sk-ant-test")
         captured_payload = {}
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
             mock_resp = httpx.Response(
                 200,
@@ -136,7 +136,7 @@ class TestPromptCaching:
         provider = AnthropicProvider(api_key="sk-ant-test")
         captured_payload = {}
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
             mock_resp = httpx.Response(
                 200,
@@ -170,7 +170,7 @@ class TestAnthropicRequestFormat:
         provider = AnthropicProvider(api_key="sk-ant-my-secret")
         captured_headers = {}
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             captured_headers.update(headers or {})
             return httpx.Response(
                 200,
@@ -194,7 +194,7 @@ class TestAnthropicRequestFormat:
         provider = AnthropicProvider(api_key="sk-ant-test")
         captured_payload = {}
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
             return httpx.Response(
                 200,
@@ -218,7 +218,7 @@ class TestAnthropicRequestFormat:
         """Response correctly parses Anthropic content blocks format."""
         provider = AnthropicProvider(api_key="sk-ant-test")
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 200,
                 json={
@@ -254,7 +254,7 @@ class TestAnthropicErrorHandling:
         """HTTP 402 raises CreditsExhaustedError."""
         provider = AnthropicProvider(api_key="sk-ant-test")
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 402,
                 json={
@@ -273,7 +273,7 @@ class TestAnthropicErrorHandling:
         """HTTP 429 raises CreditsExhaustedError with rate limit info."""
         provider = AnthropicProvider(api_key="sk-ant-test")
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 429,
                 json={"error": {"type": "rate_limit_error", "message": "Rate limited"}},
@@ -292,7 +292,7 @@ class TestAnthropicErrorHandling:
         """HTTP 500 raises httpx.HTTPStatusError (not CreditsExhaustedError)."""
         provider = AnthropicProvider(api_key="sk-ant-test")
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 500,
                 json={"error": {"type": "api_error", "message": "Internal error"}},
@@ -336,7 +336,7 @@ class TestAnthropicScore:
             }
         )
 
-        async def mock_post(url, headers=None, json=None, **kwargs):
+        def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
             return httpx.Response(
                 200,
