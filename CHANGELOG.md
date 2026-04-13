@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/pleasedodisturb/kestrel/compare/v0.3.0...v0.3.1) (2026-04-13)
+
+
+### Bug Fixes
+
+* **G-266:** resolve 28 new-code SonarCloud blocker/critical issues ([#170](https://github.com/pleasedodisturb/kestrel/issues/170)) ([83b2a7b](https://github.com/pleasedodisturb/kestrel/commit/83b2a7b1fcedc8122e38286cd18e1526a17eddfa))
+
 ## [0.3.0](https://github.com/pleasedodisturb/kestrel/compare/v0.2.0...v0.3.0) (2026-04-13)
 
 
