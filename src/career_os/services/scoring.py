@@ -13,6 +13,7 @@ import time
 
 from sqlalchemy.orm import Session
 
+from career_os.ai.base import ProviderQuotaError
 from career_os.ai.factory import get_ai_provider
 from career_os.ai.openrouter_provider import CreditsExhaustedError
 from career_os.models.discovery import DiscoveredJob
@@ -643,7 +644,7 @@ async def batch_score_discovery(
                 application_id=job.application_id,
             )
             scores.append(scored)
-        except CreditsExhaustedError:
+        except (CreditsExhaustedError, ProviderQuotaError):
             logger.warning(
                 "AI credits exhausted after scoring %d/%d jobs — stopping batch",
                 len(scores),
