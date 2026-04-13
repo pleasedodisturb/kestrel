@@ -3,7 +3,7 @@
  * List contacts with filters, add/edit/detail, interaction logging.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useContacts, useCreateContact, useArchiveContact, useLogInteraction } from "@/hooks/useContacts";
 import type {
   Contact,
@@ -105,6 +105,14 @@ function ContactDetail({
   onLogInteraction: (contactId: number) => void;
   onArchive: (contactId: number) => void;
 }>) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -122,7 +130,6 @@ function ContactDetail({
         open
         className="relative mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
@@ -220,6 +227,14 @@ function AddContactDialog({
     });
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -237,7 +252,6 @@ function AddContactDialog({
         open
         className="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <h2 className="mb-4 text-lg font-bold">Add Contact</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -363,6 +377,14 @@ function LogInteractionDialog({
     "email", "call", "coffee", "linkedin_message", "intro", "referral_submission",
   ];
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -380,7 +402,6 @@ function LogInteractionDialog({
         open
         className="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <h2 className="mb-4 text-lg font-bold">Log Interaction</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
