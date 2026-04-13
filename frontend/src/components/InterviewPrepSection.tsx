@@ -265,7 +265,7 @@ export function InterviewPrepSection({
       >
         <div className="space-y-3">
           {prep.questions.map((q, i) => (
-            <QuestionCard key={i} question={q} index={i + 1} />
+            <QuestionCard key={q.question} question={q} index={i + 1} />
           ))}
         </div>
       </CollapsibleSection>

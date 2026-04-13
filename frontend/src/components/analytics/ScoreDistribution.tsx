@@ -63,9 +63,9 @@ export function ScoreDistribution({ data }: Props) {
                 }}
               />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {data.map((_, index) => (
+                {data.map((bucket, index) => (
                   <Cell
-                    key={`cell-${index}`}
+                    key={bucket.range}
                     fill={BUCKET_COLORS[index % BUCKET_COLORS.length]}
                   />
                 ))}
