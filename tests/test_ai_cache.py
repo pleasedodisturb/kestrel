@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import sqlite3
 from unittest.mock import AsyncMock
 
 import pytest
+from cryptography.fernet import Fernet
 
 from career_os.ai.base import AIProvider
 from career_os.ai.cache import CachedProvider, _cache_key
@@ -153,3 +155,88 @@ class TestCachedProvider:
 
     def test_is_aiprovider(self, provider):
         assert isinstance(provider, AIProvider)
+
+
+# ---------------------------------------------------------------------------
+# Encryption tests
+# ---------------------------------------------------------------------------
+
+
+class TestCacheEncryption:
+    """Verify that cached responses are encrypted at rest."""
+
+    @pytest.mark.asyncio
+    async def test_stored_data_is_encrypted(self, tmp_path):
+        """Raw SQLite data should not contain plaintext response content."""
+        inner = _mock_provider()
+        key = Fernet.generate_key().decode()
+        cp = CachedProvider(inner, db_path=tmp_path / "enc.db", ttl=60, encryption_key=key)
+        try:
+            await cp.complete("prompt")
+            conn = sqlite3.connect(str(tmp_path / "enc.db"))
+            row = conn.execute("SELECT response_json FROM ai_cache").fetchone()
+            conn.close()
+            # The stored value should NOT contain plaintext content
+            assert "complete-result" not in row[0]
+        finally:
+            cp.close()
+
+    @pytest.mark.asyncio
+    async def test_auto_generates_key_file(self, tmp_path):
+        """When no encryption_key is given, a .cache_key file should be created."""
+        inner = _mock_provider()
+        cp = CachedProvider(inner, db_path=tmp_path / "auto.db", ttl=60)
+        try:
+            key_file = tmp_path / ".cache_key"
+            assert key_file.exists()
+            key_content = key_file.read_text().strip()
+            assert len(key_content) > 20  # Fernet keys are 44 chars
+        finally:
+            cp.close()
+
+    @pytest.mark.asyncio
+    async def test_wrong_key_treats_as_miss(self, tmp_path):
+        """If decryption fails (e.g. key rotation), treat as cache miss."""
+        inner = _mock_provider()
+        key1 = Fernet.generate_key().decode()
+        key2 = Fernet.generate_key().decode()
+
+        cp1 = CachedProvider(inner, db_path=tmp_path / "rot.db", ttl=60, encryption_key=key1)
+        try:
+            await cp1.complete("prompt")
+        finally:
+            cp1.close()
+
+        # Open with different key — should miss and re-fetch
+        cp2 = CachedProvider(inner, db_path=tmp_path / "rot.db", ttl=60, encryption_key=key2)
+        try:
+            await cp2.complete("prompt")
+            assert inner.complete.await_count == 2  # two real calls
+        finally:
+            cp2.close()
+
+
+class TestCacheDisabled:
+    """Verify that caching can be fully disabled."""
+
+    @pytest.mark.asyncio
+    async def test_disabled_cache_always_misses(self, tmp_path):
+        inner = _mock_provider()
+        cp = CachedProvider(inner, db_path=tmp_path / "off.db", ttl=60, enabled=False)
+        try:
+            await cp.complete("prompt")
+            await cp.complete("prompt")
+            # Both calls should hit the inner provider
+            assert inner.complete.await_count == 2
+        finally:
+            cp.close()
+
+    @pytest.mark.asyncio
+    async def test_disabled_cache_does_not_write(self, tmp_path):
+        inner = _mock_provider()
+        cp = CachedProvider(inner, db_path=tmp_path / "off2.db", ttl=60, enabled=False)
+        try:
+            await cp.complete("prompt")
+            assert cp.get_stats()["total"] == 0
+        finally:
+            cp.close()

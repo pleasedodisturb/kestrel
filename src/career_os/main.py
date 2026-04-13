@@ -25,6 +25,7 @@ from career_os.api.interview_prep import router as interview_prep_router
 from career_os.api.jobs import router as jobs_router
 from career_os.api.learning import router as learning_router
 from career_os.api.market import router as market_router
+from career_os.api.oauth import limiter as oauth_limiter
 from career_os.api.oauth import router as oauth_router
 from career_os.api.privacy import router as privacy_router
 from career_os.api.profiles import router as profiles_router
@@ -136,6 +137,15 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# Rate limiting for OAuth endpoints
+from slowapi import _rate_limit_exceeded_handler  # noqa: E402
+from slowapi.errors import RateLimitExceeded  # noqa: E402
+from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
+
+app.state.limiter = oauth_limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware for frontend
 _cors_origins: list[str] = (
