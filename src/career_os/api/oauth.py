@@ -2,10 +2,11 @@
 
 import hashlib
 import logging
-import os
 import secrets
 import time
 from base64 import urlsafe_b64encode
+from typing import Annotated
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -25,20 +26,24 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 limiter = Limiter(key_func=get_remote_address)
 
 # In-memory store for PKCE verifiers keyed by state token.
-# Each entry is (code_verifier, created_at_timestamp).
-# Entries are consumed on callback; expired entries are purged on each /start call.
-_pending_verifiers: dict[str, tuple[str, float]] = {}
-
-# Limits to prevent memory exhaustion from abandoned OAuth flows.
-_MAX_PENDING = 1000
+# Entries are capped and expire after 10 minutes to prevent DoS.
+_MAX_PENDING = 100
 _VERIFIER_TTL_SECONDS = 600  # 10 minutes
+
+_pending_verifiers: dict[str, tuple[str, float]] = {}  # state → (verifier, created_at)
+
+# In-memory store for the OAuth-obtained API key.
+# Using a module-level variable instead of os.environ avoids leaking the key
+# to child processes and /proc/<pid>/environ.  Also persisted to DB for
+# durability across restarts.
+_runtime_api_key: str = ""
 
 OPENROUTER_AUTH_URL = "https://openrouter.ai/auth"
 OPENROUTER_KEYS_URL = "https://openrouter.ai/api/v1/auth/keys"
 
 
-def _cleanup_expired_verifiers() -> None:
-    """Remove expired PKCE verifiers from the in-memory store."""
+def _cleanup_expired() -> None:
+    """Remove expired verifier entries."""
     now = time.time()
     expired = [k for k, (_, ts) in _pending_verifiers.items() if now - ts > _VERIFIER_TTL_SECONDS]
     for k in expired:
@@ -66,8 +71,8 @@ async def openrouter_auth_start(request: Request) -> dict:
     The frontend should redirect or open this URL so the user can authorize
     Kestrel to use their OpenRouter account.
     """
-    # Purge expired entries and enforce size limit to prevent memory exhaustion.
-    _cleanup_expired_verifiers()
+    _cleanup_expired()
+
     if len(_pending_verifiers) >= _MAX_PENDING:
         raise HTTPException(
             status_code=429,
@@ -82,13 +87,15 @@ async def openrouter_auth_start(request: Request) -> dict:
     # Build callback URL from the backend's own address.
     callback_url = f"{settings.frontend_url}/api/auth/openrouter/callback"
 
-    auth_url = (
-        f"{OPENROUTER_AUTH_URL}"
-        f"?callback_url={callback_url}"
-        f"&code_challenge={code_challenge}"
-        f"&code_challenge_method=S256"
-        f"&state={state}"
+    params = urlencode(
+        {
+            "callback_url": callback_url,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "state": state,
+        }
     )
+    auth_url = f"{OPENROUTER_AUTH_URL}?{params}"
 
     return {"auth_url": auth_url, "state": state}
 
@@ -97,22 +104,23 @@ async def openrouter_auth_start(request: Request) -> dict:
 @limiter.limit("20/minute")
 async def openrouter_auth_callback(
     request: Request,
-    code: str = Query(..., description="Authorization code from OpenRouter"),
-    state: str = Query(..., description="State token for PKCE verification"),
-    db: Session = Depends(get_db),
+    code: Annotated[str, Query(description="Authorization code from OpenRouter")],
+    state: Annotated[str, Query(min_length=1, description="State token for PKCE verification")],
+    db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     """Exchange the authorization code for an OpenRouter API key.
 
     OpenRouter redirects here after the user authorizes.  We POST the code
     together with the original code_verifier to obtain a permanent API key.
     """
+    _cleanup_expired()
+
     entry = _pending_verifiers.pop(state, None)
     if entry is None:
         raise HTTPException(
             status_code=400,
             detail="Invalid or expired state parameter. Please restart the OAuth flow.",
         )
-
     code_verifier, created_at = entry
     if time.time() - created_at > _VERIFIER_TTL_SECONDS:
         raise HTTPException(
@@ -145,8 +153,11 @@ async def openrouter_auth_callback(
     if not api_key:
         raise HTTPException(status_code=502, detail="OpenRouter returned an empty API key.")
 
-    # Persist to database via integrations service and also set env var for
-    # backward compatibility with the current process.
+    # Store in application memory (avoids /proc/<pid>/environ leak).
+    global _runtime_api_key  # noqa: PLW0603
+    _runtime_api_key = api_key
+
+    # Persist to database for durability across restarts.
     update_integration(
         db,
         "ai_providers",
@@ -155,29 +166,26 @@ async def openrouter_auth_callback(
             credentials={"openrouter_api_key": api_key},
         ),
     )
-    os.environ["OPENROUTER_API_KEY"] = api_key
-    logger.info("OpenRouter API key persisted to database and process environment.")
+    logger.info("OpenRouter API key stored in memory and persisted to database.")
 
     return {"success": True, "provider": "openrouter"}
 
 
 def _get_stored_api_key(db: Session) -> str:
-    """Read the OpenRouter API key from the DB, then fall back to env/settings."""
+    """Read the OpenRouter API key: runtime memory → DB → settings fallback."""
+    if _runtime_api_key:
+        return _runtime_api_key
     integration = get_integration(db, "ai_providers")
     if integration is not None and integration.credentials_set.get("openrouter_api_key"):
-        # Key exists in DB — we can't read the raw value from the response
-        # schema (it only reports booleans), but if it's been set via OAuth,
-        # the env var should still be populated in this process.
+        # Key exists in DB but we can't read the raw value from the response
+        # schema (it only reports booleans). Fall through to settings.
         pass
-    return os.environ.get("OPENROUTER_API_KEY", "") or settings.openrouter_api_key
+    return settings.openrouter_api_key
 
 
 @router.get("/openrouter/status")
-async def openrouter_auth_status(db: Session = Depends(get_db)) -> dict:
+async def openrouter_auth_status(db: Annotated[Session, Depends(get_db)]) -> dict:
     """Check whether an OpenRouter API key is currently configured."""
     key = _get_stored_api_key(db)
     connected = bool(key)
-    # Show only the last 4 characters to avoid leaking the key prefix.
-    key_preview = f"...{key[-4:]}" if connected and len(key) > 4 else ""
-
-    return {"connected": connected, "provider": "openrouter", "key_preview": key_preview}
+    return {"connected": connected, "provider": "openrouter"}

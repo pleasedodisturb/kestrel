@@ -6,6 +6,7 @@ No API key required — just a running Ollama server.
 
 import json
 import logging
+from urllib.parse import urlparse
 
 import httpx
 
@@ -37,6 +38,9 @@ class OllamaConnectionError(Exception):
 class OllamaProvider(AIProvider):
     """AI provider backed by a local Ollama instance."""
 
+    # Hosts that must never be used as Ollama targets (cloud metadata endpoints).
+    _BLOCKED_HOSTS = frozenset({"169.254.169.254", "metadata.google.internal"})
+
     def __init__(
         self,
         base_url: str = DEFAULT_BASE_URL,
@@ -47,7 +51,15 @@ class OllamaProvider(AIProvider):
         Args:
             base_url: Ollama server base URL (default: http://localhost:11434).
             model: Model name to use (default: llama3.3).
+
+        Raises:
+            ValueError: If the URL scheme is not http/https or targets a blocked host.
         """
+        parsed = urlparse(base_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f"Ollama base URL must use http or https scheme, got: {parsed.scheme}")
+        if parsed.hostname in self._BLOCKED_HOSTS:
+            raise ValueError(f"Ollama base URL targets a blocked host: {parsed.hostname}")
         self._base_url = base_url.rstrip("/")
         self._model = model
 

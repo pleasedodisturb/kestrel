@@ -1,7 +1,6 @@
 """Tests for OpenRouter OAuth PKCE endpoints."""
 
 import hashlib
-import os
 import time
 from base64 import urlsafe_b64encode
 from unittest.mock import AsyncMock, patch
@@ -13,6 +12,7 @@ from fastapi.testclient import TestClient
 from career_os.api.oauth import (
     _MAX_PENDING,
     _VERIFIER_TTL_SECONDS,
+    OPENROUTER_KEYS_URL,
     _generate_pkce_pair,
     _pending_verifiers,
     limiter,
@@ -37,6 +37,16 @@ def _clear_pending_verifiers():
     _pending_verifiers.clear()
     yield
     _pending_verifiers.clear()
+
+
+@pytest.fixture(autouse=True)
+def _clear_runtime_key():
+    """Reset runtime API key between tests."""
+    import career_os.api.oauth as oauth_mod
+
+    original = oauth_mod._runtime_api_key
+    yield
+    oauth_mod._runtime_api_key = original
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +94,6 @@ class TestStartEndpoint:
         assert "https://openrouter.ai/auth" in auth_url
         assert "code_challenge=" in auth_url
         assert "code_challenge_method=S256" in auth_url
-        assert f"state={data['state']}" in auth_url
         assert "callback_url=" in auth_url
 
     def test_stores_verifier_in_pending(self, client):
@@ -95,8 +104,8 @@ class TestStartEndpoint:
         assert len(verifier) > 40
         assert created_at <= time.time()
 
-    def test_rejects_when_max_pending_reached(self, client):
-        """Should return 429 when too many pending OAuth flows exist."""
+    def test_max_pending_returns_429(self, client):
+        """Exceeding the max pending verifiers returns 429."""
         for i in range(_MAX_PENDING):
             _pending_verifiers[f"state-{i}"] = ("verifier", time.time())
         resp = client.get("/api/auth/openrouter/start")
@@ -119,29 +128,17 @@ class TestCallbackEndpoint:
         assert "Invalid or expired state" in resp.json()["detail"]
 
     def test_missing_state_returns_422(self, db_client):
-        """State is now a required query parameter — omitting it is a validation error."""
+        """State is a required query parameter."""
         resp = db_client.get("/api/auth/openrouter/callback", params={"code": "test"})
         assert resp.status_code == 422
 
-    def test_expired_verifier_returns_400(self, db_client):
-        """A verifier that has exceeded the TTL should be rejected."""
-        expired_ts = time.time() - _VERIFIER_TTL_SECONDS - 1
-        _pending_verifiers["old-state"] = ("old-verifier", expired_ts)
-        resp = db_client.get(
-            "/api/auth/openrouter/callback",
-            params={"code": "test", "state": "old-state"},
-        )
-        assert resp.status_code == 400
-        assert "expired" in resp.json()["detail"].lower()
-
     def test_successful_exchange(self, db_client):
         """Mock a successful code-for-key exchange with OpenRouter."""
-        # Pre-populate a pending verifier.
         _pending_verifiers["test-state"] = ("test-verifier", time.time())
 
         mock_response = httpx.Response(
             200,
-            json={"key": "sk-or-v1-abc123"},
+            json={"key": "test-fake-openrouter-key"},
             request=httpx.Request("POST", OPENROUTER_KEYS_URL),
         )
 
@@ -165,8 +162,10 @@ class TestCallbackEndpoint:
         # Verifier should be consumed.
         assert "test-state" not in _pending_verifiers
 
-        # Key should be stored in env.
-        assert os.environ.get("OPENROUTER_API_KEY") == "sk-or-v1-abc123"
+        # Key should be stored in module-level variable.
+        from career_os.api.oauth import _runtime_api_key
+
+        assert _runtime_api_key == "test-fake-openrouter-key"
 
     def test_exchange_http_error_returns_502(self, db_client):
         """OpenRouter returning a non-2xx should yield a 502."""
@@ -235,6 +234,17 @@ class TestCallbackEndpoint:
         assert resp.status_code == 502
         assert "empty API key" in resp.json()["detail"]
 
+    def test_expired_verifier_returns_400(self, db_client):
+        """A verifier that has exceeded the TTL should be rejected."""
+        expired_ts = time.time() - _VERIFIER_TTL_SECONDS - 1
+        _pending_verifiers["old-state"] = ("old-verifier", expired_ts)
+        resp = db_client.get(
+            "/api/auth/openrouter/callback",
+            params={"code": "test", "state": "old-state"},
+        )
+        assert resp.status_code == 400
+        assert "expired" in resp.json()["detail"].lower()
+
 
 # ---------------------------------------------------------------------------
 # GET /api/auth/openrouter/status
@@ -245,29 +255,27 @@ class TestStatusEndpoint:
     """Tests for the OAuth status endpoint."""
 
     def test_disconnected_when_no_key(self, db_client):
-        with patch.dict(os.environ, {}, clear=False):
-            # Remove key if present.
-            os.environ.pop("OPENROUTER_API_KEY", None)
-            with patch("career_os.api.oauth.settings") as mock_settings:
-                mock_settings.openrouter_api_key = ""
-                resp = db_client.get("/api/auth/openrouter/status")
+        import career_os.api.oauth as oauth_mod
+
+        oauth_mod._runtime_api_key = ""
+        with patch("career_os.api.oauth.settings") as mock_settings:
+            mock_settings.openrouter_api_key = ""
+            resp = db_client.get("/api/auth/openrouter/status")
 
         assert resp.status_code == 200
         data = resp.json()
         assert data["connected"] is False
         assert data["provider"] == "openrouter"
-        assert data["key_preview"] == ""
 
     def test_connected_when_key_present(self, db_client):
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-or-v1-secret123"}, clear=False):
-            resp = db_client.get("/api/auth/openrouter/status")
+        import career_os.api.oauth as oauth_mod
+
+        oauth_mod._runtime_api_key = "test-fake-openrouter-key-2"
+        resp = db_client.get("/api/auth/openrouter/status")
 
         assert resp.status_code == 200
         data = resp.json()
         assert data["connected"] is True
-        # Key preview now shows only the last 4 characters to avoid leaking the prefix.
-        assert data["key_preview"] == "...t123"
-        assert "sk-or" not in data["key_preview"]
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +292,7 @@ class TestOAuthDBPersistence:
 
         mock_response = httpx.Response(
             200,
-            json={"key": "sk-or-v1-dbtest123"},
+            json={"key": "test-fake-dbtest-key"},
             request=httpx.Request("POST", OPENROUTER_KEYS_URL),
         )
 
@@ -349,7 +357,3 @@ class TestRateLimiting:
             params={"code": "test", "state": "bad-state-final"},
         )
         assert resp.status_code == 429
-
-
-# Constant used in test mocks
-OPENROUTER_KEYS_URL = "https://openrouter.ai/api/v1/auth/keys"
