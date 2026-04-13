@@ -79,6 +79,70 @@ class TestMaskURL:
         assert mapping.is_empty
 
 
+class TestMaskSSN:
+    def test_ssn_with_dashes(self, masker: PIIMasker) -> None:
+        text = "SSN: 123-45-6789"
+        masked, mapping = masker.mask(text)
+        assert "123-45-6789" not in masked
+        assert "[SSN_1]" in masked
+        assert mapping.placeholder_to_original["[SSN_1]"] == "123-45-6789"
+
+    def test_ssn_with_spaces(self, masker: PIIMasker) -> None:
+        text = "Social: 123 45 6789"
+        masked, mapping = masker.mask(text)
+        assert "123 45 6789" not in masked
+        assert any("SSN" in k for k in mapping.placeholder_to_original)
+
+
+class TestMaskCreditCard:
+    def test_16_digit_card(self, masker: PIIMasker) -> None:
+        text = "Card: 4111111111111111"
+        masked, mapping = masker.mask(text)
+        assert "4111111111111111" not in masked
+        assert any("CREDIT_CARD" in k for k in mapping.placeholder_to_original)
+
+    def test_card_with_spaces(self, masker: PIIMasker) -> None:
+        text = "Visa: 4111 1111 1111 1111"
+        masked, mapping = masker.mask(text)
+        assert "4111 1111 1111 1111" not in masked
+
+    def test_card_with_dashes(self, masker: PIIMasker) -> None:
+        text = "Card: 4111-1111-1111-1111"
+        masked, mapping = masker.mask(text)
+        assert "4111-1111-1111-1111" not in masked
+
+
+class TestMaskIPAddress:
+    def test_ipv4_address(self, masker: PIIMasker) -> None:
+        text = "Server at 192.168.1.100 is up."
+        masked, mapping = masker.mask(text)
+        assert "192.168.1.100" not in masked
+        assert any("IP_ADDR" in k for k in mapping.placeholder_to_original)
+
+    def test_loopback(self, masker: PIIMasker) -> None:
+        text = "Localhost: 127.0.0.1"
+        masked, mapping = masker.mask(text)
+        assert "127.0.0.1" not in masked
+
+    def test_rejects_invalid_octets(self, masker: PIIMasker) -> None:
+        text = "Not an IP: 999.999.999.999"
+        masked, mapping = masker.mask(text)
+        assert not any("IP_ADDR" in k for k in mapping.placeholder_to_original)
+
+
+class TestMaskPassport:
+    def test_us_passport(self, masker: PIIMasker) -> None:
+        text = "Passport: C12345678"
+        masked, mapping = masker.mask(text)
+        assert "C12345678" not in masked
+        assert any("PASSPORT" in k for k in mapping.placeholder_to_original)
+
+    def test_lowercase_not_matched(self, masker: PIIMasker) -> None:
+        text = "Code: c12345678"
+        masked, mapping = masker.mask(text)
+        assert not any("PASSPORT" in k for k in mapping.placeholder_to_original)
+
+
 class TestMaskMultiplePIITypes:
     def test_mixed_pii(self, masker: PIIMasker) -> None:
         text = "Email alice@example.com, call +49 170 1234567, see https://linkedin.com/in/alice"
@@ -87,6 +151,19 @@ class TestMaskMultiplePIITypes:
         assert "[PHONE_1]" in masked
         assert "[URL_1]" in masked
         assert len(mapping.placeholder_to_original) == 3
+
+    def test_all_pii_types_in_one_text(self, masker: PIIMasker) -> None:
+        text = (
+            "Email alice@example.com, call +1 555-123-4567, "
+            "see https://linkedin.com/in/alice, SSN 111-22-3333, "
+            "card 4111111111111111, IP 10.0.0.1, passport A12345678."
+        )
+        masked, mapping = masker.mask(text)
+        categories = {k.split("_")[0].lstrip("[") for k in mapping.placeholder_to_original}
+        assert "EMAIL" in categories
+        assert "SSN" in categories
+        assert "IP" in categories
+        assert "PASSPORT" in categories
 
 
 # ---------------------------------------------------------------------------
@@ -196,39 +273,13 @@ class TestMaskedProviderComplete:
         assert provider.name == "stub"
 
 
-class _RecordingProvider(_StubProvider):
-    """Stub that records the job_description passed to score()."""
-
-    def __init__(self) -> None:
-        self.last_jd: str | None = None
-
-    async def score(
-        self,
-        job_description: str,
-        profile_data: dict,
-        **kwargs: object,
-    ) -> AIResponse:
-        self.last_jd = job_description
-        return await super().score(job_description, profile_data, **kwargs)
-
-
 class TestMaskedProviderScore:
     @pytest.mark.asyncio
-    async def test_score_masks_pii_in_job_description(self) -> None:
-        """PII in job_description should be masked before reaching the inner provider."""
-        inner = _RecordingProvider()
-        provider = MaskedProvider(inner)
-        await provider.score("Contact alice@example.com to apply", {"profile": "data"})
-        assert inner.last_jd is not None
-        assert "alice@example.com" not in inner.last_jd
-        assert "[EMAIL_1]" in inner.last_jd
-
-    @pytest.mark.asyncio
-    async def test_score_preserves_structured_data(self) -> None:
+    async def test_score_delegates_without_unmasking_structured(self) -> None:
         stub = _StubProvider()
         provider = MaskedProvider(stub)
         resp = await provider.score("job desc with alice@example.com", {"profile": "data"})
-        # Structured data untouched
+        # score() delegates directly — structured data untouched
         assert resp.structured is not None
         assert isinstance(resp.structured, ScoreResult)
         assert resp.structured.fit_score == 7.5

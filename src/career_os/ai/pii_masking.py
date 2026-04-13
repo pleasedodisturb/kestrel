@@ -3,10 +3,19 @@
 Detects and replaces personally identifiable information (emails, phone numbers,
 LinkedIn/GitHub URLs) before text is sent to external AI providers, and restores
 originals in the response content.
+
+**Best-effort heuristic** — regex-based detection has known limitations:
+- Unicode homoglyph attacks may bypass email detection.
+- International phone formats may not be caught.
+- Only LinkedIn/GitHub URLs are masked; other identifying URLs pass through.
+- Names, addresses, and national IDs are not detected.
+
+For higher-fidelity PII detection, consider a dedicated NER library (e.g. Presidio).
 """
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 
@@ -18,14 +27,31 @@ from career_os.schemas.ai import AIFeature, AIResponse
 # ---------------------------------------------------------------------------
 
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    # NOTE: Order matters — more specific patterns must come before greedy
+    # ones (e.g. PHONE) that could match digit substrings of other types.
     ("EMAIL", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")),
-    (
-        "PHONE",
-        re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,5}"),
-    ),
     (
         "URL",
         re.compile(r"https?://(?:www\.)?(?:linkedin\.com|github\.com)/\S+"),
+    ),
+    # SSN: 123-45-6789 or 123 45 6789
+    ("SSN", re.compile(r"\b\d{3}[-\s]\d{2}[-\s]\d{4}\b")),
+    # Credit card numbers: 13–19 digits with optional spaces or dashes
+    (
+        "CREDIT_CARD",
+        re.compile(r"\b(?:\d[ -]*?){13,19}\b"),
+    ),
+    # IPv4 addresses
+    (
+        "IP_ADDR",
+        re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"),
+    ),
+    # US passport number: 1 uppercase letter followed by 8 digits
+    ("PASSPORT", re.compile(r"\b[A-Z]\d{8}\b")),
+    # PHONE last — greedy digit matching would consume other patterns' digits
+    (
+        "PHONE",
+        re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,5}"),
     ),
 ]
 
@@ -140,9 +166,19 @@ class MaskedProvider(AIProvider):
         profile_data: dict,
         **kwargs: object,
     ) -> AIResponse:
-        masked_jd, mapping = self._masker.mask(job_description)
-        response = await self._inner.score(masked_jd, profile_data, **kwargs)
-        return self._unmask_response(response, mapping)
+        masked_jd, jd_mapping = self._masker.mask(job_description)
+        # Mask string values inside profile_data
+        profile_str = json.dumps(profile_data)
+        masked_profile_str, profile_mapping = self._masker.mask(profile_str)
+        masked_profile = json.loads(masked_profile_str)
+
+        # Merge both mappings for unmasking the response
+        combined = MaskMapping()
+        combined.placeholder_to_original.update(jd_mapping.placeholder_to_original)
+        combined.placeholder_to_original.update(profile_mapping.placeholder_to_original)
+
+        response = await self._inner.score(masked_jd, masked_profile, **kwargs)
+        return self._unmask_response(response, combined)
 
     # -- helpers -------------------------------------------------------------
 

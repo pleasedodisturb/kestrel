@@ -1,12 +1,25 @@
 """Privacy metadata registry for AI providers.
 
-Maps provider names to their privacy characteristics based on
-documented policies as of 2026-Q2.
+Loads provider privacy policies from ``data/privacy_registry.json`` when
+available, falling back to a hardcoded default.  Each entry carries a
+``last_verified`` date so consumers (and users) know how fresh the data is.
 """
+
+import json
+import logging
+from pathlib import Path
 
 from career_os.schemas.privacy import DataRetention, PrivacyTier, ProviderPrivacyInfo
 
-PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = {
+logger = logging.getLogger(__name__)
+
+_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "privacy_registry.json"
+
+# ---------------------------------------------------------------------------
+# Hardcoded fallback (used when the JSON file is absent or invalid)
+# ---------------------------------------------------------------------------
+
+_HARDCODED_REGISTRY: dict[str, ProviderPrivacyInfo] = {
     "mock": ProviderPrivacyInfo(
         provider="mock",
         tier=PrivacyTier.local,
@@ -18,6 +31,7 @@ PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = {
         eu_banned=False,
         warnings=[],
         recommendation="Development/testing only",
+        last_verified="2026-04-13",
     ),
     "ollama": ProviderPrivacyInfo(
         provider="ollama",
@@ -30,6 +44,7 @@ PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = {
         eu_banned=False,
         warnings=[],
         recommendation="Best privacy — all processing on-device",
+        last_verified="2026-04-13",
     ),
     "openrouter": ProviderPrivacyInfo(
         provider="openrouter",
@@ -45,6 +60,7 @@ PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = {
             "Data routed through third-party providers — check downstream policies",
         ],
         recommendation="Review OpenRouter privacy settings before sending sensitive data",
+        last_verified="2026-04-13",
     ),
     "anthropic": ProviderPrivacyInfo(
         provider="anthropic",
@@ -57,6 +73,7 @@ PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = {
         eu_banned=False,
         warnings=[],
         recommendation="Recommended for EU users — strong privacy, DPA available",
+        last_verified="2026-04-13",
     ),
     "gemini": ProviderPrivacyInfo(
         provider="gemini",
@@ -72,6 +89,7 @@ PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = {
             "Gemini free tier banned in EU (DMA non-compliance)",
         ],
         recommendation="Use paid API tier only; avoid free tier for sensitive data",
+        last_verified="2026-04-13",
     ),
     "mistral": ProviderPrivacyInfo(
         provider="mistral",
@@ -84,6 +102,7 @@ PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = {
         eu_banned=False,
         warnings=[],
         recommendation="EU-headquartered — good choice for EU data sovereignty",
+        last_verified="2026-04-13",
     ),
     "groq": ProviderPrivacyInfo(
         provider="groq",
@@ -96,8 +115,36 @@ PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = {
         eu_banned=False,
         warnings=[],
         recommendation="Fast inference, no data retention",
+        last_verified="2026-04-13",
     ),
 }
+
+# ---------------------------------------------------------------------------
+# Loading logic
+# ---------------------------------------------------------------------------
+
+
+def _load_registry(
+    path: Path = _REGISTRY_PATH,
+) -> dict[str, ProviderPrivacyInfo]:
+    """Load the registry from a JSON file, falling back to hardcoded defaults."""
+    if not path.exists():
+        return dict(_HARDCODED_REGISTRY)
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return {name: ProviderPrivacyInfo.model_validate(entry) for name, entry in raw.items()}
+    except Exception:
+        logger.warning("Failed to load privacy registry from %s — using hardcoded fallback", path)
+        return dict(_HARDCODED_REGISTRY)
+
+
+PROVIDER_PRIVACY_REGISTRY: dict[str, ProviderPrivacyInfo] = _load_registry()
+
+
+def reload_registry(path: Path = _REGISTRY_PATH) -> None:
+    """Reload the privacy registry from disk (or reset to hardcoded defaults)."""
+    PROVIDER_PRIVACY_REGISTRY.clear()
+    PROVIDER_PRIVACY_REGISTRY.update(_load_registry(path))
 
 
 def get_privacy_info(provider_name: str) -> ProviderPrivacyInfo | None:

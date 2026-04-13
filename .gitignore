@@ -86,12 +86,12 @@ jobspy-mcp-server/
 .browser-profile/
 .claude/worktrees/
 
-# BMAD output artifacts (branch-specific, not infrastructure)
-_bmad-output/
-
-# GSD state (per-session, not infrastructure)
-.planning/
-GSD-CLAUDE.md
+# Coverage reports (generated in CI)
+coverage.xml
+.coverage
+htmlcov/
+frontend/coverage/
+lcov.info
 
 # Internal business docs
 docs/pricing-strategy.md
