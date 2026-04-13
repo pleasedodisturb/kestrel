@@ -16,17 +16,13 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (Python ${{ matrix.python-version }})
+    name: Backend (Python 3.11)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
           cache: pip
 
       - name: Install dependencies
