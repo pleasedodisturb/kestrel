@@ -34,6 +34,11 @@
       "automerge": false,
       "labels": ["dependencies", "major-update"],
       "commitMessagePrefix": "deps:"
+    },
+    {
+      "description": "Pin Python to 3.11 — not ready to upgrade yet",
+      "matchPackageNames": ["python"],
+      "allowedVersions": "<3.12"
     }
   ]
 }
