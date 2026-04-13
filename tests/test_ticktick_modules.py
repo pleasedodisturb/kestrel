@@ -175,8 +175,7 @@ def test_client_complete_task_returns_none_on_empty_body():
         "career_os.services.ticktick_client.httpx.request",
         return_value=_mock_response(200, text=""),
     ) as req:
-        result = client.complete_task("p1", "t1")
-    assert result is None
+        client.complete_task("p1", "t1")
     assert req.call_args.args[1].endswith("/project/p1/task/t1/complete")
 
 

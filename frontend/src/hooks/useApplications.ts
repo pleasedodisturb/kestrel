@@ -50,7 +50,7 @@ export function useCreateApplication() {
   return useMutation({
     mutationFn: (data: ApplicationCreate) => createApplication(data),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: APPLICATIONS_KEY });
+      queryClient.invalidateQueries({ queryKey: APPLICATIONS_KEY });
     },
   });
 }
@@ -102,8 +102,8 @@ export function useUpdateApplication() {
     },
     onSettled: (_data, _error, variables) => {
       // Always refetch after mutation settles
-      void queryClient.invalidateQueries({ queryKey: APPLICATIONS_KEY });
-      void queryClient.invalidateQueries({
+      queryClient.invalidateQueries({ queryKey: APPLICATIONS_KEY });
+      queryClient.invalidateQueries({
         queryKey: ["application", variables.id],
       });
     },
@@ -121,8 +121,8 @@ export function useArchiveApplication() {
   return useMutation({
     mutationFn: (id: number) => archiveApplication(id),
     onSuccess: (_data, id) => {
-      void queryClient.invalidateQueries({ queryKey: APPLICATIONS_KEY });
-      void queryClient.invalidateQueries({ queryKey: ["application", id] });
+      queryClient.invalidateQueries({ queryKey: APPLICATIONS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["application", id] });
     },
   });
 }

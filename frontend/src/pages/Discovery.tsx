@@ -401,16 +401,21 @@ function SaveSearchDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Save Search</h2>
@@ -802,7 +807,7 @@ export function Discovery() {
                   New Matches Found
                 </h3>
                 <p className="mt-1 text-sm text-green-700">
-                  {newMatchesCount} new job{newMatchesCount !== 1 ? "s" : ""}{" "}
+                  {newMatchesCount} new job{newMatchesCount === 1 ? "" : "s"}{" "}
                   discovered since your last visit.
                 </p>
               </div>

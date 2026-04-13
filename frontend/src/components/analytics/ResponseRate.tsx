@@ -3,15 +3,18 @@ interface Props {
 }
 
 export function ResponseRate({ rate }: Props) {
-  const displayRate = rate !== null ? `${rate.toFixed(1)}%` : "N/A";
-  const color =
-    rate === null
-      ? "text-gray-400"
-      : rate >= 50
-        ? "text-green-600"
-        : rate >= 25
-          ? "text-amber-600"
-          : "text-red-600";
+  const displayRate = rate === null ? "N/A" : `${rate.toFixed(1)}%`;
+
+  let color: string;
+  if (rate === null) {
+    color = "text-gray-400";
+  } else if (rate >= 50) {
+    color = "text-green-600";
+  } else if (rate >= 25) {
+    color = "text-amber-600";
+  } else {
+    color = "text-red-600";
+  }
 
   return (
     <div

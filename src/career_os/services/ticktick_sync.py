@@ -593,7 +593,7 @@ def check_ticktick_connection(db: Session) -> tuple[bool, str]:
     Returns (success, message).
     """
     try:
-        client, project_id = get_client(db)
+        client, _ = get_client(db)
     except TickTickNotConfiguredError as exc:
         return False, str(exc)
 

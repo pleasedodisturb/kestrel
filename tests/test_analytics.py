@@ -288,7 +288,6 @@ class TestConversionFunnel:
         funnel = data["conversion_funnel"]
         stage_map = {s["stage"]: s for s in funnel}
 
-        # rejected / offer = 2 / 3
         assert stage_map["rejected"]["percentage"] == pytest.approx(2 / 3 * 100, abs=0.1)
 
     def test_funnel_includes_all_stages(self, client, db_session):

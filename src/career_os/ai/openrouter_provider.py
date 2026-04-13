@@ -262,7 +262,7 @@ def _try_parse_structured(
         schema_cls = schema_map.get(feature)
         if schema_cls:
             return schema_cls.model_validate(data)
-    except (json.JSONDecodeError, Exception) as exc:
+    except Exception as exc:
         logger.debug("Could not parse structured response for %s: %s", feature, exc)
 
     return None

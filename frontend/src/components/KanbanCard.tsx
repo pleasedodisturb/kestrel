@@ -69,19 +69,18 @@ export function KanbanCard({ application }: KanbanCardProps) {
   );
 
   return (
-    <div
+    <button
+      type="button"
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
       data-testid={`kanban-card-${application.id}`}
       className={cn(
-        "cursor-grab rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md",
+        "w-full cursor-grab rounded-lg border bg-white p-3 text-left shadow-sm transition-shadow hover:shadow-md",
         isDragging && "opacity-50 shadow-lg",
         application.is_ghost && "border-orange-300 bg-orange-50",
       )}
-      role="button"
-      tabIndex={0}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
@@ -132,6 +131,6 @@ export function KanbanCard({ application }: KanbanCardProps) {
           </span>
         )}
       </div>
-    </div>
+    </button>
   );
 }

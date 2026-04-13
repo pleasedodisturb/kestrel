@@ -23,13 +23,7 @@ export function ApplicationsOverTime({ data }: Props) {
       </h2>
       <p className="mt-1 text-sm text-gray-500">Weekly application counts</p>
 
-      {!hasData ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-gray-400" data-testid="over-time-empty">
-            No data available
-          </p>
-        </div>
-      ) : (
+      {hasData ? (
         <div className="mt-4 h-48">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
@@ -73,6 +67,12 @@ export function ApplicationsOverTime({ data }: Props) {
               />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-sm text-gray-400" data-testid="over-time-empty">
+            No data available
+          </p>
         </div>
       )}
     </div>

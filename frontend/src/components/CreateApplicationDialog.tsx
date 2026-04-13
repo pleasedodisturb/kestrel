@@ -45,7 +45,7 @@ export function CreateApplicationDialog({
     const newErrors: Record<string, string> = {};
     if (!company.trim()) newErrors.company = "Company is required";
     if (!role.trim()) newErrors.role = "Role is required";
-    if (fitScore && (isNaN(Number(fitScore)) || Number(fitScore) < 0 || Number(fitScore) > 10)) {
+    if (fitScore && (Number.isNaN(Number(fitScore)) || Number(fitScore) < 0 || Number(fitScore) > 10)) {
       newErrors.fit_score = "Score must be between 0 and 10";
     }
     setErrors(newErrors);
@@ -88,16 +88,20 @@ export function CreateApplicationDialog({
   return (
     <div
       data-testid="create-dialog-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose();
-      }}
-      onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
-      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
+        onClick={handleClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <div
         data-testid="create-dialog"
-        className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
       >

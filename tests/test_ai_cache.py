@@ -21,7 +21,7 @@ def _make_response(content: str = "hello", feature: AIFeature = AIFeature.comple
     return AIResponse(content=content, provider="mock", feature=feature)
 
 
-def _mock_provider() -> AIProvider:
+def _mock_provider() -> AsyncMock:
     """Return an AsyncMock that satisfies the AIProvider interface."""
     provider = AsyncMock(spec=AIProvider)
     provider.name = "mock"

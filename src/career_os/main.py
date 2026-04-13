@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from career_os.api.ai import router as ai_router
@@ -147,7 +147,17 @@ app.state.limiter = oauth_limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# CORS middleware for frontend
+# API key auth middleware (disabled by default for local use)
+from career_os.middleware import APIKeyAuthMiddleware  # noqa: E402
+
+app.add_middleware(
+    APIKeyAuthMiddleware,
+    auth_enabled=settings.auth_enabled,
+    auth_api_key=settings.auth_api_key,
+)
+
+# CORS middleware — added last so it wraps all other middleware
+# (Starlette executes middleware in reverse-addition order).
 _cors_origins: list[str] = (
     ["*"]
     if settings.frontend_url == "*"
@@ -163,15 +173,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-# API key auth middleware (disabled by default for local use)
-from career_os.middleware import APIKeyAuthMiddleware  # noqa: E402
-
-app.add_middleware(
-    APIKeyAuthMiddleware,
-    auth_enabled=settings.auth_enabled,
-    auth_api_key=settings.auth_api_key,
 )
 
 # Include routers
@@ -205,7 +206,7 @@ app.include_router(voice_router)
 
 
 @app.get("/health")
-async def health_check() -> dict:
+async def health_check() -> JSONResponse:
     """Health check with database connectivity verification."""
     from sqlalchemy import text
 
@@ -215,11 +216,9 @@ async def health_check() -> dict:
         db = SessionLocal()
         db.execute(text("SELECT 1"))
         db.close()
-        return {"status": "ok", "database": "connected"}
+        return JSONResponse(content={"status": "ok", "database": "connected"})
     except Exception as e:
         logger.error("Health check failed: %s", e)
-        from fastapi.responses import JSONResponse
-
         return JSONResponse(
             status_code=503,
             content={"status": "degraded", "database": str(e)},

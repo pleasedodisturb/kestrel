@@ -10,13 +10,13 @@ export function scoreToLetterGrade(score: number | null): string | null {
   if (score === null || score === undefined || Number.isNaN(score)) {
     return null;
   }
-  if (score >= 9.0) return "A";
-  if (score >= 8.0) return "A-";
-  if (score >= 7.0) return "B+";
-  if (score >= 6.0) return "B";
-  if (score >= 5.0) return "C+";
-  if (score >= 4.0) return "C";
-  if (score >= 3.0) return "D";
+  if (score >= 9) return "A";
+  if (score >= 8) return "A-";
+  if (score >= 7) return "B+";
+  if (score >= 6) return "B";
+  if (score >= 5) return "C+";
+  if (score >= 4) return "C";
+  if (score >= 3) return "D";
   return "F";
 }
 
