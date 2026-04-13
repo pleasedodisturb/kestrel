@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: curl -fsSL https://raw.githubusercontent.com/pleasedodisturb/kestrel/main/install.sh | bash
 
 KESTREL_VENV="$HOME/.kestrel/venv"
-KESTREL_MIN_PYTHON="3.12"
+KESTREL_MIN_PYTHON="3.11"
 
 # ──────────────────────────────────────────────
 
@@ -111,7 +111,7 @@ else
         Darwin)
             if command_exists brew; then
                 echo "  Install with Homebrew:"
-                echo "    brew install python@3.12"
+                echo "    brew install python@3.11"
                 echo ""
                 echo "  Then run this installer again."
             else
@@ -119,7 +119,7 @@ else
                 echo "    https://www.python.org/downloads/"
                 echo ""
                 echo "  Or install Homebrew first (https://brew.sh), then:"
-                echo "    brew install python@3.12"
+                echo "    brew install python@3.11"
             fi
             ;;
         Linux)
@@ -127,12 +127,12 @@ else
                 echo "  Install on Ubuntu/Debian:"
                 echo "    sudo add-apt-repository ppa:deadsnakes/ppa"
                 echo "    sudo apt-get update"
-                echo "    sudo apt-get install python3.12 python3.12-venv"
+                echo "    sudo apt-get install python3.11 python3.11-venv"
                 echo ""
                 echo "  Then run this installer again."
             elif command_exists dnf; then
                 echo "  Install on Fedora/RHEL:"
-                echo "    sudo dnf install python3.12"
+                echo "    sudo dnf install python3.11"
                 echo ""
                 echo "  Then run this installer again."
             elif command_exists pacman; then

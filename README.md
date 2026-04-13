@@ -32,7 +32,7 @@ Pick whichever feels right. They all give you the same app.
 curl -fsSL https://raw.githubusercontent.com/pleasedodisturb/kestrel/main/install.sh | bash
 ```
 
-Detects your OS, checks for Python 3.12+, installs Kestrel, and opens it in your browser.
+Detects your OS, checks for Python 3.11+, installs Kestrel, and opens it in your browser.
 
 Or if you have Node.js:
 ```bash
@@ -54,7 +54,7 @@ kestrel start
 
 Opens your browser automatically. Data stored in `~/.kestrel/`.
 
-Requires Python 3.12+. Don't have Python? Install it from [python.org/downloads](https://www.python.org/downloads/) (Mac/Windows installer, takes 2 minutes). Or use Option 2 or 3 below instead.
+Requires Python 3.11+. Don't have Python? Install it from [python.org/downloads](https://www.python.org/downloads/) (Mac/Windows installer, takes 2 minutes). Or use Option 2 or 3 below instead.
 
 ### Option 2: Docker (isolated, nothing touches your system)
 
@@ -109,38 +109,48 @@ Everything runs on your machine. No account needed. No data leaves your computer
 
 ## Docs
 
-| Guide | For |
-|-------|-----|
-| [Quickstart](docs/QUICKSTART.md) | First-time setup, step by step |
-| [FAQ](docs/FAQ.md) | Common questions answered |
-| [Help](docs/HELP.md) | Troubleshooting when something breaks |
-| [AI Provider Guide](docs/AI-PROVIDERS.md) | Choosing and configuring an AI provider |
-| [Comparison](docs/COMPARISON.md) | How Kestrel compares to other tools |
-| [Features & API Reference](docs/REFERENCE.md) | Full feature list, architecture, CLI, API endpoints |
-| [Deployment](DEPLOY.md) | Railway, Fly.io, VPS hosting |
+**Getting started:**
+
+| Guide | What you'll learn |
+|-------|-------------------|
+| [Quickstart](docs/QUICKSTART.md) | First-time setup, step by step — zero assumptions |
+| [FAQ](docs/FAQ.md) | "Can I...?" "What if...?" "Why does...?" — all answered |
+| [Help](docs/HELP.md) | Something broke? Start here. We'll fix it together. |
+
+**Understanding AI in Kestrel:**
+
+| Guide | What you'll learn |
+|-------|-------------------|
+| [How Kestrel Uses AI](docs/ai-providers-explained.md) | The electricity analogy — what AI providers are, what they cost, and which to pick |
+| [AI Provider Setup](docs/AI-PROVIDERS.md) | Technical details — API keys, privacy policies, provider comparison tables |
+| [LLM Landscape Research](docs/llms-tokens-privacy.md) | Deep dive — 2026 pricing, privacy audits, GDPR, EU sovereignty (for the curious) |
+
+**Going deeper:**
+
+| Guide | What you'll learn |
+|-------|-------------------|
+| [Comparison](docs/COMPARISON.md) | How Kestrel stacks up against Huntr, Teal, Simplify, and others |
+| [Features & API Reference](docs/REFERENCE.md) | Full feature list, architecture, CLI, and API endpoints |
+| [Deployment](DEPLOY.md) | Host Kestrel on Railway, Fly.io, or your own VPS |
 | [Contributing](CONTRIBUTING.md) | Development setup and pull request guidelines |
 
 ---
 
 ## Add real AI (optional)
 
-Kestrel works out of the box in Demo Mode (free, offline). To get real AI-powered scoring:
+Kestrel works out of the box in Demo Mode — free, offline, no account needed. When you're ready for real AI-powered scoring, you have options:
 
-1. Sign up at [openrouter.ai](https://openrouter.ai) and copy your API key
-2. Open the settings file (`.env`) in your Kestrel folder:
-   - **pip users:** it's at `~/.kestrel/.env` - open with any text editor
-   - **Docker users:** it's in the Kestrel folder - on Mac type `open .env` in Terminal
-   - Hidden file? [How to see it](docs/FAQ.md)
-3. Change these two lines:
-   ```
-   AI_PROVIDER=openrouter
-   OPENROUTER_API_KEY=sk-or-paste-your-key-here
-   ```
-4. Restart:
-   - **pip:** stop with Ctrl+C, run `kestrel start` again
-   - **Docker:** `docker compose restart`
+| Option | Cost | Privacy | Best for |
+|--------|------|---------|----------|
+| **OpenRouter** | ~$3-10/mo | Good | Most users — one click to connect, 300+ models |
+| **Anthropic (Claude)** | ~$4-10/mo | Excellent (7-day retention) | Power users who want the best privacy-cost balance |
+| **Ollama** | Free | Perfect — nothing leaves your machine | Privacy maximalists, offline users |
 
-Costs about $1-3/month. Full guide: [AI Provider Guide](docs/AI-PROVIDERS.md)
+**Quickest path:** Go to Settings → click "Connect to OpenRouter" → log in → done. No API keys to copy.
+
+**Want to understand the options?** Read [How Kestrel Uses AI](docs/ai-providers-explained.md) — it explains everything in plain English, no jargon.
+
+**Already technical?** Jump to the [AI Provider Setup](docs/AI-PROVIDERS.md) for detailed configuration.
 
 ---
 

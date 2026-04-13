@@ -12,6 +12,15 @@ paths = [
   '''config/personal\.yaml\.example$''',
   '''tests/fixtures/.*''',
   '''docs/.*''',
+  # Test files that use placeholder API keys for mocking providers
+  '''tests/test_anthropic_provider\.py$''',
+  '''tests/test_oauth\.py$''',
+  '''tests/test_ai_health\.py$''',
+  '''tests/test_registry_integration\.py$''',
+  '''tests/test_auth\.py$''',
+  # Claude skill knowledge bases contain example JWT/API tokens in documentation
+  '''\.claude/skills/.*''',
+  '''_bmad/.*''',
 ]
 
 regexes = [

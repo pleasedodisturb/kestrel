@@ -7,6 +7,15 @@
       "env": {
         "TICKTICK_API_TOKEN": "your-token-here"
       }
+    },
+    "sonarcloud": {
+      "command": ".venv_mcp/bin/python",
+      "args": ["tools/sonarcloud-mcp/server.py"],
+      "env": {
+        "SONAR_TOKEN": "your-sonarcloud-token-here",
+        "SONAR_PROJECT_KEY": "your-org_your-repo",
+        "SONAR_ORGANIZATION": "your-org"
+      }
     }
   }
 }
