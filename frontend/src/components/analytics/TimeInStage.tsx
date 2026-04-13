@@ -53,13 +53,7 @@ export function TimeInStage({ data }: Props) {
         Average days applications spend in each stage
       </p>
 
-      {!hasData ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-gray-400" data-testid="time-in-stage-empty">
-            No data available
-          </p>
-        </div>
-      ) : (
+      {hasData ? (
         <div className="mt-4 h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart

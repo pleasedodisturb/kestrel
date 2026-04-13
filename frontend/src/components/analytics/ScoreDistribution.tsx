@@ -34,13 +34,7 @@ export function ScoreDistribution({ data }: Props) {
         Fit score distribution across applications
       </p>
 
-      {!hasData ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-gray-400" data-testid="score-empty">
-            No scored applications yet
-          </p>
-        </div>
-      ) : (
+      {hasData ? (
         <div className="mt-4 h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart

@@ -97,7 +97,7 @@ function AddResourceDialog({
         title,
         url: url || undefined,
         resource_type: resourceType,
-        estimated_hours: estimatedHours ? parseFloat(estimatedHours) : undefined,
+        estimated_hours: estimatedHours ? Number.parseFloat(estimatedHours) : undefined,
         difficulty,
         provider: provider || undefined,
       }),
@@ -309,11 +309,11 @@ function ResourceCard({
           <div className="mt-2 flex flex-wrap gap-1.5">
             <span
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                TYPE_COLORS[resource.resource_type as ResourceType] ??
+                TYPE_COLORS[resource.resource_type] ??
                 "bg-gray-100 text-gray-700"
               }`}
             >
-              {TYPE_LABELS[resource.resource_type as ResourceType] ??
+              {TYPE_LABELS[resource.resource_type] ??
                 resource.resource_type}
             </span>
             <span
@@ -540,12 +540,12 @@ function GapSection({
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                               TYPE_COLORS[
-                                tmpl.resource_type as ResourceType
+                                tmpl.resource_type
                               ] ?? "bg-gray-100 text-gray-700"
                             }`}
                           >
                             {TYPE_LABELS[
-                              tmpl.resource_type as ResourceType
+                              tmpl.resource_type
                             ] ?? tmpl.resource_type}
                           </span>
                           {tmpl.difficulty && (
@@ -690,7 +690,7 @@ export function Learning() {
           id="learning-application-select"
           value={applicationId ?? ""}
           onChange={(e) =>
-            setApplicationId(e.target.value ? parseInt(e.target.value) : null)
+            setApplicationId(e.target.value ? Number.parseInt(e.target.value) : null)
           }
           className="mt-2 w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
@@ -773,7 +773,7 @@ export function Learning() {
       )}
 
       {/* No requirements parsed yet */}
-      {applicationId && gapData && gapData.total_requirements === 0 && (
+      {applicationId && gapData?.total_requirements === 0 && (
         <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white py-8 text-center">
           <BookOpen className="mx-auto h-10 w-10 text-gray-400" />
           <h2 className="mt-3 text-lg font-semibold text-gray-900">
@@ -788,7 +788,7 @@ export function Learning() {
       )}
 
       {/* All requirements met */}
-      {applicationId && gapData && gapData.total_requirements > 0 && gapsWithIds.length === 0 && (
+      {applicationId && gapData?.total_requirements > 0 && gapsWithIds.length === 0 && (
         <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white py-8 text-center">
           <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" />
           <h2 className="mt-3 text-lg font-semibold text-gray-900">

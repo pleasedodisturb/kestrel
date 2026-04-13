@@ -620,7 +620,7 @@ export function ApplicationDetail() {
                   className="border-l-2 border-gray-200 pl-3"
                 >
                   <p className="text-sm font-medium text-gray-900 capitalize">
-                    {entry.action.replace(/_/g, " ")}
+                    {entry.action.replaceAll("_", " ")}
                   </p>
                   {entry.details && (
                     <p className="mt-0.5 text-xs text-gray-600">

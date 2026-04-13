@@ -51,13 +51,7 @@ export function ConversionFunnel({ data }: Props) {
         Applications by pipeline stage (percentages show stage-to-stage conversion)
       </p>
 
-      {!hasData ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-gray-400" data-testid="funnel-empty">
-            No data available
-          </p>
-        </div>
-      ) : (
+      {hasData ? (
         <div className="mt-4 h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>

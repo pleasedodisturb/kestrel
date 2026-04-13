@@ -807,7 +807,7 @@ export function Discovery() {
                   New Matches Found
                 </h3>
                 <p className="mt-1 text-sm text-green-700">
-                  {newMatchesCount} new job{newMatchesCount !== 1 ? "s" : ""}{" "}
+                  {newMatchesCount} new job{newMatchesCount === 1 ? "" : "s"}{" "}
                   discovered since your last visit.
                 </p>
               </div>
