@@ -93,5 +93,12 @@ htmlcov/
 frontend/coverage/
 lcov.info
 
+# BMAD output artifacts (branch-specific, not infrastructure)
+_bmad-output/
+
+# GSD state (per-session, not infrastructure)
+.planning/
+GSD-CLAUDE.md
+
 # Internal business docs
 docs/pricing-strategy.md
