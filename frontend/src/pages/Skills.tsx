@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchSkills,
@@ -98,16 +98,21 @@ function AddSkillDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Add Skill</h2>
@@ -265,16 +270,21 @@ function EditSkillDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Edit Skill</h2>
@@ -402,18 +412,87 @@ function SkillHistoryPanel({
     queryFn: () => fetchSkillHistory(skill.id, profileId),
   });
 
+  let historyContent: ReactNode;
+  if (isLoading) {
+    historyContent = (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    );
+  } else if (!history || history.length === 0) {
+    historyContent = (
+      <p className="py-4 text-sm text-gray-500">No history entries.</p>
+    );
+  } else {
+    historyContent = (
+      <div className="space-y-3">
+        {history.map((entry: SkillHistoryEntry) => (
+          <div
+            key={entry.id}
+            className="rounded-md border border-gray-200 bg-gray-50 p-3"
+          >
+            <div className="flex items-center gap-2">
+              {entry.previous_proficiency ? (
+                <>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      PROFICIENCY_COLORS[
+                        entry.previous_proficiency as SkillProficiency
+                      ] ?? "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {PROFICIENCY_LABELS[
+                      entry.previous_proficiency as SkillProficiency
+                    ] ?? entry.previous_proficiency}
+                  </span>
+                  <span className="text-gray-400">→</span>
+                </>
+              ) : (
+                <span className="text-xs text-gray-400">Created as</span>
+              )}
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  PROFICIENCY_COLORS[
+                    entry.new_proficiency as SkillProficiency
+                  ] ?? "bg-gray-100 text-gray-700"
+                }`}
+              >
+                {PROFICIENCY_LABELS[
+                  entry.new_proficiency as SkillProficiency
+                ] ?? entry.new_proficiency}
+              </span>
+            </div>
+            {entry.reason && (
+              <p className="mt-1 text-xs text-gray-600">
+                {entry.reason}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-gray-400">
+              {new Date(entry.created_at).toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <div
-        className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -428,62 +507,7 @@ function SkillHistoryPanel({
         </div>
 
         <div className="mt-4 max-h-96 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-            </div>
-          ) : !history || history.length === 0 ? (
-            <p className="py-4 text-sm text-gray-500">No history entries.</p>
-          ) : (
-            <div className="space-y-3">
-              {history.map((entry: SkillHistoryEntry) => (
-                <div
-                  key={entry.id}
-                  className="rounded-md border border-gray-200 bg-gray-50 p-3"
-                >
-                  <div className="flex items-center gap-2">
-                    {entry.previous_proficiency ? (
-                      <>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                            PROFICIENCY_COLORS[
-                              entry.previous_proficiency as SkillProficiency
-                            ] ?? "bg-gray-100 text-gray-700"
-                          }`}
-                        >
-                          {PROFICIENCY_LABELS[
-                            entry.previous_proficiency as SkillProficiency
-                          ] ?? entry.previous_proficiency}
-                        </span>
-                        <span className="text-gray-400">→</span>
-                      </>
-                    ) : (
-                      <span className="text-xs text-gray-400">Created as</span>
-                    )}
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        PROFICIENCY_COLORS[
-                          entry.new_proficiency as SkillProficiency
-                        ] ?? "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {PROFICIENCY_LABELS[
-                        entry.new_proficiency as SkillProficiency
-                      ] ?? entry.new_proficiency}
-                    </span>
-                  </div>
-                  {entry.reason && (
-                    <p className="mt-1 text-xs text-gray-600">
-                      {entry.reason}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-400">
-                    {new Date(entry.created_at).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+          {historyContent}
         </div>
 
         <div className="mt-4 flex justify-end">

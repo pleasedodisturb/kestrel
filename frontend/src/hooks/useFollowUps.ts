@@ -45,10 +45,10 @@ export function useCreateFollowUp() {
     mutationFn: (data: Omit<FollowUpCreate, "profile_id">) =>
       createFollowUp(data),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: FOLLOW_UPS_KEY });
-      void queryClient.invalidateQueries({ queryKey: OVERDUE_COUNT_KEY });
+      queryClient.invalidateQueries({ queryKey: FOLLOW_UPS_KEY });
+      queryClient.invalidateQueries({ queryKey: OVERDUE_COUNT_KEY });
       // Also refresh application detail since follow_ups are embedded
-      void queryClient.invalidateQueries({ queryKey: ["application"] });
+      queryClient.invalidateQueries({ queryKey: ["application"] });
     },
   });
 }
@@ -62,9 +62,9 @@ export function useCompleteFollowUp() {
   return useMutation({
     mutationFn: (id: number) => completeFollowUp(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: FOLLOW_UPS_KEY });
-      void queryClient.invalidateQueries({ queryKey: OVERDUE_COUNT_KEY });
-      void queryClient.invalidateQueries({ queryKey: ["application"] });
+      queryClient.invalidateQueries({ queryKey: FOLLOW_UPS_KEY });
+      queryClient.invalidateQueries({ queryKey: OVERDUE_COUNT_KEY });
+      queryClient.invalidateQueries({ queryKey: ["application"] });
     },
   });
 }

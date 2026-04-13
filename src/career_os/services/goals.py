@@ -595,7 +595,7 @@ async def get_alternatives(db: Session, goal_id: int, profile_id: int) -> dict:
 
 
 def _build_alternative_paths(
-    goal: Goal,
+    _goal: Goal,
     skills: list[Skill],
     applications: list[Application],
 ) -> list[dict]:

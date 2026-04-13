@@ -25,7 +25,7 @@ export function OverdueBanner() {
           <span data-testid="overdue-count" className="font-bold">
             {data.count}
           </span>{" "}
-          overdue follow-up{data.count !== 1 ? "s" : ""}
+          overdue follow-up{data.count === 1 ? "" : "s"}
         </p>
         <p className="text-xs text-amber-600">
           Check your follow-ups and take action to keep your pipeline moving.

@@ -145,7 +145,7 @@ async def _attempt_request(
         return exc, None, backoff * BACKOFF_MULTIPLIER
 
 
-def _log_retry(exc: Exception, url: str, backoff: float, attempt: int, max_retries: int) -> None:
+def _log_retry(exc: Exception, _url: str, backoff: float, attempt: int, max_retries: int) -> None:
     """Log a retry warning with context about the error type."""
     if isinstance(exc, httpx.HTTPStatusError):
         logger.warning(

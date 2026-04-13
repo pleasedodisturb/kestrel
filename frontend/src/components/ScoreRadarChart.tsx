@@ -53,17 +53,17 @@ function scoreColor(value: number): string {
 
 function useIsNarrow(breakpointPx = 640): boolean {
   const getInitial = () =>
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia(`(max-width: ${breakpointPx - 1}px)`).matches;
+    typeof globalThis.window !== "undefined" &&
+    typeof globalThis.matchMedia === "function" &&
+    globalThis.matchMedia(`(max-width: ${breakpointPx - 1}px)`).matches;
 
   const [isNarrow, setIsNarrow] = useState<boolean>(getInitial);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (typeof globalThis.window === "undefined" || typeof globalThis.matchMedia !== "function") {
       return;
     }
-    const mql = window.matchMedia(`(max-width: ${breakpointPx - 1}px)`);
+    const mql = globalThis.matchMedia(`(max-width: ${breakpointPx - 1}px)`);
     const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);

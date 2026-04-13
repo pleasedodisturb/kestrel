@@ -37,7 +37,7 @@ export function useCreateProfile() {
   return useMutation({
     mutationFn: (data: ProfileCreate) => createProfile(data),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: PROFILES_KEY });
+      queryClient.invalidateQueries({ queryKey: PROFILES_KEY });
     },
   });
 }
@@ -49,8 +49,8 @@ export function useUpdateProfile() {
     mutationFn: ({ id, data }: { id: number; data: ProfileUpdate }) =>
       updateProfile(id, data),
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: PROFILES_KEY });
-      void queryClient.invalidateQueries({
+      queryClient.invalidateQueries({ queryKey: PROFILES_KEY });
+      queryClient.invalidateQueries({
         queryKey: ["profile", variables.id],
       });
     },
@@ -63,7 +63,7 @@ export function useDeleteProfile() {
   return useMutation({
     mutationFn: (id: number) => deleteProfile(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: PROFILES_KEY });
+      queryClient.invalidateQueries({ queryKey: PROFILES_KEY });
     },
   });
 }

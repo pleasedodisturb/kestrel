@@ -228,9 +228,9 @@ function ProviderCard({ provider }: Readonly<{ provider: ProviderHealthStatus }>
           <div data-testid="credits-info" className="flex items-center gap-2 text-xs text-gray-600">
             <CreditCard className="h-3 w-3" />
             <span>
-              {provider.credits.remaining != null
-                ? `${provider.credits.remaining} / ${provider.credits.total ?? "∞"} ${provider.credits.unit}`
-                : `${provider.credits.unit} (usage tracked)`}
+              {provider.credits.remaining == null
+                ? `${provider.credits.unit} (usage tracked)`
+                : `${provider.credits.remaining} / ${provider.credits.total ?? "∞"} ${provider.credits.unit}`}
             </span>
           </div>
         )}
@@ -240,12 +240,12 @@ function ProviderCard({ provider }: Readonly<{ provider: ProviderHealthStatus }>
           <div data-testid="rate-limit-info" className="flex items-center gap-2 text-xs text-gray-600">
             <Zap className="h-3 w-3" />
             <span>
-              {provider.rate_limit.requests_per_minute != null
-                ? `${provider.rate_limit.requests_per_minute} RPM`
-                : ""}
-              {provider.rate_limit.tokens_per_minute != null
-                ? ` / ${provider.rate_limit.tokens_per_minute} TPM`
-                : ""}
+              {provider.rate_limit.requests_per_minute == null
+                ? ""
+                : `${provider.rate_limit.requests_per_minute} RPM`}
+              {provider.rate_limit.tokens_per_minute == null
+                ? ""
+                : ` / ${provider.rate_limit.tokens_per_minute} TPM`}
             </span>
           </div>
         )}
