@@ -48,17 +48,21 @@ export function OnboardingWizard({
     <div
       data-testid="onboarding-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleDismiss();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") handleDismiss();
-      }}
-      role="presentation"
+      aria-hidden="true"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default"
+        onClick={handleDismiss}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") handleDismiss();
+        }}
+        aria-label="Close onboarding"
+        tabIndex={-1}
+      />
       <div
         data-testid="onboarding-wizard"
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"

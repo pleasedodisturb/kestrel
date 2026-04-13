@@ -89,15 +89,19 @@ export function CreateApplicationDialog({
     <div
       data-testid="create-dialog-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose();
-      }}
-      onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
-      role="presentation"
+      aria-hidden="true"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default"
+        onClick={handleClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
       <div
         data-testid="create-dialog"
-        className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
       >

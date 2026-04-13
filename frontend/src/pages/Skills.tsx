@@ -99,15 +99,20 @@ function AddSkillDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
       <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Add Skill</h2>
@@ -266,15 +271,20 @@ function EditSkillDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
       <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Edit Skill</h2>
@@ -405,15 +415,20 @@ function SkillHistoryPanel({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
       <div
-        className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">

@@ -108,16 +108,21 @@ function ContactDetail({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
       data-testid="contact-detail-overlay"
     >
-      <div
-        className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
-        role="dialog"
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
+      <dialog
+        open
+        className="relative mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
@@ -179,7 +184,7 @@ function ContactDetail({
             Archive
           </button>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }
@@ -218,16 +223,21 @@ function AddContactDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
       data-testid="add-contact-dialog"
     >
-      <div
-        className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
-        role="dialog"
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
+      <dialog
+        open
+        className="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <h2 className="mb-4 text-lg font-bold">Add Contact</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -314,7 +324,7 @@ function AddContactDialog({
             </button>
           </div>
         </form>
-      </div>
+      </dialog>
     </div>
   );
 }
@@ -356,16 +366,21 @@ function LogInteractionDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
       data-testid="log-interaction-dialog"
     >
-      <div
-        className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
-        role="dialog"
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
+      <dialog
+        open
+        className="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <h2 className="mb-4 text-lg font-bold">Log Interaction</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -419,7 +434,7 @@ function LogInteractionDialog({
             </button>
           </div>
         </form>
-      </div>
+      </dialog>
     </div>
   );
 }
