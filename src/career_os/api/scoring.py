@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from career_os.ai.base import ProviderQuotaError
 from career_os.ai.openrouter_provider import CreditsExhaustedError
 from career_os.api.constants import DESC_PROFILE_ID, RESP_404
 from career_os.database import get_db
@@ -80,10 +81,10 @@ async def score_endpoint(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except JobNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except CreditsExhaustedError as exc:
+    except (CreditsExhaustedError, ProviderQuotaError) as exc:
         raise HTTPException(
             status_code=402,
-            detail="AI scoring credits exhausted. Add credits at https://openrouter.ai",
+            detail=f"AI scoring credits exhausted: {exc}",
         ) from exc
     except ScoringError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
