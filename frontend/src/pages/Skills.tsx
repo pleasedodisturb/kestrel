@@ -98,16 +98,16 @@ function AddSkillDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      aria-hidden="true"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
       <button
         type="button"
-        className="absolute inset-0 h-full w-full cursor-default"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
         onClick={onClose}
         onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
         aria-label="Close dialog"
         tabIndex={-1}
+        aria-hidden="true"
       />
       <div
         className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
@@ -270,16 +270,16 @@ function EditSkillDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      aria-hidden="true"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
       <button
         type="button"
-        className="absolute inset-0 h-full w-full cursor-default"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
         onClick={onClose}
         onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
         aria-label="Close dialog"
         tabIndex={-1}
+        aria-hidden="true"
       />
       <div
         className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
@@ -414,16 +414,16 @@ function SkillHistoryPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      aria-hidden="true"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
       <button
         type="button"
-        className="absolute inset-0 h-full w-full cursor-default"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
         onClick={onClose}
         onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
         aria-label="Close dialog"
         tabIndex={-1}
+        aria-hidden="true"
       />
       <div
         className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"

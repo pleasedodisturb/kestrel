@@ -206,7 +206,7 @@ export function KanbanBoard() {
   const showDiscoveryNudge =
     !nudgeDismissed &&
     totalCount >= 10 &&
-    typeof window !== "undefined" &&
+    typeof globalThis.window !== "undefined" &&
     localStorage.getItem("lastDiscoveryVisit") === null;
 
   // Empty board CTA
