@@ -716,6 +716,7 @@ class TestProfileAPI:
     def api_client(self, tmp_path: Path) -> TestClient:
         """Create a test client with temp file-based database."""
         from contextlib import asynccontextmanager
+        from typing import Annotated
 
         from fastapi import APIRouter, Depends, FastAPI, HTTPException
         from fastapi.middleware.cors import CORSMiddleware
@@ -755,9 +756,11 @@ class TestProfileAPI:
 
         test_router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
-        @test_router.get("", response_model=ProfileListResponse)
+        DbDep = Annotated[Session, Depends(get_test_db)]
+
+        @test_router.get("")
         async def list_profiles(
-            db: Session = Depends(get_test_db),
+            db: DbDep,
         ) -> ProfileListResponse:
             profiles = db.query(ProfileModel).all()
             return ProfileListResponse(
@@ -765,9 +768,9 @@ class TestProfileAPI:
                 count=len(profiles),
             )
 
-        @test_router.get("/{profile_id}", response_model=ProfileResponse)
+        @test_router.get("/{profile_id}")
         async def get_profile(
-            profile_id: int, db: Session = Depends(get_test_db)
+            profile_id: int, db: DbDep
         ) -> ProfileResponse:
             profile = db.query(ProfileModel).filter(ProfileModel.id == profile_id).first()
             if profile is None:

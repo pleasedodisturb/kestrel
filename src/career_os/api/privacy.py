@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/ai/privacy", tags=["privacy"])
 
 
-@router.get("", response_model=list[ProviderPrivacyInfo])
+@router.get("")
 async def list_provider_privacy() -> list[ProviderPrivacyInfo]:
     """Return privacy info for all known AI providers."""
     return list(PROVIDER_PRIVACY_REGISTRY.values())
 
 
-@router.get("/{provider}", response_model=ProviderPrivacyInfo)
+@router.get("/{provider}")
 async def get_provider_privacy(provider: str) -> ProviderPrivacyInfo:
     """Return privacy info for a single AI provider.
 
