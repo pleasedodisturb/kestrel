@@ -291,7 +291,7 @@ class TestAnthropicErrorHandling:
 
     @pytest.mark.asyncio
     async def test_500_raises_http_error(self) -> None:
-        """HTTP 500 raises httpx.HTTPStatusError (not CreditsExhaustedError)."""
+        """HTTP 500 raises httpx.HTTPStatusError (not ProviderQuotaError)."""
         provider = AnthropicProvider(api_key="test-fake-anthropic-key")
 
         async def mock_post(url, headers=None, json=None, **kwargs):
