@@ -38,3 +38,4 @@ class ProviderPrivacyInfo(BaseModel):
     eu_banned: bool = False  # True for Gemini free tier
     warnings: list[str] = Field(default_factory=list)
     recommendation: str = ""  # e.g. "Recommended for EU users"
+    last_verified: str = ""  # ISO date when the policy was last verified, e.g. "2026-04-13"

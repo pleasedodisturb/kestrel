@@ -18,14 +18,31 @@ from career_os.schemas.ai import AIFeature, AIResponse
 # ---------------------------------------------------------------------------
 
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    # NOTE: Order matters — more specific patterns must come before greedy
+    # ones (e.g. PHONE) that could match digit substrings of other types.
     ("EMAIL", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")),
-    (
-        "PHONE",
-        re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,5}"),
-    ),
     (
         "URL",
         re.compile(r"https?://(?:www\.)?(?:linkedin\.com|github\.com)/\S+"),
+    ),
+    # SSN: 123-45-6789 or 123 45 6789
+    ("SSN", re.compile(r"\b\d{3}[-\s]\d{2}[-\s]\d{4}\b")),
+    # Credit card numbers: 13–19 digits with optional spaces or dashes
+    (
+        "CREDIT_CARD",
+        re.compile(r"\b(?:\d[ -]*?){13,19}\b"),
+    ),
+    # IPv4 addresses
+    (
+        "IP_ADDR",
+        re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"),
+    ),
+    # US passport number: 1 uppercase letter followed by 8 digits
+    ("PASSPORT", re.compile(r"\b[A-Z]\d{8}\b")),
+    # PHONE last — greedy digit matching would consume other patterns' digits
+    (
+        "PHONE",
+        re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,5}"),
     ),
 ]
 
