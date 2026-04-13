@@ -33,6 +33,10 @@ class ParsedSkill:
 
 PROFICIENCY_ORDER = ["beginner", "intermediate", "advanced", "expert"]
 
+_SOURCE_CV_YAML = "cv.yaml"
+_SOURCE_CCAT = "assessment:ccat"
+_SOURCE_WORKPLACE_INSIGHTS = "assessment:workplace-insights"
+
 
 def _proficiency_from_source_count(count: int) -> str:
     """Derive proficiency from number of evidence sources.
@@ -98,7 +102,7 @@ def parse_cv_yaml(cv_path: Path) -> list[ParsedSkill]:
                     name=skill_name,
                     category=category,
                     proficiency="intermediate",
-                    evidence_source="cv.yaml",
+                    evidence_source=_SOURCE_CV_YAML,
                     evidence_detail=f"CV skills section: {label}",
                 )
             )
@@ -212,7 +216,7 @@ def _extract_skills_from_experience(experience: list[dict]) -> list[ParsedSkill]
                             name=skill_name,
                             category=category,
                             proficiency="advanced",
-                            evidence_source="cv.yaml",
+                            evidence_source=_SOURCE_CV_YAML,
                             evidence_detail=(
                                 f"Experience at {company} ({position}): {highlight[:120]}"
                             ),
@@ -389,7 +393,7 @@ def parse_ccat(file_path: Path) -> list[ParsedSkill]:
                 name=skill_name,
                 category=skill_category,
                 proficiency=proficiency,
-                evidence_source="assessment:ccat",
+                evidence_source=_SOURCE_CCAT,
                 evidence_detail=f"CCAT {percentile}th percentile: {description[:120]}",
             )
         )
@@ -408,7 +412,7 @@ def parse_ccat(file_path: Path) -> list[ParsedSkill]:
                 name="Cognitive Aptitude",
                 category="soft",
                 proficiency=prof,
-                evidence_source="assessment:ccat",
+                evidence_source=_SOURCE_CCAT,
                 evidence_detail=f"CCAT Overall: {overall_pct}th percentile",
             )
         )
@@ -462,7 +466,7 @@ def parse_workplace_insights(file_path: Path) -> list[ParsedSkill]:
                     name=trait_map[trait],
                     category="soft",
                     proficiency="advanced",
-                    evidence_source="assessment:workplace-insights",
+                    evidence_source=_SOURCE_WORKPLACE_INSIGHTS,
                     evidence_detail=f"Workplace Insights: {description[:120]}",
                 )
             )
@@ -479,7 +483,7 @@ def parse_workplace_insights(file_path: Path) -> list[ParsedSkill]:
                         name=matched,
                         category="soft",
                         proficiency="advanced",
-                        evidence_source="assessment:workplace-insights",
+                        evidence_source=_SOURCE_WORKPLACE_INSIGHTS,
                         evidence_detail=f"Workplace Insights strength: {line[:120]}",
                     )
                 )

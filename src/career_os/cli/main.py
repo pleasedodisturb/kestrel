@@ -25,6 +25,8 @@ from career_os.schemas.applications import ApplicationStatus, is_valid_transitio
 
 console = Console()
 
+_HELP_OUTPUT_FORMAT = "Output format: table or json"
+
 app = typer.Typer(
     name="career",
     help="Career OS — AI-Powered Job Search & Career Strategy Platform",
@@ -1018,7 +1020,7 @@ def discover(
         "table",
         "--output",
         "-o",
-        help="Output format: table or json",
+        help=_HELP_OUTPUT_FORMAT,
     ),
 ) -> None:
     """Run a job discovery sweep or configure scheduled runs."""
@@ -1260,7 +1262,7 @@ def score(
         "table",
         "--output",
         "-o",
-        help="Output format: table or json",
+        help=_HELP_OUTPUT_FORMAT,
     ),
 ) -> None:
     """Score a single job posting against your profile."""
@@ -1439,7 +1441,7 @@ def market(
         "table",
         "--output",
         "-o",
-        help="Output format: table or json",
+        help=_HELP_OUTPUT_FORMAT,
     ),
 ) -> None:
     """Show market intelligence summary (salary trends, skills, hiring, positioning)."""

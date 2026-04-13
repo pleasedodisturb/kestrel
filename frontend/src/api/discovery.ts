@@ -42,21 +42,28 @@ export async function searchJobs(
 ): Promise<JobSearchResponse> {
   const searchParams = new URLSearchParams();
   searchParams.set("profile_id", String(params.profile_id));
-  if (params.q) searchParams.set("q", params.q);
-  if (params.source) searchParams.set("source", params.source);
-  if (params.remote != null) searchParams.set("remote", String(params.remote));
-  if (params.salary_min != null) searchParams.set("salary_min", String(params.salary_min));
-  if (params.salary_max != null) searchParams.set("salary_max", String(params.salary_max));
-  if (params.score_min != null) searchParams.set("score_min", String(params.score_min));
-  if (params.score_max != null) searchParams.set("score_max", String(params.score_max));
-  if (params.date_from) searchParams.set("date_from", params.date_from);
-  if (params.date_to) searchParams.set("date_to", params.date_to);
-  if (params.company) searchParams.set("company", params.company);
-  if (params.location) searchParams.set("location", params.location);
-  if (params.sort) searchParams.set("sort", params.sort);
-  if (params.order) searchParams.set("order", params.order);
-  if (params.page != null) searchParams.set("page", String(params.page));
-  if (params.page_size != null) searchParams.set("page_size", String(params.page_size));
+
+  const optionalParams: [string, string | number | boolean | null | undefined][] = [
+    ["q", params.q],
+    ["source", params.source],
+    ["remote", params.remote],
+    ["salary_min", params.salary_min],
+    ["salary_max", params.salary_max],
+    ["score_min", params.score_min],
+    ["score_max", params.score_max],
+    ["date_from", params.date_from],
+    ["date_to", params.date_to],
+    ["company", params.company],
+    ["location", params.location],
+    ["sort", params.sort],
+    ["order", params.order],
+    ["page", params.page],
+    ["page_size", params.page_size],
+  ];
+
+  for (const [key, value] of optionalParams) {
+    if (value != null) searchParams.set(key, String(value));
+  }
 
   const resp = await fetch(`${JOBS_API}?${searchParams}`);
   if (!resp.ok) throw new Error(`Failed to search jobs: ${resp.status}`);
