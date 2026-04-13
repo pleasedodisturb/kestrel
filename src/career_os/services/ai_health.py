@@ -55,7 +55,7 @@ async def _check_mock() -> ProviderHealthStatus:
     """Mock provider is always reachable."""
     return ProviderHealthStatus(
         name="mock",
-        display_name="Demo Mode",
+        display_name=_PROVIDER_DISPLAY_NAMES["mock"],
         status="reachable",
         is_default=False,
         error_message=None,
@@ -326,7 +326,7 @@ async def check_all_providers(db: Session | None = None) -> AIHealthResponse:
     except Exception as exc:
         status = ProviderHealthStatus(
             name="mock",
-            display_name="Demo Mode",
+            display_name=_PROVIDER_DISPLAY_NAMES["mock"],
             status="error",
             error_message=str(exc),
         )

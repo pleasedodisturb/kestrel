@@ -37,6 +37,14 @@ from career_os.services.salary import parse_salary_range
 
 logger = logging.getLogger(__name__)
 
+_ROLE_PROGRAM_MANAGER = "program manager"
+_ROLE_PRODUCT_ENGINEER = "product engineer"
+_ROLE_PRODUCT_MANAGER = "product manager"
+_ROLE_TPM = "technical program manager"
+_ROLE_SOFTWARE_ENGINEER = "software engineer"
+_ROLE_DEVELOPER_ADVOCATE = "developer advocate"
+_ROLE_DEVELOPER_RELATIONS = "developer relations"
+
 
 def _sanitize_for_log(value: object, max_length: int = 200) -> str:
     """Sanitize user-controlled data before logging to prevent log injection."""
@@ -74,15 +82,15 @@ def _normalize_role_type(title: str) -> str:
 
     if "tpm" in title_lower or "technical program" in title_lower:
         return "TPM"
-    if "program lead" in title_lower or "program manager" in title_lower:
+    if "program lead" in title_lower or _ROLE_PROGRAM_MANAGER in title_lower:
         return "Program Lead"
-    if "product engineer" in title_lower:
+    if _ROLE_PRODUCT_ENGINEER in title_lower:
         return "Product Engineer"
     if "devrel" in title_lower or "developer relation" in title_lower:
         return "DevRel"
     if "engineer" in title_lower:
         return "Engineer"
-    if "product manager" in title_lower:
+    if _ROLE_PRODUCT_MANAGER in title_lower:
         return "Product Manager"
     if "lead" in title_lower:
         return "Lead"
@@ -185,17 +193,17 @@ def _normalize_role_for_matching(role: str) -> list[str]:
     "TPM" also matches "Technical Program Manager" and vice versa.
     """
     role_aliases: dict[str, list[str]] = {
-        "tpm": ["tpm", "technical program manager"],
-        "technical program manager": ["tpm", "technical program manager"],
-        "pm": ["pm", "program manager", "project manager"],
-        "program manager": ["pm", "program manager"],
-        "product manager": ["product manager"],
-        "swe": ["swe", "software engineer"],
-        "software engineer": ["swe", "software engineer"],
-        "devrel": ["devrel", "developer relations", "developer advocate"],
-        "developer relations": ["devrel", "developer relations", "developer advocate"],
-        "developer advocate": ["devrel", "developer relations", "developer advocate"],
-        "product engineer": ["product engineer"],
+        "tpm": ["tpm", _ROLE_TPM],
+        _ROLE_TPM: ["tpm", _ROLE_TPM],
+        "pm": ["pm", _ROLE_PROGRAM_MANAGER, "project manager"],
+        _ROLE_PROGRAM_MANAGER: ["pm", _ROLE_PROGRAM_MANAGER],
+        _ROLE_PRODUCT_MANAGER: [_ROLE_PRODUCT_MANAGER],
+        "swe": ["swe", _ROLE_SOFTWARE_ENGINEER],
+        _ROLE_SOFTWARE_ENGINEER: ["swe", _ROLE_SOFTWARE_ENGINEER],
+        "devrel": ["devrel", _ROLE_DEVELOPER_RELATIONS, _ROLE_DEVELOPER_ADVOCATE],
+        _ROLE_DEVELOPER_RELATIONS: ["devrel", _ROLE_DEVELOPER_RELATIONS, _ROLE_DEVELOPER_ADVOCATE],
+        _ROLE_DEVELOPER_ADVOCATE: ["devrel", _ROLE_DEVELOPER_RELATIONS, _ROLE_DEVELOPER_ADVOCATE],
+        _ROLE_PRODUCT_ENGINEER: [_ROLE_PRODUCT_ENGINEER],
     }
 
     role_lower = role.strip().lower()
@@ -261,14 +269,14 @@ def _salary_fallback_from_ai(
     # Role-based salary estimate heuristics (EUR)
     _role_salary_estimates: dict[str, tuple[float, float, float]] = {
         "tpm": (110_000.0, 135_000.0, 165_000.0),
-        "technical program manager": (110_000.0, 135_000.0, 165_000.0),
-        "program manager": (95_000.0, 115_000.0, 140_000.0),
-        "product engineer": (90_000.0, 115_000.0, 145_000.0),
-        "software engineer": (85_000.0, 110_000.0, 140_000.0),
+        _ROLE_TPM: (110_000.0, 135_000.0, 165_000.0),
+        _ROLE_PROGRAM_MANAGER: (95_000.0, 115_000.0, 140_000.0),
+        _ROLE_PRODUCT_ENGINEER: (90_000.0, 115_000.0, 145_000.0),
+        _ROLE_SOFTWARE_ENGINEER: (85_000.0, 110_000.0, 140_000.0),
         "senior engineer": (100_000.0, 125_000.0, 155_000.0),
         "devrel": (85_000.0, 105_000.0, 130_000.0),
-        "developer relations": (85_000.0, 105_000.0, 130_000.0),
-        "product manager": (95_000.0, 120_000.0, 150_000.0),
+        _ROLE_DEVELOPER_RELATIONS: (85_000.0, 105_000.0, 130_000.0),
+        _ROLE_PRODUCT_MANAGER: (95_000.0, 120_000.0, 150_000.0),
         "engineering manager": (110_000.0, 135_000.0, 170_000.0),
         "ai program lead": (115_000.0, 140_000.0, 175_000.0),
     }
