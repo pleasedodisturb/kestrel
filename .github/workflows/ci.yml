@@ -239,7 +239,7 @@ jobs:
           script: |
             const MARKER = '<!-- sonarcloud-issues -->';
             const PROJECT = 'pleasedodisturb_kestrel';
-            const ORG = 'pleasedodisturb';
+            const ORG = 'brokenpromisesinc';
             const PR = context.payload.pull_request.number;
             const TOKEN = process.env.SONAR_TOKEN;
             const DASHBOARD = `https://sonarcloud.io/project/issues?id=${PROJECT}&pullRequest=${PR}&resolved=false`;
