@@ -54,9 +54,7 @@ class TestAnthropicProviderInit:
         assert provider._model == "claude-sonnet-4-20250514"
 
     def test_custom_model(self) -> None:
-        provider = AnthropicProvider(
-            api_key=_TEST_API_KEY, model="claude-opus-4-20250514"
-        )
+        provider = AnthropicProvider(api_key=_TEST_API_KEY, model="claude-opus-4-20250514")
         assert provider._model == "claude-opus-4-20250514"
 
 
