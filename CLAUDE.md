@@ -125,7 +125,7 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 ## Workflow Rules
 
 ### Commits
-- **Every commit references a Linear ticket** — prefix title with ticket ID (e.g., `G-97: add onboarding flow`)
+- **Every commit uses conventional commit format** — `type(scope): description` where the scope includes the Linear ticket ID (e.g., `feat(G-97): add onboarding flow`, `fix(G-265): re-add gitignore entries`). Valid types: `feat`, `fix`, `chore`, `ci`, `deps`, `docs`, `build`, `perf`, `refactor`, `revert`, `style`, `test`.
 - **Commit messages must have a body** — title + blank line + explanation of what changed and why
 - **Commit after every logical unit of work** — don't batch unrelated changes
 - **Push after committing on non-main branches** — work happens across multiple machines/sessions
