@@ -194,6 +194,9 @@ export function ApplicationDetail() {
   const statusColors =
     STATUS_COLORS[normalizedStatus] ?? STATUS_COLORS.discovered;
 
+  const rawScore = isEditing ? editData.fit_score : data.fit_score;
+  const fitScoreValue = rawScore == null ? "" : String(rawScore);
+
   return (
     <section data-testid="application-detail" className="space-y-6">
       {/* Header */}
@@ -221,16 +224,7 @@ export function ApplicationDetail() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {!isEditing ? (
-            <button
-              data-testid="edit-button"
-              onClick={() => setIsEditing(true)}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-            >
-              <Pencil className="h-4 w-4" />
-              Edit
-            </button>
-          ) : (
+          {isEditing ? (
             <>
               <button
                 data-testid="cancel-edit-button"
@@ -266,6 +260,15 @@ export function ApplicationDetail() {
                 {updateMutation.isPending ? "Saving…" : "Save"}
               </button>
             </>
+          ) : (
+            <button
+              data-testid="edit-button"
+              onClick={() => setIsEditing(true)}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </button>
           )}
           <button
             data-testid="archive-button"
@@ -369,15 +372,7 @@ export function ApplicationDetail() {
                 <div className="flex-1">
                   <FieldRow
                     label="Fit Score"
-                    value={
-                      isEditing
-                        ? editData.fit_score != null
-                          ? String(editData.fit_score)
-                          : ""
-                        : data.fit_score != null
-                          ? String(data.fit_score)
-                          : ""
-                    }
+                    value={fitScoreValue}
                     isEditing={isEditing}
                     testId="field-score"
                     inputType="number"
@@ -620,7 +615,7 @@ export function ApplicationDetail() {
                   className="border-l-2 border-gray-200 pl-3"
                 >
                   <p className="text-sm font-medium text-gray-900 capitalize">
-                    {entry.action.replace(/_/g, " ")}
+                    {entry.action.replaceAll("_", " ")}
                   </p>
                   {entry.details && (
                     <p className="mt-0.5 text-xs text-gray-600">
@@ -666,32 +661,41 @@ function FieldRow({
   onChange?: (value: string) => void;
   renderDisplay?: (value: string) => React.ReactNode;
 }>) {
+  let fieldContent: React.ReactNode;
+  if (isEditing && onChange) {
+    fieldContent = (
+      <input
+        id={`${testId}-input`}
+        data-testid={`${testId}-input`}
+        type={inputType}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+        step={inputType === "number" ? "0.1" : undefined}
+        min={inputType === "number" ? "0" : undefined}
+        max={inputType === "number" ? "10" : undefined}
+      />
+    );
+  } else if (renderDisplay) {
+    fieldContent = (
+      <div data-testid={testId} className="mt-1 text-sm text-gray-900">
+        {renderDisplay(value)}
+      </div>
+    );
+  } else {
+    fieldContent = (
+      <p data-testid={testId} className="mt-1 text-sm text-gray-900">
+        {value || <span className="text-gray-400">—</span>}
+      </p>
+    );
+  }
+
   return (
     <div>
       <label htmlFor={`${testId}-input`} className="block text-sm font-medium text-gray-500">
         {label}
       </label>
-      {isEditing && onChange ? (
-        <input
-          id={`${testId}-input`}
-          data-testid={`${testId}-input`}
-          type={inputType}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
-          step={inputType === "number" ? "0.1" : undefined}
-          min={inputType === "number" ? "0" : undefined}
-          max={inputType === "number" ? "10" : undefined}
-        />
-      ) : renderDisplay ? (
-        <div data-testid={testId} className="mt-1 text-sm text-gray-900">
-          {renderDisplay(value)}
-        </div>
-      ) : (
-        <p data-testid={testId} className="mt-1 text-sm text-gray-900">
-          {value || <span className="text-gray-400">—</span>}
-        </p>
-      )}
+      {fieldContent}
     </div>
   );
 }

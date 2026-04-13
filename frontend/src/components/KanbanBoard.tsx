@@ -206,7 +206,7 @@ export function KanbanBoard() {
   const showDiscoveryNudge =
     !nudgeDismissed &&
     totalCount >= 10 &&
-    typeof window !== "undefined" &&
+    typeof globalThis.window !== "undefined" &&
     localStorage.getItem("lastDiscoveryVisit") === null;
 
   // Empty board CTA
@@ -253,7 +253,7 @@ export function KanbanBoard() {
             data-testid="kanban-total-count"
             className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700"
           >
-            {totalCount} application{totalCount !== 1 ? "s" : ""}
+            {totalCount} application{totalCount === 1 ? "" : "s"}
           </span>
           <button
             data-testid="add-application-button"

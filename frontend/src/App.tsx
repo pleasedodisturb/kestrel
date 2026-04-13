@@ -50,7 +50,7 @@ class ErrorBoundary extends Component<
             <button
               onClick={() => {
                 this.setState({ hasError: false, error: null });
-                window.location.href = "/";
+                globalThis.location.href = "/";
               }}
               className="mt-4 rounded-md bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800"
             >

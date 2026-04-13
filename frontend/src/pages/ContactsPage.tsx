@@ -42,12 +42,10 @@ function ContactCard({
   onSelect: (c: Contact) => void;
 }>) {
   return (
-    <div
-      className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+    <button
+      type="button"
+      className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md text-left w-full"
       onClick={() => onSelect(contact)}
-      onKeyDown={(e) => { if (e.key === 'Enter') onSelect(contact); }}
-      role="button"
-      tabIndex={0}
       data-testid={`contact-card-${contact.id}`}
     >
       <div className="flex items-start justify-between">
@@ -92,7 +90,7 @@ function ContactCard({
           Last contact: {new Date(contact.last_contacted_at).toLocaleDateString()}
         </p>
       )}
-    </div>
+    </button>
   );
 }
 
@@ -110,16 +108,21 @@ function ContactDetail({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
       data-testid="contact-detail-overlay"
     >
-      <div
-        className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
-        role="dialog"
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
+      <dialog
+        open
+        className="relative mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
@@ -181,7 +184,7 @@ function ContactDetail({
             Archive
           </button>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }
@@ -220,16 +223,21 @@ function AddContactDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
       data-testid="add-contact-dialog"
     >
-      <div
-        className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
-        role="dialog"
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
+      <dialog
+        open
+        className="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <h2 className="mb-4 text-lg font-bold">Add Contact</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -316,7 +324,7 @@ function AddContactDialog({
             </button>
           </div>
         </form>
-      </div>
+      </dialog>
     </div>
   );
 }
@@ -358,16 +366,21 @@ function LogInteractionDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      aria-hidden="true"
       data-testid="log-interaction-dialog"
     >
-      <div
-        className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
-        role="dialog"
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
+      <dialog
+        open
+        className="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       >
         <h2 className="mb-4 text-lg font-bold">Log Interaction</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -421,7 +434,7 @@ function LogInteractionDialog({
             </button>
           </div>
         </form>
-      </div>
+      </dialog>
     </div>
   );
 }

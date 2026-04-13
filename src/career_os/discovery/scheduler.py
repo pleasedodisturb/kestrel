@@ -97,7 +97,7 @@ async def _discovery_loop(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) -> N
             consecutive_errors = 0
         except asyncio.CancelledError:
             logger.info("Discovery scheduler cancelled")
-            break
+            raise
         except Exception as exc:
             should_stop, consecutive_errors = _handle_discovery_error(
                 exc, consecutive_errors, max_consecutive_errors

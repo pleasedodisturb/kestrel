@@ -97,7 +97,7 @@ function AddResourceDialog({
         title,
         url: url || undefined,
         resource_type: resourceType,
-        estimated_hours: estimatedHours ? parseFloat(estimatedHours) : undefined,
+        estimated_hours: estimatedHours ? Number.parseFloat(estimatedHours) : undefined,
         difficulty,
         provider: provider || undefined,
       }),
@@ -109,16 +109,21 @@ function AddResourceDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center"
     >
+      <button
+        type="button"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/50"
+        onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        aria-label="Close dialog"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <div
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -304,11 +309,11 @@ function ResourceCard({
           <div className="mt-2 flex flex-wrap gap-1.5">
             <span
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                TYPE_COLORS[resource.resource_type as ResourceType] ??
+                TYPE_COLORS[resource.resource_type] ??
                 "bg-gray-100 text-gray-700"
               }`}
             >
-              {TYPE_LABELS[resource.resource_type as ResourceType] ??
+              {TYPE_LABELS[resource.resource_type] ??
                 resource.resource_type}
             </span>
             <span
@@ -430,6 +435,127 @@ function GapSection({
   };
   const severityColor = severityColorMap[gap.severity] ?? "text-gray-600 bg-gray-50";
 
+  let gapContent: React.ReactNode;
+  if (isLoading) {
+    gapContent = (
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+      </div>
+    );
+  } else if ((data?.recommendations?.length ?? 0) > 0) {
+    gapContent = (
+      <div className="space-y-3">
+        {data.recommendations.map((resource) => (
+          <ResourceCard
+            key={resource.id}
+            resource={resource}
+            onStatusChange={(id, status) =>
+              statusMutation.mutate({ resourceId: id, status })
+            }
+          />
+        ))}
+        <button
+          onClick={() => setShowAddDialog(true)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600"
+        >
+          <PlusCircle className="h-4 w-4" />
+          Add resource
+        </button>
+      </div>
+    );
+  } else if (
+    data?.template_recommendations &&
+    data.template_recommendations.length > 0
+  ) {
+    gapContent = (
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-gray-500">
+          Suggested learning resources:
+        </p>
+        {data.template_recommendations.map(
+          (tmpl: TemplateRecommendation, idx: number) => (
+            <div
+              key={`${tmpl.title}-${idx}`}
+              className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="truncate font-medium text-gray-900">
+                      {tmpl.title}
+                    </h4>
+                    {tmpl.url && (
+                      <a
+                        href={tmpl.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 text-blue-500 hover:text-blue-700"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        TYPE_COLORS[
+                          tmpl.resource_type
+                        ] ?? "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {TYPE_LABELS[
+                        tmpl.resource_type
+                      ] ?? tmpl.resource_type}
+                    </span>
+                    {tmpl.difficulty && (
+                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                        {DIFFICULTY_LABELS[
+                          tmpl.difficulty as Difficulty
+                        ] ?? tmpl.difficulty}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                    {tmpl.estimated_hours !== null && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {tmpl.estimated_hours}h
+                      </span>
+                    )}
+                    {tmpl.provider && <span>{tmpl.provider}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ),
+        )}
+        <button
+          onClick={() => setShowAddDialog(true)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600"
+        >
+          <PlusCircle className="h-4 w-4" />
+          Add your own resource
+        </button>
+      </div>
+    );
+  } else {
+    gapContent = (
+      <div className="rounded-lg border-2 border-dashed border-gray-200 py-6 text-center">
+        <BookOpen className="mx-auto h-8 w-8 text-gray-300" />
+        <p className="mt-2 text-sm text-gray-500">
+          No recommendations available.
+        </p>
+        <button
+          onClick={() => setShowAddDialog(true)}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <PlusCircle className="h-4 w-4" />
+          Add your own
+        </button>
+      </div>
+    );
+  }
+
   const distanceBar = (
     <div className="flex items-center gap-1">
       {[1, 2, 3].map((level) => (
@@ -479,115 +605,7 @@ function GapSection({
 
       {expanded && (
         <div className="border-t border-gray-100 p-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-            </div>
-          ) : (data?.recommendations?.length ?? 0) > 0 ? (
-            <div className="space-y-3">
-              {data.recommendations.map((resource) => (
-                <ResourceCard
-                  key={resource.id}
-                  resource={resource}
-                  onStatusChange={(id, status) =>
-                    statusMutation.mutate({ resourceId: id, status })
-                  }
-                />
-              ))}
-              <button
-                onClick={() => setShowAddDialog(true)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600"
-              >
-                <PlusCircle className="h-4 w-4" />
-                Add resource
-              </button>
-            </div>
-          ) : data?.template_recommendations &&
-            data.template_recommendations.length > 0 ? (
-            <div className="space-y-3">
-              <p className="text-xs font-medium text-gray-500">
-                Suggested learning resources:
-              </p>
-              {data.template_recommendations.map(
-                (tmpl: TemplateRecommendation, idx: number) => (
-                  <div
-                    key={idx}
-                    className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="truncate font-medium text-gray-900">
-                            {tmpl.title}
-                          </h4>
-                          {tmpl.url && (
-                            <a
-                              href={tmpl.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="shrink-0 text-blue-500 hover:text-blue-700"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
-                          )}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                              TYPE_COLORS[
-                                tmpl.resource_type as ResourceType
-                              ] ?? "bg-gray-100 text-gray-700"
-                            }`}
-                          >
-                            {TYPE_LABELS[
-                              tmpl.resource_type as ResourceType
-                            ] ?? tmpl.resource_type}
-                          </span>
-                          {tmpl.difficulty && (
-                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                              {DIFFICULTY_LABELS[
-                                tmpl.difficulty as Difficulty
-                              ] ?? tmpl.difficulty}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                          {tmpl.estimated_hours !== null && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {tmpl.estimated_hours}h
-                            </span>
-                          )}
-                          {tmpl.provider && <span>{tmpl.provider}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ),
-              )}
-              <button
-                onClick={() => setShowAddDialog(true)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600"
-              >
-                <PlusCircle className="h-4 w-4" />
-                Add your own resource
-              </button>
-            </div>
-          ) : (
-            <div className="rounded-lg border-2 border-dashed border-gray-200 py-6 text-center">
-              <BookOpen className="mx-auto h-8 w-8 text-gray-300" />
-              <p className="mt-2 text-sm text-gray-500">
-                No recommendations available.
-              </p>
-              <button
-                onClick={() => setShowAddDialog(true)}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                <PlusCircle className="h-4 w-4" />
-                Add your own
-              </button>
-            </div>
-          )}
+          {gapContent}
         </div>
       )}
 
@@ -685,7 +703,7 @@ export function Learning() {
           id="learning-application-select"
           value={applicationId ?? ""}
           onChange={(e) =>
-            setApplicationId(e.target.value ? parseInt(e.target.value) : null)
+            setApplicationId(e.target.value ? Number.parseInt(e.target.value) : null)
           }
           className="mt-2 w-full max-w-md rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
@@ -768,7 +786,7 @@ export function Learning() {
       )}
 
       {/* No requirements parsed yet */}
-      {applicationId && gapData && gapData.total_requirements === 0 && (
+      {applicationId && gapData?.total_requirements === 0 && (
         <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white py-8 text-center">
           <BookOpen className="mx-auto h-10 w-10 text-gray-400" />
           <h2 className="mt-3 text-lg font-semibold text-gray-900">
@@ -783,7 +801,7 @@ export function Learning() {
       )}
 
       {/* All requirements met */}
-      {applicationId && gapData && gapData.total_requirements > 0 && gapsWithIds.length === 0 && (
+      {applicationId && gapData?.total_requirements > 0 && gapsWithIds.length === 0 && (
         <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white py-8 text-center">
           <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" />
           <h2 className="mt-3 text-lg font-semibold text-gray-900">

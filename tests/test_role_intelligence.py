@@ -1094,7 +1094,6 @@ class TestLogInjectionWiring:
 
         mock_logger.warning.assert_called_once()
         args = mock_logger.warning.call_args.args
-        # args = (fmt, sanitized_company, sanitized_exc)
         assert "\n" not in args[1] and "\r" not in args[1]
         assert args[1] == "Evil\\nFAKE LOG ENTRY\\rtail"
         assert "\n" not in args[2] and "\r" not in args[2]

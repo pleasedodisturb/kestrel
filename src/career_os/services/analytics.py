@@ -292,7 +292,7 @@ def _compute_funnel_stats(
     """
     total = len(all_apps)
 
-    status_counts: dict[str, int] = {s: 0 for s in ALL_STATUSES}
+    status_counts: dict[str, int] = dict.fromkeys(ALL_STATUSES, 0)
     for app_obj in all_apps:
         status_key = app_obj.status.lower()
         if status_key in status_counts:

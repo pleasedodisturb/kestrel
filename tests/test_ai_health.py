@@ -150,10 +150,10 @@ class TestCreditsAndRateLimits:
         data = resp.json()
         # Just validate structure exists (mock will have null)
         for p in data["providers"]:
-            credits = p["credits"]
-            if credits is not None:
-                assert "remaining" in credits
-                assert "unit" in credits
+            provider_credits = p["credits"]
+            if provider_credits is not None:
+                assert "remaining" in provider_credits
+                assert "unit" in provider_credits
 
     def test_rate_limit_structure_when_available(self, client: TestClient) -> None:
         """Rate limit field has expected structure when provided."""

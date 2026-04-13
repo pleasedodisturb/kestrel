@@ -230,95 +230,91 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # Custom PR comment disabled — testing SonarCloud's native PR decoration
-      # (via GitHub App) first. Re-enable this step if native decoration is
-      # insufficient. See PR #153 for the original implementation.
-      #
-      # - name: Post SonarCloud issues to PR
-      #   if: github.event_name == 'pull_request'
-      #   uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-      #   continue-on-error: true
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #   with:
-      #     script: |
-      #       const MARKER = '<!-- sonarcloud-issues -->';
-      #       const PROJECT = 'pleasedodisturb_kestrel';
-      #       const ORG = 'pleasedodisturb';
-      #       const PR = context.payload.pull_request.number;
-      #       const TOKEN = process.env.SONAR_TOKEN;
-      #       const DASHBOARD = `https://sonarcloud.io/project/issues?id=${PROJECT}&pullRequest=${PR}&resolved=false`;
-      #       const PAGE_SIZE = 100;
-      #
-      #       const url = new URL('https://sonarcloud.io/api/issues/search');
-      #       url.searchParams.set('componentKeys', PROJECT);
-      #       url.searchParams.set('pullRequest', String(PR));
-      #       url.searchParams.set('resolved', 'false');
-      #       url.searchParams.set('ps', String(PAGE_SIZE));
-      #
-      #       const res = await fetch(url.toString(), {
-      #         headers: { Authorization: `Bearer ${TOKEN}` },
-      #       });
-      #
-      #       if (!res.ok) {
-      #         core.warning(`SonarCloud API returned ${res.status}: ${res.statusText}`);
-      #         return;
-      #       }
-      #
-      #       const data = await res.json();
-      #       const issues = data.issues || [];
-      #       const total = data.total || 0;
-      #
-      #       const icon = {
-      #         BLOCKER: '\u{1F6D1}', CRITICAL: '\u{1F534}', MAJOR: '\u{1F7E0}',
-      #         MINOR: '\u{1F7E1}', INFO: '\u{1F535}',
-      #       };
-      #
-      #       let body = `${MARKER}\n## SonarCloud Issues\n\n`;
-      #
-      #       if (issues.length === 0) {
-      #         body += 'No unresolved issues on new code.\n\n';
-      #       } else {
-      #         body += `Found **${total}** issue(s) on new code\n\n`;
-      #         body += '| Severity | Type | File | Line | Message | Rule |\n';
-      #         body += '|----------|------|------|------|---------|------|\n';
-      #
-      #         for (const i of issues) {
-      #           const sev = i.severity || 'UNKNOWN';
-      #           const type = (i.type || '').replace(/_/g, ' ');
-      #           const file = (i.component || '').replace(`${PROJECT}:`, '');
-      #           const line = i.line || '-';
-      #           const msg = (i.message || '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
-      #           const rule = i.rule
-      #             ? `[\`${i.rule}\`](https://sonarcloud.io/organizations/${ORG}/rules?rule_key=${encodeURIComponent(i.rule)})`
-      #             : '';
-      #           body += `| ${icon[sev] || '\u{26AA}'} ${sev} | ${type} | \`${file}\` | ${line} | ${msg} | ${rule} |\n`;
-      #         }
-      #
-      #         if (total > PAGE_SIZE) {
-      #           body += `\n> Showing first ${PAGE_SIZE} of ${total} issues.\n`;
-      #         }
-      #       }
-      #
-      #       body += `\n[View on SonarCloud](${DASHBOARD})\n`;
-      #
-      #       const { data: comments } = await github.rest.issues.listComments({
-      #         owner: context.repo.owner, repo: context.repo.repo,
-      #         issue_number: PR, per_page: 100,
-      #       });
-      #
-      #       const existing = comments.find(c => c.body && c.body.includes(MARKER));
-      #
-      #       if (existing) {
-      #         await github.rest.issues.updateComment({
-      #           owner: context.repo.owner, repo: context.repo.repo,
-      #           comment_id: existing.id, body,
-      #         });
-      #         core.info(`Updated comment ${existing.id}`);
-      #       } else {
-      #         await github.rest.issues.createComment({
-      #           owner: context.repo.owner, repo: context.repo.repo,
-      #           issue_number: PR, body,
-      #         });
-      #         core.info('Created SonarCloud issues comment');
-      #       }
+      - name: Post SonarCloud issues to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          script: |
+            const MARKER = '<!-- sonarcloud-issues -->';
+            const PROJECT = 'pleasedodisturb_kestrel';
+            const ORG = 'brokenpromisesinc';
+            const PR = context.payload.pull_request.number;
+            const TOKEN = process.env.SONAR_TOKEN;
+            const DASHBOARD = `https://sonarcloud.io/project/issues?id=${PROJECT}&pullRequest=${PR}&resolved=false`;
+            const PAGE_SIZE = 100;
+
+            const url = new URL('https://sonarcloud.io/api/issues/search');
+            url.searchParams.set('componentKeys', PROJECT);
+            url.searchParams.set('pullRequest', String(PR));
+            url.searchParams.set('resolved', 'false');
+            url.searchParams.set('ps', String(PAGE_SIZE));
+
+            const res = await fetch(url.toString(), {
+              headers: { Authorization: `Bearer ${TOKEN}` },
+            });
+
+            if (!res.ok) {
+              core.warning(`SonarCloud API returned ${res.status}: ${res.statusText}`);
+              return;
+            }
+
+            const data = await res.json();
+            const issues = data.issues || [];
+            const total = data.total || 0;
+
+            const icon = {
+              BLOCKER: '\u{1F6D1}', CRITICAL: '\u{1F534}', MAJOR: '\u{1F7E0}',
+              MINOR: '\u{1F7E1}', INFO: '\u{1F535}',
+            };
+
+            let body = `${MARKER}\n## SonarCloud Issues\n\n`;
+
+            if (issues.length === 0) {
+              body += 'No unresolved issues on new code.\n\n';
+            } else {
+              body += `Found **${total}** issue(s) on new code\n\n`;
+              body += '| Severity | Type | File | Line | Message | Rule |\n';
+              body += '|----------|------|------|------|---------|------|\n';
+
+              for (const i of issues) {
+                const sev = i.severity || 'UNKNOWN';
+                const type = (i.type || '').replace(/_/g, ' ');
+                const file = (i.component || '').replace(`${PROJECT}:`, '');
+                const line = i.line || '-';
+                const msg = (i.message || '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+                const rule = i.rule
+                  ? `[\`${i.rule}\`](https://sonarcloud.io/organizations/${ORG}/rules?rule_key=${encodeURIComponent(i.rule)})`
+                  : '';
+                body += `| ${icon[sev] || '\u{26AA}'} ${sev} | ${type} | \`${file}\` | ${line} | ${msg} | ${rule} |\n`;
+              }
+
+              if (total > PAGE_SIZE) {
+                body += `\n> Showing first ${PAGE_SIZE} of ${total} issues.\n`;
+              }
+            }
+
+            body += `\n[View on SonarCloud](${DASHBOARD})\n`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: PR, per_page: 100,
+            });
+
+            const existing = comments.find(c => c.body && c.body.includes(MARKER));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+              core.info(`Updated comment ${existing.id}`);
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: PR, body,
+              });
+              core.info('Created SonarCloud issues comment');
+            }

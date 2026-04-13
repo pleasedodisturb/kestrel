@@ -42,7 +42,7 @@ export function useCreateContact() {
   return useMutation({
     mutationFn: (data: ContactCreate) => createContact(data),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
+      queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
     },
   });
 }
@@ -53,8 +53,8 @@ export function useUpdateContact() {
     mutationFn: ({ id, data }: { id: number; data: ContactUpdate }) =>
       updateContact(id, data),
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
-      void queryClient.invalidateQueries({
+      queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
+      queryClient.invalidateQueries({
         queryKey: ["contact", variables.id],
       });
     },
@@ -66,7 +66,7 @@ export function useArchiveContact() {
   return useMutation({
     mutationFn: (id: number) => archiveContact(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
+      queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
     },
   });
 }
@@ -87,8 +87,8 @@ export function useLogInteraction() {
       };
     }) => logInteraction(contactId, data),
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
-      void queryClient.invalidateQueries({
+      queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
+      queryClient.invalidateQueries({
         queryKey: ["contact", variables.contactId],
       });
     },
@@ -106,8 +106,8 @@ export function useLinkContactToApplication() {
       data: { application_id: number; role: string; notes?: string };
     }) => linkContactToApplication(contactId, data),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
-      void queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: CONTACTS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
   });
 }

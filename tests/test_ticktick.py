@@ -985,7 +985,7 @@ class TestTickTickClient:
             call_args = mock_req.call_args
             assert call_args.kwargs["json"]["title"] == "Test Task"
             assert call_args.kwargs["json"]["projectId"] == "proj-123"
-            assert call_args.kwargs["json"]["priority"] == 5  # high = 5
+            assert call_args.kwargs["json"]["priority"] == 5
 
     def test_create_task_with_due_date(self):
         """Client formats due date correctly."""
