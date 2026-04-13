@@ -34,6 +34,8 @@ from career_os.services.pushover_client import (
 
 logger = logging.getLogger(__name__)
 
+_URL_TITLE_VIEW_APPLICATION = "View Application"
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -426,7 +428,7 @@ def trigger_follow_up_reminders(db: Session, profile_id: int) -> dict:
             message=message,
             application_id=fu.application_id,
             url=f"http://localhost:8101/applications/{fu.application_id}",
-            url_title="View Application",
+            url_title=_URL_TITLE_VIEW_APPLICATION,
         )
 
         if send_result["status"] in ("sent", "queued"):
@@ -527,7 +529,7 @@ def _send_ghost_notification(
         message=message,
         application_id=app_obj.id,
         url=url,
-        url_title="View Application",
+        url_title=_URL_TITLE_VIEW_APPLICATION,
         priority=PRIORITY_HIGH,
     )
 
@@ -786,7 +788,7 @@ def _process_interview_event(
         if event.application_id
         else None
     )
-    url_title = "Join Interview" if event.meeting_link else "View Application"
+    url_title = "Join Interview" if event.meeting_link else _URL_TITLE_VIEW_APPLICATION
 
     return _send_or_queue_notification(
         db,

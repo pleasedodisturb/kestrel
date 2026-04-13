@@ -13,6 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from career_os.database import Base
+from career_os.models.models import CASCADE_ALL_DELETE_ORPHAN, FK_PROFILES_ID
 
 
 def _utcnow() -> datetime:
@@ -27,7 +28,7 @@ class Skill(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[str] = mapped_column(
@@ -49,7 +50,7 @@ class Skill(Base):
 
     # Relationships
     history: Mapped[list["SkillHistory"]] = relationship(
-        back_populates="skill", cascade="all, delete-orphan"
+        back_populates="skill", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
 
     def __repr__(self) -> str:
@@ -66,7 +67,7 @@ class SkillHistory(Base):
         Integer, ForeignKey("skills.id"), nullable=False, index=True
     )
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     previous_proficiency: Mapped[str | None] = mapped_column(String(50), nullable=True)
     new_proficiency: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -92,7 +93,7 @@ class LearningResource(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     skill_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("skills.id"), nullable=True, index=True
@@ -131,7 +132,7 @@ class Goal(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     goal_type: Mapped[str] = mapped_column(String(50), nullable=False)  # realistic, aspirational
@@ -161,7 +162,7 @@ class JobRequirement(Base):
         Integer, ForeignKey("applications.id"), nullable=False, index=True
     )
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     skill_name: Mapped[str] = mapped_column(String(255), nullable=False)
     required_level: Mapped[str] = mapped_column(
@@ -187,7 +188,7 @@ class CoachingSuggestion(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     action: Mapped[str] = mapped_column(Text, nullable=False)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

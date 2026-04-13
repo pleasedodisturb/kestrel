@@ -15,14 +15,16 @@ logger = logging.getLogger(__name__)
 
 # Mapping from package directory names to (company_substring, role_substring) patterns
 # These map the 14 known package directories to their CSV counterparts
+_MISTRAL_AI = "Mistral AI"
+
 PACKAGE_MAPPINGS: dict[str, tuple[str, str]] = {
     "ashby-sr-swe-product-eng": ("Ashby", "Senior Software Engineer"),
     "attio-product-engineer": ("Attio", "Product Engineer"),
     "deepl-sr-technical-pm-ai": ("DeepL", "Senior Technical Product Manager"),
     "jetbrains-pm-bonsai": ("JetBrains", "Product Manager for Bonsai"),
-    "mistral-ai-deployment-strategist": ("Mistral AI", "AI Deployment Strategist"),
-    "mistral-tpm-engineering": ("Mistral AI", "Technical Program Manager - Engineering"),
-    "mistral-tpm-science-ops": ("Mistral AI", "Technical Program Manager - Science"),
+    "mistral-ai-deployment-strategist": (_MISTRAL_AI, "AI Deployment Strategist"),
+    "mistral-tpm-engineering": (_MISTRAL_AI, "Technical Program Manager - Engineering"),
+    "mistral-tpm-science-ops": (_MISTRAL_AI, "Technical Program Manager - Science"),
     "mongodb-technical-project-manager": ("MongoDB", "Technical Project Manager"),
     "n8n-sr-developer-advocate": ("n8n", "Senior Developer Advocate"),
     "oxide-computer": ("Oxide Computer", ""),

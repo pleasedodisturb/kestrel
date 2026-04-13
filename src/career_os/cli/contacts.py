@@ -41,6 +41,7 @@ contacts_app = typer.Typer(
 )
 
 DEFAULT_PROFILE_ID = 1
+_HELP_CONTACT_ID = "Contact ID"
 
 
 @contacts_app.command("add")
@@ -181,7 +182,7 @@ def _build_contact_info(contact) -> str:  # noqa: ANN001
 
 @contacts_app.command("show")
 def show(
-    contact_id: int = typer.Argument(..., help="Contact ID"),
+    contact_id: int = typer.Argument(..., help=_HELP_CONTACT_ID),
     profile_id: int = typer.Option(DEFAULT_PROFILE_ID, "--profile-id", hidden=True),
 ) -> None:
     """Show contact details."""
@@ -199,7 +200,7 @@ def show(
 
 @contacts_app.command("update")
 def update_cmd(
-    contact_id: int = typer.Argument(..., help="Contact ID"),
+    contact_id: int = typer.Argument(..., help=_HELP_CONTACT_ID),
     name: str | None = typer.Option(None, "--name"),
     company: str | None = typer.Option(None, "--company"),
     role: str | None = typer.Option(None, "--role"),
@@ -244,7 +245,7 @@ def update_cmd(
 
 @contacts_app.command("archive")
 def archive_cmd(
-    contact_id: int = typer.Argument(..., help="Contact ID"),
+    contact_id: int = typer.Argument(..., help=_HELP_CONTACT_ID),
     profile_id: int = typer.Option(DEFAULT_PROFILE_ID, "--profile-id", hidden=True),
 ) -> None:
     """Archive (soft-delete) a contact."""
@@ -261,7 +262,7 @@ def archive_cmd(
 
 @contacts_app.command("log")
 def log_cmd(
-    contact_id: int = typer.Argument(..., help="Contact ID"),
+    contact_id: int = typer.Argument(..., help=_HELP_CONTACT_ID),
     type_: str = typer.Option(
         ...,
         "--type",
@@ -298,7 +299,7 @@ def log_cmd(
 
 @contacts_app.command("history")
 def history_cmd(
-    contact_id: int = typer.Argument(..., help="Contact ID"),
+    contact_id: int = typer.Argument(..., help=_HELP_CONTACT_ID),
     profile_id: int = typer.Option(DEFAULT_PROFILE_ID, "--profile-id", hidden=True),
 ) -> None:
     """Show interaction history for a contact."""
@@ -335,7 +336,7 @@ def history_cmd(
 
 @contacts_app.command("link")
 def link_cmd(
-    contact_id: int = typer.Argument(..., help="Contact ID"),
+    contact_id: int = typer.Argument(..., help=_HELP_CONTACT_ID),
     application_id: int = typer.Argument(..., help="Application ID"),
     role: str = typer.Option(
         "referrer",
@@ -368,7 +369,7 @@ def link_cmd(
 
 @contacts_app.command("unlink")
 def unlink_cmd(
-    contact_id: int = typer.Argument(..., help="Contact ID"),
+    contact_id: int = typer.Argument(..., help=_HELP_CONTACT_ID),
     application_id: int = typer.Argument(..., help="Application ID"),
 ) -> None:
     """Unlink a contact from an application."""

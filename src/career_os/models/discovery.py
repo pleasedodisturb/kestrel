@@ -15,6 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from career_os.database import Base
+from career_os.models.models import FK_PROFILES_ID
 
 
 def _utcnow() -> datetime:
@@ -43,7 +44,7 @@ class DiscoveredJob(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
 
     # Raw fields from scraping
@@ -92,7 +93,7 @@ class SearchProfile(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     keywords: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
@@ -125,7 +126,7 @@ class DiscoveryRun(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     search_profile_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("search_profiles.id", ondelete="SET NULL"), nullable=True
@@ -161,7 +162,7 @@ class SavedSearch(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     # All filter state stored as JSON for flexibility
