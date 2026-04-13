@@ -3,10 +3,19 @@
 Detects and replaces personally identifiable information (emails, phone numbers,
 LinkedIn/GitHub URLs) before text is sent to external AI providers, and restores
 originals in the response content.
+
+**Best-effort heuristic** — regex-based detection has known limitations:
+- Unicode homoglyph attacks may bypass email detection.
+- International phone formats may not be caught.
+- Only LinkedIn/GitHub URLs are masked; other identifying URLs pass through.
+- Names, addresses, and national IDs are not detected.
+
+For higher-fidelity PII detection, consider a dedicated NER library (e.g. Presidio).
 """
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 
@@ -157,9 +166,19 @@ class MaskedProvider(AIProvider):
         profile_data: dict,
         **kwargs: object,
     ) -> AIResponse:
-        masked_jd, mapping = self._masker.mask(job_description)
-        response = await self._inner.score(masked_jd, profile_data, **kwargs)
-        return self._unmask_response(response, mapping)
+        masked_jd, jd_mapping = self._masker.mask(job_description)
+        # Mask string values inside profile_data
+        profile_str = json.dumps(profile_data)
+        masked_profile_str, profile_mapping = self._masker.mask(profile_str)
+        masked_profile = json.loads(masked_profile_str)
+
+        # Merge both mappings for unmasking the response
+        combined = MaskMapping()
+        combined.placeholder_to_original.update(jd_mapping.placeholder_to_original)
+        combined.placeholder_to_original.update(profile_mapping.placeholder_to_original)
+
+        response = await self._inner.score(masked_jd, masked_profile, **kwargs)
+        return self._unmask_response(response, combined)
 
     # -- helpers -------------------------------------------------------------
 

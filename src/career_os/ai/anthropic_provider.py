@@ -12,12 +12,8 @@ import logging
 
 import httpx
 
-from career_os.ai.base import AIProvider
-from career_os.ai.openrouter_provider import (
-    CreditsExhaustedError,
-    _system_prompt_for_feature,
-    _try_parse_structured,
-)
+from career_os.ai.base import AIProvider, ProviderQuotaError
+from career_os.ai.openrouter_provider import _system_prompt_for_feature, _try_parse_structured
 from career_os.schemas.ai import AIFeature, AIResponse
 
 logger = logging.getLogger(__name__)
@@ -77,28 +73,33 @@ class AnthropicProvider(AIProvider):
         if system_blocks:
             payload["system"] = system_blocks
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                ANTHROPIC_API_URL,
-                headers={
-                    "x-api-key": self._api_key,
-                    "anthropic-version": ANTHROPIC_VERSION,
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-            if response.status_code == 402:
-                detail = _extract_error_detail(response)
-                raise CreditsExhaustedError(status_code=402, detail=detail)
-            if response.status_code == 429:
-                retry_after = response.headers.get("retry-after")
-                detail = _extract_error_detail(response)
-                if retry_after:
-                    retry_msg = f"retry-after: {retry_after}s"
-                    detail = f"{detail} ({retry_msg})" if detail else retry_msg
-                raise CreditsExhaustedError(status_code=429, detail=detail)
-            response.raise_for_status()
-            data = response.json()
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    ANTHROPIC_API_URL,
+                    headers={
+                        "x-api-key": self._api_key,
+                        "anthropic-version": ANTHROPIC_VERSION,
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                if response.status_code in (402, 429):
+                    detail = _extract_error_detail(response)
+                    if response.status_code == 429:
+                        retry_after = response.headers.get("retry-after")
+                        if retry_after:
+                            retry_msg = f"retry-after: {retry_after}s"
+                            detail = f"{detail} ({retry_msg})" if detail else retry_msg
+                    raise ProviderQuotaError("anthropic", response.status_code, detail)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.ConnectError as exc:
+            raise httpx.ConnectError(
+                f"Cannot connect to Anthropic API at {ANTHROPIC_API_URL}: {exc}"
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise httpx.TimeoutException(f"Anthropic API request timed out: {exc}") from exc
 
         # Anthropic Messages API returns content as array of blocks
         content_blocks = data.get("content", [])
