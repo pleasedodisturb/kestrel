@@ -12,12 +12,15 @@ Kestrel uses AI for job scoring, skills analysis, interview prep, company resear
 
 ---
 
+> **New to AI providers?** Start with [How Kestrel Uses AI](ai-providers-explained.md) — it explains everything in plain English with zero jargon. This page is the technical reference.
+
 ## TL;DR
 
 - **Free, works now:** Demo Mode (built in, no signup needed)
-- **Best value:** OpenRouter with Claude Sonnet or GPT-4o ($1-3/month for typical job search use)
-- **Free with caveats:** OpenRouter free models (some Chinese models have data collection concerns)
-- **Maximum privacy:** Run a local model with Ollama (coming soon)
+- **Easiest setup:** OpenRouter — click "Connect" in Settings, done ($3-10/month)
+- **Best privacy + cost:** Direct Anthropic API with prompt caching ($4-10/month, 7-day retention)
+- **Maximum privacy:** Ollama — runs on your computer, nothing leaves your machine (free)
+- **EU-sovereign:** Mistral — French-hosted, GDPR-native (coming soon)
 
 ---
 
@@ -152,11 +155,19 @@ Cost is similar to OpenRouter. Slightly cheaper (no middleware markup) but you o
 
 ---
 
-## Option 5: Local models with Ollama (coming soon)
+## Option 5: Local models with Ollama
 
 Run AI entirely on your machine. Zero cost, total privacy. Requires a Mac with 16GB+ RAM or a decent GPU.
 
-This feature is on the roadmap. When available, you'll install [Ollama](https://ollama.com), download a model, and point Kestrel at it.
+1. Install [Ollama](https://ollama.com) and download a model: `ollama pull llama3.3`
+2. Set in your `.env`:
+   ```
+   AI_PROVIDER=ollama
+   OLLAMA_MODEL=llama3.3
+   ```
+3. Restart Kestrel.
+
+**Quality expectations:** Local 8B models handle basic scoring well. For deeper analysis (company research, coaching), 14B+ models are recommended. Cloud models (Claude, GPT) remain stronger for complex structured output.
 
 ---
 
@@ -175,7 +186,7 @@ It does NOT send: your full name, email, phone number, application history, or p
 
 | Provider | Data retention | Trains on your data? | Where data is processed |
 |----------|---------------|---------------------|------------------------|
-| Anthropic (Claude) | 30 days for safety, then deleted | No | US |
+| Anthropic (Claude) | 7 days for safety, then deleted | No | US |
 | OpenAI (GPT) | 30 days for safety, then deleted | No (API usage) | US |
 | Google (Gemini) | Varies by plan | No (API usage) | US/EU |
 | Mistral | EU-hosted, GDPR compliant | No | EU (France) |
@@ -223,6 +234,6 @@ If you want Chinese model quality at zero risk, wait for local model support (Ol
 | Ready for real scoring, want best quality | OpenRouter + Claude Sonnet |
 | On a tight budget | OpenRouter + Gemini Flash |
 | Maximum privacy, EU data residency | OpenRouter + Mistral Large |
-| Zero data exposure | Demo Mode or local Ollama (coming soon) |
+| Zero data exposure | Demo Mode or local Ollama |
 | Already have OpenAI API access | Direct OpenAI |
 | Already have Anthropic API access | Direct Anthropic |
