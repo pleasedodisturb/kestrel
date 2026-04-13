@@ -110,7 +110,7 @@ class TestPromptCaching:
         provider = AnthropicProvider(api_key=_TEST_API_KEY)
         captured_payload = {}
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
             mock_resp = httpx.Response(
                 200,
@@ -139,7 +139,7 @@ class TestPromptCaching:
         provider = AnthropicProvider(api_key=_TEST_API_KEY)
         captured_payload = {}
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
             mock_resp = httpx.Response(
                 200,
@@ -173,7 +173,7 @@ class TestAnthropicRequestFormat:
         provider = AnthropicProvider(api_key=_TEST_API_KEY_2)
         captured_headers = {}
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             captured_headers.update(headers or {})
             return httpx.Response(
                 200,
@@ -197,7 +197,7 @@ class TestAnthropicRequestFormat:
         provider = AnthropicProvider(api_key=_TEST_API_KEY)
         captured_payload = {}
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
             return httpx.Response(
                 200,
@@ -221,7 +221,7 @@ class TestAnthropicRequestFormat:
         """Response correctly parses Anthropic content blocks format."""
         provider = AnthropicProvider(api_key=_TEST_API_KEY)
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 200,
                 json={
@@ -257,7 +257,7 @@ class TestAnthropicErrorHandling:
         """HTTP 402 raises ProviderQuotaError."""
         provider = AnthropicProvider(api_key=_TEST_API_KEY)
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 402,
                 json={
@@ -277,7 +277,7 @@ class TestAnthropicErrorHandling:
         """HTTP 429 raises ProviderQuotaError with rate limit info."""
         provider = AnthropicProvider(api_key=_TEST_API_KEY)
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 429,
                 json={"error": {"type": "rate_limit_error", "message": "Rate limited"}},
@@ -296,7 +296,7 @@ class TestAnthropicErrorHandling:
         """HTTP 500 raises httpx.HTTPStatusError (not ProviderQuotaError)."""
         provider = AnthropicProvider(api_key=_TEST_API_KEY)
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
                 500,
                 json={"error": {"type": "api_error", "message": "Internal error"}},
@@ -340,7 +340,7 @@ class TestAnthropicScore:
             }
         )
 
-        def mock_post(url, headers=None, json=None, **kwargs):
+        async def mock_post(url, headers=None, json=None, **kwargs):
             captured_payload.update(json)
             return httpx.Response(
                 200,
