@@ -86,5 +86,12 @@ jobspy-mcp-server/
 .browser-profile/
 .claude/worktrees/
 
+# Coverage reports (generated in CI)
+coverage.xml
+.coverage
+htmlcov/
+frontend/coverage/
+lcov.info
+
 # Internal business docs
 docs/pricing-strategy.md
