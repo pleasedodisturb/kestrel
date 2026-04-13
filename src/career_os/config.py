@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     # Data directory
     data_dir: Path = Path("data")
 
+    # Cache settings
+    cache_enabled: bool = True
+    cache_encryption_key: str = ""  # User-provided Fernet key; auto-generated if empty
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).

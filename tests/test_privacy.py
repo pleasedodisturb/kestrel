@@ -1,9 +1,16 @@
 """Tests for the privacy metadata framework."""
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
-from career_os.ai.privacy import PROVIDER_PRIVACY_REGISTRY, get_privacy_info
+from career_os.ai.privacy import (
+    PROVIDER_PRIVACY_REGISTRY,
+    _load_registry,
+    get_privacy_info,
+    reload_registry,
+)
 from career_os.main import app
 from career_os.schemas.privacy import (
     DataRetention,
@@ -173,3 +180,70 @@ class TestPrivacyAPI:
             assert "retention" in item
             assert "gdpr_compliant" in item
             assert "warnings" in item
+            assert "last_verified" in item
+
+    def test_last_verified_exposed_in_api(self, client: TestClient) -> None:
+        resp = client.get("/api/ai/privacy/anthropic")
+        assert resp.status_code == 200
+        assert resp.json()["last_verified"] != ""
+
+
+# ---------------------------------------------------------------------------
+# Dynamic registry loading
+# ---------------------------------------------------------------------------
+
+
+class TestDynamicRegistry:
+    """Tests for JSON-based registry loading and reload."""
+
+    def test_all_entries_have_last_verified(self) -> None:
+        for name, info in PROVIDER_PRIVACY_REGISTRY.items():
+            assert info.last_verified, f"{name} missing last_verified"
+
+    def test_load_from_json_file(self, tmp_path) -> None:
+        registry_file = tmp_path / "registry.json"
+        registry_file.write_text(
+            json.dumps(
+                {
+                    "test_provider": {
+                        "provider": "test_provider",
+                        "tier": "green",
+                        "retention": {"days": 0, "description": "none"},
+                        "last_verified": "2026-01-01",
+                    }
+                }
+            )
+        )
+        loaded = _load_registry(registry_file)
+        assert "test_provider" in loaded
+        assert loaded["test_provider"].last_verified == "2026-01-01"
+
+    def test_fallback_on_missing_file(self, tmp_path) -> None:
+        loaded = _load_registry(tmp_path / "nonexistent.json")
+        assert "mock" in loaded
+        assert "anthropic" in loaded
+
+    def test_fallback_on_invalid_json(self, tmp_path) -> None:
+        bad_file = tmp_path / "bad.json"
+        bad_file.write_text("NOT VALID JSON {{{")
+        loaded = _load_registry(bad_file)
+        assert "mock" in loaded
+
+    def test_reload_registry(self, tmp_path) -> None:
+        registry_file = tmp_path / "registry.json"
+        registry_file.write_text(
+            json.dumps(
+                {
+                    "custom": {
+                        "provider": "custom",
+                        "tier": "red",
+                        "retention": {"days": 365, "description": "1 year"},
+                        "last_verified": "2026-03-01",
+                    }
+                }
+            )
+        )
+        reload_registry(registry_file)
+        assert "custom" in PROVIDER_PRIVACY_REGISTRY
+        # Restore defaults
+        reload_registry()
