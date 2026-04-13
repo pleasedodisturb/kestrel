@@ -769,9 +769,7 @@ class TestProfileAPI:
             )
 
         @test_router.get("/{profile_id}")
-        async def get_profile(
-            profile_id: int, db: DbDep
-        ) -> ProfileResponse:
+        async def get_profile(profile_id: int, db: DbDep) -> ProfileResponse:
             profile = db.query(ProfileModel).filter(ProfileModel.id == profile_id).first()
             if profile is None:
                 raise HTTPException(status_code=404, detail="Profile not found")
