@@ -1,11 +1,64 @@
 """AI provider factory — selects provider based on AI_PROVIDER env var."""
 
+import json
+import logging
 import os
+import sqlite3
 from collections.abc import Callable
 
+from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
+from career_os.ai.ollama_provider import OllamaProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# DB credential lookup — lightweight, no ORM dependency
+# ---------------------------------------------------------------------------
+
+
+def _read_credential_from_db(credential_key: str) -> str:
+    """Read a credential value from the integration_configs table.
+
+    Uses a direct SQLite connection to avoid circular imports with the
+    full service layer.  Returns empty string if not found or on error.
+    """
+    from career_os.config import settings
+
+    db_url = settings.database_url
+    if not db_url.startswith("sqlite"):
+        return ""
+
+    db_path = db_url.replace("sqlite:///", "")
+    try:
+        conn = sqlite3.connect(db_path)
+        row = conn.execute(
+            "SELECT credentials FROM integration_configs WHERE name = ?",
+            ("ai_providers",),
+        ).fetchone()
+        conn.close()
+    except Exception:
+        return ""
+
+    if row is None or not row[0]:
+        return ""
+    try:
+        creds = json.loads(row[0])
+        return creds.get(credential_key, "")
+    except (json.JSONDecodeError, TypeError):
+        return ""
+
+
+def _resolve_api_key(env_var: str, credential_key: str) -> str:
+    """Resolve an API key: env var first, then DB-stored credential."""
+    val = os.getenv(env_var, "")
+    if val:
+        return val
+    return _read_credential_from_db(credential_key)
+
 
 # ---------------------------------------------------------------------------
 # Provider registry: name → factory callable.
@@ -18,8 +71,16 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "mock": lambda: MockProvider(),
     "demo": lambda: MockProvider(),
     "openrouter": lambda: OpenRouterProvider(
-        api_key=os.getenv("OPENROUTER_API_KEY", ""),
+        api_key=_resolve_api_key("OPENROUTER_API_KEY", "openrouter_api_key"),
         model=os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4"),
+    ),
+    "anthropic": lambda: AnthropicProvider(
+        api_key=_resolve_api_key("ANTHROPIC_API_KEY", "anthropic_api_key"),
+        model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
+    ),
+    "ollama": lambda: OllamaProvider(
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        model=os.getenv("OLLAMA_MODEL", "llama3.3"),
     ),
 }
 

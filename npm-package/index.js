@@ -8,7 +8,7 @@
 const { execSync, spawn } = require("child_process");
 const os = require("os");
 
-const MIN_PYTHON = [3, 13];
+const MIN_PYTHON = [3, 11];
 
 // ── Helpers ──
 
@@ -68,17 +68,17 @@ function printPythonHelp() {
   const platform = os.platform();
   if (platform === "darwin") {
     print("  Install with Homebrew:");
-    print("    brew install python@3.13");
+    print("    brew install python@3.11");
     print("");
     print("  Or download from: https://www.python.org/downloads/");
   } else if (platform === "linux") {
     print("  On Ubuntu/Debian:");
     print("    sudo add-apt-repository ppa:deadsnakes/ppa");
     print("    sudo apt-get update");
-    print("    sudo apt-get install python3.13 python3.13-venv");
+    print("    sudo apt-get install python3.11 python3.11-venv");
     print("");
     print("  On Fedora:");
-    print("    sudo dnf install python3.13");
+    print("    sudo dnf install python3.11");
     print("");
     print("  Or download from: https://www.python.org/downloads/");
   } else {
