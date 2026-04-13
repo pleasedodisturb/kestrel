@@ -14,6 +14,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from career_os.database import Base
 
+FK_PROFILES_ID = "profiles.id"
+FK_APPLICATIONS_ID = "applications.id"
+CASCADE_ALL_DELETE_ORPHAN = "all, delete-orphan"
+
 
 def _utcnow() -> datetime:
     """Return timezone-aware UTC now."""
@@ -43,32 +47,32 @@ class Profile(Base):
 
     # Relationships — M1 tables
     applications: Mapped[list["Application"]] = relationship(
-        back_populates="profile", cascade="all, delete-orphan"
+        back_populates="profile", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     activity_logs: Mapped[list["ActivityLog"]] = relationship(
-        back_populates="profile", cascade="all, delete-orphan"
+        back_populates="profile", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     follow_ups: Mapped[list["FollowUp"]] = relationship(
-        back_populates="profile", cascade="all, delete-orphan"
+        back_populates="profile", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
 
     # Relationships — M2 tables (Skills Intelligence)
     # These forward-reference models defined in career_os.models.skills
     skills: Mapped[list["Skill"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+        cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     goals: Mapped[list["Goal"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+        cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     coaching_suggestions: Mapped[list["CoachingSuggestion"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+        cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     # Note: skill_history cascades through Skill.history,
     # job_requirements cascade through Application.job_requirements,
     # learning_resources cascade through Profile (below) and also
     # via Skill/JobRequirement for FK ordering.
     learning_resources: Mapped[list["LearningResource"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+        cascade=CASCADE_ALL_DELETE_ORPHAN
     )
 
     def __repr__(self) -> str:
@@ -82,7 +86,7 @@ class Application(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     company: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -106,17 +110,17 @@ class Application(Base):
     # Relationships
     profile: Mapped["Profile"] = relationship(back_populates="applications")
     activity_logs: Mapped[list["ActivityLog"]] = relationship(
-        back_populates="application", cascade="all, delete-orphan"
+        back_populates="application", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     follow_ups: Mapped[list["FollowUp"]] = relationship(
-        back_populates="application", cascade="all, delete-orphan"
+        back_populates="application", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     packages: Mapped[list["ApplicationPackage"]] = relationship(
-        back_populates="application", cascade="all, delete-orphan"
+        back_populates="application", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     # M2: job requirements parsed from this application's JD
     job_requirements: Mapped[list["JobRequirement"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+        cascade=CASCADE_ALL_DELETE_ORPHAN
     )
 
     def __repr__(self) -> str:
@@ -134,10 +138,10 @@ class ActivityLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     application_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("applications.id"), nullable=True, index=True
+        Integer, ForeignKey(FK_APPLICATIONS_ID), nullable=True, index=True
     )
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -169,10 +173,10 @@ class FollowUp(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     application_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("applications.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_APPLICATIONS_ID), nullable=False, index=True
     )
     due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     follow_up_type: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -197,10 +201,10 @@ class ApplicationPackage(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     application_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("applications.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_APPLICATIONS_ID), nullable=False, index=True
     )
     package_dir: Mapped[str] = mapped_column(Text, nullable=False)
     cover_letter_path: Mapped[str | None] = mapped_column(Text, nullable=True)

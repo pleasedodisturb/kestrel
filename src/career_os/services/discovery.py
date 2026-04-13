@@ -392,6 +392,22 @@ def _collect_unique(items: list, existing: list) -> list:
     return existing
 
 
+def _pick_earliest(current: datetime | None, candidate: datetime | None) -> datetime | None:
+    """Return the earliest of two optional datetimes."""
+    if candidate is None:
+        return current
+    if current is None:
+        return candidate
+    return min(current, candidate)
+
+
+def _pick_longest(current: str, candidate: str | None) -> str:
+    """Return the longer of two strings, preferring non-empty."""
+    if candidate and len(candidate) > len(current):
+        return candidate
+    return current
+
+
 def _merge_raw_jobs(group: list[RawJobResult]) -> dict:
     """Merge multiple raw jobs (same dedup key) keeping richest data."""
     sources: list[str] = []
@@ -405,14 +421,11 @@ def _merge_raw_jobs(group: list[RawJobResult]) -> dict:
     for job in group:
         _collect_unique([job.source], sources)
         _collect_unique([job.url], source_urls)
-        if len(job.description or "") > len(best_description):
-            best_description = job.description or ""
+        best_description = _pick_longest(best_description, job.description)
         if not best_url and job.url:
             best_url = job.url
-        if job.posted_at and (earliest_posted is None or job.posted_at < earliest_posted):
-            earliest_posted = job.posted_at
-        if job.salary_range and len(job.salary_range) > len(salary_range):
-            salary_range = job.salary_range
+        earliest_posted = _pick_earliest(earliest_posted, job.posted_at)
+        salary_range = _pick_longest(salary_range, job.salary_range)
         remote = remote or job.remote
 
     first = group[0]

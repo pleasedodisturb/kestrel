@@ -24,6 +24,9 @@ from career_os.schemas.ai import (
     ScoreResult,
 )
 
+_PROGRAM_MANAGEMENT = "program management"
+_SYSTEM_DESIGN = "System Design"
+
 # Static pool of 12 keywords used by the mock provider to build a deterministic
 # ATS checklist. Distinct categories so the UI checklist has variety to show.
 _MOCK_ATS_KEYWORDS: tuple[tuple[str, str], ...] = (
@@ -530,8 +533,8 @@ def _build_topic_pool(
     _add_gap_or_keyword_topics(topic_pool, gap_data, unresolved_gaps, prompt_lower)
 
     role_lower = role.lower()
-    if ("program management" in prompt_lower or "tpm" in role_lower) and (
-        not gap_data or "program management" in unresolved_skill_names
+    if (_PROGRAM_MANAGEMENT in prompt_lower or "tpm" in role_lower) and (
+        not gap_data or _PROGRAM_MANAGEMENT in unresolved_skill_names
     ):
         topic_pool.append(
             {
@@ -658,7 +661,7 @@ def _build_mock_questions(
                     "difficulty": "high",
                 }
             )
-        if "program management" in prompt_lower:
+        if _PROGRAM_MANAGEMENT in prompt_lower:
             questions.append(
                 {
                     "question": (
@@ -1312,7 +1315,7 @@ def _handle_interview_format(prompt: str, context: dict | None) -> AIResponse:
         "Phone Screen",
         "Technical Interview",
         "Behavioral Interview",
-        "System Design",
+        _SYSTEM_DESIGN,
         "Hiring Manager",
         "Panel Interview",
         "Take-Home Assignment",
@@ -1432,7 +1435,7 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
                 "Risk Management",
                 "Technical Communication",
                 "Cross-functional Leadership",
-                "System Design",
+                _SYSTEM_DESIGN,
             ],
         )
     elif "product engineer" in prompt_lower:
@@ -1447,7 +1450,7 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
                     ],
                 },
                 {
-                    "name": "System Design",
+                    "name": _SYSTEM_DESIGN,
                     "description": "Large-scale system architecture discussions.",
                     "example_questions": [
                         "Design a real-time collaboration feature like Google Docs.",
@@ -1498,7 +1501,7 @@ def _handle_interview_patterns(prompt: str, context: dict | None) -> AIResponse:
             frequently_tested_skills=[
                 "JavaScript/TypeScript",
                 "React",
-                "System Design",
+                _SYSTEM_DESIGN,
                 "API Design",
                 "Database Design",
                 "Product Thinking",

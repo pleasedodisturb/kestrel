@@ -6,7 +6,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from career_os.database import Base
-from career_os.models.models import _utcnow
+from career_os.models.models import CASCADE_ALL_DELETE_ORPHAN, FK_PROFILES_ID, _utcnow
 
 
 class Contact(Base):
@@ -16,7 +16,7 @@ class Contact(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     company: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -45,10 +45,10 @@ class Contact(Base):
     # Relationships
     profile: Mapped["Profile"] = relationship()  # noqa: F821
     interactions: Mapped[list["ContactInteraction"]] = relationship(
-        back_populates="contact", cascade="all, delete-orphan"
+        back_populates="contact", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
     contact_applications: Mapped[list["ContactApplication"]] = relationship(
-        back_populates="contact", cascade="all, delete-orphan"
+        back_populates="contact", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
 
     def __repr__(self) -> str:
@@ -68,7 +68,7 @@ class ContactInteraction(Base):
         index=True,
     )
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     interaction_type: Mapped[str] = mapped_column(String(50), nullable=False)
     direction: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -107,7 +107,7 @@ class ContactApplication(Base):
         index=True,
     )
     profile_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+        Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     role: Mapped[str] = mapped_column(String(50), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

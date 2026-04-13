@@ -556,6 +556,50 @@ def _build_scoring_prompt(
 # ---------------------------------------------------------------------------
 
 
+def _query_jobs_to_score(
+    db: Session,
+    profile_id: int,
+    discovered_job_ids: list[int] | None,
+    rescore_stale: bool,
+) -> list:
+    """Return the list of DiscoveredJob rows to score."""
+    if discovered_job_ids:
+        return (
+            db.query(DiscoveredJob)
+            .filter(
+                DiscoveredJob.profile_id == profile_id,
+                DiscoveredJob.id.in_(discovered_job_ids),
+            )
+            .all()
+        )
+    if rescore_stale:
+        fresh_scored_ids = db.query(ScoredJob.discovered_job_id).filter(
+            ScoredJob.profile_id == profile_id,
+            ScoredJob.discovered_job_id.isnot(None),
+            ScoredJob.is_stale.is_(False),
+        )
+        return (
+            db.query(DiscoveredJob)
+            .filter(
+                DiscoveredJob.profile_id == profile_id,
+                DiscoveredJob.id.notin_(fresh_scored_ids),
+            )
+            .all()
+        )
+    any_scored_ids = db.query(ScoredJob.discovered_job_id).filter(
+        ScoredJob.profile_id == profile_id,
+        ScoredJob.discovered_job_id.isnot(None),
+    )
+    return (
+        db.query(DiscoveredJob)
+        .filter(
+            DiscoveredJob.profile_id == profile_id,
+            DiscoveredJob.id.notin_(any_scored_ids),
+        )
+        .all()
+    )
+
+
 async def batch_score_discovery(
     db: Session,
     profile_id: int,
@@ -585,46 +629,7 @@ async def batch_score_discovery(
 
     start_time = time.monotonic()
 
-    # Determine which jobs to score
-    if discovered_job_ids:
-        jobs = (
-            db.query(DiscoveredJob)
-            .filter(
-                DiscoveredJob.profile_id == profile_id,
-                DiscoveredJob.id.in_(discovered_job_ids),
-            )
-            .all()
-        )
-    else:
-        if rescore_stale:
-            # Score jobs with no non-stale score (includes never-scored + stale-only)
-            fresh_scored_ids = db.query(ScoredJob.discovered_job_id).filter(
-                ScoredJob.profile_id == profile_id,
-                ScoredJob.discovered_job_id.isnot(None),
-                ScoredJob.is_stale.is_(False),
-            )
-            jobs = (
-                db.query(DiscoveredJob)
-                .filter(
-                    DiscoveredJob.profile_id == profile_id,
-                    DiscoveredJob.id.notin_(fresh_scored_ids),
-                )
-                .all()
-            )
-        else:
-            # Score only never-scored jobs (no ScoredJob record at all)
-            any_scored_ids = db.query(ScoredJob.discovered_job_id).filter(
-                ScoredJob.profile_id == profile_id,
-                ScoredJob.discovered_job_id.isnot(None),
-            )
-            jobs = (
-                db.query(DiscoveredJob)
-                .filter(
-                    DiscoveredJob.profile_id == profile_id,
-                    DiscoveredJob.id.notin_(any_scored_ids),
-                )
-                .all()
-            )
+    jobs = _query_jobs_to_score(db, profile_id, discovered_job_ids, rescore_stale)
 
     scores: list[ScoredJob] = []
     errors: list[dict[str, str]] = []

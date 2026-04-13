@@ -37,6 +37,59 @@ import { InterviewPrepSection } from "@/components/InterviewPrepSection";
 import { StarStoriesSection } from "@/components/StarStoriesSection";
 import { getApplicationScore } from "@/api/scoring";
 
+type ApplicationData = {
+  company: string;
+  role: string;
+  url: string | null;
+  source: string | null;
+  salary_range: string | null;
+  contact: string | null;
+  next_step: string | null;
+  notes: string | null;
+  fit_score: number | null;
+};
+
+function buildEditData(data: ApplicationData): ApplicationUpdate {
+  return {
+    company: data.company,
+    role: data.role,
+    url: data.url ?? "",
+    source: data.source ?? "",
+    salary_range: data.salary_range ?? "",
+    contact: data.contact ?? "",
+    next_step: data.next_step ?? "",
+    notes: data.notes ?? "",
+    fit_score: data.fit_score ?? undefined,
+  };
+}
+
+function computeChanges(
+  editData: ApplicationUpdate,
+  data: ApplicationData,
+): ApplicationUpdate {
+  const changes: ApplicationUpdate = {};
+  if (editData.company !== data.company) changes.company = editData.company;
+  if (editData.role !== data.role) changes.role = editData.role;
+
+  const nullableFields = [
+    "url",
+    "source",
+    "salary_range",
+    "contact",
+    "next_step",
+    "notes",
+  ] as const;
+  for (const field of nullableFields) {
+    if ((editData[field] ?? "") !== (data[field] ?? "")) {
+      changes[field] = editData[field];
+    }
+  }
+
+  if (editData.fit_score !== data.fit_score)
+    changes.fit_score = editData.fit_score;
+  return changes;
+}
+
 export function ApplicationDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -82,40 +135,13 @@ export function ApplicationDetail() {
   useEffect(() => {
     if (!data) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: sync server data to form state
-    setEditData({
-      company: data.company,
-      role: data.role,
-      url: data.url ?? "",
-      source: data.source ?? "",
-      salary_range: data.salary_range ?? "",
-      contact: data.contact ?? "",
-      next_step: data.next_step ?? "",
-      notes: data.notes ?? "",
-      fit_score: data.fit_score ?? undefined,
-    });
+    setEditData(buildEditData(data));
   }, [data]);
 
   const handleSave = useCallback(() => {
     if (!data) return;
 
-    // Only send fields that actually changed
-    const changes: ApplicationUpdate = {};
-    if (editData.company !== data.company) changes.company = editData.company;
-    if (editData.role !== data.role) changes.role = editData.role;
-    if ((editData.url ?? "") !== (data.url ?? ""))
-      changes.url = editData.url;
-    if ((editData.source ?? "") !== (data.source ?? ""))
-      changes.source = editData.source;
-    if ((editData.salary_range ?? "") !== (data.salary_range ?? ""))
-      changes.salary_range = editData.salary_range;
-    if ((editData.contact ?? "") !== (data.contact ?? ""))
-      changes.contact = editData.contact;
-    if ((editData.next_step ?? "") !== (data.next_step ?? ""))
-      changes.next_step = editData.next_step;
-    if ((editData.notes ?? "") !== (data.notes ?? ""))
-      changes.notes = editData.notes;
-    if (editData.fit_score !== data.fit_score)
-      changes.fit_score = editData.fit_score;
+    const changes = computeChanges(editData, data);
 
     if (Object.keys(changes).length === 0) {
       setIsEditing(false);
@@ -230,19 +256,8 @@ export function ApplicationDetail() {
                 data-testid="cancel-edit-button"
                 onClick={() => {
                   setIsEditing(false);
-                  // Reset edit data
                   if (data) {
-                    setEditData({
-                      company: data.company,
-                      role: data.role,
-                      url: data.url ?? "",
-                      source: data.source ?? "",
-                      salary_range: data.salary_range ?? "",
-                      contact: data.contact ?? "",
-                      next_step: data.next_step ?? "",
-                      notes: data.notes ?? "",
-                      fit_score: data.fit_score ?? undefined,
-                    });
+                    setEditData(buildEditData(data));
                   }
                 }}
                 className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
