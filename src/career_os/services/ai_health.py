@@ -51,7 +51,7 @@ _CREDENTIAL_KEY_MAP = {
 # ---------------------------------------------------------------------------
 
 
-def _check_mock() -> ProviderHealthStatus:
+async def _check_mock() -> ProviderHealthStatus:
     """Mock provider is always reachable."""
     return ProviderHealthStatus(
         name="mock",
@@ -322,7 +322,7 @@ async def check_all_providers(db: Session | None = None) -> AIHealthResponse:
 
     # Mock — always available
     try:
-        status = _check_mock()
+        status = await _check_mock()
     except Exception as exc:
         status = ProviderHealthStatus(
             name="mock",
