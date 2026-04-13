@@ -1,0 +1,99 @@
+{
+  "mock": {
+    "provider": "mock",
+    "tier": "local",
+    "trains_on_data": false,
+    "human_review": false,
+    "retention": {"days": 0, "description": "No data retained — mock provider"},
+    "dpa_available": false,
+    "gdpr_compliant": true,
+    "eu_banned": false,
+    "warnings": [],
+    "recommendation": "Development/testing only",
+    "last_verified": "2026-04-13"
+  },
+  "ollama": {
+    "provider": "ollama",
+    "tier": "local",
+    "trains_on_data": false,
+    "human_review": false,
+    "retention": {"days": 0, "description": "No data leaves the device"},
+    "dpa_available": false,
+    "gdpr_compliant": true,
+    "eu_banned": false,
+    "warnings": [],
+    "recommendation": "Best privacy — all processing on-device",
+    "last_verified": "2026-04-13"
+  },
+  "openrouter": {
+    "provider": "openrouter",
+    "tier": "yellow",
+    "trains_on_data": false,
+    "human_review": false,
+    "retention": {"days": 30, "description": "30-day prompt log retention"},
+    "dpa_available": false,
+    "gdpr_compliant": true,
+    "eu_banned": false,
+    "warnings": [
+      "Prompt logging enabled under commercial license",
+      "Data routed through third-party providers — check downstream policies"
+    ],
+    "recommendation": "Review OpenRouter privacy settings before sending sensitive data",
+    "last_verified": "2026-04-13"
+  },
+  "anthropic": {
+    "provider": "anthropic",
+    "tier": "green",
+    "trains_on_data": false,
+    "human_review": false,
+    "retention": {"days": 7, "description": "7-day retention for abuse monitoring"},
+    "dpa_available": true,
+    "gdpr_compliant": true,
+    "eu_banned": false,
+    "warnings": [],
+    "recommendation": "Recommended for EU users — strong privacy, DPA available",
+    "last_verified": "2026-04-13"
+  },
+  "gemini": {
+    "provider": "gemini",
+    "tier": "yellow",
+    "trains_on_data": false,
+    "human_review": false,
+    "retention": {"days": null, "description": "Varies by plan — free tier trains on data"},
+    "dpa_available": true,
+    "gdpr_compliant": true,
+    "eu_banned": false,
+    "warnings": [
+      "Free tier trains on prompts — use paid API only",
+      "Gemini free tier banned in EU (DMA non-compliance)"
+    ],
+    "recommendation": "Use paid API tier only; avoid free tier for sensitive data",
+    "last_verified": "2026-04-13"
+  },
+  "mistral": {
+    "provider": "mistral",
+    "tier": "green",
+    "trains_on_data": false,
+    "human_review": false,
+    "retention": {"days": 30, "description": "30-day retention for paid API"},
+    "dpa_available": true,
+    "gdpr_compliant": true,
+    "eu_banned": false,
+    "warnings": [],
+    "recommendation": "EU-headquartered — good choice for EU data sovereignty",
+    "last_verified": "2026-04-13"
+  },
+  "groq": {
+    "provider": "groq",
+    "tier": "green",
+    "trains_on_data": false,
+    "human_review": false,
+    "retention": {"days": 0, "description": "No prompt data retained"},
+    "dpa_available": false,
+    "gdpr_compliant": true,
+    "eu_banned": false,
+    "warnings": [],
+    "recommendation": "Fast inference, no data retention",
+    "last_verified": "2026-04-13"
+  }
+}

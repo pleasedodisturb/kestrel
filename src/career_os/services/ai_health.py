@@ -35,11 +35,14 @@ RUNTIME_SUPPORTED_PROVIDERS = _SUPPORTED_PROVIDERS
 _PROVIDER_DISPLAY_NAMES = {
     "mock": "Demo Mode",
     "openrouter": "OpenRouter",
+    "anthropic": "Anthropic",
+    "ollama": "Ollama",
 }
 
 # Credential key mapping from integration config → env var fallback
 _CREDENTIAL_KEY_MAP = {
     "openrouter": "openrouter_api_key",
+    "anthropic": "anthropic_api_key",
 }
 
 
@@ -158,6 +161,108 @@ async def _check_openrouter(api_key: str) -> ProviderHealthStatus:
         )
 
 
+async def _check_anthropic(api_key: str) -> ProviderHealthStatus:
+    """Check Anthropic API connectivity."""
+    if not api_key.strip():
+        return ProviderHealthStatus(
+            name="anthropic",
+            display_name="Anthropic",
+            status="not_configured",
+            error_message="ANTHROPIC_API_KEY not set",
+        )
+
+    try:
+        start = time.monotonic()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://api.anthropic.com/v1/models",
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                },
+            )
+        elapsed_ms = (time.monotonic() - start) * 1000
+
+        if resp.status_code == 200:
+            return ProviderHealthStatus(
+                name="anthropic",
+                display_name="Anthropic",
+                status="reachable",
+                response_time_ms=round(elapsed_ms, 1),
+            )
+        if resp.status_code in (401, 403):
+            return ProviderHealthStatus(
+                name="anthropic",
+                display_name="Anthropic",
+                status="error",
+                error_message=f"Authentication failed (HTTP {resp.status_code})",
+                response_time_ms=round(elapsed_ms, 1),
+            )
+        return ProviderHealthStatus(
+            name="anthropic",
+            display_name="Anthropic",
+            status="unreachable",
+            error_message=f"Unexpected HTTP {resp.status_code}",
+            response_time_ms=round(elapsed_ms, 1),
+        )
+    except httpx.TimeoutException:
+        return ProviderHealthStatus(
+            name="anthropic",
+            display_name="Anthropic",
+            status="unreachable",
+            error_message="Connection timed out",
+        )
+    except Exception as exc:
+        logger.debug("Anthropic health check failed: %s", exc)
+        return ProviderHealthStatus(
+            name="anthropic",
+            display_name="Anthropic",
+            status="error",
+            error_message=str(exc),
+        )
+
+
+async def _check_ollama() -> ProviderHealthStatus:
+    """Check Ollama local server connectivity."""
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+    try:
+        start = time.monotonic()
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{base_url}/api/tags")
+        elapsed_ms = (time.monotonic() - start) * 1000
+
+        if resp.status_code == 200:
+            return ProviderHealthStatus(
+                name="ollama",
+                display_name="Ollama",
+                status="reachable",
+                response_time_ms=round(elapsed_ms, 1),
+            )
+        return ProviderHealthStatus(
+            name="ollama",
+            display_name="Ollama",
+            status="unreachable",
+            error_message=f"Unexpected HTTP {resp.status_code}",
+            response_time_ms=round(elapsed_ms, 1),
+        )
+    except (httpx.ConnectError, httpx.TimeoutException):
+        return ProviderHealthStatus(
+            name="ollama",
+            display_name="Ollama",
+            status="not_configured",
+            error_message="Ollama server not running (start with: ollama serve)",
+        )
+    except Exception as exc:
+        logger.debug("Ollama health check failed: %s", exc)
+        return ProviderHealthStatus(
+            name="ollama",
+            display_name="Ollama",
+            status="error",
+            error_message=str(exc),
+        )
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -197,6 +302,7 @@ def _resolve_api_key(provider: str, stored_config: dict[str, str]) -> str:
     # Fallback to env var
     env_key_map = {
         "openrouter": "OPENROUTER_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
     }
     env_key = env_key_map.get(provider, "")
     return os.getenv(env_key, "") if env_key else ""
@@ -226,7 +332,7 @@ async def check_all_providers(db: Session | None = None) -> AIHealthResponse:
         )
     results.append(status)
 
-    # OpenRouter — the only real provider currently supported
+    # OpenRouter
     openrouter_key = _resolve_api_key("openrouter", stored_config)
     try:
         status = await _check_openrouter(openrouter_key)
@@ -234,6 +340,31 @@ async def check_all_providers(db: Session | None = None) -> AIHealthResponse:
         status = ProviderHealthStatus(
             name="openrouter",
             display_name="OpenRouter",
+            status="error",
+            error_message=str(exc),
+        )
+    results.append(status)
+
+    # Anthropic
+    anthropic_key = _resolve_api_key("anthropic", stored_config)
+    try:
+        status = await _check_anthropic(anthropic_key)
+    except Exception as exc:
+        status = ProviderHealthStatus(
+            name="anthropic",
+            display_name="Anthropic",
+            status="error",
+            error_message=str(exc),
+        )
+    results.append(status)
+
+    # Ollama
+    try:
+        status = await _check_ollama()
+    except Exception as exc:
+        status = ProviderHealthStatus(
+            name="ollama",
+            display_name="Ollama",
             status="error",
             error_message=str(exc),
         )
@@ -274,6 +405,8 @@ async def check_single_provider(
     checkers = {
         "mock": lambda: _check_mock(),
         "openrouter": lambda: _check_openrouter(_resolve_api_key("openrouter", stored_config)),
+        "anthropic": lambda: _check_anthropic(_resolve_api_key("anthropic", stored_config)),
+        "ollama": lambda: _check_ollama(),
     }
 
     checker = checkers.get(name)
