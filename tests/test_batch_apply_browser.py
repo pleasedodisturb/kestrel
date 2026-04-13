@@ -24,6 +24,15 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# batch_apply_browser loads config/personal.yaml at import time.
+# Skip the entire module when the config file is absent (CI, fresh clones).
+_personal_config = Path(__file__).resolve().parent.parent / "config" / "personal.yaml"
+if not _personal_config.exists():
+    pytest.skip(
+        "config/personal.yaml not found — skipping batch_apply_browser tests",
+        allow_module_level=True,
+    )
+
 from tools.batch_apply_browser import (
     PERSONAL,
     detect_platform,

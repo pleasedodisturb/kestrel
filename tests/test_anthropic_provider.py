@@ -21,10 +21,13 @@ from career_os.ai.anthropic_provider import (
     ANTHROPIC_VERSION,
     AnthropicProvider,
 )
-from career_os.ai.base import AIProvider
+from career_os.ai.base import AIProvider, ProviderQuotaError
 from career_os.ai.factory import _PROVIDER_REGISTRY, get_ai_provider
-from career_os.ai.openrouter_provider import CreditsExhaustedError
 from career_os.schemas.ai import AIFeature, AIResponse
+
+# Fake API key used across all tests — not a real credential.
+_TEST_API_KEY = "test-fake-anthropic-key"  # noqa: S105
+_TEST_API_KEY_2 = "test-fake-anthropic-key-2"  # noqa: S105
 
 # ---------------------------------------------------------------------------
 # AnthropicProvider unit tests
@@ -35,11 +38,11 @@ class TestAnthropicProviderInit:
     """Test AnthropicProvider initialization and contract."""
 
     def test_name(self) -> None:
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
         assert provider.name == "anthropic"
 
     def test_is_ai_provider(self) -> None:
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
         assert isinstance(provider, AIProvider)
 
     def test_empty_key_raises(self) -> None:
@@ -47,11 +50,11 @@ class TestAnthropicProviderInit:
             AnthropicProvider(api_key="")
 
     def test_default_model(self) -> None:
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
         assert provider._model == "claude-sonnet-4-20250514"
 
     def test_custom_model(self) -> None:
-        provider = AnthropicProvider(api_key="sk-ant-test", model="claude-opus-4-20250514")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY, model="claude-opus-4-20250514")
         assert provider._model == "claude-opus-4-20250514"
 
 
@@ -73,7 +76,7 @@ class TestAnthropicFactoryRegistration:
 
     def test_factory_creates_anthropic_provider(self) -> None:
         """get_ai_provider('anthropic') returns AnthropicProvider."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test-key"}):
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-fake-anthropic-key-3"}):
             provider = get_ai_provider("anthropic")
             assert isinstance(provider, AnthropicProvider)
             assert provider.name == "anthropic"
@@ -104,7 +107,7 @@ class TestPromptCaching:
     @pytest.mark.asyncio
     async def test_cache_control_in_system_block(self) -> None:
         """System message blocks include cache_control for prompt caching."""
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
         captured_payload = {}
 
         def mock_post(url, headers=None, json=None, **kwargs):
@@ -133,7 +136,7 @@ class TestPromptCaching:
     @pytest.mark.asyncio
     async def test_no_system_block_for_generic_complete(self) -> None:
         """Generic complete (no feature) does not include system blocks."""
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
         captured_payload = {}
 
         def mock_post(url, headers=None, json=None, **kwargs):
@@ -167,7 +170,7 @@ class TestAnthropicRequestFormat:
     @pytest.mark.asyncio
     async def test_headers_include_api_key_and_version(self) -> None:
         """Request headers include x-api-key and anthropic-version."""
-        provider = AnthropicProvider(api_key="sk-ant-my-secret")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY_2)
         captured_headers = {}
 
         def mock_post(url, headers=None, json=None, **kwargs):
@@ -185,13 +188,13 @@ class TestAnthropicRequestFormat:
         with patch("httpx.AsyncClient.post", side_effect=mock_post):
             await provider.complete("test")
 
-        assert captured_headers["x-api-key"] == "sk-ant-my-secret"
+        assert captured_headers["x-api-key"] == _TEST_API_KEY_2
         assert captured_headers["anthropic-version"] == ANTHROPIC_VERSION
 
     @pytest.mark.asyncio
     async def test_payload_uses_messages_api_format(self) -> None:
         """Payload uses Anthropic Messages API format (not OpenAI chat format)."""
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
         captured_payload = {}
 
         def mock_post(url, headers=None, json=None, **kwargs):
@@ -216,7 +219,7 @@ class TestAnthropicRequestFormat:
     @pytest.mark.asyncio
     async def test_response_parses_content_blocks(self) -> None:
         """Response correctly parses Anthropic content blocks format."""
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
 
         def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
@@ -250,9 +253,9 @@ class TestAnthropicErrorHandling:
     """Test HTTP error handling (402, 429, etc.)."""
 
     @pytest.mark.asyncio
-    async def test_402_raises_credits_exhausted(self) -> None:
-        """HTTP 402 raises CreditsExhaustedError."""
-        provider = AnthropicProvider(api_key="sk-ant-test")
+    async def test_402_raises_provider_quota_error(self) -> None:
+        """HTTP 402 raises ProviderQuotaError."""
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
 
         def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
@@ -264,14 +267,15 @@ class TestAnthropicErrorHandling:
             )
 
         with patch("httpx.AsyncClient.post", side_effect=mock_post):
-            with pytest.raises(CreditsExhaustedError) as exc_info:
+            with pytest.raises(ProviderQuotaError) as exc_info:
                 await provider.complete("test")
             assert exc_info.value.status_code == 402
+            assert exc_info.value.provider == "anthropic"
 
     @pytest.mark.asyncio
-    async def test_429_raises_credits_exhausted(self) -> None:
-        """HTTP 429 raises CreditsExhaustedError with rate limit info."""
-        provider = AnthropicProvider(api_key="sk-ant-test")
+    async def test_429_raises_provider_quota_error(self) -> None:
+        """HTTP 429 raises ProviderQuotaError with rate limit info."""
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
 
         def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
@@ -282,15 +286,15 @@ class TestAnthropicErrorHandling:
             )
 
         with patch("httpx.AsyncClient.post", side_effect=mock_post):
-            with pytest.raises(CreditsExhaustedError) as exc_info:
+            with pytest.raises(ProviderQuotaError) as exc_info:
                 await provider.complete("test")
             assert exc_info.value.status_code == 429
             assert "retry-after" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_500_raises_http_error(self) -> None:
-        """HTTP 500 raises httpx.HTTPStatusError (not CreditsExhaustedError)."""
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        """HTTP 500 raises httpx.HTTPStatusError (not ProviderQuotaError)."""
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
 
         def mock_post(url, headers=None, json=None, **kwargs):
             return httpx.Response(
@@ -315,7 +319,7 @@ class TestAnthropicScore:
     @pytest.mark.asyncio
     async def test_score_calls_complete_with_score_feature(self) -> None:
         """score() calls complete() with AIFeature.score."""
-        provider = AnthropicProvider(api_key="sk-ant-test")
+        provider = AnthropicProvider(api_key=_TEST_API_KEY)
         captured_payload = {}
 
         score_json = json.dumps(

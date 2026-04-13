@@ -22,7 +22,7 @@ title: Features and API Reference
   <img src="https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/Tests-1773_passing-22c55e?style=flat-square" alt="Tests">
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License">
+  <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0 License">
 </p>
 
 <p align="center">
@@ -555,4 +555,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and pu
 
 ## License
 
-[MIT](LICENSE)
+[AGPL-3.0](LICENSE)
