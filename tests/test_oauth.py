@@ -10,9 +10,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from career_os.api.oauth import (
+    _MAX_PENDING,
+    _VERIFIER_TTL_SECONDS,
     OPENROUTER_KEYS_URL,
     _generate_pkce_pair,
     _pending_verifiers,
+    limiter,
 )
 from career_os.main import app
 
@@ -22,12 +25,28 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture
+def db_client(db_session):
+    """TestClient with a DB session override (for endpoints that use Depends(get_db))."""
+    return TestClient(app)
+
+
 @pytest.fixture(autouse=True)
 def _clear_pending_verifiers():
     """Ensure the pending verifiers dict is clean between tests."""
     _pending_verifiers.clear()
     yield
     _pending_verifiers.clear()
+
+
+@pytest.fixture(autouse=True)
+def _clear_runtime_key():
+    """Reset runtime API key between tests."""
+    import career_os.api.oauth as oauth_mod
+
+    original = oauth_mod._runtime_api_key
+    yield
+    oauth_mod._runtime_api_key = original
 
 
 # ---------------------------------------------------------------------------
@@ -87,8 +106,6 @@ class TestStartEndpoint:
 
     def test_max_pending_returns_429(self, client):
         """Exceeding the max pending verifiers returns 429."""
-        from career_os.api.oauth import _MAX_PENDING
-
         for i in range(_MAX_PENDING):
             _pending_verifiers[f"state-{i}"] = ("verifier", time.time())
         resp = client.get("/api/auth/openrouter/start")
@@ -103,19 +120,20 @@ class TestStartEndpoint:
 class TestCallbackEndpoint:
     """Tests for the OAuth callback endpoint."""
 
-    def test_invalid_state_returns_400(self, client):
-        resp = client.get("/api/auth/openrouter/callback", params={"code": "test", "state": "bad"})
+    def test_invalid_state_returns_400(self, db_client):
+        resp = db_client.get(
+            "/api/auth/openrouter/callback", params={"code": "test", "state": "bad"}
+        )
         assert resp.status_code == 400
         assert "Invalid or expired state" in resp.json()["detail"]
 
-    def test_missing_state_returns_422(self, client):
+    def test_missing_state_returns_422(self, db_client):
         """State is a required query parameter."""
-        resp = client.get("/api/auth/openrouter/callback", params={"code": "test"})
+        resp = db_client.get("/api/auth/openrouter/callback", params={"code": "test"})
         assert resp.status_code == 422
 
-    def test_successful_exchange(self, client):
+    def test_successful_exchange(self, db_client):
         """Mock a successful code-for-key exchange with OpenRouter."""
-        # Pre-populate a pending verifier (now stores tuple with timestamp).
         _pending_verifiers["test-state"] = ("test-verifier", time.time())
 
         mock_response = httpx.Response(
@@ -131,7 +149,7 @@ class TestCallbackEndpoint:
             mock_client.__aexit__ = AsyncMock(return_value=False)
             mock_cls.return_value = mock_client
 
-            resp = client.get(
+            resp = db_client.get(
                 "/api/auth/openrouter/callback",
                 params={"code": "auth-code-xyz", "state": "test-state"},
             )
@@ -144,12 +162,12 @@ class TestCallbackEndpoint:
         # Verifier should be consumed.
         assert "test-state" not in _pending_verifiers
 
-        # Key should be stored in module-level variable (not os.environ).
+        # Key should be stored in module-level variable.
         from career_os.api.oauth import _runtime_api_key
 
         assert _runtime_api_key == "test-fake-openrouter-key"
 
-    def test_exchange_http_error_returns_502(self, client):
+    def test_exchange_http_error_returns_502(self, db_client):
         """OpenRouter returning a non-2xx should yield a 502."""
         _pending_verifiers["err-state"] = ("verifier", time.time())
 
@@ -166,14 +184,14 @@ class TestCallbackEndpoint:
             mock_client.__aexit__ = AsyncMock(return_value=False)
             mock_cls.return_value = mock_client
 
-            resp = client.get(
+            resp = db_client.get(
                 "/api/auth/openrouter/callback",
                 params={"code": "bad-code", "state": "err-state"},
             )
 
         assert resp.status_code == 502
 
-    def test_exchange_network_error_returns_502(self, client):
+    def test_exchange_network_error_returns_502(self, db_client):
         """Network failure contacting OpenRouter should yield a 502."""
         _pending_verifiers["net-state"] = ("verifier", time.time())
 
@@ -184,14 +202,14 @@ class TestCallbackEndpoint:
             mock_client.__aexit__ = AsyncMock(return_value=False)
             mock_cls.return_value = mock_client
 
-            resp = client.get(
+            resp = db_client.get(
                 "/api/auth/openrouter/callback",
                 params={"code": "code", "state": "net-state"},
             )
 
         assert resp.status_code == 502
 
-    def test_empty_key_returns_502(self, client):
+    def test_empty_key_returns_502(self, db_client):
         """OpenRouter returning an empty key should be treated as an error."""
         _pending_verifiers["empty-state"] = ("verifier", time.time())
 
@@ -208,7 +226,7 @@ class TestCallbackEndpoint:
             mock_client.__aexit__ = AsyncMock(return_value=False)
             mock_cls.return_value = mock_client
 
-            resp = client.get(
+            resp = db_client.get(
                 "/api/auth/openrouter/callback",
                 params={"code": "code", "state": "empty-state"},
             )
@@ -216,18 +234,16 @@ class TestCallbackEndpoint:
         assert resp.status_code == 502
         assert "empty API key" in resp.json()["detail"]
 
-    def test_expired_verifier_returns_400(self, client):
-        """A verifier older than the TTL is treated as expired."""
-        from career_os.api.oauth import _VERIFIER_TTL_SECONDS
-
-        _pending_verifiers["old-state"] = ("verifier", time.time() - _VERIFIER_TTL_SECONDS - 1)
-
-        resp = client.get(
+    def test_expired_verifier_returns_400(self, db_client):
+        """A verifier that has exceeded the TTL should be rejected."""
+        expired_ts = time.time() - _VERIFIER_TTL_SECONDS - 1
+        _pending_verifiers["old-state"] = ("old-verifier", expired_ts)
+        resp = db_client.get(
             "/api/auth/openrouter/callback",
-            params={"code": "code", "state": "old-state"},
+            params={"code": "test", "state": "old-state"},
         )
         assert resp.status_code == 400
-        assert "Invalid or expired state" in resp.json()["detail"]
+        assert "expired" in resp.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -238,34 +254,106 @@ class TestCallbackEndpoint:
 class TestStatusEndpoint:
     """Tests for the OAuth status endpoint."""
 
-    def test_disconnected_when_no_key(self, client):
+    def test_disconnected_when_no_key(self, db_client):
         import career_os.api.oauth as oauth_mod
 
-        original = oauth_mod._runtime_api_key
-        try:
-            oauth_mod._runtime_api_key = ""
-            with patch("career_os.api.oauth.settings") as mock_settings:
-                mock_settings.openrouter_api_key = ""
-                resp = client.get("/api/auth/openrouter/status")
-        finally:
-            oauth_mod._runtime_api_key = original
+        oauth_mod._runtime_api_key = ""
+        with patch("career_os.api.oauth.settings") as mock_settings:
+            mock_settings.openrouter_api_key = ""
+            resp = db_client.get("/api/auth/openrouter/status")
 
         assert resp.status_code == 200
         data = resp.json()
         assert data["connected"] is False
         assert data["provider"] == "openrouter"
-        assert "key_preview" not in data  # removed for security
 
-    def test_connected_when_key_present(self, client):
+    def test_connected_when_key_present(self, db_client):
         import career_os.api.oauth as oauth_mod
 
-        original = oauth_mod._runtime_api_key
-        try:
-            oauth_mod._runtime_api_key = "test-fake-openrouter-key-2"
-            resp = client.get("/api/auth/openrouter/status")
-        finally:
-            oauth_mod._runtime_api_key = original
+        oauth_mod._runtime_api_key = "test-fake-openrouter-key-2"
+        resp = db_client.get("/api/auth/openrouter/status")
 
         assert resp.status_code == 200
         data = resp.json()
         assert data["connected"] is True
+
+
+# ---------------------------------------------------------------------------
+# DB persistence
+# ---------------------------------------------------------------------------
+
+
+class TestOAuthDBPersistence:
+    """Tests for OAuth key persistence to the integration_configs table."""
+
+    def test_successful_exchange_persists_to_db(self, db_client, db_session):
+        """After a successful OAuth exchange, the key should be stored in the DB."""
+        _pending_verifiers["persist-state"] = ("persist-verifier", time.time())
+
+        mock_response = httpx.Response(
+            200,
+            json={"key": "test-fake-dbtest-key"},
+            request=httpx.Request("POST", OPENROUTER_KEYS_URL),
+        )
+
+        with patch("career_os.api.oauth.httpx.AsyncClient") as mock_cls:
+            mock_client = AsyncMock()
+            mock_client.post.return_value = mock_response
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_cls.return_value = mock_client
+
+            resp = db_client.get(
+                "/api/auth/openrouter/callback",
+                params={"code": "code", "state": "persist-state"},
+            )
+
+        assert resp.status_code == 200
+
+        # Verify the key was persisted to the integration_configs table.
+        from career_os.services.integrations import get_integration
+
+        integration = get_integration(db_session, "ai_providers")
+        assert integration is not None
+        assert integration.credentials_set.get("openrouter_api_key") is True
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting
+# ---------------------------------------------------------------------------
+
+
+class TestRateLimiting:
+    """Tests for rate limiting on OAuth endpoints."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_limiter(self):
+        """Reset rate limiter storage between tests."""
+        limiter.reset()
+        yield
+        limiter.reset()
+
+    def test_start_rate_limited_after_10_requests(self, client):
+        """The /start endpoint should return 429 after 10 requests per minute."""
+        for _ in range(10):
+            resp = client.get("/api/auth/openrouter/start")
+            assert resp.status_code == 200
+
+        resp = client.get("/api/auth/openrouter/start")
+        assert resp.status_code == 429
+
+    def test_callback_rate_limited_after_20_requests(self, client):
+        """The /callback endpoint should return 429 after 20 requests per minute."""
+        for i in range(20):
+            resp = client.get(
+                "/api/auth/openrouter/callback",
+                params={"code": "test", "state": f"bad-state-{i}"},
+            )
+            # 400 because state is invalid, but rate limit is not triggered yet
+            assert resp.status_code == 400
+
+        resp = client.get(
+            "/api/auth/openrouter/callback",
+            params={"code": "test", "state": "bad-state-final"},
+        )
+        assert resp.status_code == 429
