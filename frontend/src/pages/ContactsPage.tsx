@@ -42,12 +42,10 @@ function ContactCard({
   onSelect: (c: Contact) => void;
 }>) {
   return (
-    <div
-      className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+    <button
+      type="button"
+      className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md text-left w-full"
       onClick={() => onSelect(contact)}
-      onKeyDown={(e) => { if (e.key === 'Enter') onSelect(contact); }}
-      role="button"
-      tabIndex={0}
       data-testid={`contact-card-${contact.id}`}
     >
       <div className="flex items-start justify-between">
@@ -92,7 +90,7 @@ function ContactCard({
           Last contact: {new Date(contact.last_contacted_at).toLocaleDateString()}
         </p>
       )}
-    </div>
+    </button>
   );
 }
 
