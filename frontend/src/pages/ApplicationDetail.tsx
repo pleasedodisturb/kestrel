@@ -194,9 +194,8 @@ export function ApplicationDetail() {
   const statusColors =
     STATUS_COLORS[normalizedStatus] ?? STATUS_COLORS.discovered;
 
-  const fitScoreValue = isEditing
-    ? (editData.fit_score == null ? "" : String(editData.fit_score))
-    : (data.fit_score == null ? "" : String(data.fit_score));
+  const rawScore = isEditing ? editData.fit_score : data.fit_score;
+  const fitScoreValue = rawScore == null ? "" : String(rawScore);
 
   return (
     <section data-testid="application-detail" className="space-y-6">
