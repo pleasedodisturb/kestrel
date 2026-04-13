@@ -64,7 +64,7 @@ class TestGetUserAgent:
         assert "Mozilla" in ua
 
     def test_returns_from_pool(self):
-        agents = set(_get_user_agent() for _ in range(50))
+        agents = {_get_user_agent() for _ in range(50)}
         assert len(agents) >= 2  # should get at least 2 different ones
 
 

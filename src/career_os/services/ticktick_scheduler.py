@@ -63,7 +63,7 @@ async def _ticktick_sync_loop(interval_seconds: int = DEFAULT_INTERVAL_SECONDS) 
 
         except asyncio.CancelledError:
             logger.info("TickTick scheduler cancelled")
-            break
+            raise
         except Exception as exc:
             logger.exception("TickTick scheduler error: %s", exc)
             # Continue running even on unexpected errors

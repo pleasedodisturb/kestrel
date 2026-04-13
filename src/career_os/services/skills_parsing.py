@@ -227,7 +227,7 @@ def _extract_skills_from_experience(experience: list[dict]) -> list[ParsedSkill]
 # ---------------------------------------------------------------------------
 
 
-def _proficiency_from_rank(rank: int, total: int = 34) -> str | None:
+def _proficiency_from_rank(rank: int, _total: int = 34) -> str | None:
     """Map a CliftonStrengths rank to a proficiency level.
 
     Returns None for ranks that should be skipped (bottom 14).

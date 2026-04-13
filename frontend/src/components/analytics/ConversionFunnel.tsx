@@ -90,6 +90,12 @@ export function ConversionFunnel({ data }: Props) {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      ) : (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-sm text-gray-400" data-testid="funnel-empty">
+            No data available
+          </p>
+        </div>
       )}
 
       {/* Summary table below the chart */}

@@ -114,9 +114,9 @@ export function Analytics() {
                   </div>
                   <div className="rounded-lg bg-emerald-50 p-3">
                     <p className="text-xl font-bold text-emerald-700">
-                      {analytics.prep_metrics.completion_rate != null
-                        ? `${analytics.prep_metrics.completion_rate}%`
-                        : "N/A"}
+                      {analytics.prep_metrics.completion_rate == null
+                        ? "N/A"
+                        : `${analytics.prep_metrics.completion_rate}%`}
                     </p>
                     <p className="text-xs text-emerald-600">Completion Rate</p>
                   </div>

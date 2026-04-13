@@ -49,7 +49,7 @@ class TestCoverLetterPDFClass:
 
     def test_instantiation(self):
         pdf = CoverLetterPDF()
-        assert pdf is not None
+        assert isinstance(pdf, CoverLetterPDF)
 
     def test_auto_page_break_margin(self):
         pdf = CoverLetterPDF()

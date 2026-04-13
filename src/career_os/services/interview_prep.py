@@ -521,7 +521,7 @@ def _build_prep_prompt(
     app_obj: Application,
     profile: Profile,
     gaps: list[dict],
-    company_researched: bool,
+    _company_researched: bool,
     research_data: dict | None = None,
 ) -> str:
     """Build the AI prompt for interview preparation.

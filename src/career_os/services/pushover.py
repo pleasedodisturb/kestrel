@@ -388,7 +388,7 @@ def trigger_follow_up_reminders(db: Session, profile_id: int) -> dict:
     VAL-PUSH-001: Due follow-up triggers Pushover notification with company,
     role, suggested action.
     """
-    pref, quiet, client, error_result = _validate_followup_config(db, profile_id, "follow_up")
+    _, quiet, client, error_result = _validate_followup_config(db, profile_id, "follow_up")
     if error_result is not None:
         return error_result
 
@@ -992,7 +992,7 @@ def _deliver_single_notification(client: PushoverClient, log_entry: Notification
         log_entry.error_message = None
         log_entry.sent_at = datetime.now(UTC)
         return True
-    except (PushoverAuthError, PushoverAPIError) as exc:
+    except PushoverAPIError as exc:
         log_entry.status = "failed"
         log_entry.error_message = str(exc)
         return False

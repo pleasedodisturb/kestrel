@@ -18,7 +18,7 @@ async def list_provider_privacy() -> list[ProviderPrivacyInfo]:
     return list(PROVIDER_PRIVACY_REGISTRY.values())
 
 
-@router.get("/{provider}")
+@router.get("/{provider}", responses={404: {"description": "Not found"}})
 async def get_provider_privacy(provider: str) -> ProviderPrivacyInfo:
     """Return privacy info for a single AI provider.
 

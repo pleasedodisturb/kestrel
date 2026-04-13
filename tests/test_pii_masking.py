@@ -48,13 +48,13 @@ class TestMaskEmail:
 class TestMaskPhone:
     def test_international_phone(self, masker: PIIMasker) -> None:
         text = "Call +49 170 1234567 anytime."
-        masked, mapping = masker.mask(text)
+        masked, _ = masker.mask(text)
         assert "+49 170 1234567" not in masked
         assert "[PHONE_1]" in masked
 
     def test_us_phone(self, masker: PIIMasker) -> None:
         text = "Reach me at (555) 123-4567."
-        masked, mapping = masker.mask(text)
+        masked, _ = masker.mask(text)
         assert "(555) 123-4567" not in masked
         assert "[PHONE_1]" in masked
 
@@ -62,13 +62,13 @@ class TestMaskPhone:
 class TestMaskURL:
     def test_linkedin_url(self, masker: PIIMasker) -> None:
         text = "Profile: https://www.linkedin.com/in/johndoe"
-        masked, mapping = masker.mask(text)
+        masked, _ = masker.mask(text)
         assert "linkedin.com" not in masked
         assert "[URL_1]" in masked
 
     def test_github_url(self, masker: PIIMasker) -> None:
         text = "Code at https://github.com/johndoe/repo"
-        masked, mapping = masker.mask(text)
+        masked, _ = masker.mask(text)
         assert "github.com" not in masked
         assert "[URL_1]" in masked
 
@@ -103,12 +103,12 @@ class TestMaskCreditCard:
 
     def test_card_with_spaces(self, masker: PIIMasker) -> None:
         text = "Visa: 4111 1111 1111 1111"
-        masked, mapping = masker.mask(text)
+        masked, _ = masker.mask(text)
         assert "4111 1111 1111 1111" not in masked
 
     def test_card_with_dashes(self, masker: PIIMasker) -> None:
         text = "Card: 4111-1111-1111-1111"
-        masked, mapping = masker.mask(text)
+        masked, _ = masker.mask(text)
         assert "4111-1111-1111-1111" not in masked
 
 
@@ -121,12 +121,12 @@ class TestMaskIPAddress:
 
     def test_loopback(self, masker: PIIMasker) -> None:
         text = "Localhost: 127.0.0.1"
-        masked, mapping = masker.mask(text)
+        masked, _ = masker.mask(text)
         assert "127.0.0.1" not in masked
 
     def test_rejects_invalid_octets(self, masker: PIIMasker) -> None:
         text = "Not an IP: 999.999.999.999"
-        masked, mapping = masker.mask(text)
+        _, mapping = masker.mask(text)
         assert not any("IP_ADDR" in k for k in mapping.placeholder_to_original)
 
 
@@ -139,7 +139,7 @@ class TestMaskPassport:
 
     def test_lowercase_not_matched(self, masker: PIIMasker) -> None:
         text = "Code: c12345678"
-        masked, mapping = masker.mask(text)
+        _, mapping = masker.mask(text)
         assert not any("PASSPORT" in k for k in mapping.placeholder_to_original)
 
 
@@ -158,7 +158,7 @@ class TestMaskMultiplePIITypes:
             "see https://linkedin.com/in/alice, SSN 111-22-3333, "
             "card 4111111111111111, IP 10.0.0.1, passport A12345678."
         )
-        masked, mapping = masker.mask(text)
+        _, mapping = masker.mask(text)
         categories = {k.split("_")[0].lstrip("[") for k in mapping.placeholder_to_original}
         assert "EMAIL" in categories
         assert "SSN" in categories

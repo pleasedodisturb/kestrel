@@ -68,6 +68,12 @@ export function ApplicationsOverTime({ data }: Props) {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+      ) : (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-sm text-gray-400" data-testid="over-time-empty">
+            No data available
+          </p>
+        </div>
       )}
     </div>
   );

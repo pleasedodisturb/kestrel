@@ -58,7 +58,7 @@ def _generate_pkce_pair() -> tuple[str, str]:
     return code_verifier, code_challenge
 
 
-@router.get("/openrouter/start")
+@router.get("/openrouter/start", responses={429: {"description": "Too many requests"}})
 @limiter.limit("10/minute")
 async def openrouter_auth_start(request: Request) -> dict:
     """Generate PKCE challenge and return the OpenRouter authorization URL.
@@ -93,7 +93,13 @@ async def openrouter_auth_start(request: Request) -> dict:
     return {"auth_url": auth_url, "state": state}
 
 
-@router.get("/openrouter/callback")
+@router.get(
+    "/openrouter/callback",
+    responses={
+        400: {"description": "Bad request"},
+        502: {"description": "Bad gateway"},
+    },
+)
 @limiter.limit("20/minute")
 async def openrouter_auth_callback(
     request: Request,

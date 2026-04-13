@@ -106,6 +106,12 @@ export function TimeInStage({ data }: Props) {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      ) : (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-sm text-gray-400" data-testid="time-in-stage-empty">
+            No data available
+          </p>
+        </div>
       )}
 
       {/* Summary badges */}
@@ -118,7 +124,7 @@ export function TimeInStage({ data }: Props) {
             >
               {STATUS_LABELS[d.stage] ?? d.stage}:{" "}
               <span className="ml-1 font-medium">
-                {d.avg_days !== null ? `${d.avg_days.toFixed(1)}d` : "No data"}
+                {d.avg_days === null ? "No data" : `${d.avg_days.toFixed(1)}d`}
               </span>
             </span>
           ))}

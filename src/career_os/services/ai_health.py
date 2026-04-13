@@ -51,7 +51,7 @@ _CREDENTIAL_KEY_MAP = {
 # ---------------------------------------------------------------------------
 
 
-async def _check_mock() -> ProviderHealthStatus:
+def _check_mock() -> ProviderHealthStatus:
     """Mock provider is always reachable."""
     return ProviderHealthStatus(
         name="mock",
@@ -76,14 +76,14 @@ def _parse_openrouter_response(
     if not key_data:
         return None, None
 
-    credits = None
+    provider_credits = None
     usage = key_data.get("usage")
     limit = key_data.get("limit")
     if limit is not None:
         remaining = (limit - usage) if usage is not None else None
-        credits = ProviderCredits(remaining=remaining, total=limit, unit="USD")
+        provider_credits = ProviderCredits(remaining=remaining, total=limit, unit="USD")
     elif usage is not None:
-        credits = ProviderCredits(remaining=None, total=None, unit="USD")
+        provider_credits = ProviderCredits(remaining=None, total=None, unit="USD")
 
     rate_limit = None
     rl = key_data.get("rate_limit")
@@ -93,7 +93,7 @@ def _parse_openrouter_response(
             tokens_per_minute=rl.get("tokens"),
         )
 
-    return credits, rate_limit
+    return provider_credits, rate_limit
 
 
 async def _check_openrouter(api_key: str) -> ProviderHealthStatus:
@@ -117,12 +117,12 @@ async def _check_openrouter(api_key: str) -> ProviderHealthStatus:
         elapsed_ms = (time.monotonic() - start) * 1000
 
         if resp.status_code == 200:
-            credits, rate_limit = _parse_openrouter_response(resp.json())
+            provider_credits, rate_limit = _parse_openrouter_response(resp.json())
             return ProviderHealthStatus(
                 name="openrouter",
                 display_name="OpenRouter",
                 status="reachable",
-                credits=credits,
+                credits=provider_credits,
                 rate_limit=rate_limit,
                 response_time_ms=round(elapsed_ms, 1),
             )
@@ -322,7 +322,7 @@ async def check_all_providers(db: Session | None = None) -> AIHealthResponse:
 
     # Mock — always available
     try:
-        status = await _check_mock()
+        status = _check_mock()
     except Exception as exc:
         status = ProviderHealthStatus(
             name="mock",

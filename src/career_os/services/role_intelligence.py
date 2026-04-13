@@ -250,8 +250,8 @@ def _salary_fallback_from_market(
 
 def _salary_fallback_from_ai(
     role: str,
-    location: str | None = None,
-    company_stage: str | None = None,
+    _location: str | None = None,
+    _company_stage: str | None = None,
 ) -> SalaryBenchmark | None:
     """Generate AI-based salary estimates as final fallback.
 
