@@ -235,4 +235,95 @@ describe("ContactsPage", () => {
 
     expect(screen.getByTestId("contacts-loading")).toBeInTheDocument();
   });
+
+  // 11. Escape key closes contact detail dialog
+  it("closes contact detail on Escape key", async () => {
+    const contact = makeContact({ id: 1, name: "Jane Doe" });
+    mockFetchContacts.mockResolvedValue(makeContactList([contact]));
+
+    renderContacts();
+
+    await waitFor(() => {
+      expect(screen.getByText("Jane Doe")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("contact-card-1"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("contact-detail-overlay")).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("contact-detail-overlay")).not.toBeInTheDocument();
+    });
+  });
+
+  // 12. Add contact form submission
+  it("submits add contact form", async () => {
+    mockFetchContacts.mockResolvedValue(makeContactList([]));
+    mockCreateContact.mockResolvedValue(makeContact({ name: "New Person" }));
+
+    renderContacts();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("add-contact-btn")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("add-contact-btn"));
+
+    expect(screen.getByTestId("add-contact-dialog")).toBeInTheDocument();
+
+    const nameInput = screen.getByTestId("contact-name-input");
+    fireEvent.change(nameInput, { target: { value: "New Person" } });
+
+    const form = nameInput.closest("form")!;
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockCreateContact).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "New Person" }),
+      );
+    });
+  });
+
+  // 13. Log interaction form submission
+  it("submits log interaction form", async () => {
+    const contact = makeContact({ id: 1, name: "Jane" });
+    mockFetchContacts.mockResolvedValue(makeContactList([contact]));
+    mockLogInteraction.mockResolvedValue({});
+
+    renderContacts();
+
+    await waitFor(() => {
+      expect(screen.getByText("Jane")).toBeInTheDocument();
+    });
+
+    // Open contact detail
+    fireEvent.click(screen.getByTestId("contact-card-1"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Log Interaction")).toBeInTheDocument();
+    });
+
+    // Open log interaction dialog
+    fireEvent.click(screen.getByText("Log Interaction"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("log-interaction-dialog")).toBeInTheDocument();
+    });
+
+    // Submit the form via the form element
+    const dialog = screen.getByTestId("log-interaction-dialog");
+    const form = dialog.querySelector("form")!;
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockLogInteraction).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ interaction_type: "email" }),
+      );
+    });
+  });
 });
