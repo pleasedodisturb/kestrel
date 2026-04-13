@@ -146,13 +146,52 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 - All work serves a Linear ticket (team: G). GitHub Issues are NOT used for task tracking.
 - <!-- maintainer-specific --> Linear CLI: `linearis` (or `~/.config/linear-cli.sh`). Fork maintainers: replace with your own task tracker.
 
-## GSD Workflow
+## Planning & Workflow Tooling
+
+Two workflow systems are installed: **GSD** (execution) and **BMAD** (product planning). Both are long-running project infrastructure — committed independently, not bundled with feature work.
+
+### GSD (Get Shit Done)
+
+**Installation:** Global (`~/.claude/skills/gsd-*/`). Available in all projects automatically.
+**State directory:** `.planning/` (created on first use, gitignored)
+**Auto-generated context:** `GSD-CLAUDE.md` (gitignored) — this hand-maintained `CLAUDE.md` is the source of truth
 
 Before making repo edits, start work through a GSD command:
-- `/gsd-quick` — small fixes, doc updates, ad-hoc tasks
-- `/gsd-debug` — investigation and bug fixing
-- `/gsd-execute-phase` — planned phase work
+
+| Command | Use when |
+|---------|----------|
+| `/gsd-quick` | Small fixes, doc updates, ad-hoc tasks |
+| `/gsd-fast` | Trivial inline tasks, no subagents |
+| `/gsd-debug` | Investigation and bug fixing |
+| `/gsd-plan-phase` | Plan a phase before execution |
+| `/gsd-execute-phase` | Execute planned phase work |
+| `/gsd-discuss-phase` | Gather context before planning (use `--chain` for discuss→plan→execute) |
+| `/gsd-autonomous` | Run remaining phases unattended |
+| `/gsd-progress` | Check project status and next action |
+| `/gsd-resume-work` | Resume from a previous session |
+| `/gsd-help` | Full command reference |
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 
-**Note:** GSD auto-generated context lives in `GSD-CLAUDE.md` (gitignored). This hand-maintained `CLAUDE.md` is the source of truth. If GSD regenerates, it writes to `GSD-CLAUDE.md` — do not let it overwrite this file.
+### BMAD (Build More, Architect Dreams)
+
+**Installation:** Per-project in `_bmad/` (config) and `.claude/skills/bmad-*/` (skills). Version 6.3.0.
+**Output directory:** `_bmad-output/planning-artifacts/` (PRD, architecture docs, etc.)
+**Config:** `_bmad/bmm/config.yaml` (project name, user, languages, output paths)
+
+BMAD drives the product planning pipeline: PRD → UX Design → Architecture → Epics → Stories.
+
+| Command | Use when |
+|---------|----------|
+| `/bmad-create-prd` | Create a new PRD from scratch (13-step guided workflow) |
+| `/bmad-edit-prd` | Edit an existing PRD |
+| `/bmad-validate-prd` | Validate a PRD against BMAD quality standards |
+| `/bmad-create-ux-design` | Plan UX patterns and design specs |
+| `/bmad-help` | See available BMAD skills and recommendations |
+| `/bmad-party-mode` | Multi-agent roundtable discussion |
+| `/bmad-advanced-elicitation` | Push LLM to reconsider/refine output (Socratic, red team, etc.) |
+| `/bmad-brainstorming` | Facilitated ideation sessions |
+
+**Step-file workflow:** Each BMAD workflow (e.g., create-prd) uses sequential step files in `steps-c/`. Steps are loaded one at a time, executed in order, with A/P/C menus (Advanced Elicitation / Party Mode / Continue). Never skip steps or load multiple simultaneously.
+
+**History:** BMAD was first installed via G-225 (Ollama provider) but got collateral-damaged when that commit was reverted. Reinstalled independently via G-265 to prevent recurrence.
