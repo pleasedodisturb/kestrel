@@ -13,6 +13,7 @@ from career_os.database import get_db
 from career_os.schemas.scoring import (
     BatchScoreRequest,
     BatchScoreResponse,
+    ScoreContextResponse,
     ScoreRequest,
     ScoreResponse,
     ScoringWeightsResponse,
@@ -25,6 +26,7 @@ from career_os.services.scoring import (
     ProfileNotFoundError,
     ScoringError,
     batch_score_discovery,
+    compute_score_context,
     flag_stale_scores,
     get_or_create_weights,
     get_score_for_application,
@@ -193,6 +195,21 @@ async def batch_score_endpoint(
 
 
 # ---------------------------------------------------------------------------
+# Score Context Helper
+# ---------------------------------------------------------------------------
+
+
+def _build_score_context(
+    db: Session, profile_id: int, fit_score: float
+) -> ScoreContextResponse | None:
+    """Compute and return a ScoreContextResponse, or None when data is insufficient."""
+    ctx = compute_score_context(db, profile_id, fit_score)
+    if ctx is None:
+        return None
+    return ScoreContextResponse(**ctx)
+
+
+# ---------------------------------------------------------------------------
 # Score Retrieval
 # ---------------------------------------------------------------------------
 
@@ -203,11 +220,16 @@ async def get_job_score_endpoint(
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
-    """Get the latest score for a discovered job."""
+    """Get the latest score for a discovered job.
+
+    Includes ``score_context`` (percentile/rank) when the profile has >= 5 scored jobs.
+    """
     scored = get_score_for_job(db, profile_id, discovered_job_id)
     if not scored:
         raise HTTPException(status_code=404, detail="No score found for this job")
-    return ScoreResponse.model_validate(scored)
+    response = ScoreResponse.model_validate(scored)
+    response.score_context = _build_score_context(db, profile_id, scored.fit_score)
+    return response
 
 
 @router.get(
@@ -219,11 +241,16 @@ async def get_application_score_endpoint(
     profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
-    """Get the latest score for an application."""
+    """Get the latest score for an application.
+
+    Includes ``score_context`` (percentile/rank) when the profile has >= 5 scored jobs.
+    """
     scored = get_score_for_application(db, profile_id, application_id)
     if not scored:
         raise HTTPException(status_code=404, detail="No score found for this application")
-    return ScoreResponse.model_validate(scored)
+    response = ScoreResponse.model_validate(scored)
+    response.score_context = _build_score_context(db, profile_id, scored.fit_score)
+    return response
 
 
 # ---------------------------------------------------------------------------

@@ -733,6 +733,102 @@ def flag_stale_scores(db: Session, profile_id: int) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Score Context (Percentile / Rank)
+# ---------------------------------------------------------------------------
+
+_SCORE_CONTEXT_MIN_SCORES = 5  # minimum non-stale scores required for meaningful context
+
+
+def compute_score_context(db: Session, profile_id: int, fit_score: float) -> dict | None:
+    """Return percentile context for a score relative to the user's scoring history.
+
+    Only computed when the profile has >= 5 non-stale scored jobs.  Returns
+    ``None`` when there is insufficient data.
+
+    The returned dict matches the ``ScoreContextResponse`` Pydantic schema:
+        {
+            "percentile": 82,       # score is higher than 82% of scored jobs
+            "rank": 3,              # 3rd highest score
+            "total_scored": 47,     # total non-stale scored jobs
+            "avg_score": 5.3,       # average fit_score
+            "score_band_count": 8,  # jobs in the same letter grade band
+        }
+    """
+    from career_os.schemas.scoring import score_to_letter_grade
+
+    # Count total non-stale scored jobs for this profile
+    total_scored: int = (
+        db.query(ScoredJob)
+        .filter(
+            ScoredJob.profile_id == profile_id,
+            ScoredJob.is_stale.is_(False),
+        )
+        .count()
+    )
+
+    if total_scored < _SCORE_CONTEXT_MIN_SCORES:
+        return None
+
+    # Count how many scores are strictly below this score (for percentile)
+    below_count: int = (
+        db.query(ScoredJob)
+        .filter(
+            ScoredJob.profile_id == profile_id,
+            ScoredJob.is_stale.is_(False),
+            ScoredJob.fit_score < fit_score,
+        )
+        .count()
+    )
+
+    percentile = int(below_count / total_scored * 100)
+
+    # Rank: count scores strictly above this score + 1
+    above_count: int = (
+        db.query(ScoredJob)
+        .filter(
+            ScoredJob.profile_id == profile_id,
+            ScoredJob.is_stale.is_(False),
+            ScoredJob.fit_score > fit_score,
+        )
+        .count()
+    )
+    rank = above_count + 1
+
+    # Average score across all non-stale jobs
+    from sqlalchemy import func as sa_func
+
+    avg_result = (
+        db.query(sa_func.avg(ScoredJob.fit_score))
+        .filter(
+            ScoredJob.profile_id == profile_id,
+            ScoredJob.is_stale.is_(False),
+        )
+        .scalar()
+    )
+    avg_score = round(float(avg_result), 2) if avg_result is not None else 0.0
+
+    # Jobs in the same letter grade band as fit_score
+    target_grade = score_to_letter_grade(fit_score)
+    all_scores = (
+        db.query(ScoredJob.fit_score)
+        .filter(
+            ScoredJob.profile_id == profile_id,
+            ScoredJob.is_stale.is_(False),
+        )
+        .all()
+    )
+    score_band_count = sum(1 for (s,) in all_scores if score_to_letter_grade(s) == target_grade)
+
+    return {
+        "percentile": percentile,
+        "rank": rank,
+        "total_scored": total_scored,
+        "avg_score": avg_score,
+        "score_band_count": score_band_count,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Score Retrieval
 # ---------------------------------------------------------------------------
 
