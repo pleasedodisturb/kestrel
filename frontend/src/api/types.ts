@@ -134,6 +134,23 @@ export interface ATSKeyword {
 }
 
 /**
+ * Percentile context for a score relative to a user's full scoring history.
+ * Only present when the profile has >= 5 non-stale scored jobs.
+ */
+export interface ScoreContext {
+  /** Percentage of scored jobs this score is higher than (0-100) */
+  percentile: number;
+  /** Rank among all scored jobs, 1 = highest */
+  rank: number;
+  /** Total number of non-stale scored jobs for this profile */
+  total_scored: number;
+  /** Average fit_score across all non-stale scored jobs */
+  avg_score: number;
+  /** Number of jobs in the same letter grade band as this score */
+  score_band_count: number;
+}
+
+/**
  * Shape of the /api/score/application/{id} response. Mirrors the backend
  * `ScoreResponse` pydantic schema — only the fields we actively consume on
  * the application detail page are listed.
@@ -147,6 +164,7 @@ export interface ScoreResponseShape {
   ats_keywords?: ATSKeyword[];
   red_flags?: RedFlag[];
   reasoning: string;
+  score_context?: ScoreContext | null;
 }
 
 export interface Application {

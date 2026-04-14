@@ -99,6 +99,30 @@ class ATSKeywordItem(BaseModel):
     matched: bool
 
 
+class ScoreContextResponse(BaseModel):
+    """Percentile context for a score relative to a user's scoring history.
+
+    Only populated when the profile has >= 5 non-stale scored jobs.
+    """
+
+    percentile: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Percentage of scored jobs this score is higher than",
+    )
+    rank: int = Field(..., ge=1, description="Rank among all scored jobs (1 = highest)")
+    total_scored: int = Field(..., ge=1, description="Total number of non-stale scored jobs")
+    avg_score: float = Field(
+        ..., ge=0, le=10, description="Average fit_score across all scored jobs"
+    )
+    score_band_count: int = Field(
+        ...,
+        ge=0,
+        description="Number of jobs in the same letter grade band as this score",
+    )
+
+
 class ScoreResponse(BaseModel):
     """Full scoring breakdown response."""
 
@@ -153,6 +177,15 @@ class ScoreResponse(BaseModel):
     effort_flag: str = Field(..., description="Effort level: low / medium / high")
     prep_level: str = Field(..., description="Preparation level: light / moderate / intensive")
     prep_notes: str = Field(..., description="Prep recommendations")
+
+    # Score context — percentile/rank relative to this profile's history.
+    # Computed dynamically on GET; not stored in DB. None when < 5 scored jobs exist.
+    score_context: ScoreContextResponse | None = Field(
+        default=None,
+        description=(
+            "Percentile context relative to profile's scoring history (null when < 5 scores)"
+        ),
+    )
 
     is_stale: bool = False
     created_at: datetime | None = None
