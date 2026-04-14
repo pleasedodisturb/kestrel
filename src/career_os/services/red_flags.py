@@ -17,12 +17,15 @@ See ``tests/test_ghost_jobs.py`` for ghost-job detection expectations.
 
 from __future__ import annotations
 
+import logging
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -462,6 +465,82 @@ def _detect_multi_city_blast(
 
 
 # ---------------------------------------------------------------------------
+# WARN Act layoff detection (Epic 9 / G-277)
+# ---------------------------------------------------------------------------
+
+_WARN_CAUTION_DAYS = 180  # filings within 180 days → caution
+_WARN_WARNING_DAYS = 60  # filings within 60 days → warning (imminent/in-progress)
+
+
+def _detect_recent_layoffs(
+    company_name: str | None,
+    *,
+    db: Session | None = None,
+    today: date | None = None,
+) -> dict[str, str] | None:
+    """Check WARN Act filings for recent layoffs at this company.
+
+    Queries the warn_filings table for any notice filed in the last 180 days.
+    - Filing within 60 days  → severity "warning" (layoffs imminent or in progress)
+    - Filing within 180 days → severity "caution" (recent layoffs, still a risk signal)
+    - No filing / WARN data unavailable → None (no flag emitted)
+
+    This rule is US-only — it silently returns None for non-US roles or when
+    the company name cannot be matched.
+
+    Args:
+        company_name: Company name from the job posting.
+        db: SQLAlchemy session. If None, rule is skipped (no DB access).
+        today: Override for today's date (used in tests).
+
+    Returns:
+        A flag dict or None.
+    """
+    if not company_name or db is None:
+        return None
+
+    # Lazy import to avoid circular dependency and keep warn_data truly optional
+    try:
+        from career_os.services.warn_data import get_filings_for_company
+    except ImportError:
+        logger.debug("warn_data module not available — skipping WARN check")
+        return None
+
+    reference_date = today or datetime.now(UTC).date()
+    cutoff = reference_date - timedelta(days=_WARN_CAUTION_DAYS)
+
+    try:
+        filings = get_filings_for_company(db, company_name, since=cutoff)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("WARN filing lookup failed for '%s': %s", company_name, exc)
+        return None
+
+    if not filings:
+        return None
+
+    # Most recent filing first (get_filings_for_company orders DESC)
+    most_recent = filings[0]
+    age_days = (reference_date - most_recent.notice_date).days
+
+    employee_str = (
+        f" affecting {most_recent.employees_affected:,} employees"
+        if most_recent.employees_affected
+        else ""
+    )
+    description = (
+        f"Company filed WARN Act notice on {most_recent.notice_date.isoformat()}"
+        f"{employee_str} in {most_recent.state}."
+    )
+
+    if age_days <= _WARN_WARNING_DAYS:
+        description += " Layoffs are imminent or currently in progress."
+        return _flag("recent_layoffs", "warning", description)
+
+    description += f" Filed {age_days} days ago — layoff risk signal."
+    return _flag("recent_layoffs", "caution", description)
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -473,6 +552,8 @@ def detect_red_flags(
     title: str | None = None,
     salary_range: str | None = None,
     location: str | None = None,
+    company_name: str | None = None,
+    db: Session | None = None,
 ) -> list[dict[str, str]]:
     """Run all rule-based red-flag rules and return any flags found.
 
@@ -517,6 +598,12 @@ def detect_red_flags(
         excessive = _detect_excessive_requirements(job_description)
         if excessive:
             flags.append(excessive)
+
+    # WARN Act layoff check — requires DB session and company name.
+    # Silently skipped if either is absent.
+    layoffs = _detect_recent_layoffs(company_name, db=db)
+    if layoffs:
+        flags.append(layoffs)
 
     return flags
 
