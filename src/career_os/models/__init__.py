@@ -8,6 +8,7 @@ from career_os.models.discovery import (
     DiscoveryRun,
     SearchProfile,
 )
+from career_os.models.esco import ESCOSkill, SkillMapping
 from career_os.models.integrations import IntegrationConfig
 from career_os.models.interview_prep import (
     InterviewPrepItem,
@@ -43,6 +44,8 @@ __all__ = [
     "CalendarEvent",
     "CompanyResearchReportModel",
     "Contact",
+    "ESCOSkill",
+    "SkillMapping",
     "ContactApplication",
     "ContactInteraction",
     "ApplicationPackage",
