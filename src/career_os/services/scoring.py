@@ -114,6 +114,90 @@ JOB_FAMILY_WEIGHTS: dict[str, dict[str, float]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Scoring rubric & calibration (Epic 1 / G-269)
+# ---------------------------------------------------------------------------
+
+RUBRIC_VERSION = "v1.0"
+
+SCORING_RUBRIC = """\
+## Scoring Rubric
+
+Use these band definitions to anchor your fit_score:
+
+- **9-10 (Dream fit):** Role, skills, seniority, domain, and location all align. \
+The candidate would be a top-quartile applicant. Virtually no gaps.
+- **7-8 (Strong fit):** Most dimensions match well. Minor gaps exist (e.g. one \
+missing tool, slight seniority stretch) but the candidate is clearly competitive.
+- **5-6 (Moderate fit):** Partial overlap — some skills transfer, but meaningful \
+gaps in domain, seniority, or core requirements. Could succeed with ramp-up.
+- **3-4 (Weak fit):** Few dimensions align. Major gaps in multiple areas. \
+The candidate would need significant retraining or a career pivot.
+- **1-2 (Poor fit):** Near-total mismatch on role type, skills, and domain. \
+Applying would waste time for both sides.
+
+### Calibration Examples
+
+**Example 1 — Score: 2.0**
+JD: "Senior .NET Developer — build enterprise ERP modules in C#/.NET, Azure DevOps, \
+SQL Server. 5+ years .NET required."
+Profile: TPM with Python/AI focus, no .NET or ERP experience.
+Reasoning: Complete skills mismatch (Python vs .NET), wrong role type (TPM vs SWE), \
+unrelated domain. Score: 2.0
+
+**Example 2 — Score: 5.5**
+JD: "Product Manager, Growth — own activation funnels, run A/B experiments, SQL \
+proficiency, B2C SaaS experience."
+Profile: TPM with some PM overlap, strong SQL, but B2B enterprise background.
+Reasoning: Transferable analytical skills and SQL, but wrong domain (B2B vs B2C), \
+no growth/activation experience. Partial fit. Score: 5.5
+
+**Example 3 — Score: 8.5**
+JD: "Technical Program Manager, AI Platform — coordinate ML infrastructure teams, \
+drive cross-functional delivery, Python scripting, stakeholder management."
+Profile: TPM with strong AI/ML platform experience, Python proficiency, proven \
+cross-functional leadership.
+Reasoning: Direct role match, strong technical overlap, relevant domain experience. \
+Minor gap: specific ML infra tooling. Score: 8.5
+"""
+
+
+def _build_job_family_modifiers(job_family: str | None) -> str:
+    """Generate rubric modifiers based on the active job family weights.
+
+    Highlights which dimensions carry more or less weight for the given
+    job family so the AI calibrates accordingly.
+    """
+    if not job_family:
+        return ""
+
+    weights = _weights_for_job_family(job_family)
+    if weights == DEFAULT_WEIGHTS:
+        return ""
+
+    # Identify dimensions that deviate meaningfully from the default
+    modifier_lines: list[str] = []
+    for dim, weight in weights.items():
+        default_w = DEFAULT_WEIGHTS.get(dim, 0.0)
+        diff = weight - default_w
+        label = dim.replace("_", " ")
+        if diff >= 0.05:
+            modifier_lines.append(
+                f"- For {job_family}: {label} is weighted higher ({weight:.0%} vs "
+                f"default {default_w:.0%}) — gaps here are more penalizing."
+            )
+        elif diff <= -0.05:
+            modifier_lines.append(
+                f"- For {job_family}: {label} is weighted lower ({weight:.0%} vs "
+                f"default {default_w:.0%}) — gaps here matter less."
+            )
+
+    if not modifier_lines:
+        return ""
+
+    return "\n### Job-Family Weight Modifiers\n" + "\n".join(modifier_lines) + "\n"
+
+
 def _weights_for_job_family(job_family: str | None) -> dict[str, float]:
     """Return the default weight preset for a given job family.
 
@@ -469,7 +553,7 @@ async def score_job(
         red_flags=red_flags_json,
         ats_keywords=ats_keywords_json,
         is_stale=False,
-        weights_snapshot=json.dumps(profile_data["weights"]),
+        weights_snapshot=json.dumps({**profile_data["weights"], "rubric_version": RUBRIC_VERSION}),
         **dim_columns,
     )
     db.add(scored_job)
@@ -544,6 +628,13 @@ def _build_scoring_prompt(
     parts.extend(_format_skills_section(profile_data.get("skills", [])))
     parts.extend(_format_goals_section(profile_data.get("goals", [])))
     parts.extend(_format_market_section(profile_data.get("market_positioning", {})))
+
+    # Scoring rubric with calibration examples (G-269)
+    parts.append(f"\n{SCORING_RUBRIC}")
+    job_family = profile_data.get("job_family")
+    family_modifiers = _build_job_family_modifiers(job_family)
+    if family_modifiers:
+        parts.append(family_modifiers)
 
     if profile_data.get("weights"):
         parts.append(f"\nScoring Weights: {json.dumps(profile_data['weights'])}")
