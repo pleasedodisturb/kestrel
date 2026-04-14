@@ -114,6 +114,11 @@ class ScoredJob(Base):
     # ATS keywords extracted by AI (JSON array of {keyword, category, matched})
     ats_keywords: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Desire score — measures "how much would the user want this job?" (0-10)
+    desire_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    desire_score_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    desire_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Dimensional sub-scores (0-10, each may be null on legacy rows)
     dim_technical_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
     dim_seniority_alignment: Mapped[float | None] = mapped_column(Float, nullable=True)
