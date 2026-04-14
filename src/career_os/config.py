@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     cache_enabled: bool = True
     cache_encryption_key: str = ""  # User-provided Fernet key; auto-generated if empty
 
+    # Feedback calibration (Epic 6 / G-274) — inject top feedback examples into
+    # scoring prompts. Disabled by default until ≥10 explicit corrections exist.
+    # Epic 11 (Bayesian Learning) will leverage this when enabled.
+    feedback_calibration_enabled: bool = False
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).

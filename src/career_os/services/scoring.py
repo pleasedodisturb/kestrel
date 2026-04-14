@@ -18,7 +18,7 @@ from career_os.ai.factory import get_ai_provider
 from career_os.ai.openrouter_provider import CreditsExhaustedError
 from career_os.models.discovery import DiscoveredJob
 from career_os.models.models import Application, Profile
-from career_os.models.scoring import ScoredJob, ScoringWeights
+from career_os.models.scoring import ScoredJob, ScoringFeedback, ScoringWeights
 from career_os.models.skills import Goal, Skill
 from career_os.schemas.ai import ScoreResult
 from career_os.services.red_flags import detect_data_driven_red_flags, detect_red_flags
@@ -966,3 +966,259 @@ def get_score_for_application(
         .order_by(ScoredJob.created_at.desc())
         .first()
     )
+
+
+# ---------------------------------------------------------------------------
+# Feedback CRUD
+# ---------------------------------------------------------------------------
+
+#: Directions considered explicit user corrections
+EXPLICIT_DIRECTIONS = {"too_high", "too_low", "correct"}
+
+#: Directions considered implicit signals
+IMPLICIT_DIRECTIONS = {"implicit_positive", "implicit_negative", "implicit_strong_positive"}
+
+#: All valid feedback directions
+VALID_DIRECTIONS = EXPLICIT_DIRECTIONS | IMPLICIT_DIRECTIONS
+
+
+class FeedbackNotFoundError(Exception):
+    """Raised when a scored_job is not found when submitting feedback."""
+
+
+class InvalidFeedbackError(Exception):
+    """Raised when feedback data is invalid."""
+
+
+def submit_feedback(
+    db: Session,
+    *,
+    scored_job_id: int,
+    profile_id: int,
+    direction: str,
+    user_score: float | None = None,
+    reason: str | None = None,
+) -> ScoringFeedback:
+    """Submit feedback on an AI-generated score.
+
+    Validates that the scored_job exists and belongs to the profile, then
+    creates a ScoringFeedback record snapshotting the original fit_score.
+
+    Raises FeedbackNotFoundError if the scored_job does not exist.
+    Raises InvalidFeedbackError if direction or user_score are invalid.
+    """
+    if direction not in VALID_DIRECTIONS:
+        raise InvalidFeedbackError(
+            f"Invalid direction '{direction}'. Must be one of: {sorted(VALID_DIRECTIONS)}"
+        )
+    if user_score is not None and not (0.0 <= user_score <= 10.0):
+        raise InvalidFeedbackError("user_score must be between 0 and 10")
+
+    scored_job = (
+        db.query(ScoredJob)
+        .filter(ScoredJob.id == scored_job_id, ScoredJob.profile_id == profile_id)
+        .first()
+    )
+    if scored_job is None:
+        raise FeedbackNotFoundError(f"ScoredJob {scored_job_id} not found for profile {profile_id}")
+
+    feedback = ScoringFeedback(
+        scored_job_id=scored_job_id,
+        profile_id=profile_id,
+        direction=direction,
+        user_score=user_score,
+        reason=reason,
+        original_fit_score=scored_job.fit_score,
+    )
+    db.add(feedback)
+    db.commit()
+    db.refresh(feedback)
+    return feedback
+
+
+def record_implicit_feedback(
+    db: Session,
+    *,
+    profile_id: int,
+    direction: str,
+    scored_job_id: int | None = None,
+    discovered_job_id: int | None = None,
+    application_id: int | None = None,
+) -> ScoringFeedback | None:
+    """Record an implicit feedback signal.
+
+    Looks up the most recent ScoredJob linked to the given discovered_job_id
+    or application_id, then creates a ScoringFeedback record. Returns None
+    if no ScoredJob can be found (gracefully skipped).
+
+    Called from service hooks — never fails loudly.
+    """
+    if direction not in IMPLICIT_DIRECTIONS:
+        logger.warning("record_implicit_feedback: invalid direction '%s', skipping", direction)
+        return None
+
+    # Resolve scored_job_id from the linked entity if not supplied directly
+    if scored_job_id is None:
+        query = db.query(ScoredJob).filter(ScoredJob.profile_id == profile_id)
+        if discovered_job_id is not None:
+            query = query.filter(ScoredJob.discovered_job_id == discovered_job_id)
+        elif application_id is not None:
+            query = query.filter(ScoredJob.application_id == application_id)
+        else:
+            return None
+        scored_job = query.order_by(ScoredJob.created_at.desc()).first()
+        if scored_job is None:
+            return None
+        scored_job_id = scored_job.id
+    else:
+        scored_job = db.query(ScoredJob).filter(ScoredJob.id == scored_job_id).first()
+        if scored_job is None:
+            return None
+
+    try:
+        feedback = ScoringFeedback(
+            scored_job_id=scored_job_id,
+            profile_id=profile_id,
+            direction=direction,
+            user_score=None,
+            reason=None,
+            original_fit_score=scored_job.fit_score,
+        )
+        db.add(feedback)
+        db.commit()
+        db.refresh(feedback)
+        return feedback
+    except Exception:
+        logger.warning(
+            "record_implicit_feedback: failed to record signal '%s' for scored_job %d",
+            direction,
+            scored_job_id,
+            exc_info=True,
+        )
+        db.rollback()
+        return None
+
+
+def list_feedback(db: Session, profile_id: int) -> list[ScoringFeedback]:
+    """List all feedback records for a profile, newest first."""
+    return (
+        db.query(ScoringFeedback)
+        .filter(ScoringFeedback.profile_id == profile_id)
+        .order_by(ScoringFeedback.created_at.desc())
+        .all()
+    )
+
+
+def get_feedback_stats(db: Session, profile_id: int) -> dict:
+    """Return summary statistics for feedback submitted by a profile.
+
+    Returns:
+        total_count, explicit_count, implicit_count,
+        avg_deviation (or None), direction_counts.
+    """
+    records = list_feedback(db, profile_id)
+
+    direction_counts: dict[str, int] = {}
+    explicit_count = 0
+    implicit_count = 0
+    deviations: list[float] = []
+
+    for r in records:
+        direction_counts[r.direction] = direction_counts.get(r.direction, 0) + 1
+        if r.direction in EXPLICIT_DIRECTIONS:
+            explicit_count += 1
+        else:
+            implicit_count += 1
+        if r.user_score is not None:
+            deviations.append(abs(r.user_score - r.original_fit_score))
+
+    avg_deviation = sum(deviations) / len(deviations) if deviations else None
+
+    return {
+        "total_count": len(records),
+        "explicit_count": explicit_count,
+        "implicit_count": implicit_count,
+        "avg_deviation": avg_deviation,
+        "direction_counts": direction_counts,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Calibration Summary (foundation for Epic 11 / Bayesian Learning)
+# ---------------------------------------------------------------------------
+
+#: Minimum number of explicit feedback records required before calibration is
+#: returned. Below this threshold the data is too sparse to be meaningful.
+CALIBRATION_MIN_FEEDBACK = 10
+
+#: Maximum number of calibration examples injected into the scoring prompt.
+CALIBRATION_MAX_EXAMPLES = 5
+
+
+def get_feedback_calibration(db: Session, profile_id: int) -> list[dict]:
+    """Return the most informative calibration examples for the scoring prompt.
+
+    "Most informative" = largest absolute deviation between the user's score
+    and the AI's original score. Only explicit corrections (too_high / too_low)
+    with a user_score are considered.
+
+    Returns an empty list when fewer than CALIBRATION_MIN_FEEDBACK explicit
+    feedback records exist (data too sparse to calibrate).
+
+    Each returned dict has keys:
+        job_title, company, ai_score, user_score, reason, deviation
+    """
+    explicit_records = (
+        db.query(ScoringFeedback)
+        .filter(
+            ScoringFeedback.profile_id == profile_id,
+            ScoringFeedback.direction.in_(["too_high", "too_low"]),
+            ScoringFeedback.user_score.isnot(None),
+        )
+        .all()
+    )
+
+    if len(explicit_records) < CALIBRATION_MIN_FEEDBACK:
+        return []
+
+    # Enrich with job metadata from the linked ScoredJob → DiscoveredJob/Application
+    enriched: list[dict] = []
+    for record in explicit_records:
+        scored_job = db.query(ScoredJob).filter(ScoredJob.id == record.scored_job_id).first()
+        job_title: str | None = None
+        company: str | None = None
+        if scored_job is not None:
+            if scored_job.discovered_job_id is not None:
+                dj = (
+                    db.query(DiscoveredJob)
+                    .filter(DiscoveredJob.id == scored_job.discovered_job_id)
+                    .first()
+                )
+                if dj:
+                    job_title = dj.title
+                    company = dj.company
+            elif scored_job.application_id is not None:
+                app_rec = (
+                    db.query(Application)
+                    .filter(Application.id == scored_job.application_id)
+                    .first()
+                )
+                if app_rec:
+                    job_title = app_rec.role
+                    company = app_rec.company
+
+        deviation = abs(record.user_score - record.original_fit_score)  # type: ignore[operator]
+        enriched.append(
+            {
+                "job_title": job_title,
+                "company": company,
+                "ai_score": record.original_fit_score,
+                "user_score": record.user_score,
+                "reason": record.reason,
+                "deviation": deviation,
+            }
+        )
+
+    # Sort by deviation descending, take top N
+    enriched.sort(key=lambda x: x["deviation"], reverse=True)
+    return enriched[:CALIBRATION_MAX_EXAMPLES]

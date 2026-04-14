@@ -13,6 +13,9 @@ from career_os.database import get_db
 from career_os.schemas.scoring import (
     BatchScoreRequest,
     BatchScoreResponse,
+    FeedbackCreate,
+    FeedbackResponse,
+    FeedbackStats,
     ScoreContextResponse,
     ScoreRequest,
     ScoreResponse,
@@ -21,6 +24,8 @@ from career_os.schemas.scoring import (
 )
 from career_os.services.pushover import send_credits_exhausted_alert
 from career_os.services.scoring import (
+    FeedbackNotFoundError,
+    InvalidFeedbackError,
     JobNotFoundError,
     ProfileIncompleteError,
     ProfileNotFoundError,
@@ -28,10 +33,13 @@ from career_os.services.scoring import (
     batch_score_discovery,
     compute_score_context,
     flag_stale_scores,
+    get_feedback_stats,
     get_or_create_weights,
     get_score_for_application,
     get_score_for_job,
+    list_feedback,
     score_job,
+    submit_feedback,
     update_weights,
 )
 
@@ -270,3 +278,69 @@ async def flag_stale_endpoint(
     """
     count = flag_stale_scores(db, profile_id)
     return {"stale_count": count}
+
+
+# ---------------------------------------------------------------------------
+# Scoring Feedback (Epic 6 / G-274)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/api/score/{scored_job_id}/feedback",
+    status_code=201,
+    responses={
+        **RESP_404,
+        400: {"description": "Invalid feedback data"},
+    },
+)
+async def submit_feedback_endpoint(
+    scored_job_id: int,
+    payload: FeedbackCreate,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    db: Annotated[Session, Depends(get_db)],
+) -> FeedbackResponse:
+    """Submit user feedback on an AI-generated score.
+
+    Accepts explicit corrections (too_high, too_low, correct) with an optional
+    user_score (0-10) and free-text reason. Records a snapshot of the original
+    AI score for calibration purposes.
+    """
+    try:
+        feedback = submit_feedback(
+            db,
+            scored_job_id=scored_job_id,
+            profile_id=profile_id,
+            direction=payload.direction.value,
+            user_score=payload.user_score,
+            reason=payload.reason,
+        )
+    except FeedbackNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidFeedbackError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return FeedbackResponse.model_validate(feedback)
+
+
+@router.get("/api/score/feedback")
+async def list_feedback_endpoint(
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[FeedbackResponse]:
+    """List all feedback records for a profile, newest first."""
+    records = list_feedback(db, profile_id)
+    return [FeedbackResponse.model_validate(r) for r in records]
+
+
+@router.get("/api/score/feedback/stats")
+async def feedback_stats_endpoint(
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    db: Annotated[Session, Depends(get_db)],
+) -> FeedbackStats:
+    """Return summary statistics for feedback submitted by a profile.
+
+    Includes total count, explicit vs implicit breakdown, average deviation,
+    and per-direction counts.
+    """
+    stats = get_feedback_stats(db, profile_id)
+    return FeedbackStats(**stats)

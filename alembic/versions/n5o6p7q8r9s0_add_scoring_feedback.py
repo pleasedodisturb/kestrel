@@ -1,7 +1,7 @@
 """Add scoring_feedback table for user feedback loop (Epic 6 / G-274).
 
-Revision ID: l3g4h5i6j7k8
-Revises: k2f3g4h5i6j7
+Revision ID: n5o6p7q8r9s0
+Revises: d2e5a7f1b9c3
 Create Date: 2026-04-14 00:00:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "l3g4h5i6j7k8"
-down_revision: Union[str, None] = "k2f3g4h5i6j7"
+revision: str = "n5o6p7q8r9s0"
+down_revision: Union[str, None] = "d2e5a7f1b9c3"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
