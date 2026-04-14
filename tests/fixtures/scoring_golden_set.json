@@ -1,0 +1,182 @@
+[
+  {
+    "id": "gs-01",
+    "category": "reject",
+    "expected_band": [1, 3],
+    "title": "Senior .NET Developer",
+    "company": "SAP SE",
+    "location": "Walldorf, Germany",
+    "description": "Build enterprise ERP modules in C#/.NET 8, Azure DevOps, SQL Server. 5+ years .NET required. Team of 12 backend developers. On-site only."
+  },
+  {
+    "id": "gs-02",
+    "category": "reject",
+    "expected_band": [1, 3],
+    "title": "Compensation & Benefits Analyst",
+    "company": "Deel",
+    "location": "Remote, EMEA",
+    "description": "Manage global compensation benchmarking, benefits administration, and payroll compliance across 30+ countries. Excel/HRIS expertise required."
+  },
+  {
+    "id": "gs-03",
+    "category": "reject",
+    "expected_band": [1, 3],
+    "title": "Senior iOS Developer (Swift)",
+    "company": "N26",
+    "location": "Berlin, Germany",
+    "description": "Build native iOS banking features in Swift/SwiftUI. 6+ years iOS development. Strong UIKit and Core Data experience required."
+  },
+  {
+    "id": "gs-04",
+    "category": "reject",
+    "expected_band": [1, 3],
+    "title": "Clinical Data Manager",
+    "company": "BioNTech",
+    "location": "Mainz, Germany",
+    "description": "Manage clinical trial databases, ensure GCP compliance, write data management plans. Medidata Rave experience required. Pharma background essential."
+  },
+  {
+    "id": "gs-05",
+    "category": "mediocre",
+    "expected_band": [4, 6],
+    "title": "Product Manager, Growth",
+    "company": "Personio",
+    "location": "Remote, EU",
+    "description": "Own activation and retention funnels for HR SaaS platform. Run A/B experiments, define growth metrics, work with data team. B2C growth experience preferred."
+  },
+  {
+    "id": "gs-06",
+    "category": "mediocre",
+    "expected_band": [4, 6],
+    "title": "Project Manager, Cloud Migration",
+    "company": "T-Systems",
+    "location": "Frankfurt, Germany",
+    "description": "Lead cloud migration projects for enterprise clients. PMP/PRINCE2 certification required. Manage budgets, timelines, vendor relationships. Some technical oversight."
+  },
+  {
+    "id": "gs-07",
+    "category": "mediocre",
+    "expected_band": [4, 6],
+    "title": "Developer Relations Engineer",
+    "company": "Stripe",
+    "location": "Remote, EU",
+    "description": "Create technical content, build sample apps, speak at conferences. Deep payments/fintech knowledge required. Ruby/Python proficiency."
+  },
+  {
+    "id": "gs-08",
+    "category": "mediocre",
+    "expected_band": [4, 6],
+    "title": "Engineering Manager, Backend",
+    "company": "SoundCloud",
+    "location": "Berlin, Germany",
+    "description": "Lead a team of 8 backend engineers. Scala/JVM stack. Drive technical roadmap for audio processing pipeline. People management experience required."
+  },
+  {
+    "id": "gs-09",
+    "category": "mediocre",
+    "expected_band": [4, 6],
+    "title": "Solutions Architect, AWS",
+    "company": "Amazon Web Services",
+    "location": "Munich, Germany",
+    "description": "Help enterprise customers design cloud architectures. Pre-sales technical support. AWS certifications required. Travel 30%."
+  },
+  {
+    "id": "gs-10",
+    "category": "mediocre",
+    "expected_band": [4, 6],
+    "title": "Data Engineering Lead",
+    "company": "Zalando",
+    "location": "Berlin, Germany",
+    "description": "Lead data platform team. Build ETL pipelines with Spark/Airflow. Python/SQL proficiency. E-commerce domain experience preferred."
+  },
+  {
+    "id": "gs-11",
+    "category": "strong",
+    "expected_band": [7, 8],
+    "title": "Technical Program Manager, Platform",
+    "company": "Datadog",
+    "location": "Remote, EU",
+    "description": "Drive cross-functional delivery for observability platform. Coordinate 4 engineering teams. Python scripting, CI/CD expertise. Technical background required."
+  },
+  {
+    "id": "gs-12",
+    "category": "strong",
+    "expected_band": [7, 8],
+    "title": "Senior TPM, Developer Tools",
+    "company": "GitLab",
+    "location": "Remote",
+    "description": "Program-manage DevOps toolchain initiatives. Stakeholder management across product, engineering, and design. Strong technical acumen, Python/Go experience."
+  },
+  {
+    "id": "gs-13",
+    "category": "strong",
+    "expected_band": [7, 8],
+    "title": "Product Engineer, AI Features",
+    "company": "Notion",
+    "location": "Remote, EU",
+    "description": "Build AI-powered features end-to-end. React/TypeScript frontend, Python/FastAPI backend. LLM integration experience valued. Small autonomous team."
+  },
+  {
+    "id": "gs-14",
+    "category": "strong",
+    "expected_band": [7, 8],
+    "title": "Program Manager, ML Infrastructure",
+    "company": "DeepMind",
+    "location": "London, UK",
+    "description": "Coordinate ML infrastructure programs. Manage cross-team dependencies for training pipelines. Python proficiency, ML ecosystem familiarity."
+  },
+  {
+    "id": "gs-15",
+    "category": "strong",
+    "expected_band": [7, 8],
+    "title": "Staff TPM, AI Platform",
+    "company": "Anthropic",
+    "location": "Remote",
+    "description": "Lead technical programs for AI safety infrastructure. Cross-functional coordination, Python, distributed systems experience. Strong written communication."
+  },
+  {
+    "id": "gs-16",
+    "category": "strong",
+    "expected_band": [7, 8],
+    "title": "Technical Program Manager, Cloud AI",
+    "company": "Mistral AI",
+    "location": "Paris, France",
+    "description": "Drive delivery of cloud AI products. Coordinate ML and platform engineering. Python scripting, API design experience. Builder culture, small team."
+  },
+  {
+    "id": "gs-17",
+    "category": "dream",
+    "expected_band": [9, 10],
+    "title": "Head of Technical Programs, AI",
+    "company": "Anthropic",
+    "location": "Remote, EU",
+    "description": "Lead the TPM function for AI safety and infrastructure. Build the program management discipline from scratch. Deep AI/ML familiarity, Python, distributed systems. Remote-first, mission-driven."
+  },
+  {
+    "id": "gs-18",
+    "category": "dream",
+    "expected_band": [9, 10],
+    "title": "Principal TPM, AI Developer Platform",
+    "company": "Mistral AI",
+    "location": "Remote, EU",
+    "description": "Own the technical program for Mistral's developer platform. API design, LLM deployment, cross-functional leadership. Python/FastAPI. Founding-team energy, high autonomy."
+  },
+  {
+    "id": "gs-19",
+    "category": "dream",
+    "expected_band": [9, 10],
+    "title": "VP of Engineering, AI Products",
+    "company": "Linear",
+    "location": "Remote",
+    "description": "Lead engineering for AI-powered productivity tools. Build and scale engineering teams. Deep technical background in AI/ML, Python, modern web stack. Remote-first, builder culture."
+  },
+  {
+    "id": "gs-20",
+    "category": "dream",
+    "expected_band": [9, 10],
+    "title": "Founding AI Program Lead",
+    "company": "Vercel",
+    "location": "Remote, EU",
+    "description": "First TPM hire. Define program management for AI features (v0, AI SDK). Python/TypeScript, LLM integration, developer tools background. High autonomy, startup pace."
+  }
+]
