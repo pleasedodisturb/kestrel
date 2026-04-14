@@ -416,6 +416,83 @@ def _gather_red_flag_metadata(
     return rf
 
 
+# ---------------------------------------------------------------------------
+# Desire Score — Option A (Derived from dimensional scores + goals)
+# ---------------------------------------------------------------------------
+
+# Default weights for deriving desire_score from dimensional sub-scores.
+# career_trajectory = growth potential, company_fit = culture/reputation,
+# compensation_fit = salary attractiveness.
+DEFAULT_DESIRE_WEIGHTS: dict[str, float] = {
+    "career_trajectory": 0.35,
+    "company_fit": 0.35,
+    "compensation_fit": 0.30,
+}
+
+# Keywords in goal titles/descriptions that shift desire weights.
+_GOAL_WEIGHT_ADJUSTMENTS: dict[str, dict[str, float]] = {
+    "leadership": {"career_trajectory": 0.50, "company_fit": 0.25, "compensation_fit": 0.25},
+    "management": {"career_trajectory": 0.50, "company_fit": 0.25, "compensation_fit": 0.25},
+    "compensation": {"career_trajectory": 0.20, "company_fit": 0.25, "compensation_fit": 0.55},
+    "salary": {"career_trajectory": 0.20, "company_fit": 0.25, "compensation_fit": 0.55},
+    "culture": {"career_trajectory": 0.25, "company_fit": 0.50, "compensation_fit": 0.25},
+    "remote": {"career_trajectory": 0.25, "company_fit": 0.50, "compensation_fit": 0.25},
+}
+
+
+def _resolve_desire_weights(goals: list[dict]) -> dict[str, float]:
+    """Determine desire weights based on user's active goals.
+
+    If any goal title/description contains keywords like "leadership",
+    "compensation", etc., we shift the weights to match user priorities.
+    Falls back to DEFAULT_DESIRE_WEIGHTS if no keywords match.
+    """
+    if not goals:
+        return dict(DEFAULT_DESIRE_WEIGHTS)
+
+    all_goal_text = " ".join(
+        f"{g.get('title', '')} {g.get('description', '')}".lower() for g in goals
+    )
+
+    for keyword, weights in _GOAL_WEIGHT_ADJUSTMENTS.items():
+        if keyword in all_goal_text:
+            return dict(weights)
+
+    return dict(DEFAULT_DESIRE_WEIGHTS)
+
+
+def compute_derived_desire_score(
+    dimensional_scores: dict[str, float] | None,
+    goals: list[dict] | None = None,
+) -> float | None:
+    """Compute desire_score as a weighted average of dimensional sub-scores.
+
+    Option A: derived from existing dimensions — no additional AI call.
+
+    Args:
+        dimensional_scores: Dict with keys career_trajectory, company_fit,
+            compensation_fit (each 0-10). None → returns None.
+        goals: List of goal dicts with title/description for weight adjustment.
+
+    Returns:
+        Float 0-10 rounded to 1 decimal, or None if dimensions unavailable.
+    """
+    if dimensional_scores is None:
+        return None
+
+    # Check that the required dimensions are present
+    required = ("career_trajectory", "company_fit", "compensation_fit")
+    if not all(dimensional_scores.get(k) is not None for k in required):
+        return None
+
+    weights = _resolve_desire_weights(goals or [])
+
+    score = sum(dimensional_scores[dim] * weight for dim, weight in weights.items())
+
+    # Clamp to [0, 10]
+    return round(max(0.0, min(10.0, score)), 1)
+
+
 def _build_dim_columns(dim) -> dict[str, float | None]:
     """Build dimensional score columns dict from AI result."""
     if dim is None:
@@ -550,6 +627,28 @@ async def score_job(
         else None
     )
 
+    # Desire score computation (dual-score architecture, G-275)
+    desire_score = None
+    desire_score_method = None
+    desire_reasoning = None
+
+    # Option B: AI-generated desire_score (if the provider returned one)
+    if score_data.desire_score is not None:
+        desire_score = score_data.desire_score
+        desire_score_method = "ai_generated"
+        desire_reasoning = score_data.desire_reasoning
+
+    # Option A fallback: derive from dimensional scores + goals
+    if desire_score is None and score_data.dimensional_scores is not None:
+        dim_dict = {
+            "career_trajectory": score_data.dimensional_scores.career_trajectory,
+            "company_fit": score_data.dimensional_scores.company_fit,
+            "compensation_fit": score_data.dimensional_scores.compensation_fit,
+        }
+        desire_score = compute_derived_desire_score(dim_dict, profile_data.get("goals"))
+        if desire_score is not None:
+            desire_score_method = "derived"
+
     # Persist the score
     scored_job = ScoredJob(
         profile_id=profile_id,
@@ -568,6 +667,9 @@ async def score_job(
         ats_keywords=ats_keywords_json,
         is_stale=False,
         weights_snapshot=json.dumps({**profile_data["weights"], "rubric_version": RUBRIC_VERSION}),
+        desire_score=desire_score,
+        desire_score_method=desire_score_method,
+        desire_reasoning=desire_reasoning,
         **dim_columns,
     )
     db.add(scored_job)

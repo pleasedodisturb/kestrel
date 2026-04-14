@@ -155,6 +155,9 @@ export interface ScoreContext {
  * `ScoreResponse` pydantic schema — only the fields we actively consume on
  * the application detail page are listed.
  */
+/** 2D quadrant classification based on fit_score and desire_score. */
+export type ScoreQuadrant = "dream_job" | "stretch_goal" | "safe_bet" | "skip";
+
 export interface ScoreResponseShape {
   fit_score: number;
   readiness_score: number;
@@ -165,6 +168,21 @@ export interface ScoreResponseShape {
   red_flags?: RedFlag[];
   reasoning: string;
   score_context?: ScoreContext | null;
+  /** Desirability score 0-10 (how much user would want this job). */
+  desire_score?: number | null;
+  /** Method used to compute desire_score: "derived" or "ai_generated". */
+  desire_score_method?: string | null;
+  /** Reasoning for the desire score (AI-generated only). */
+  desire_reasoning?: string | null;
+}
+
+/** Standalone desire score response from the dual-score API. */
+export interface DesireScoreResponse {
+  desire_score: number | null;
+  desire_score_method: string | null;
+  desire_reasoning: string | null;
+  quadrant: ScoreQuadrant | null;
+  fit_score: number | null;
 }
 
 export interface Application {

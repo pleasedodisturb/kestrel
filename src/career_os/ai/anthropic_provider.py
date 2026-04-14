@@ -138,7 +138,12 @@ class AnthropicProvider(AIProvider):
             f"company_fit), "
             f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
             f"category (one of technical/soft_skill/tool/certification/domain), "
-            f"matched (boolean -- true if the profile demonstrates this keyword)).\n\n"
+            f"matched (boolean -- true if the profile demonstrates this keyword)), "
+            f"desire_score (0-10, how much the candidate would WANT this job -- "
+            f"considering company reputation, growth potential, culture signals, "
+            f"role excitement, compensation attractiveness, work-life balance), "
+            f"desire_reasoning (string explaining what makes this job desirable "
+            f"or undesirable from the candidate's perspective).\n\n"
             f"Job Description:\n{job_description}\n\n"
             f"Profile:\n{json.dumps(profile_data, indent=2)}"
         )
