@@ -485,6 +485,13 @@ async def score_job(
     # Gather profile data and weights for scoring
     profile_data = _gather_scoring_context(db, profile, profile_id)
 
+    # Fetch calibration examples when feature flag is enabled
+    calibration_examples: list[dict] = []
+    from career_os.config import settings
+
+    if settings.feedback_calibration_enabled:
+        calibration_examples = get_feedback_calibration(db, profile_id)
+
     # Build scoring prompt with job context
     prompt = _build_scoring_prompt(
         job_description=job_description,
@@ -492,6 +499,7 @@ async def score_job(
         job_company=job_company,
         job_url=job_url,
         profile_data=profile_data,
+        calibration_examples=calibration_examples,
     )
 
     # Score via AI provider
@@ -615,6 +623,28 @@ def _format_market_section(market: dict) -> list[str]:
     return lines
 
 
+def _format_calibration_section(calibration_examples: list[dict]) -> list[str]:
+    """Format feedback calibration examples into prompt lines.
+
+    Tells the AI how the user previously corrected scores so it can adjust
+    its scoring tendencies for this profile.
+    """
+    if not calibration_examples:
+        return []
+    lines = ["\nScoring Calibration (user corrections on past scores — adjust accordingly):"]
+    for ex in calibration_examples:
+        title = ex.get("job_title") or "Unknown role"
+        company = ex.get("company") or "Unknown company"
+        ai = ex.get("ai_score", "?")
+        user = ex.get("user_score", "?")
+        reason = ex.get("reason")
+        line = f"  - {title} @ {company}: AI scored {ai}, user corrected to {user}"
+        if reason:
+            line += f" (reason: {reason})"
+        lines.append(line)
+    return lines
+
+
 def _build_scoring_prompt(
     *,
     job_description: str,
@@ -622,6 +652,7 @@ def _build_scoring_prompt(
     job_company: str | None = None,
     job_url: str | None = None,
     profile_data: dict,
+    calibration_examples: list[dict] | None = None,
 ) -> str:
     """Build a scoring prompt combining job info and profile context."""
     parts = ["Score this job against the candidate profile.\n"]
@@ -652,6 +683,8 @@ def _build_scoring_prompt(
 
     if profile_data.get("weights"):
         parts.append(f"\nScoring Weights: {json.dumps(profile_data['weights'])}")
+
+    parts.extend(_format_calibration_section(calibration_examples or []))
 
     return "\n".join(parts)
 

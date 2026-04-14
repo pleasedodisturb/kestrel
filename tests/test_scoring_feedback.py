@@ -21,15 +21,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from career_os.database import Base, get_db
 from career_os.main import app
 from career_os.models.models import Application, Profile
-from career_os.models.scoring import ScoredJob, ScoringFeedback
-from career_os.schemas.applications import ApplicationCreate, ApplicationUpdate
+from career_os.models.scoring import ScoredJob
 from career_os.services.scoring import (
     CALIBRATION_MIN_FEEDBACK,
     FeedbackNotFoundError,
     InvalidFeedbackError,
+    _build_scoring_prompt,
+    _format_calibration_section,
     get_feedback_calibration,
-    get_feedback_stats,
-    list_feedback,
     record_implicit_feedback,
     submit_feedback,
 )
@@ -53,8 +52,9 @@ def db_session():
     Session_ = sessionmaker(bind=connection, autocommit=False, autoflush=False)
     session = Session_()
 
-    profile = Profile(id=1, name="Test User", email="test@example.com", location="Berlin",
-                      job_family="SWE")
+    profile = Profile(
+        id=1, name="Test User", email="test@example.com", location="Berlin", job_family="SWE"
+    )
     session.add(profile)
     session.commit()
 
@@ -188,8 +188,9 @@ def test_submit_feedback_scored_job_not_found(client, db_session):
 def test_submit_feedback_wrong_profile(client, db_session):
     """404 when scored_job belongs to a different profile."""
     # Create second profile
-    p2 = Profile(id=2, name="Other User", email="other@example.com",
-                 location="Munich", job_family="TPM")
+    p2 = Profile(
+        id=2, name="Other User", email="other@example.com", location="Munich", job_family="TPM"
+    )
     db_session.add(p2)
     db_session.commit()
 
@@ -238,12 +239,13 @@ def test_list_feedback_empty(client, db_session):
 def test_feedback_stats(client, db_session):
     """Stats endpoint returns count, avg deviation, most common direction."""
     sj = _make_scored_job(db_session, fit_score=8.0)
-    submit_feedback(db_session, scored_job_id=sj.id, profile_id=1,
-                    direction="too_high", user_score=6.0)
-    submit_feedback(db_session, scored_job_id=sj.id, profile_id=1,
-                    direction="too_low", user_score=9.0)
-    submit_feedback(db_session, scored_job_id=sj.id, profile_id=1,
-                    direction="correct")
+    submit_feedback(
+        db_session, scored_job_id=sj.id, profile_id=1, direction="too_high", user_score=6.0
+    )
+    submit_feedback(
+        db_session, scored_job_id=sj.id, profile_id=1, direction="too_low", user_score=9.0
+    )
+    submit_feedback(db_session, scored_job_id=sj.id, profile_id=1, direction="correct")
 
     resp = client.get("/api/score/feedback/stats", params={"profile_id": 1})
     assert resp.status_code == 200
@@ -555,3 +557,96 @@ def test_integration_submit_retrieve_stats(client, db_session):
     assert stats["implicit_count"] == 0
     # Deviations: |5.0-7.0|=2.0, |9.0-7.0|=2.0 → avg=2.0
     assert stats["avg_deviation"] == pytest.approx(2.0)
+
+
+# ---------------------------------------------------------------------------
+# Calibration prompt injection (G-274 fix)
+# ---------------------------------------------------------------------------
+
+
+class TestCalibrationFormatting:
+    """Tests for _format_calibration_section and prompt injection."""
+
+    def test_empty_calibration_returns_empty(self):
+        """No calibration examples → no lines added."""
+        assert _format_calibration_section([]) == []
+
+    def test_calibration_section_includes_header(self):
+        """Calibration section starts with an explanatory header."""
+        examples = [
+            {
+                "job_title": "SWE",
+                "company": "Acme",
+                "ai_score": 8.0,
+                "user_score": 5.0,
+                "reason": None,
+                "deviation": 3.0,
+            }
+        ]
+        lines = _format_calibration_section(examples)
+        assert any("Scoring Calibration" in line for line in lines)
+
+    def test_calibration_section_formats_example(self):
+        """Each example shows job, company, AI score, user score."""
+        examples = [
+            {
+                "job_title": "Backend Engineer",
+                "company": "BigCo",
+                "ai_score": 9.0,
+                "user_score": 6.0,
+                "reason": "Too senior",
+                "deviation": 3.0,
+            }
+        ]
+        lines = _format_calibration_section(examples)
+        detail_line = lines[1]
+        assert "Backend Engineer" in detail_line
+        assert "BigCo" in detail_line
+        assert "9.0" in detail_line
+        assert "6.0" in detail_line
+        assert "Too senior" in detail_line
+
+    def test_calibration_section_handles_missing_metadata(self):
+        """None job_title/company gracefully becomes 'Unknown'."""
+        examples = [
+            {
+                "job_title": None,
+                "company": None,
+                "ai_score": 7.0,
+                "user_score": 4.0,
+                "reason": None,
+                "deviation": 3.0,
+            }
+        ]
+        lines = _format_calibration_section(examples)
+        detail_line = lines[1]
+        assert "Unknown role" in detail_line
+        assert "Unknown company" in detail_line
+
+    def test_build_prompt_includes_calibration(self):
+        """When calibration_examples are passed, they appear in the prompt."""
+        examples = [
+            {
+                "job_title": "SRE",
+                "company": "CloudCo",
+                "ai_score": 8.5,
+                "user_score": 5.5,
+                "reason": None,
+                "deviation": 3.0,
+            }
+        ]
+        prompt = _build_scoring_prompt(
+            job_description="Test JD",
+            profile_data={"name": "Test", "location": "Berlin", "job_family": "SWE"},
+            calibration_examples=examples,
+        )
+        assert "Scoring Calibration" in prompt
+        assert "SRE @ CloudCo" in prompt
+
+    def test_build_prompt_without_calibration(self):
+        """When no calibration_examples, section is absent from prompt."""
+        prompt = _build_scoring_prompt(
+            job_description="Test JD",
+            profile_data={"name": "Test", "location": "Berlin", "job_family": "SWE"},
+        )
+        assert "Scoring Calibration" not in prompt
