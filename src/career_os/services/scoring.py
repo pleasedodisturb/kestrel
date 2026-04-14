@@ -21,7 +21,7 @@ from career_os.models.models import Application, Profile
 from career_os.models.scoring import ScoredJob, ScoringWeights
 from career_os.models.skills import Goal, Skill
 from career_os.schemas.ai import ScoreResult
-from career_os.services.red_flags import detect_red_flags
+from career_os.services.red_flags import detect_data_driven_red_flags, detect_red_flags
 
 logger = logging.getLogger(__name__)
 
@@ -523,6 +523,20 @@ async def score_job(
         salary_range=rf["salary"],
         location=rf["location"],
     )
+
+    # Data-driven red flags: ghost job and multi-city blast detection (G-270)
+    # Only runs when we have company and title context from a discovered job.
+    effective_title = rf["title"] or job_title
+    if job_company and effective_title:
+        ghost_flags = detect_data_driven_red_flags(
+            db,
+            company=job_company,
+            title=effective_title,
+            description=job_description,
+            profile_id=profile_id,
+        )
+        red_flags = red_flags + ghost_flags
+
     red_flags_json = json.dumps(red_flags) if red_flags else None
 
     # Dimensional sub-scores
