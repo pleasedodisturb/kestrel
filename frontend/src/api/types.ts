@@ -775,3 +775,52 @@ export interface ContactDetailResponse extends Contact {
   interactions: ContactInteraction[];
   linked_applications: ContactApplicationLink[];
 }
+
+// ---------------------------------------------------------------------------
+// Scoring Feedback types (Epic 6 / G-274)
+// ---------------------------------------------------------------------------
+
+export type FeedbackDirection =
+  | "too_high"
+  | "too_low"
+  | "correct"
+  | "implicit_positive"
+  | "implicit_negative"
+  | "implicit_strong_positive";
+
+export interface FeedbackCreate {
+  direction: FeedbackDirection;
+  /** Optional: what the user thinks the score should be (0–10) */
+  user_score?: number | null;
+  /** Optional: free-text explanation */
+  reason?: string | null;
+}
+
+export interface FeedbackResponse {
+  id: number;
+  scored_job_id: number;
+  profile_id: number;
+  direction: FeedbackDirection;
+  user_score: number | null;
+  reason: string | null;
+  original_fit_score: number;
+  created_at: string;
+}
+
+export interface FeedbackStats {
+  total_count: number;
+  explicit_count: number;
+  implicit_count: number;
+  /** Average |user_score - original_fit_score|. Null if no records with user_score. */
+  avg_deviation: number | null;
+  direction_counts: Record<FeedbackDirection, number>;
+}
+
+export interface CalibrationExample {
+  job_title: string | null;
+  company: string | null;
+  ai_score: number;
+  user_score: number;
+  reason: string | null;
+  deviation: number;
+}
