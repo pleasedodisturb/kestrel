@@ -1069,6 +1069,140 @@ def compute_score_context(db: Session, profile_id: int, fit_score: float) -> dic
 
 
 # ---------------------------------------------------------------------------
+# Profile Completeness (Epic 10 / G-278)
+# ---------------------------------------------------------------------------
+
+# Weights for each completeness component (sum = 100)
+_COMPLETENESS_WEIGHTS: dict[str, int] = {
+    "job_family": 15,
+    "location": 15,
+    "skills": 20,
+    "goals": 15,
+    "market_positioning": 10,
+    "experiences": 15,
+    "dream_companies": 10,
+}
+
+_MIN_SKILLS = 5
+_MIN_GOALS = 1
+_MIN_EXPERIENCES = 3  # proxy: Applications with status != 'discovered'
+_HIGH_UNCERTAINTY_THRESHOLD = 50  # below this, show the improvement hint
+
+
+def compute_profile_completeness(db: Session, profile_id: int) -> dict:
+    """Compute profile richness and return a completeness dict.
+
+    Returns a dict with:
+        - ``completeness``: 0-100 float representing profile richness
+        - ``confidence_range``: (low_bound, high_bound) tuple clamped to [0, 10]
+        - ``missing_fields``: list of field suggestions (only when completeness < 50)
+
+    Completeness components and their weights:
+        job_family (+15%), location (+15%), >=5 skills (+20%),
+        >=1 goal (+15%), market_positioning (+10%), >=3 experiences (+15%),
+        dream_companies (+10%).
+
+    Confidence interval formula:
+        half_width = 3.0 * (1 - completeness / 100) + 0.3
+    so at 100% -> ±0.3, at 50% -> ±1.8 (effective), at 25% -> ±3.075.
+
+    Since there is no Experiences model yet, that component is always 0.
+    """
+    import json as _json
+
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if profile is None:
+        return {
+            "completeness": 0.0,
+            "confidence_range": (0.0, 10.0),
+            "missing_fields": list(_COMPLETENESS_WEIGHTS.keys()),
+        }
+
+    skills = db.query(Skill).filter(Skill.profile_id == profile_id).all()
+    goals = db.query(Goal).filter(Goal.profile_id == profile_id).all()
+
+    # Evaluate each component
+    has_job_family = bool(profile.job_family)
+    has_location = bool(profile.location)
+    has_enough_skills = len(skills) >= _MIN_SKILLS
+    has_goals = len(goals) >= _MIN_GOALS
+    has_market_data = profile.last_market_refreshed_at is not None
+    # No Experiences model yet — proxy via applied/interviewing/offer/accepted applications
+    # We conservatively treat this as 0 until the model exists.
+    has_experiences = False  # always False until Experiences model is introduced
+
+    # dream_companies is a JSON array stored as text
+    has_dream_companies = False
+    if profile.dream_companies:
+        try:
+            dc = _json.loads(profile.dream_companies)
+            has_dream_companies = isinstance(dc, list) and len(dc) > 0
+        except (ValueError, TypeError):
+            has_dream_companies = bool(profile.dream_companies.strip())
+
+    component_flags = {
+        "job_family": has_job_family,
+        "location": has_location,
+        "skills": has_enough_skills,
+        "goals": has_goals,
+        "market_positioning": has_market_data,
+        "experiences": has_experiences,
+        "dream_companies": has_dream_companies,
+    }
+
+    completeness = float(
+        sum(
+            _COMPLETENESS_WEIGHTS[component]
+            for component, present in component_flags.items()
+            if present
+        )
+    )
+
+    # half_width = 3.0 * (1 - completeness/100) + 0.3
+    half_width = 3.0 * (1.0 - completeness / 100.0) + 0.3
+
+    # We need a fit_score to center the range, but completeness is profile-level
+    # (not score-specific), so we express it as a symmetric expansion around
+    # the score midpoint.  Callers apply this to the actual fit_score.
+    # Return raw half_width here; the API layer applies it to each score.
+    low_bound = round(max(0.0, 5.0 - half_width), 2)
+    high_bound = round(min(10.0, 5.0 + half_width), 2)
+
+    missing_fields: list[str] = []
+    if completeness < _HIGH_UNCERTAINTY_THRESHOLD:
+        field_labels: dict[str, str] = {
+            "job_family": "target job family",
+            "location": "location preference",
+            "skills": f"at least {_MIN_SKILLS} skills",
+            "goals": "at least one career goal",
+            "market_positioning": "market positioning data (refresh market)",
+            "experiences": "past work experiences",
+            "dream_companies": "dream companies list",
+        }
+        missing_fields = [
+            field_labels[component] for component, present in component_flags.items() if not present
+        ]
+
+    return {
+        "completeness": completeness,
+        "confidence_range": (low_bound, high_bound),
+        "missing_fields": missing_fields,
+        "half_width": half_width,
+    }
+
+
+def apply_confidence_range(fit_score: float, half_width: float) -> tuple[float, float]:
+    """Apply a half-width to a specific fit_score, clamped to [0, 10].
+
+    Returns (low_bound, high_bound).
+    """
+    return (
+        round(max(0.0, fit_score - half_width), 2),
+        round(min(10.0, fit_score + half_width), 2),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Score Retrieval
 # ---------------------------------------------------------------------------
 
