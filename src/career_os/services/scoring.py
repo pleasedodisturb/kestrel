@@ -871,6 +871,55 @@ async def batch_score_discovery(
 
     jobs = _query_jobs_to_score(db, profile_id, discovered_job_ids, rescore_stale)
 
+    # --- Embedding pre-filter (Epic 4 / G-272) ---
+    # Compute cosine similarity between profile and each job embedding.
+    # In shadow mode (default): log similarities but score all jobs.
+    # When enabled: skip jobs below threshold to save LLM costs.
+    from career_os.config import settings as _settings
+    from career_os.services.embeddings import compute_job_similarities
+
+    provider = get_ai_provider()
+    prefilter_enabled = _settings.embedding_prefilter_enabled
+    threshold = _settings.embedding_prefilter_threshold
+
+    try:
+        similarities = await compute_job_similarities(db, profile_id, jobs, provider)
+    except Exception:
+        logger.warning(
+            "Embedding pre-filter failed — skipping, all %d jobs will be fully scored",
+            len(jobs),
+            exc_info=True,
+        )
+        similarities = {}
+
+    if similarities:
+        below = sum(1 for s in similarities.values() if s < threshold)
+        above = len(similarities) - below
+        no_embed = len(jobs) - len(similarities)
+
+        if prefilter_enabled:
+            # Actually filter: keep jobs above threshold + jobs without embeddings
+            jobs = [j for j in jobs if similarities.get(j.id, threshold) >= threshold]
+            logger.info(
+                "Pre-filtered %d of %d jobs (threshold %.2f), sending %d to full scoring "
+                "(%d without embeddings passed through)",
+                below,
+                below + above + no_embed,
+                threshold,
+                len(jobs),
+                no_embed,
+            )
+        else:
+            # Shadow mode: log but don't filter
+            logger.info(
+                "Shadow pre-filter: %d/%d jobs below threshold %.2f "
+                "(would be filtered if enabled), %d without embeddings",
+                below,
+                below + above + no_embed,
+                threshold,
+                no_embed,
+            )
+
     scores: list[ScoredJob] = []
     errors: list[dict[str, str]] = []
     credits_exhausted = False

@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     # users with too many prompts.
     active_query_enabled: bool = False
 
+    # Embedding pre-filter (Epic 4 / G-272) — compute embedding cosine
+    # similarity before sending jobs through the full LLM scoring pipeline.
+    # Shadow mode (default): similarities are computed and logged but jobs are
+    # NOT filtered.  Set to True to actually skip low-similarity jobs.
+    embedding_prefilter_enabled: bool = False
+    embedding_prefilter_threshold: float = 0.65
+    embedding_model: str = "nomic-embed-text"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).

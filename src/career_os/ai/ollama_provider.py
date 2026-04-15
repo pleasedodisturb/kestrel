@@ -155,6 +155,45 @@ class OllamaProvider(AIProvider):
         content = data["choices"][0]["message"]["content"]
         return _try_parse_structured(content, feature)
 
+    async def embed(self, text: str, **kwargs: object) -> list[float]:
+        """Generate an embedding vector via Ollama's /api/embeddings endpoint.
+
+        Uses the model specified by EMBEDDING_MODEL (default: nomic-embed-text),
+        NOT the chat model configured for completions/scoring.
+
+        Raises:
+            OllamaConnectionError: If the Ollama server is unreachable.
+            RuntimeError: If the response doesn't contain a valid embedding.
+        """
+        from career_os.config import settings
+
+        model = kwargs.get("model", settings.embedding_model) or "nomic-embed-text"
+        url = f"{self._base_url}/api/embeddings"
+
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
+                response = await client.post(
+                    url,
+                    headers={"Content-Type": "application/json"},
+                    json={"model": model, "prompt": text},
+                )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.ConnectError as exc:
+            raise OllamaConnectionError(self._base_url, str(exc)) from exc
+        except httpx.TimeoutException as exc:
+            raise OllamaConnectionError(
+                self._base_url, f"Embedding request timed out after {_TIMEOUT_SECONDS}s"
+            ) from exc
+
+        embedding = data.get("embedding")
+        if not embedding or not isinstance(embedding, list):
+            raise RuntimeError(
+                f"Ollama /api/embeddings did not return a valid embedding "
+                f"(model={model}, keys={list(data.keys())})"
+            )
+        return embedding
+
     async def score(
         self,
         job_description: str,

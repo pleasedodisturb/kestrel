@@ -70,6 +70,10 @@ class DiscoveredJob(Base):
     # Scoring (populated later by M3 scoring engine)
     fit_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Embedding cosine similarity to profile (Epic 4 / G-272).
+    # Populated during batch scoring pre-filter; NULL until first embedding run.
+    embedding_similarity: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     # Pipeline linkage — set when auto-fed into pipeline
     application_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("applications.id"), nullable=True
