@@ -92,6 +92,11 @@ from career_os.cli.contacts import contacts_app  # noqa: E402
 
 app.add_typer(contacts_app, name="contacts")
 
+# WARN Act subcommand group (Epic 9 / G-277)
+from career_os.cli.warn import warn_app  # noqa: E402
+
+app.add_typer(warn_app, name="warn")
+
 
 # ---------------------------------------------------------------------------
 # Database helpers
