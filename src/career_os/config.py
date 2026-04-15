@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     embedding_prefilter_threshold: float = 0.65
     embedding_model: str = "nomic-embed-text"
 
+    # Borderline 2-pass scoring (Epic 5 / G-273) — when a job's fit_score falls
+    # in the borderline zone [BORDERLINE_LOW, BORDERLINE_HIGH], a second scoring
+    # pass is run and the two results are averaged.  This reduces variance by ~50%
+    # in the borderline zone (LLM-as-Judge on a Budget, 2026) at ~1.3x cost.
+    # Set BORDERLINE_SCORING_ENABLED=false to disable entirely.
+    borderline_scoring_enabled: bool = True
+    borderline_low_threshold: float = 4.0
+    borderline_high_threshold: float = 6.5
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).

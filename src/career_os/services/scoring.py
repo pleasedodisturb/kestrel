@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from career_os.ai.base import ProviderQuotaError
 from career_os.ai.factory import get_ai_provider
 from career_os.ai.openrouter_provider import CreditsExhaustedError
+from career_os.config import settings
 from career_os.models.discovery import DiscoveredJob
 from career_os.models.models import Application, Profile
 from career_os.models.scoring import ScoredJob, ScoringFeedback, ScoringWeights
@@ -514,6 +515,96 @@ def _build_dim_columns(dim) -> dict[str, float | None]:
     }
 
 
+# ---------------------------------------------------------------------------
+# Borderline 2-Pass Scoring (Epic 5 / G-273)
+# ---------------------------------------------------------------------------
+
+
+def _average_score_results(a: ScoreResult, b: ScoreResult) -> ScoreResult:
+    """Average two ScoreResult objects to reduce borderline scoring variance.
+
+    Numeric fields are averaged.  For qualitative fields, the result with the
+    higher fit_score contributes the reasoning/prep_notes (richer context).
+    ATS keywords come from whichever result has more keywords.
+    score_breakdown factors are deduplicated by factor name and their
+    contributions averaged.
+    """
+    # Determine which result has the richer reasoning (higher fit_score wins)
+    primary, secondary = (a, b) if a.fit_score >= b.fit_score else (b, a)
+
+    # Average numeric fields
+    avg_fit = round((a.fit_score + b.fit_score) / 2, 2)
+    avg_readiness = round((a.readiness_score + b.readiness_score) / 2, 2)
+    avg_career_alignment = round((a.career_alignment + b.career_alignment) / 2, 2)
+
+    # Average dimensional scores if both are present
+    from career_os.schemas.ai import DimensionalScores
+
+    averaged_dims: DimensionalScores | None = None
+
+    if a.dimensional_scores is not None and b.dimensional_scores is not None:
+        ad = a.dimensional_scores
+        bd = b.dimensional_scores
+        averaged_dims = DimensionalScores(
+            technical_fit=round((ad.technical_fit + bd.technical_fit) / 2, 2),
+            seniority_alignment=round((ad.seniority_alignment + bd.seniority_alignment) / 2, 2),
+            compensation_fit=round((ad.compensation_fit + bd.compensation_fit) / 2, 2),
+            location_fit=round((ad.location_fit + bd.location_fit) / 2, 2),
+            career_trajectory=round((ad.career_trajectory + bd.career_trajectory) / 2, 2),
+            company_fit=round((ad.company_fit + bd.company_fit) / 2, 2),
+        )
+    else:
+        averaged_dims = primary.dimensional_scores
+
+    # Merge score_breakdown: deduplicate by factor name, average contributions
+    breakdown_by_factor: dict[str, list] = {}
+    from career_os.schemas.ai import ScoreBreakdownFactor
+
+    for factor in list(a.score_breakdown) + list(b.score_breakdown):
+        breakdown_by_factor.setdefault(factor.factor, []).append(factor)
+
+    merged_breakdown: list[ScoreBreakdownFactor] = []
+    for factor_name, factors in breakdown_by_factor.items():
+        avg_contribution = round(sum(f.contribution for f in factors) / len(factors), 3)
+        # Use description from whichever came from the primary (higher-score) result
+        desc = next(
+            (f.description for f in factors if f in primary.score_breakdown), factors[0].description
+        )
+        merged_breakdown.append(
+            ScoreBreakdownFactor(
+                factor=factor_name,
+                contribution=avg_contribution,
+                description=desc,
+            )
+        )
+
+    # ATS keywords: keep the longer list
+    ats_keywords = a.ats_keywords if len(a.ats_keywords) >= len(b.ats_keywords) else b.ats_keywords
+
+    # Average desire score if both have it
+    desire_score: float | None = None
+    if a.desire_score is not None and b.desire_score is not None:
+        desire_score = round((a.desire_score + b.desire_score) / 2, 2)
+    else:
+        desire_score = primary.desire_score
+
+    return ScoreResult(
+        fit_score=avg_fit,
+        readiness_score=avg_readiness,
+        career_alignment=avg_career_alignment,
+        reasoning=primary.reasoning,
+        estimated_salary=primary.estimated_salary,
+        effort_flag=primary.effort_flag,
+        prep_level=primary.prep_level,
+        prep_notes=primary.prep_notes,
+        score_breakdown=merged_breakdown,
+        dimensional_scores=averaged_dims,
+        ats_keywords=ats_keywords,
+        desire_score=desire_score,
+        desire_reasoning=primary.desire_reasoning,
+    )
+
+
 def _update_linked_scores(
     db: Session,
     fit_score: float,
@@ -564,8 +655,6 @@ async def score_job(
 
     # Fetch calibration examples when feature flag is enabled
     calibration_examples: list[dict] = []
-    from career_os.config import settings
-
     if settings.feedback_calibration_enabled:
         calibration_examples = get_feedback_calibration(db, profile_id)
 
@@ -591,6 +680,50 @@ async def score_job(
         score_data = response.structured
     else:
         raise ScoringError("AI provider did not return a valid ScoreResult")
+
+    # Borderline 2-pass scoring (Epic 5 / G-273)
+    # When the first-pass score falls in the borderline zone, run a second pass
+    # and average the results to reduce variance (~50% reduction per research).
+    scoring_passes = 1
+    if (
+        settings.borderline_scoring_enabled
+        and settings.borderline_low_threshold
+        <= score_data.fit_score
+        <= settings.borderline_high_threshold
+    ):
+        logger.info(
+            "Borderline score %.2f (zone [%.1f, %.1f]), running second scoring pass",
+            score_data.fit_score,
+            settings.borderline_low_threshold,
+            settings.borderline_high_threshold,
+        )
+        try:
+            response2 = await provider.score(
+                job_description=prompt,
+                profile_data=profile_data,
+            )
+            if response2.structured and isinstance(response2.structured, ScoreResult):
+                score_data2 = response2.structured
+                score_data = _average_score_results(score_data, score_data2)
+                scoring_passes = 2
+                logger.info(
+                    "Averaged borderline scores: pass1=%.2f pass2=%.2f → avg=%.2f",
+                    score_data2.fit_score,  # original first-pass stored before averaging
+                    response2.structured.fit_score,
+                    score_data.fit_score,
+                )
+            else:
+                logger.warning(
+                    "Second scoring pass did not return a valid ScoreResult — "
+                    "using single-pass score %.2f",
+                    score_data.fit_score,
+                )
+        except Exception as exc:
+            logger.warning(
+                "Second scoring pass failed (%s) — using single-pass score %.2f",
+                exc,
+                score_data.fit_score,
+            )
 
     # Serialize score_breakdown to JSON for storage
     breakdown_json = (
@@ -678,6 +811,7 @@ async def score_job(
         desire_score=desire_score,
         desire_score_method=desire_score_method,
         desire_reasoning=desire_reasoning,
+        scoring_passes=scoring_passes,
         **dim_columns,
     )
     db.add(scored_job)
@@ -875,12 +1009,11 @@ async def batch_score_discovery(
     # Compute cosine similarity between profile and each job embedding.
     # In shadow mode (default): log similarities but score all jobs.
     # When enabled: skip jobs below threshold to save LLM costs.
-    from career_os.config import settings as _settings
     from career_os.services.embeddings import compute_job_similarities
 
     provider = get_ai_provider()
-    prefilter_enabled = _settings.embedding_prefilter_enabled
-    threshold = _settings.embedding_prefilter_threshold
+    prefilter_enabled = settings.embedding_prefilter_enabled
+    threshold = settings.embedding_prefilter_threshold
 
     try:
         similarities = await compute_job_similarities(db, profile_id, jobs, provider)
