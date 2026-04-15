@@ -16,6 +16,7 @@ from career_os.schemas.scoring import (
     FeedbackCreate,
     FeedbackResponse,
     FeedbackStats,
+    ProfileCompletenessResponse,
     ScoreContextResponse,
     ScoreRequest,
     ScoreResponse,
@@ -30,7 +31,9 @@ from career_os.services.scoring import (
     ProfileIncompleteError,
     ProfileNotFoundError,
     ScoringError,
+    apply_confidence_range,
     batch_score_discovery,
+    compute_profile_completeness,
     compute_score_context,
     flag_stale_scores,
     get_feedback_stats,
@@ -218,6 +221,39 @@ def _build_score_context(
 
 
 # ---------------------------------------------------------------------------
+# Profile Completeness Helper (Epic 10 / G-278)
+# ---------------------------------------------------------------------------
+
+
+def _build_profile_completeness(
+    db: Session, profile_id: int, fit_score: float
+) -> ProfileCompletenessResponse:
+    """Compute and return a ProfileCompletenessResponse for the given profile and score.
+
+    The confidence_range is centered on the actual fit_score so clients get
+    concrete lower/upper bounds (e.g. "6.2 – 8.8") rather than a raw half-width.
+
+    An improvement_hint is included when completeness < 50% to prompt the user.
+    """
+    result = compute_profile_completeness(db, profile_id)
+    half_width: float = result["half_width"]
+    low_bound, high_bound = apply_confidence_range(fit_score, half_width)
+    missing_fields: list[str] = result["missing_fields"]
+
+    hint: str | None = None
+    if missing_fields:
+        fields_str = ", ".join(missing_fields)
+        hint = f"This score has high uncertainty. Add {fields_str} to improve accuracy."
+
+    return ProfileCompletenessResponse(
+        completeness=result["completeness"],
+        confidence_range=(low_bound, high_bound),
+        missing_fields=missing_fields,
+        improvement_hint=hint,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Score Retrieval
 # ---------------------------------------------------------------------------
 
@@ -237,6 +273,7 @@ async def get_job_score_endpoint(
         raise HTTPException(status_code=404, detail="No score found for this job")
     response = ScoreResponse.model_validate(scored)
     response.score_context = _build_score_context(db, profile_id, scored.fit_score)
+    response.profile_completeness = _build_profile_completeness(db, profile_id, scored.fit_score)
     return response
 
 
@@ -258,6 +295,7 @@ async def get_application_score_endpoint(
         raise HTTPException(status_code=404, detail="No score found for this application")
     response = ScoreResponse.model_validate(scored)
     response.score_context = _build_score_context(db, profile_id, scored.fit_score)
+    response.profile_completeness = _build_profile_completeness(db, profile_id, scored.fit_score)
     return response
 
 

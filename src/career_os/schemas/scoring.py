@@ -124,6 +124,39 @@ class ScoreContextResponse(BaseModel):
     )
 
 
+class ProfileCompletenessResponse(BaseModel):
+    """Profile richness and confidence interval for a scored job.
+
+    Computed dynamically at read time — not stored in DB.
+    Always present on ScoreResponse GET endpoints.
+    """
+
+    completeness: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Profile richness 0-100% (higher = more data → tighter range)",
+    )
+    confidence_range: tuple[float, float] = Field(
+        ...,
+        description=(
+            "Uncertainty interval (low_bound, high_bound) around the fit_score. Clamped to [0, 10]."
+        ),
+    )
+    missing_fields: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Fields that would most improve confidence. Only populated when completeness < 50%."
+        ),
+    )
+    improvement_hint: str | None = Field(
+        default=None,
+        description=(
+            "Human-readable hint shown when completeness < 50%. Tells the user what to add."
+        ),
+    )
+
+
 class ScoreResponse(BaseModel):
     """Full scoring breakdown response."""
 
@@ -196,6 +229,16 @@ class ScoreResponse(BaseModel):
         default=None,
         description=(
             "Percentile context relative to profile's scoring history (null when < 5 scores)"
+        ),
+    )
+
+    # Profile completeness + confidence interval (Epic 10 / G-278).
+    # Computed dynamically on GET; not stored in DB. Always present on GET endpoints.
+    profile_completeness: ProfileCompletenessResponse | None = Field(
+        default=None,
+        description=(
+            "Profile richness score (0-100) and confidence interval around fit_score. "
+            "Computed at read time; null immediately after POST /api/score."
         ),
     )
 
