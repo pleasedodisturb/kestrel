@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     cache_enabled: bool = True
     cache_encryption_key: str = ""  # User-provided Fernet key; auto-generated if empty
 
+    # Feedback calibration (Epic 6 / G-274) — inject top feedback examples into
+    # scoring prompts. Self-gating: get_feedback_calibration() returns [] when
+    # fewer than 10 explicit corrections exist, so no data leaks into prompts
+    # until the user has provided enough feedback. Can be disabled via env var.
+    feedback_calibration_enabled: bool = True
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).

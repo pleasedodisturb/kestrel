@@ -121,7 +121,32 @@ def create_application(db: Session, payload: ApplicationCreate) -> Application:
 
     try_auto_push_pipeline_action(db, app_obj, "Application created")
 
+    # Record implicit positive feedback when a discovered job is promoted to application
+    # (no-op if no ScoredJob exists for this application)
+    _record_implicit_on_create(db, app_obj)
+
     return app_obj
+
+
+def _record_implicit_on_create(db: Session, app_obj: Application) -> None:
+    """Record implicit_positive feedback when an application is created.
+
+    Looks for a ScoredJob linked to the application's discovered_job_id (if
+    the application was promoted from a DiscoveredJob) or to application_id.
+    Silently skipped when no scored job exists.
+    """
+    try:
+        from career_os.services.scoring import record_implicit_feedback
+
+        # Try linking via the application itself (application_id FK on ScoredJob)
+        record_implicit_feedback(
+            db,
+            profile_id=app_obj.profile_id,
+            direction="implicit_positive",
+            application_id=app_obj.id,
+        )
+    except Exception:
+        pass  # Never block application creation due to feedback side-effects
 
 
 def get_application(
@@ -249,6 +274,7 @@ def update_application(
     _handle_status_transition(db, app_obj, update_data)
     _apply_field_updates(db, app_obj, update_data)
 
+    new_status = update_data.get("status")
     status_changed = "status" in update_data
     db.commit()
     db.refresh(app_obj)
@@ -258,7 +284,29 @@ def update_application(
 
         try_auto_push_pipeline_action(db, app_obj, f"Status changed to {app_obj.status}")
 
+        # Record implicit strong positive when application reaches interview stage
+        if new_status == "interview":
+            _record_implicit_on_interview(db, app_obj)
+
     return app_obj
+
+
+def _record_implicit_on_interview(db: Session, app_obj: Application) -> None:
+    """Record implicit_strong_positive feedback when an application reaches interview.
+
+    Silently skipped when no scored job exists for this application.
+    """
+    try:
+        from career_os.services.scoring import record_implicit_feedback
+
+        record_implicit_feedback(
+            db,
+            profile_id=app_obj.profile_id,
+            direction="implicit_strong_positive",
+            application_id=app_obj.id,
+        )
+    except Exception:
+        pass  # Never block status updates due to feedback side-effects
 
 
 def delete_application(
