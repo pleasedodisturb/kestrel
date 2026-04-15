@@ -2,6 +2,7 @@
 
 import json as json_mod
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -348,3 +349,83 @@ class BatchScoreResponse(BaseModel):
         default=False,
         description="True if scoring stopped due to AI provider credits being exhausted",
     )
+
+
+# ---------------------------------------------------------------------------
+# Scoring Feedback
+# ---------------------------------------------------------------------------
+
+
+class FeedbackDirection(StrEnum):
+    """Valid directions for scoring feedback."""
+
+    TOO_HIGH = "too_high"
+    TOO_LOW = "too_low"
+    CORRECT = "correct"
+    IMPLICIT_POSITIVE = "implicit_positive"
+    IMPLICIT_NEGATIVE = "implicit_negative"
+    IMPLICIT_STRONG_POSITIVE = "implicit_strong_positive"
+
+
+class FeedbackCreate(BaseModel):
+    """Request body for POST /api/score/{scored_job_id}/feedback."""
+
+    direction: FeedbackDirection = Field(..., description="Feedback direction")
+    user_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=10,
+        description="Optional: what the user thinks the score should be (0–10)",
+    )
+    reason: str | None = Field(
+        default=None,
+        max_length=1000,
+        description="Optional: free-text explanation",
+    )
+
+
+class FeedbackResponse(BaseModel):
+    """Response schema for a single feedback record."""
+
+    id: int
+    scored_job_id: int
+    profile_id: int
+    direction: str
+    user_score: float | None = None
+    reason: str | None = None
+    original_fit_score: float
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def _ensure_utc(cls, v: Any) -> datetime | None:
+        return _ensure_utc(v)
+
+
+class FeedbackStats(BaseModel):
+    """Summary statistics for feedback submitted by a profile."""
+
+    total_count: int = Field(..., description="Total number of feedback records")
+    explicit_count: int = Field(..., description="Explicit corrections (too_high/too_low/correct)")
+    implicit_count: int = Field(..., description="Implicit signals (promoted/dismissed/interview)")
+    avg_deviation: float | None = Field(
+        default=None,
+        description="Average |user_score - original_fit_score| for records with user_score",
+    )
+    direction_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Count of feedback records per direction",
+    )
+
+
+class CalibrationExample(BaseModel):
+    """A single calibration example for the scoring prompt."""
+
+    job_title: str | None = None
+    company: str | None = None
+    ai_score: float
+    user_score: float
+    reason: str | None = None
+    deviation: float
