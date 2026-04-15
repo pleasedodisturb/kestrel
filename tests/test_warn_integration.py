@@ -397,8 +397,8 @@ class TestGracefulSkipNoWarnScraper:
         career_os.services.warn_data raise ImportError. The function must catch
         this and return None rather than propagating the error.
         """
-        import sys
         import importlib
+        import sys
 
         # Remove warn_data from sys.modules so the lazy import re-executes,
         # then substitute a broken module reference.
