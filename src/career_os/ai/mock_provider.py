@@ -240,6 +240,14 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
         for idx, (keyword, category) in enumerate(_MOCK_ATS_KEYWORDS)
     ]
 
+    # Desire score (Option B: AI-generated) — deterministic from seed
+    desire = round(1.0 + ((seed + 42) % 90) / 10.0, 1)
+    desire = min(desire, 10.0)
+    desire_reasoning = (
+        f"Company culture aligns well with candidate preferences. "
+        f"Growth potential rated {desire}/10 based on role trajectory and industry outlook."
+    )
+
     structured = ScoreResult(
         fit_score=fit,
         reasoning=reasoning,
@@ -254,6 +262,8 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
         score_breakdown=breakdown_factors,
         dimensional_scores=dimensional,
         ats_keywords=ats_keywords,
+        desire_score=desire,
+        desire_reasoning=desire_reasoning,
     )
     return AIResponse(
         content=structured.reasoning,
