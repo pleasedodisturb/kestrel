@@ -137,6 +137,17 @@ class ScoreResponse(BaseModel):
     readiness_score: float = Field(..., ge=0, le=100, description="Skills readiness 0-100")
     career_alignment: float = Field(..., ge=0, le=10, description="Career alignment 0-10")
 
+    # Desire score (dual-score architecture, G-275)
+    desire_score: float | None = Field(
+        default=None, ge=0, le=10, description="Desirability score 0-10 (how much user wants job)"
+    )
+    desire_score_method: str | None = Field(
+        default=None, description="Method used: 'derived' or 'ai_generated'"
+    )
+    desire_reasoning: str | None = Field(
+        default=None, description="Reasoning for desire score (Option B only)"
+    )
+
     # Letter grade derived from fit_score (A, A-, B+, B, C+, C, D, F)
     letter_grade: str | None = Field(
         default=None,
@@ -281,6 +292,43 @@ class ScoreResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Scoring Weights
 # ---------------------------------------------------------------------------
+
+
+def classify_quadrant(fit_score: float | None, desire_score: float | None) -> str | None:
+    """Classify a job into a 2D quadrant based on fit and desire scores.
+
+    Quadrants (threshold = 5.0):
+        - "dream_job"   — high fit, high desire
+        - "stretch_goal" — low fit, high desire
+        - "safe_bet"    — high fit, low desire
+        - "skip"        — low fit, low desire
+
+    Returns None if either score is None.
+    """
+    if fit_score is None or desire_score is None:
+        return None
+    threshold = 5.0
+    if fit_score >= threshold and desire_score >= threshold:
+        return "dream_job"
+    if fit_score < threshold and desire_score >= threshold:
+        return "stretch_goal"
+    if fit_score >= threshold and desire_score < threshold:
+        return "safe_bet"
+    return "skip"
+
+
+class DesireScoreResponse(BaseModel):
+    """Standalone desire score response for the dual-score API."""
+
+    desire_score: float | None = Field(default=None, ge=0, le=10, description="Desirability 0-10")
+    desire_score_method: str | None = Field(default=None, description="'derived' or 'ai_generated'")
+    desire_reasoning: str | None = Field(default=None, description="Reasoning (ai_generated only)")
+    quadrant: str | None = Field(
+        default=None, description="2D quadrant: dream_job / stretch_goal / safe_bet / skip"
+    )
+    fit_score: float | None = Field(
+        default=None, ge=0, le=10, description="Corresponding fit_score for context"
+    )
 
 
 class ScoringWeightsResponse(BaseModel):
