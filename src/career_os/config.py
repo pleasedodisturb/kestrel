@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     # until the user has provided enough feedback. Can be disabled via env var.
     feedback_calibration_enabled: bool = True
 
+    # Active query selection (Epic 11 / G-279) — when enabled, borderline
+    # scores may include a prompt asking the user for feedback to reduce
+    # preference model uncertainty.  Disabled by default to avoid annoying
+    # users with too many prompts.
+    active_query_enabled: bool = False
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).
