@@ -21,6 +21,12 @@ from career_os.schemas.scoring import (
     ScoreResponse,
     ScoringWeightsResponse,
     ScoringWeightsUpdate,
+    SuggestionsResponse,
+    WeightSuggestionResponse,
+)
+from career_os.services.preference_learning import (
+    SUGGESTION_MIN_FEEDBACK,
+    generate_suggestions,
 )
 from career_os.services.pushover import send_credits_exhausted_alert
 from career_os.services.scoring import (
@@ -344,3 +350,44 @@ async def feedback_stats_endpoint(
     """
     stats = get_feedback_stats(db, profile_id)
     return FeedbackStats(**stats)
+
+
+# ---------------------------------------------------------------------------
+# Bayesian Preference Learning (Epic 11 / G-279)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/api/score/suggestions")
+async def suggestions_endpoint(
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    db: Annotated[Session, Depends(get_db)],
+) -> SuggestionsResponse:
+    """Get weight adjustment suggestions based on accumulated feedback.
+
+    Analyzes patterns in user feedback (explicit corrections and implicit
+    signals) using a Bayesian preference model to suggest scoring weight
+    changes. Returns suggestions only when ≥15 feedback records exist and
+    the model has sufficient confidence.
+
+    Suggestions are presented for review — they are never auto-applied.
+    """
+    from career_os.models.scoring import ScoringFeedback as SFModel
+
+    feedback_count = db.query(SFModel).filter(SFModel.profile_id == profile_id).count()
+    ready = feedback_count >= SUGGESTION_MIN_FEEDBACK
+
+    if not ready:
+        return SuggestionsResponse(
+            suggestions=[],
+            feedback_count=feedback_count,
+            min_feedback_required=SUGGESTION_MIN_FEEDBACK,
+            ready=False,
+        )
+
+    suggestions = generate_suggestions(db, profile_id)
+    return SuggestionsResponse(
+        suggestions=[WeightSuggestionResponse(**s.to_dict()) for s in suggestions],
+        feedback_count=feedback_count,
+        min_feedback_required=SUGGESTION_MIN_FEEDBACK,
+        ready=True,
+    )

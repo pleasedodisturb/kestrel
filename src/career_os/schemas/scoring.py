@@ -477,3 +477,48 @@ class CalibrationExample(BaseModel):
     user_score: float
     reason: str | None = None
     deviation: float
+
+
+# ---------------------------------------------------------------------------
+# Bayesian Preference Learning (Epic 11 / G-279)
+# ---------------------------------------------------------------------------
+
+
+class WeightSuggestionResponse(BaseModel):
+    """A single weight adjustment suggestion from the preference model."""
+
+    dimension: str = Field(..., description="Weight dimension name (e.g. 'skills_match')")
+    current_weight: float = Field(..., ge=0, le=1, description="Current configured weight")
+    suggested_weight: float = Field(..., ge=0, le=1, description="Suggested new weight")
+    confidence: float = Field(..., ge=0, le=1, description="Confidence in the suggestion (0-1)")
+    reason: str = Field(..., description="Human-readable explanation of the suggestion")
+
+
+class SuggestionsResponse(BaseModel):
+    """Response for GET /api/score/suggestions — weight adjustment suggestions."""
+
+    suggestions: list[WeightSuggestionResponse] = Field(
+        default_factory=list,
+        description="Weight adjustment suggestions based on feedback patterns",
+    )
+    feedback_count: int = Field(
+        ..., description="Total feedback records used to generate suggestions"
+    )
+    min_feedback_required: int = Field(
+        ..., description="Minimum feedback records needed before suggestions appear"
+    )
+    ready: bool = Field(..., description="True when enough feedback exists to generate suggestions")
+
+
+class ActiveQueryResponse(BaseModel):
+    """Optional active query suggestion returned with a score."""
+
+    should_query: bool = Field(..., description="Whether to prompt the user for feedback")
+    uncertain_dimensions: list[str] = Field(
+        default_factory=list,
+        description="Dimensions with highest uncertainty that would benefit from feedback",
+    )
+    message: str | None = Field(
+        default=None,
+        description="Suggested prompt message for the user (e.g. 'Would you apply to this?')",
+    )
