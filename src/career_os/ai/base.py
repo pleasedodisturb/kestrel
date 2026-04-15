@@ -78,3 +78,19 @@ class AIProvider(ABC):
             AIResponse with ScoreResult structured data.
         """
         ...
+
+    async def embed(self, text: str, **kwargs: object) -> list[float]:
+        """Generate an embedding vector for the given text.
+
+        Default implementation raises NotImplementedError. Providers that
+        support embeddings (Ollama, future Voyage AI) override this method.
+        Callers should catch NotImplementedError for graceful degradation.
+
+        Args:
+            text: The input text to embed.
+            **kwargs: Provider-specific options (e.g. model override).
+
+        Returns:
+            A list of floats representing the embedding vector.
+        """
+        raise NotImplementedError(f"{self.name} provider does not support embeddings")
