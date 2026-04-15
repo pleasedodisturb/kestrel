@@ -122,6 +122,16 @@ class ScoreResult(BaseModel):
         default_factory=list,
         description="10-15 ATS keywords extracted from the JD, categorized and matched",
     )
+    desire_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=10,
+        description="Desirability score 0-10: how much would the candidate want this job?",
+    )
+    desire_reasoning: str | None = Field(
+        default=None,
+        description="Reasoning for the desire score (what makes this job desirable/undesirable)",
+    )
 
 
 class GapAnalysisResult(BaseModel):
