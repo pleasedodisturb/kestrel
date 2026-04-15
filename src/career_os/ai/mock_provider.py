@@ -73,6 +73,30 @@ class MockProvider(AIProvider):
         """Return deterministic scoring response."""
         return _handle_score(job_description, {"profile": profile_data})
 
+    async def embed(self, text: str, **kwargs: object) -> list[float]:
+        """Return a deterministic 768-dim embedding vector for testing.
+
+        Uses an MD5 hash of the input to seed a simple PRNG so different
+        texts produce different (but reproducible) vectors.  Vectors are
+        normalized to unit length so cosine-similarity math works correctly.
+        """
+        import math
+
+        seed = _deterministic_seed(text)
+        # Simple LCG-based PRNG seeded from the text hash
+        dim = 768
+        values: list[float] = []
+        x = seed
+        for _ in range(dim):
+            x = (x * 6364136223846793005 + 1442695040888963407) & 0xFFFFFFFFFFFFFFFF
+            # Map to [-1, 1]
+            values.append((x / 0xFFFFFFFFFFFFFFFF) * 2 - 1)
+        # L2-normalize
+        norm = math.sqrt(sum(v * v for v in values))
+        if norm > 0:
+            values = [v / norm for v in values]
+        return values
+
 
 def _deterministic_seed(text: str) -> int:
     """Produce a deterministic integer seed from input text."""

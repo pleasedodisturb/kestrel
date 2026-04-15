@@ -127,6 +127,10 @@ class ScoredJob(Base):
     dim_career_trajectory: Mapped[float | None] = mapped_column(Float, nullable=True)
     dim_company_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Borderline 2-pass scoring (Epic 5 / G-273) — number of scoring passes used.
+    # 1 = single pass (default), 2 = borderline zone triggered second pass.
+    scoring_passes: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
