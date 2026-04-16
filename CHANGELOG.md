@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.4.0](https://github.com/pleasedodisturb/kestrel/compare/v0.3.1...v0.4.0) (2026-04-16)
+
+
+### Features
+
+* **G-269:** add scoring rubric with few-shot calibration examples ([#177](https://github.com/pleasedodisturb/kestrel/issues/177)) ([4bc847a](https://github.com/pleasedodisturb/kestrel/commit/4bc847a4089cdc972d21d7bd31f55f0be2278f05))
+* **G-270:** add ghost job detection as red flag rule [#8](https://github.com/pleasedodisturb/kestrel/issues/8) ([#178](https://github.com/pleasedodisturb/kestrel/issues/178)) ([0516680](https://github.com/pleasedodisturb/kestrel/commit/05166801c4dfe10236816dc3f769d6741e070ca2))
+* **G-271:** add score context & percentiles to scoring API ([#179](https://github.com/pleasedodisturb/kestrel/issues/179)) ([746d4d7](https://github.com/pleasedodisturb/kestrel/commit/746d4d7a5f867077e9e15754ae0f5278835fae7e))
+* **G-273:** borderline 2-pass scoring ([#187](https://github.com/pleasedodisturb/kestrel/issues/187)) ([0c1acf3](https://github.com/pleasedodisturb/kestrel/commit/0c1acf3cedbdb3104eb35b892935605b3a047a5c))
+* **G-274:** user feedback loop for score correction ([#181](https://github.com/pleasedodisturb/kestrel/issues/181)) ([7ad2c65](https://github.com/pleasedodisturb/kestrel/commit/7ad2c6523b40dfe99492c072d2320e4573f5d6ab))
+* **G-275:** dual-score architecture (fit vs desire) ([#180](https://github.com/pleasedodisturb/kestrel/issues/180)) ([505fc0a](https://github.com/pleasedodisturb/kestrel/commit/505fc0a928fefad30af2539f02c6b3e50bf4c695))
+* **G-276:** add ESCO skill taxonomy normalization service ([#182](https://github.com/pleasedodisturb/kestrel/issues/182)) ([2e0e070](https://github.com/pleasedodisturb/kestrel/commit/2e0e07071b92ef1d765034858eb8298b4e32d200))
+* **G-277:** WARN Act layoff integration ([#183](https://github.com/pleasedodisturb/kestrel/issues/183)) ([51d4eba](https://github.com/pleasedodisturb/kestrel/commit/51d4eba92de57c7610e1b0b9433a05ed6725dd0a))
+* **G-278:** add uncertainty ranges for sparse profiles ([#184](https://github.com/pleasedodisturb/kestrel/issues/184)) ([51e31ad](https://github.com/pleasedodisturb/kestrel/commit/51e31adf7663c60ed8ea275989467b29ecfe0150))
+* **G-279:** add Bayesian preference learning service ([#185](https://github.com/pleasedodisturb/kestrel/issues/185)) ([a3140d4](https://github.com/pleasedodisturb/kestrel/commit/a3140d4fe810e050797920f25354c5c270d7d5f5))
+* **G-295:** expand golden set — fix miscategorizations, add finance & design sets ([#194](https://github.com/pleasedodisturb/kestrel/issues/194)) ([ca6cdc0](https://github.com/pleasedodisturb/kestrel/commit/ca6cdc008edc2a1118d4f3365cbbec592c0165c7))
+* **G-296:** rubric v1.1 — sharpen dream boundary, add 7.5 example ([#189](https://github.com/pleasedodisturb/kestrel/issues/189)) ([f827fb5](https://github.com/pleasedodisturb/kestrel/commit/f827fb5608a52110dbe510b09dc7b2c0165ba063))
+* **G-301:** add 288 job family weight presets across 16 sectors ([#204](https://github.com/pleasedodisturb/kestrel/issues/204)) ([63763a6](https://github.com/pleasedodisturb/kestrel/commit/63763a6753c1219cd7c98571b357ae7827ecbd6b))
+* **G-349:** enable token-efficient tool use header ([#206](https://github.com/pleasedodisturb/kestrel/issues/206)) ([0136579](https://github.com/pleasedodisturb/kestrel/commit/01365798199890d02b4ae67987f5b01bdf3e1427))
+
+
+### Bug Fixes
+
+* **G-294:** add JSON parse retry and robust extraction in AI providers ([#188](https://github.com/pleasedodisturb/kestrel/issues/188)) ([659ef2d](https://github.com/pleasedodisturb/kestrel/commit/659ef2d01b0467992ff96a3c53d0578c77b38a88))
+* **G-297:** raise vague_responsibilities threshold from 200 to 400 chars ([#190](https://github.com/pleasedodisturb/kestrel/issues/190)) ([8546901](https://github.com/pleasedodisturb/kestrel/commit/8546901debcf8616c61efa17a9649b1a5ca55652))
+
+
+### Documentation
+
+* add session summary for 2026-04-14 (Supabase research) ([#172](https://github.com/pleasedodisturb/kestrel/issues/172)) ([af0dacb](https://github.com/pleasedodisturb/kestrel/commit/af0dacbe9ff5141f134ceaad910d11a90774b67b))
+* **G-298:** add user-facing scoring explainer (how-scoring-works.md) ([#191](https://github.com/pleasedodisturb/kestrel/issues/191)) ([80d0e00](https://github.com/pleasedodisturb/kestrel/commit/80d0e00b175de7226a8e3914cc0ed2ee31c4a971))
+* **G-299:** add PII-scrubbed benchmark artifacts from G-286 validation ([#192](https://github.com/pleasedodisturb/kestrel/issues/192)) ([29c6f3a](https://github.com/pleasedodisturb/kestrel/commit/29c6f3a0ba9c352b95b673e539d24907f5cb4ee6))
+* **G-300:** create Kestrel feature audit for CareerOS sync matrix ([#202](https://github.com/pleasedodisturb/kestrel/issues/202)) ([a0f60c1](https://github.com/pleasedodisturb/kestrel/commit/a0f60c16916bbe056698d44664672c6cf8ba1ad7))
+* **G-302:** validation report v2.0 — post-fix benchmark results ([#197](https://github.com/pleasedodisturb/kestrel/issues/197)) ([c1444d0](https://github.com/pleasedodisturb/kestrel/commit/c1444d0617c795a1e2981544d6d4ada79289c8de))
+* **G-305:** add testing strategy research docs in 3 formats ([#195](https://github.com/pleasedodisturb/kestrel/issues/195)) ([1bdb358](https://github.com/pleasedodisturb/kestrel/commit/1bdb358756922c03801664a919a2368a29c6b2b4))
+* **G-305:** research docs integration — license fix, scoring docs, README matrix ([#198](https://github.com/pleasedodisturb/kestrel/issues/198)) ([209caf1](https://github.com/pleasedodisturb/kestrel/commit/209caf189797f2d7602f0d2315ae3bcbcaf82393))
+* **G-306:** add CI/CD research docs in 4 formats ([#196](https://github.com/pleasedodisturb/kestrel/issues/196)) ([2d1a6be](https://github.com/pleasedodisturb/kestrel/commit/2d1a6bea905c140e8e7b384bc19c2f70e951c2e3))
+
 ## [0.3.1](https://github.com/pleasedodisturb/kestrel/compare/v0.3.0...v0.3.1) (2026-04-13)
 
 
