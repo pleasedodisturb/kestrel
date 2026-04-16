@@ -12,7 +12,7 @@ import httpx
 
 from career_os.ai.base import AIProvider
 from career_os.ai.openrouter_provider import _system_prompt_for_feature, _try_parse_structured
-from career_os.schemas.ai import AIFeature, AIResponse
+from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +112,15 @@ class OllamaProvider(AIProvider):
         content = data["choices"][0]["message"]["content"]
         model_used = data.get("model", self._model)
 
+        # Extract token usage from Ollama response
+        usage_data = data.get("usage", {})
+        usage = TokenUsage(
+            input_tokens=usage_data.get("prompt_tokens", 0)
+            or usage_data.get("prompt_eval_count", 0),
+            output_tokens=usage_data.get("completion_tokens", 0)
+            or usage_data.get("eval_count", 0),
+        )
+
         # Try to parse structured data for known features
         structured = _try_parse_structured(content, feature)
 
@@ -125,6 +134,7 @@ class OllamaProvider(AIProvider):
             feature=feature,
             structured=structured,
             model=model_used,
+            usage=usage,
         )
 
     async def _retry_json(

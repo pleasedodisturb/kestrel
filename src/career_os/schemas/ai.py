@@ -237,6 +237,20 @@ class InterviewPatternsResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Token usage tracking
+# ---------------------------------------------------------------------------
+
+
+class TokenUsage(BaseModel):
+    """Token usage statistics from an AI provider response."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+
+
+# ---------------------------------------------------------------------------
 # Response schemas
 # ---------------------------------------------------------------------------
 
@@ -260,3 +274,6 @@ class AIResponse(BaseModel):
         | None
     ) = Field(default=None, description="Structured response data (feature-dependent)")
     model: str | None = Field(default=None, description="Model used for generation")
+    usage: TokenUsage | None = Field(
+        default=None, description="Token usage statistics (None for cache hits)"
+    )
