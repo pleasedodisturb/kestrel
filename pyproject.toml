@@ -7,7 +7,7 @@ name = "kestrel-app"
 version = "0.3.1"
 description = "AI-powered job search platform. Self-hosted, open-source, privacy-first."
 readme = "README.md"
-license = {text = "MIT"}
+license = {text = "AGPL-3.0-or-later"}
 authors = [{name = "Kestrel Contributors"}]
 requires-python = ">=3.11"
 dependencies = [

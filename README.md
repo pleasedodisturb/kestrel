@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://pypi.org/project/kestrel-app/"><img src="https://img.shields.io/pypi/v/kestrel-app?style=flat-square&label=pip%20install&color=22c55e" alt="PyPI"></a>
   <img src="https://img.shields.io/badge/AI-built--in_(free)-blue?style=flat-square" alt="AI included">
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License">
+  <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0 License">
   <img src="https://img.shields.io/badge/No_coding_required-gray?style=flat-square" alt="No coding required">
 </p>
 
@@ -125,6 +125,13 @@ Everything runs on your machine. No account needed. No data leaves your computer
 | [AI Provider Setup](docs/AI-PROVIDERS.md) | Technical details — API keys, privacy policies, provider comparison tables |
 | [LLM Landscape Research](docs/llms-tokens-privacy.md) | Deep dive — 2026 pricing, privacy audits, GDPR, EU sovereignty (for the curious) |
 
+**How it works under the hood:**
+
+| Guide | What you'll learn |
+|-------|-------------------|
+| [How Scoring Works](docs/how-scoring-works.md) | What "fit score" actually means, and how Kestrel decides which jobs match you |
+| [How Testing Works](docs/how-testing-works.md) | 2,800+ automated checks — the kitchen analogy for quality assurance |
+
 **Going deeper:**
 
 | Guide | What you'll learn |
@@ -154,6 +161,19 @@ Kestrel works out of the box in Demo Mode — free, offline, no account needed. 
 
 ---
 
+## How we build
+
+**Human-first, data-driven.** Every infrastructure decision — testing, CI/CD, scoring — is backed by deep research. We investigate thoroughly, then choose the sanest path: not the most sophisticated, but the most sustainable.
+
+Our proof is in the research artifacts. Before building anything, we run parallel research agents, synthesize findings, and publish the decision rationale so anyone can understand *why* things work the way they do.
+
+| Topic | For users | For developers | Raw research |
+|-------|-----------|---------------|--------------|
+| **Scoring** | [How Scoring Works](docs/how-scoring-works.md) | [Scoring Strategy](docs/research/scoring-research.md) | [Raw Findings](docs/research/scoring-raw-research.md) |
+| **Testing** | [How Testing Works](docs/how-testing-works.md) | [Testing Strategy](docs/research/testing-research.md) | [Raw Findings](docs/research/testing-raw-research.md) |
+| **CI/CD** | [How CI/CD Works](docs/how-cicd-works.md) | [CI/CD Strategy](docs/research/cicd-research.md) | [Raw Findings](docs/research/cicd-raw-research.md) |
+| **[LLM Token Costs](https://github.com/pleasedodisturb/awesome-llm-token-optimization)** | [Quick Wins](https://github.com/pleasedodisturb/awesome-llm-token-optimization#quick-wins) | [Tools & Strategies](https://github.com/pleasedodisturb/awesome-llm-token-optimization#contents) | [52 Papers + Sources](https://github.com/pleasedodisturb/awesome-llm-token-optimization/tree/main/research) |
+
 ## License
 
-[MIT](LICENSE) - free forever, do whatever you want with it.
+[AGPL-3.0](LICENSE) — free and open source. If you modify Kestrel and offer it as a service, you must share your changes under the same license.
