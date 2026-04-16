@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-4-20250514"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.3"
+    together_api_key: str = ""
+    together_model: str = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
     host: str = "0.0.0.0"
     port: int = 8100
     frontend_url: str = "http://localhost:8101"
