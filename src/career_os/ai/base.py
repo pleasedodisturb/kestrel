@@ -1,8 +1,25 @@
 """Abstract base class for AI providers."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from enum import StrEnum
 
 from career_os.schemas.ai import AIFeature, AIResponse
+
+
+class ComplexityTier(StrEnum):
+    """Task complexity tier for model routing.
+
+    Routes AI calls to different models based on task complexity:
+    - SIMPLE: Classification, extraction, keyword matching -> cheaper models (Haiku)
+    - STANDARD: Generation, analysis -> default models (Sonnet)
+    - COMPLEX: Deep reasoning, strategy -> most capable models (Opus)
+    """
+
+    SIMPLE = "simple"
+    STANDARD = "standard"
+    COMPLEX = "complex"
 
 
 class ProviderQuotaError(Exception):
@@ -45,6 +62,7 @@ class AIProvider(ABC):
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         """Generate a completion for the given prompt.
@@ -53,6 +71,7 @@ class AIProvider(ABC):
             prompt: The input prompt text.
             feature: AI feature type controlling response schema.
             context: Optional context data.
+            tier: Complexity tier for model routing. None defaults to STANDARD.
             **kwargs: Provider-specific options.
 
         Returns:
@@ -65,6 +84,8 @@ class AIProvider(ABC):
         self,
         job_description: str,
         profile_data: dict,
+        *,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile.
@@ -72,6 +93,7 @@ class AIProvider(ABC):
         Args:
             job_description: Job posting text or structured data.
             profile_data: User profile data dict.
+            tier: Complexity tier for model routing. None defaults to STANDARD.
             **kwargs: Provider-specific options.
 
         Returns:
