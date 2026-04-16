@@ -121,17 +121,18 @@ class TestScoringRubric:
         assert "1-2" in SCORING_RUBRIC
 
     def test_rubric_contains_calibration_examples(self):
-        """Rubric must contain exactly 3 calibration examples."""
+        """Rubric must contain exactly 4 calibration examples."""
         assert "Example 1" in SCORING_RUBRIC
         assert "Example 2" in SCORING_RUBRIC
         assert "Example 3" in SCORING_RUBRIC
+        assert "Example 4" in SCORING_RUBRIC
 
     def test_calibration_examples_cover_score_range(self):
         """Examples should have scores in bands [1-3], [4-6], [7-9]."""
         # Each example ends with "Score: X.X" — deduplicate since the score
         # value may appear in both the reasoning line and the summary.
         scores = sorted(set(float(m) for m in re.findall(r"Score:\s+(\d+\.?\d*)", SCORING_RUBRIC)))
-        assert len(scores) == 3, f"Expected 3 unique example scores, found {scores}"
+        assert len(scores) == 4, f"Expected 4 unique example scores, found {scores}"
 
         # One in low band, one in mid band, one in high band
         assert any(1.0 <= s <= 3.0 for s in scores), f"No low-band score in {scores}"
@@ -149,7 +150,19 @@ class TestScoringRubric:
         """RUBRIC_VERSION must be a non-empty string."""
         assert isinstance(RUBRIC_VERSION, str)
         assert len(RUBRIC_VERSION) > 0
-        assert RUBRIC_VERSION == "v1.0"
+        assert RUBRIC_VERSION == "v1.1"
+
+    def test_rubric_contains_top_5_percent_language(self):
+        """v1.1 dream-fit band must reference top-5% threshold."""
+        assert "top-5%" in SCORING_RUBRIC
+
+    def test_rubric_contains_example_4(self):
+        """v1.1 must include a 4th calibration example."""
+        assert "Example 4" in SCORING_RUBRIC
+
+    def test_rubric_contains_score_7_5(self):
+        """v1.1 Example 4 must use Score: 7.5."""
+        assert "Score: 7.5" in SCORING_RUBRIC
 
 
 # ---------------------------------------------------------------------------
