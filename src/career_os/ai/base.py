@@ -101,6 +101,41 @@ class AIProvider(ABC):
         """
         ...
 
+    async def batch_score(
+        self,
+        jobs: list[dict],
+        profile_data: dict,
+        **kwargs: object,
+    ) -> str:
+        """Submit batch scoring request. Returns batch ID.
+
+        Default implementation raises NotImplementedError. Providers that
+        support batch scoring (Anthropic) override this method.
+
+        Args:
+            jobs: List of dicts, each with at least 'id' and 'description' keys.
+            profile_data: User profile data dict.
+
+        Returns:
+            Batch ID string for polling results.
+        """
+        raise NotImplementedError(f"{self.name} provider does not support batch scoring")
+
+    async def get_batch_results(self, batch_id: str) -> dict:
+        """Get results of a batch scoring request.
+
+        Default implementation raises NotImplementedError. Providers that
+        support batch scoring (Anthropic) override this method.
+
+        Args:
+            batch_id: The batch ID returned by batch_score().
+
+        Returns:
+            Dict with 'status' key and 'results' key (list of AIResponse)
+            when status is 'ended'.
+        """
+        raise NotImplementedError(f"{self.name} provider does not support batch results")
+
     async def embed(self, text: str, **kwargs: object) -> list[float]:
         """Generate an embedding vector for the given text.
 

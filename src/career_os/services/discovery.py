@@ -20,6 +20,10 @@ from career_os.services.salary import parse_salary_range
 
 logger = logging.getLogger(__name__)
 
+# Minimum number of jobs before routing through Anthropic Batch API
+# instead of sequential real-time scoring.
+BATCH_SCORING_THRESHOLD = 10
+
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -214,25 +218,96 @@ def _create_discovered_job(db: Session, profile_id: int, merged: dict, key: tupl
         return None, False
 
 
+async def _try_batch_score(
+    new_jobs_list: list[DiscoveredJob],
+    profile_data: dict,
+) -> str | None:
+    """Attempt to submit jobs for batch scoring via the Anthropic Batch API.
+
+    Returns a batch ID if submission succeeded, or None if batch scoring is
+    not available or the provider does not support it.
+    """
+    from career_os.ai.factory import get_ai_provider
+
+    provider = get_ai_provider()
+    if provider.name != "anthropic":
+        return None
+
+    jobs_payload = [
+        {
+            "id": str(dj.id),
+            "description": (dj.description or f"{dj.title} at {dj.company} in {dj.location}"),
+        }
+        for dj in new_jobs_list
+    ]
+
+    try:
+        batch_id = await provider.batch_score(jobs_payload, profile_data)
+        logger.info(
+            "Submitted %d jobs for batch scoring (batch %s)",
+            len(jobs_payload),
+            batch_id,
+        )
+        return batch_id
+    except NotImplementedError:
+        return None
+    except Exception as exc:
+        logger.warning("Batch score submission failed: %s — falling back to sequential", exc)
+        return None
+
+
 async def _auto_score_and_refresh(db, profile_id, new_jobs_list, warnings):
-    """Auto-score discovered jobs and refresh market intelligence."""
+    """Auto-score discovered jobs and refresh market intelligence.
+
+    When the number of new jobs exceeds ``BATCH_SCORING_THRESHOLD`` and the
+    active AI provider is Anthropic, jobs are submitted via the Batch API
+    for 50% cost savings.  The batch ID is returned in the warnings list
+    for downstream polling.  If batch submission fails (or the provider
+    doesn't support it), falls back to sequential real-time scoring.
+    """
     if new_jobs_list:
-        try:
-            from career_os.services.scoring import batch_score_discovery
+        batch_id: str | None = None
 
-            await batch_score_discovery(
-                db,
-                profile_id,
-                discovered_job_ids=[dj.id for dj in new_jobs_list],
+        # Try batch scoring for large sweeps with Anthropic provider
+        if len(new_jobs_list) > BATCH_SCORING_THRESHOLD:
+            profile = db.query(Profile).filter(Profile.id == profile_id).first()
+            profile_data = {"name": profile.name, "location": profile.location} if profile else {}
+            batch_id = await _try_batch_score(new_jobs_list, profile_data)
+
+        if batch_id:
+            logger.info(
+                "Batch scoring submitted for %d jobs (batch %s) — results available via polling",
+                len(new_jobs_list),
+                batch_id,
             )
-            logger.info("Auto-scored %d discovered jobs", len(new_jobs_list))
+            warnings.append(
+                {
+                    "source": "batch_scoring",
+                    "batch_id": batch_id,
+                    "message": (
+                        f"Submitted {len(new_jobs_list)} jobs for batch scoring. "
+                        f"Poll batch {batch_id} for results."
+                    ),
+                }
+            )
+        else:
+            # Fall back to sequential real-time scoring
+            try:
+                from career_os.services.scoring import batch_score_discovery
 
-            propagated = propagate_discovery_scores(db, profile_id)
-            if propagated:
-                logger.info("Propagated scores to %d linked applications", propagated)
-        except Exception as exc:
-            logger.warning("Auto-scoring failed: %s", exc)
-            warnings.append({"source": "auto_scoring", "error": str(exc)})
+                await batch_score_discovery(
+                    db,
+                    profile_id,
+                    discovered_job_ids=[dj.id for dj in new_jobs_list],
+                )
+                logger.info("Auto-scored %d discovered jobs", len(new_jobs_list))
+
+                propagated = propagate_discovery_scores(db, profile_id)
+                if propagated:
+                    logger.info("Propagated scores to %d linked applications", propagated)
+            except Exception as exc:
+                logger.warning("Auto-scoring failed: %s", exc)
+                warnings.append({"source": "auto_scoring", "error": str(exc)})
 
     try:
         from career_os.services.market import refresh_market_data
