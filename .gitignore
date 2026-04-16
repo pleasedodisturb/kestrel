@@ -1,5 +1,6 @@
 # Private local-only notes (never commit)
 private/
+docs/sessions/
 
 # Python
 __pycache__/
