@@ -156,6 +156,64 @@ def test_vague_responsibilities_short_description() -> None:
     assert "vague_responsibilities" in types
 
 
+def test_vague_responsibilities_150_chars_triggers() -> None:
+    """A 150-char description is well below the 400-char threshold and should trigger."""
+    desc = "We need a developer to work on stuff. " * 4  # ~148 chars
+    assert len(desc.strip()) < 400
+    flags = detect_red_flags(desc)
+    types = [f["flag_type"] for f in flags]
+    assert "vague_responsibilities" in types
+
+
+def test_vague_responsibilities_250_chars_triggers() -> None:
+    """250 chars is below the new 400-char threshold, so it triggers."""
+    desc = "We are looking for a software engineer to join our team. " * 5  # ~285 chars
+    assert 200 < len(desc.strip()) < 400
+    flags = detect_red_flags(desc)
+    types = [f["flag_type"] for f in flags]
+    assert "vague_responsibilities" in types
+
+
+def test_vague_responsibilities_350_chars_triggers() -> None:
+    """350 chars is still below the 400-char threshold, so it triggers."""
+    desc = (
+        "Join our engineering team to build scalable backend services. "
+        "You will design APIs, write tests, and collaborate with product managers. "
+        "We use Python, FastAPI, and PostgreSQL in our technology stack. "
+        "Strong communication skills are a must for this hybrid role based in Berlin. "
+        "We offer competitive pay, equity packages, and comprehensive benefits globally. "
+    )
+    assert 300 < len(desc) < 400
+    flags = detect_red_flags(desc)
+    types = [f["flag_type"] for f in flags]
+    assert "vague_responsibilities" in types
+
+
+def test_vague_responsibilities_bullet_ratio_triggers_on_long_desc() -> None:
+    """A 450+ char description with >50% vague bullets should trigger via bullet-ratio path."""
+    vague_lines = [
+        "- Other duties as assigned",
+        "- Various tasks as needed",
+        "- Support the team as needed",
+        "- Help with daily operations",
+        "- Assist with ongoing projects",
+    ]
+    specific_lines = [
+        "- Build REST APIs using Python and FastAPI",
+        "- Write unit tests with pytest",
+    ]
+    desc = (
+        "We are hiring a software engineer for our platform team. "
+        "This is a full-time position based in our Berlin office.\n"
+        + "\n".join(vague_lines + specific_lines)
+        + "\nApply today to join our growing company and make an impact on millions of users."
+    )
+    assert len(desc) > 400
+    flags = detect_red_flags(desc)
+    types = [f["flag_type"] for f in flags]
+    assert "vague_responsibilities" in types
+
+
 def test_vague_responsibilities_normal_length_not_flagged() -> None:
     flags = detect_red_flags(_FILLER)
     types = [f["flag_type"] for f in flags]
