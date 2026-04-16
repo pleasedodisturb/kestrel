@@ -11,6 +11,7 @@ from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
+from career_os.ai.together_provider import TogetherProvider
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,10 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "ollama": lambda: OllamaProvider(
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
         model=os.getenv("OLLAMA_MODEL", "llama3.3"),
+    ),
+    "together": lambda: TogetherProvider(
+        api_key=_resolve_api_key("TOGETHER_API_KEY", "together_api_key"),
+        model=os.getenv("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo"),
     ),
 }
 
