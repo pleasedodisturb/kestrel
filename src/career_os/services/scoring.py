@@ -118,7 +118,7 @@ JOB_FAMILY_WEIGHTS: dict[str, dict[str, float]] = {
 # Scoring rubric & calibration (Epic 1 / G-269)
 # ---------------------------------------------------------------------------
 
-RUBRIC_VERSION = "v1.0"
+RUBRIC_VERSION = "v1.1"
 
 SCORING_RUBRIC = """\
 ## Scoring Rubric
@@ -126,7 +126,9 @@ SCORING_RUBRIC = """\
 Use these band definitions to anchor your fit_score:
 
 - **9-10 (Dream fit):** Role, skills, seniority, domain, and location all align. \
-The candidate would be a top-quartile applicant. Virtually no gaps.
+The candidate would be a top-5% applicant AND the role precisely matches their \
+stated career goals and target job family. A prestigious company alone does not \
+make a 9 — the role type must also be an exact match. Virtually no gaps.
 - **7-8 (Strong fit):** Most dimensions match well. Minor gaps exist (e.g. one \
 missing tool, slight seniority stretch) but the candidate is clearly competitive.
 - **5-6 (Moderate fit):** Partial overlap — some skills transfer, but meaningful \
@@ -145,12 +147,12 @@ Profile: TPM with Python/AI focus, no .NET or ERP experience.
 Reasoning: Complete skills mismatch (Python vs .NET), wrong role type (TPM vs SWE), \
 unrelated domain. Score: 2.0
 
-**Example 2 — Score: 5.5**
+**Example 2 — Score: 5.0**
 JD: "Product Manager, Growth — own activation funnels, run A/B experiments, SQL \
 proficiency, B2C SaaS experience."
 Profile: TPM with some PM overlap, strong SQL, but B2B enterprise background.
 Reasoning: Transferable analytical skills and SQL, but wrong domain (B2B vs B2C), \
-no growth/activation experience. Partial fit. Score: 5.5
+no growth/activation experience. Center of the moderate range. Score: 5.0
 
 **Example 3 — Score: 8.5**
 JD: "Technical Program Manager, AI Platform — coordinate ML infrastructure teams, \
@@ -159,6 +161,15 @@ Profile: TPM with strong AI/ML platform experience, Python proficiency, proven \
 cross-functional leadership.
 Reasoning: Direct role match, strong technical overlap, relevant domain experience. \
 Minor gap: specific ML infra tooling. Score: 8.5
+
+**Example 4 — Score: 7.5**
+JD: "Staff TPM, AI Platform — own delivery roadmap for ML infrastructure, \
+coordinate 6 engineering teams, Python scripting, budget oversight."
+Profile: TPM with strong AI/ML platform experience, Python proficiency, proven \
+cross-functional leadership.
+Reasoning: Excellent role-type and domain match. Strong seniority fit. \
+Missing: specific ML infrastructure tooling experience and budget management \
+at staff level. Competitive but not top-5%. Score: 7.5
 """
 
 
