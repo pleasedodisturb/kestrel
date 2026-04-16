@@ -33,6 +33,56 @@ class AIFeature(StrEnum):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Feature → default complexity tier mapping
+# ---------------------------------------------------------------------------
+# Lazy import to avoid circular dependency — ComplexityTier lives in
+# career_os.ai.base which imports AIFeature from this module.  We define the
+# map as a module-level function so callers import it after both modules have
+# loaded.
+
+
+def _build_feature_tier_map() -> dict:  # noqa: UP006 — deferred type
+    """Build the AIFeature → ComplexityTier mapping.
+
+    Called lazily at first access via :func:`get_feature_tier_map` to avoid
+    circular imports between ``schemas.ai`` and ``ai.base``.
+    """
+    from career_os.ai.base import ComplexityTier
+
+    return {
+        AIFeature.score: ComplexityTier.STANDARD,
+        AIFeature.gap_analysis: ComplexityTier.STANDARD,
+        AIFeature.coaching: ComplexityTier.STANDARD,
+        AIFeature.goal_recalibration: ComplexityTier.STANDARD,
+        AIFeature.interview_prep: ComplexityTier.STANDARD,
+        AIFeature.company_research: ComplexityTier.STANDARD,
+        AIFeature.learning_recommendations: ComplexityTier.SIMPLE,
+        AIFeature.interview_format: ComplexityTier.SIMPLE,
+        AIFeature.interview_patterns: ComplexityTier.SIMPLE,
+        AIFeature.complete: ComplexityTier.STANDARD,
+        AIFeature.voice_cover_letter: ComplexityTier.STANDARD,
+        AIFeature.voice_coaching: ComplexityTier.STANDARD,
+        AIFeature.voice_job_evaluation: ComplexityTier.STANDARD,
+    }
+
+
+_FEATURE_TIER_MAP_CACHE: dict | None = None
+
+
+def get_feature_tier_map() -> dict:
+    """Return the AIFeature → ComplexityTier mapping (cached after first call)."""
+    global _FEATURE_TIER_MAP_CACHE  # noqa: PLW0603
+    if _FEATURE_TIER_MAP_CACHE is None:
+        _FEATURE_TIER_MAP_CACHE = _build_feature_tier_map()
+    return _FEATURE_TIER_MAP_CACHE
+
+
+# ---------------------------------------------------------------------------
+# Request schemas
+# ---------------------------------------------------------------------------
+
+
 class AICompleteRequest(BaseModel):
     """Request body for POST /api/ai/complete."""
 

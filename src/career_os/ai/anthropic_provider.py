@@ -12,7 +12,7 @@ import logging
 
 import httpx
 
-from career_os.ai.base import AIProvider, ProviderQuotaError
+from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
     _system_prompt_for_feature,
@@ -25,6 +25,13 @@ logger = logging.getLogger(__name__)
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 ANTHROPIC_VERSION = "2023-06-01"
+
+
+_TIER_MODELS: dict[ComplexityTier, str] = {
+    ComplexityTier.SIMPLE: "claude-haiku-4-5-20251001",
+    ComplexityTier.STANDARD: "claude-sonnet-4-20250514",
+    ComplexityTier.COMPLEX: "claude-opus-4-20250514",
+}
 
 
 class AnthropicProvider(AIProvider):
@@ -46,16 +53,30 @@ class AnthropicProvider(AIProvider):
     def name(self) -> str:
         return "anthropic"
 
+    def _resolve_model(self, tier: ComplexityTier | None) -> str:
+        """Return the model to use for a request.
+
+        If the provider was constructed with an explicit model override (via env
+        var), that always wins.  Otherwise, the tier selects the model from
+        ``_TIER_MODELS``.  If tier is None, STANDARD is used.
+        """
+        if self._model != DEFAULT_MODEL:
+            return self._model
+        effective_tier = tier or ComplexityTier.STANDARD
+        return _TIER_MODELS[effective_tier]
+
     async def complete(
         self,
         prompt: str,
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        tier: ComplexityTier | None = None,
         max_retries: int = 1,
         **kwargs: object,
     ) -> AIResponse:
         """Send a completion request to the Anthropic Messages API."""
+        model = self._resolve_model(tier)
         expects_structured = feature in _SCHEMA_MAP
 
         for attempt in range(1, max_retries + 2):
@@ -81,7 +102,7 @@ class AnthropicProvider(AIProvider):
                 ]
 
             payload: dict = {
-                "model": self._model,
+                "model": model,
                 "max_tokens": 4096,
                 "messages": messages,
             }
@@ -157,6 +178,8 @@ class AnthropicProvider(AIProvider):
         self,
         job_description: str,
         profile_data: dict,
+        *,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile via the Anthropic API."""
@@ -181,7 +204,7 @@ class AnthropicProvider(AIProvider):
             f"Job Description:\n{job_description}\n\n"
             f"Profile:\n{json.dumps(profile_data, indent=2)}"
         )
-        return await self.complete(prompt, feature=AIFeature.score)
+        return await self.complete(prompt, feature=AIFeature.score, tier=tier)
 
 
 def _extract_error_detail(response: httpx.Response) -> str:

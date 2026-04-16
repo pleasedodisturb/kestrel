@@ -19,7 +19,7 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from career_os.ai.base import AIProvider
+from career_os.ai.base import AIProvider, ComplexityTier
 from career_os.schemas.ai import AIFeature, AIResponse
 
 # ---------------------------------------------------------------------------
@@ -152,11 +152,12 @@ class MaskedProvider(AIProvider):
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         masked_prompt, mapping = self._masker.mask(prompt)
         response = await self._inner.complete(
-            masked_prompt, feature=feature, context=context, **kwargs
+            masked_prompt, feature=feature, context=context, tier=tier, **kwargs
         )
         return self._unmask_response(response, mapping)
 
@@ -164,6 +165,8 @@ class MaskedProvider(AIProvider):
         self,
         job_description: str,
         profile_data: dict,
+        *,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         masked_jd, jd_mapping = self._masker.mask(job_description)
@@ -177,7 +180,7 @@ class MaskedProvider(AIProvider):
         combined.placeholder_to_original.update(jd_mapping.placeholder_to_original)
         combined.placeholder_to_original.update(profile_mapping.placeholder_to_original)
 
-        response = await self._inner.score(masked_jd, masked_profile, **kwargs)
+        response = await self._inner.score(masked_jd, masked_profile, tier=tier, **kwargs)
         return self._unmask_response(response, combined)
 
     # -- helpers -------------------------------------------------------------
