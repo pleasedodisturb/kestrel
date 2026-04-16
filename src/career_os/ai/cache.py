@@ -136,6 +136,7 @@ class CachedProvider(AIProvider):
         cached = await asyncio.to_thread(self._get, key)
         if cached is not None:
             self._hits += 1
+            cached.usage = None  # No tokens consumed on cache hit
             return cached
 
         self._misses += 1
@@ -154,6 +155,7 @@ class CachedProvider(AIProvider):
         cached = await asyncio.to_thread(self._get, key)
         if cached is not None:
             self._hits += 1
+            cached.usage = None  # No tokens consumed on cache hit
             return cached
 
         self._misses += 1
