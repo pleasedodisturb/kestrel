@@ -1,0 +1,199 @@
+{
+  "timestamp": "2026-04-15T16:33:48Z",
+  "config": {
+    "runs_per_job": 3,
+    "n_jobs": 20,
+    "ai_provider": "openrouter",
+    "model": "default"
+  },
+  "baseline_analysis": {
+    "label": "baseline",
+    "total_runs": 47,
+    "errors": 13,
+    "mean_std_across_jobs": 0.364,
+    "category_stats": {
+      "reject": {
+        "mean": 2.26,
+        "std": 0.207,
+        "min": 2.1,
+        "max": 2.5,
+        "in_band_pct": 100.0,
+        "n_jobs": 4,
+        "n_runs": 10
+      },
+      "mediocre": {
+        "mean": 5.29,
+        "std": 0.831,
+        "min": 4.2,
+        "max": 6.2,
+        "in_band_pct": 63.6,
+        "n_jobs": 6,
+        "n_runs": 11
+      },
+      "strong": {
+        "mean": 8.03,
+        "std": 1.288,
+        "min": 5.5,
+        "max": 9.2,
+        "in_band_pct": 20.0,
+        "n_jobs": 6,
+        "n_runs": 15
+      },
+      "dream": {
+        "mean": 8.57,
+        "std": 1.057,
+        "min": 6.2,
+        "max": 9.2,
+        "in_band_pct": 54.5,
+        "n_jobs": 4,
+        "n_runs": 11
+      }
+    },
+    "dimensional_consistency": {
+      "dim_technical_fit": 0.339,
+      "dim_seniority_alignment": 0.48,
+      "dim_compensation_fit": 0.428,
+      "dim_location_fit": 0.876,
+      "dim_career_trajectory": 0.333,
+      "dim_company_fit": 0.261
+    }
+  },
+  "rubric_analysis": {
+    "label": "rubric",
+    "total_runs": 54,
+    "errors": 6,
+    "mean_std_across_jobs": 0.307,
+    "category_stats": {
+      "reject": {
+        "mean": 2.14,
+        "std": 0.452,
+        "min": 1.5,
+        "max": 2.5,
+        "in_band_pct": 100.0,
+        "n_jobs": 4,
+        "n_runs": 11
+      },
+      "mediocre": {
+        "mean": 4.16,
+        "std": 0.413,
+        "min": 3.5,
+        "max": 4.5,
+        "in_band_pct": 75.0,
+        "n_jobs": 6,
+        "n_runs": 16
+      },
+      "strong": {
+        "mean": 7.76,
+        "std": 1.58,
+        "min": 4.2,
+        "max": 9.2,
+        "in_band_pct": 11.8,
+        "n_jobs": 6,
+        "n_runs": 17
+      },
+      "dream": {
+        "mean": 8.55,
+        "std": 1.445,
+        "min": 4.5,
+        "max": 9.2,
+        "in_band_pct": 60.0,
+        "n_jobs": 4,
+        "n_runs": 10
+      }
+    },
+    "dimensional_consistency": {
+      "dim_technical_fit": 0.548,
+      "dim_seniority_alignment": 0.513,
+      "dim_compensation_fit": 0.491,
+      "dim_location_fit": 0.683,
+      "dim_career_trajectory": 0.362,
+      "dim_company_fit": 0.459
+    }
+  },
+  "comparison": {
+    "variance_reduction_pct": 15.7,
+    "baseline_mean_std": 0.364,
+    "rubric_mean_std": 0.307,
+    "accuracy_comparison": {
+      "reject": {
+        "baseline_in_band_pct": 100.0,
+        "rubric_in_band_pct": 100.0,
+        "baseline_mean": 2.26,
+        "rubric_mean": 2.14
+      },
+      "mediocre": {
+        "baseline_in_band_pct": 63.6,
+        "rubric_in_band_pct": 75.0,
+        "baseline_mean": 5.29,
+        "rubric_mean": 4.16
+      },
+      "strong": {
+        "baseline_in_band_pct": 20.0,
+        "rubric_in_band_pct": 11.8,
+        "baseline_mean": 8.03,
+        "rubric_mean": 7.76
+      },
+      "dream": {
+        "baseline_in_band_pct": 54.5,
+        "rubric_in_band_pct": 60.0,
+        "baseline_mean": 8.57,
+        "rubric_mean": 8.55
+      }
+    },
+    "category_separation": {
+      "baseline": {
+        "reject": [2.1, 2.5],
+        "mediocre": [4.2, 6.2],
+        "strong": [5.5, 9.2],
+        "dream": [6.2, 9.2]
+      },
+      "rubric": {
+        "reject": [1.5, 2.5],
+        "mediocre": [3.5, 4.5],
+        "strong": [4.2, 9.2],
+        "dream": [4.5, 9.2]
+      }
+    },
+    "dimensional_consistency_comparison": {
+      "baseline": {
+        "dim_technical_fit": 0.339,
+        "dim_seniority_alignment": 0.48,
+        "dim_compensation_fit": 0.428,
+        "dim_location_fit": 0.876,
+        "dim_career_trajectory": 0.333,
+        "dim_company_fit": 0.261
+      },
+      "rubric": {
+        "dim_technical_fit": 0.548,
+        "dim_seniority_alignment": 0.513,
+        "dim_compensation_fit": 0.491,
+        "dim_location_fit": 0.683,
+        "dim_career_trajectory": 0.362,
+        "dim_company_fit": 0.459
+      }
+    }
+  },
+  "red_flags": {
+    "total_flags_triggered": 18,
+    "flag_type_counts": {
+      "vague_responsibilities": 18
+    },
+    "false_positive_count": 10
+  },
+  "dual_score": {
+    "quadrant_summary": {
+      "Dream Job": 8,
+      "Reach": 2,
+      "Skip": 8,
+      "Safe Bet": 0
+    }
+  },
+  "embedding_analysis": {
+    "model": "nomic-embed-text",
+    "threshold_analysis": {
+      "max_reject_similarity": 0.6475,
+      "min_strong_dream_similarity": 0.6066,
+      "clean_threshold_exists": false
+    }
+  }
+}
