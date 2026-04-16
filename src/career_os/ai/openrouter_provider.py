@@ -23,6 +23,7 @@ from career_os.schemas.ai import (
     InterviewPrepResult,
     LearningRecommendationsResult,
     ScoreResult,
+    TokenUsage,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,6 +128,13 @@ class OpenRouterProvider(AIProvider):
             content = data["choices"][0]["message"]["content"]
             model_used = data.get("model", self._model)
 
+            # Extract token usage from OpenAI-format response
+            usage_data = data.get("usage", {})
+            usage = TokenUsage(
+                input_tokens=usage_data.get("prompt_tokens", 0),
+                output_tokens=usage_data.get("completion_tokens", 0),
+            )
+
             # Try to parse structured data for known features
             structured = _try_parse_structured(content, feature)
 
@@ -137,6 +145,7 @@ class OpenRouterProvider(AIProvider):
                     feature=feature,
                     structured=structured,
                     model=model_used,
+                    usage=usage,
                 )
 
             # Structured parse failed — retry if we have attempts left
