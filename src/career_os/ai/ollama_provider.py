@@ -117,8 +117,7 @@ class OllamaProvider(AIProvider):
         usage = TokenUsage(
             input_tokens=usage_data.get("prompt_tokens", 0)
             or usage_data.get("prompt_eval_count", 0),
-            output_tokens=usage_data.get("completion_tokens", 0)
-            or usage_data.get("eval_count", 0),
+            output_tokens=usage_data.get("completion_tokens", 0) or usage_data.get("eval_count", 0),
         )
 
         # Try to parse structured data for known features

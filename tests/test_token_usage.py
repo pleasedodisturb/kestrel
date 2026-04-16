@@ -81,17 +81,13 @@ class TestAIResponseUsageField:
 
     def test_usage_can_be_set(self) -> None:
         usage = TokenUsage(input_tokens=10, output_tokens=5)
-        resp = AIResponse(
-            content="hi", provider="mock", feature=AIFeature.complete, usage=usage
-        )
+        resp = AIResponse(content="hi", provider="mock", feature=AIFeature.complete, usage=usage)
         assert resp.usage is not None
         assert resp.usage.input_tokens == 10
 
     def test_serialization_with_usage(self) -> None:
         usage = TokenUsage(input_tokens=100, output_tokens=50)
-        resp = AIResponse(
-            content="test", provider="test", feature=AIFeature.complete, usage=usage
-        )
+        resp = AIResponse(content="test", provider="test", feature=AIFeature.complete, usage=usage)
         data = json.loads(resp.model_dump_json())
         assert data["usage"]["input_tokens"] == 100
         assert data["usage"]["output_tokens"] == 50
@@ -368,9 +364,7 @@ def _mock_provider_with_usage() -> AsyncMock:
     provider = AsyncMock(spec=AIProvider)
     provider.name = "mock"
     usage = TokenUsage(input_tokens=50, output_tokens=25)
-    provider.complete.return_value = _make_response_with_usage(
-        "result", usage=usage
-    )
+    provider.complete.return_value = _make_response_with_usage("result", usage=usage)
     provider.score.return_value = _make_response_with_usage(
         "score-result", AIFeature.score, usage=usage
     )
