@@ -1,7 +1,7 @@
 """AI provider abstraction package."""
 
 from career_os.ai.anthropic_provider import AnthropicProvider
-from career_os.ai.base import AIProvider, ProviderQuotaError
+from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
 from career_os.ai.cache import CachedProvider
 from career_os.ai.factory import UnsupportedProviderError, get_ai_provider
 from career_os.ai.mock_provider import MockProvider
@@ -14,6 +14,7 @@ __all__ = [
     "AIProvider",
     "AnthropicProvider",
     "CachedProvider",
+    "ComplexityTier",
     "CreditsExhaustedError",
     "MaskedProvider",
     "MaskMapping",
