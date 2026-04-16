@@ -15,11 +15,11 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from career_os.ai.cache import CachedProvider
 from career_os.ai.anthropic_provider import AnthropicProvider
+from career_os.ai.base import AIProvider
+from career_os.ai.cache import CachedProvider
 from career_os.ai.ollama_provider import OllamaProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
-from career_os.ai.base import AIProvider
 from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
 # Fake credentials — not real.
