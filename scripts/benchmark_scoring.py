@@ -10,10 +10,13 @@ Requires:
 
 Usage:
     .venv/bin/python scripts/benchmark_scoring.py
+    .venv/bin/python scripts/benchmark_scoring.py \\
+        --golden-set tests/fixtures/scoring_golden_set_finance.json
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import logging
@@ -52,43 +55,62 @@ log = logging.getLogger("benchmark")
 # Helpers
 # ---------------------------------------------------------------------------
 
-def load_golden_set() -> list[dict]:
-    with open(GOLDEN_SET_PATH) as f:
-        return json.load(f)
+
+def load_golden_set(path: Path = GOLDEN_SET_PATH) -> tuple[dict, list[dict]]:
+    with open(path) as f:
+        data = json.load(f)
+    if isinstance(data, list):
+        # Legacy format (bare array)
+        return {}, data
+    return data.get("profile", {}), data["jobs"]
 
 
-def create_benchmark_profile(db):
-    """Create a TPM profile with skills & goals for scoring context."""
+def create_benchmark_profile(db, profile_data: dict | None = None):
+    """Create a benchmark profile with skills & goals for scoring context.
+
+    When *profile_data* is provided (from the golden set's ``profile`` section),
+    its ``job_family``, ``location``, and ``key_skills`` override the defaults.
+    """
     from career_os.models.models import Profile
-    from career_os.models.skills import Skill, Goal
+    from career_os.models.skills import Goal, Skill
+
+    job_family = (profile_data or {}).get("job_family", "TPM")
+    location = (profile_data or {}).get("location", "Frankfurt, Germany")
+    key_skills = (profile_data or {}).get("key_skills")
 
     profile = Profile(
-        name="Benchmark TPM",
+        name=f"Benchmark {job_family}",
         email="benchmark@test.local",
-        location="Frankfurt, Germany",
-        job_family="TPM",
+        location=location,
+        job_family=job_family,
     )
     db.add(profile)
     db.flush()
 
     def _skill(name, cat, prof):
         return Skill(
-            profile_id=profile.id, name=name, category=cat,
-            proficiency=prof, evidence_source="benchmark",
+            profile_id=profile.id,
+            name=name,
+            category=cat,
+            proficiency=prof,
+            evidence_source="benchmark",
         )
 
-    skills = [
-        _skill("Python", "technical", "expert"),
-        _skill("Program Management", "management", "expert"),
-        _skill("AI/ML", "technical", "advanced"),
-        _skill("Cross-functional Leadership", "management", "expert"),
-        _skill("Cloud Infrastructure", "technical", "intermediate"),
-        _skill("Stakeholder Management", "management", "expert"),
-        _skill("Agile/Scrum", "process", "expert"),
-        _skill("Technical Architecture", "technical", "advanced"),
-        _skill("Data Analysis", "technical", "advanced"),
-        _skill("Risk Management", "process", "advanced"),
-    ]
+    if key_skills:
+        skills = [_skill(s, "technical", "expert") for s in key_skills]
+    else:
+        skills = [
+            _skill("Python", "technical", "expert"),
+            _skill("Program Management", "management", "expert"),
+            _skill("AI/ML", "technical", "advanced"),
+            _skill("Cross-functional Leadership", "management", "expert"),
+            _skill("Cloud Infrastructure", "technical", "intermediate"),
+            _skill("Stakeholder Management", "management", "expert"),
+            _skill("Agile/Scrum", "process", "expert"),
+            _skill("Technical Architecture", "technical", "advanced"),
+            _skill("Data Analysis", "technical", "advanced"),
+            _skill("Risk Management", "process", "advanced"),
+        ]
     db.add_all(skills)
 
     goals = [
@@ -111,7 +133,7 @@ def create_benchmark_profile(db):
     db.commit()
     db.refresh(profile)
 
-    log.info("Created benchmark profile id=%d (TPM, Frankfurt)", profile.id)
+    log.info("Created benchmark profile id=%d (%s, %s)", profile.id, job_family, location)
     return profile
 
 
@@ -131,8 +153,12 @@ async def score_one(db, profile_id: int, job: dict) -> dict:
 
     dim_scores = {}
     for dim in [
-        "dim_technical_fit", "dim_seniority_alignment", "dim_compensation_fit",
-        "dim_location_fit", "dim_career_trajectory", "dim_company_fit",
+        "dim_technical_fit",
+        "dim_seniority_alignment",
+        "dim_compensation_fit",
+        "dim_location_fit",
+        "dim_career_trajectory",
+        "dim_company_fit",
     ]:
         dim_scores[dim] = getattr(scored, dim, None)
 
@@ -158,9 +184,7 @@ async def score_one(db, profile_id: int, job: dict) -> dict:
     }
 
 
-async def run_scoring_pass(
-    db, profile_id: int, golden_set: list[dict], label: str
-) -> list[dict]:
+async def run_scoring_pass(db, profile_id: int, golden_set: list[dict], label: str) -> list[dict]:
     """Score all golden-set jobs RUNS_PER_JOB times. Returns flat list of results."""
     results = []
     total = len(golden_set) * RUNS_PER_JOB
@@ -171,7 +195,12 @@ async def run_scoring_pass(
             done += 1
             log.info(
                 "[%s] %d/%d — %s @ %s (run %d)",
-                label, done, total, job["title"], job["company"], run,
+                label,
+                done,
+                total,
+                job["title"],
+                job["company"],
+                run,
             )
             try:
                 result = await score_one(db, profile_id, job)
@@ -185,15 +214,17 @@ async def run_scoring_pass(
                 )
             except Exception as e:
                 log.error("  ✗ FAILED: %s", e)
-                results.append({
-                    "golden_id": job["id"],
-                    "category": job["category"],
-                    "expected_band": job["expected_band"],
-                    "title": job["title"],
-                    "company": job["company"],
-                    "run": run,
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "golden_id": job["id"],
+                        "category": job["category"],
+                        "expected_band": job["expected_band"],
+                        "title": job["title"],
+                        "company": job["company"],
+                        "run": run,
+                        "error": str(e),
+                    }
+                )
 
     return results
 
@@ -201,6 +232,7 @@ async def run_scoring_pass(
 # ---------------------------------------------------------------------------
 # Analysis
 # ---------------------------------------------------------------------------
+
 
 def analyze_pass(results: list[dict], label: str) -> dict:
     """Compute per-job and overall statistics for a scoring pass."""
@@ -219,18 +251,20 @@ def analyze_pass(results: list[dict], label: str) -> dict:
         in_band = sum(
             1 for r in runs if r["expected_band"][0] <= r["fit_score"] <= r["expected_band"][1]
         )
-        job_stats.append({
-            "golden_id": gid,
-            "category": runs[0]["category"],
-            "expected_band": runs[0]["expected_band"],
-            "title": runs[0]["title"],
-            "company": runs[0]["company"],
-            "scores": scores,
-            "mean": round(mean, 2),
-            "std": round(std, 3),
-            "in_band_count": in_band,
-            "in_band_pct": round(in_band / len(runs) * 100, 1),
-        })
+        job_stats.append(
+            {
+                "golden_id": gid,
+                "category": runs[0]["category"],
+                "expected_band": runs[0]["expected_band"],
+                "title": runs[0]["title"],
+                "company": runs[0]["company"],
+                "scores": scores,
+                "mean": round(mean, 2),
+                "std": round(std, 3),
+                "in_band_count": in_band,
+                "in_band_pct": round(in_band / len(runs) * 100, 1),
+            }
+        )
 
     # Overall stats
     all_stds = [j["std"] for j in job_stats if j["std"] > 0]
@@ -256,14 +290,22 @@ def analyze_pass(results: list[dict], label: str) -> dict:
 
     # Dimensional consistency
     dim_names = [
-        "dim_technical_fit", "dim_seniority_alignment", "dim_compensation_fit",
-        "dim_location_fit", "dim_career_trajectory", "dim_company_fit",
+        "dim_technical_fit",
+        "dim_seniority_alignment",
+        "dim_compensation_fit",
+        "dim_location_fit",
+        "dim_career_trajectory",
+        "dim_company_fit",
     ]
     dim_consistency = {}
     for dim in dim_names:
         dim_stds = []
         for gid, runs in by_job.items():
-            vals = [r["dimensional_scores"].get(dim) for r in runs if r["dimensional_scores"].get(dim) is not None]
+            vals = [
+                r["dimensional_scores"].get(dim)
+                for r in runs
+                if r["dimensional_scores"].get(dim) is not None
+            ]
             if len(vals) > 1:
                 dim_stds.append(statistics.stdev(vals))
         dim_consistency[dim] = round(statistics.mean(dim_stds), 3) if dim_stds else None
@@ -323,9 +365,9 @@ def compare_passes(baseline: dict, rubric: dict) -> dict:
 # Red flags validation
 # ---------------------------------------------------------------------------
 
+
 def validate_red_flags(rubric_results: list[dict]) -> dict:
     """Analyze red flag detection across golden set."""
-    from career_os.services.red_flags import detect_red_flags
 
     flag_counts: dict[str, int] = {}
     false_positives = []  # flags on dream/strong jobs
@@ -338,20 +380,24 @@ def validate_red_flags(rubric_results: list[dict]) -> dict:
         for f in flags:
             flag_counts[f["flag_type"]] = flag_counts.get(f["flag_type"], 0) + 1
             if r["category"] in ("strong", "dream"):
-                false_positives.append({
-                    "job": f"{r['title']} @ {r['company']}",
-                    "category": r["category"],
-                    "flag": f["flag_type"],
-                    "severity": f["severity"],
-                    "description": f["description"],
-                })
-        per_job.append({
-            "golden_id": r["golden_id"],
-            "category": r["category"],
-            "title": r["title"],
-            "n_flags": len(flags),
-            "flag_types": [f["flag_type"] for f in flags],
-        })
+                false_positives.append(
+                    {
+                        "job": f"{r['title']} @ {r['company']}",
+                        "category": r["category"],
+                        "flag": f["flag_type"],
+                        "severity": f["severity"],
+                        "description": f["description"],
+                    }
+                )
+        per_job.append(
+            {
+                "golden_id": r["golden_id"],
+                "category": r["category"],
+                "title": r["title"],
+                "n_flags": len(flags),
+                "flag_types": [f["flag_type"] for f in flags],
+            }
+        )
 
     return {
         "total_flags_triggered": sum(flag_counts.values()),
@@ -364,6 +410,7 @@ def validate_red_flags(rubric_results: list[dict]) -> dict:
 # ---------------------------------------------------------------------------
 # Dual-score spot check
 # ---------------------------------------------------------------------------
+
 
 def validate_dual_score(rubric_results: list[dict]) -> list[dict]:
     """Spot-check desire_score quadrant classifications."""
@@ -385,16 +432,18 @@ def validate_dual_score(rubric_results: list[dict]) -> list[dict]:
         else:
             quadrant = "Skip"
 
-        checks.append({
-            "golden_id": r["golden_id"],
-            "category": r["category"],
-            "title": r["title"],
-            "company": r["company"],
-            "fit_score": fit,
-            "desire_score": desire,
-            "desire_method": r.get("desire_score_method"),
-            "quadrant": quadrant,
-        })
+        checks.append(
+            {
+                "golden_id": r["golden_id"],
+                "category": r["category"],
+                "title": r["title"],
+                "company": r["company"],
+                "fit_score": fit,
+                "desire_score": desire,
+                "desire_method": r.get("desire_score_method"),
+                "quadrant": quadrant,
+            }
+        )
 
     return checks
 
@@ -402,6 +451,7 @@ def validate_dual_score(rubric_results: list[dict]) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Embedding analysis (optional — requires Ollama)
 # ---------------------------------------------------------------------------
+
 
 async def embedding_analysis(golden_set: list[dict], rubric_analysis: dict) -> dict | None:
     """Generate embeddings and compare cosine similarity vs fit_score."""
@@ -461,21 +511,25 @@ async def embedding_analysis(golden_set: list[dict], rubric_analysis: dict) -> d
         job_stats = [j for j in rubric_analysis["per_job"] if j["golden_id"] == job["id"]]
         mean_fit = job_stats[0]["mean"] if job_stats else None
 
-        results.append({
-            "golden_id": job["id"],
-            "category": job["category"],
-            "title": job["title"],
-            "company": job["company"],
-            "cosine_similarity": round(sim, 4),
-            "mean_fit_score": mean_fit,
-        })
+        results.append(
+            {
+                "golden_id": job["id"],
+                "category": job["category"],
+                "title": job["title"],
+                "company": job["company"],
+                "cosine_similarity": round(sim, 4),
+                "mean_fit_score": mean_fit,
+            }
+        )
 
     # Sort by similarity
     results.sort(key=lambda x: x["cosine_similarity"], reverse=True)
 
     # Find threshold that filters all rejects without losing strong/dream
     reject_sims = [r["cosine_similarity"] for r in results if r["category"] == "reject"]
-    strong_dream_sims = [r["cosine_similarity"] for r in results if r["category"] in ("strong", "dream")]
+    strong_dream_sims = [
+        r["cosine_similarity"] for r in results if r["category"] in ("strong", "dream")
+    ]
 
     max_reject_sim = max(reject_sims) if reject_sims else 0
     min_sd_sim = min(strong_dream_sims) if strong_dream_sims else 1
@@ -491,7 +545,8 @@ async def embedding_analysis(golden_set: list[dict], rubric_analysis: dict) -> d
         # Count what this threshold would filter
         filtered = sum(1 for r in results if r["cosine_similarity"] < suggested_threshold)
         false_negatives = sum(
-            1 for r in results
+            1
+            for r in results
             if r["cosine_similarity"] < suggested_threshold and r["category"] in ("strong", "dream")
         )
         threshold_analysis["suggested_threshold"] = suggested_threshold
@@ -509,16 +564,24 @@ async def embedding_analysis(golden_set: list[dict], rubric_analysis: dict) -> d
 # Main
 # ---------------------------------------------------------------------------
 
-async def main():
-    from career_os.database import SessionLocal
-    import career_os.services.scoring as scoring_mod
 
-    golden_set = load_golden_set()
-    log.info("Loaded %d golden-set jobs", len(golden_set))
+async def main():
+    import career_os.services.scoring as scoring_mod
+    from career_os.database import SessionLocal
+
+    parser = argparse.ArgumentParser(description="Scoring benchmark")
+    parser.add_argument(
+        "--golden-set", default=str(GOLDEN_SET_PATH), help="Path to golden set JSON"
+    )
+    args = parser.parse_args()
+    golden_set_path = Path(args.golden_set)
+
+    profile_data, golden_set = load_golden_set(golden_set_path)
+    log.info("Loaded %d golden-set jobs from %s", len(golden_set), golden_set_path)
 
     db = SessionLocal()
     try:
-        profile = create_benchmark_profile(db)
+        profile = create_benchmark_profile(db, profile_data)
         profile_id = profile.id
 
         # ── Phase 1: Baseline (no rubric) ──────────────────────────
@@ -604,10 +667,14 @@ async def main():
 
         print("\nCategory accuracy (% scores in expected band):")
         for cat, data in comparison["accuracy_comparison"].items():
-            print(f"  {cat:10s} — baseline: {data['baseline_in_band_pct']:5.1f}%  rubric: {data['rubric_in_band_pct']:5.1f}%")
+            print(
+                f"  {cat:10s} — baseline: {data['baseline_in_band_pct']:5.1f}%  rubric: {data['rubric_in_band_pct']:5.1f}%"
+            )
 
-        print(f"\nRed flags: {red_flag_report['total_flags_triggered']} total, "
-              f"{len(red_flag_report['false_positives_on_strong_dream'])} false positives on strong/dream")
+        print(
+            f"\nRed flags: {red_flag_report['total_flags_triggered']} total, "
+            f"{len(red_flag_report['false_positives_on_strong_dream'])} false positives on strong/dream"
+        )
 
         print("\nDual-score quadrants:")
         quadrant_counts: dict[str, int] = {}
@@ -619,7 +686,7 @@ async def main():
 
         if embedding_report:
             ta = embedding_report["threshold_analysis"]
-            print(f"\nEmbedding pre-filter:")
+            print("\nEmbedding pre-filter:")
             print(f"  Clean threshold exists: {ta['clean_threshold_exists']}")
             if ta.get("suggested_threshold"):
                 print(f"  Suggested threshold: {ta['suggested_threshold']}")

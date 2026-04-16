@@ -1,0 +1,189 @@
+{
+  "profile": {
+    "job_family": "Financial Analyst",
+    "location": "London, UK",
+    "key_skills": ["Financial Modeling", "Excel/VBA", "Bloomberg Terminal", "Risk Analysis", "SQL", "Python"]
+  },
+  "jobs": [
+    {
+      "id": "fs-01",
+      "category": "reject",
+      "expected_band": [1, 3],
+      "title": "Senior Frontend Developer",
+      "company": "Shopify",
+      "location": "Remote, EMEA",
+      "description": "Build and maintain merchant-facing storefronts using React 19 and TypeScript. You will work on Shopify's Hydrogen framework, optimizing Remix-based server components for performance. Requires 5+ years of frontend development experience with strong knowledge of CSS-in-JS, GraphQL, and accessibility standards. No finance or analytics background needed."
+    },
+    {
+      "id": "fs-02",
+      "category": "reject",
+      "expected_band": [1, 3],
+      "title": "Veterinary Technician",
+      "company": "Green Lane Animal Hospital",
+      "location": "London, UK",
+      "description": "Assist veterinarians with surgical procedures, administer medications, and monitor animal patients during recovery. You will handle lab work including blood draws, urinalysis, and radiographs. Requires RCVS-registered veterinary nursing qualification and at least 2 years of clinical experience. Must be comfortable handling large and small animals in a fast-paced emergency clinic environment."
+    },
+    {
+      "id": "fs-03",
+      "category": "reject",
+      "expected_band": [1, 3],
+      "title": "Mechanical Engineer",
+      "company": "Siemens",
+      "location": "Munich, Germany",
+      "description": "Design and validate gas turbine components using SolidWorks and ANSYS FEA simulation. You will own the full product lifecycle from concept through manufacturing handoff, collaborating with materials science and quality teams. Requires a degree in mechanical engineering and 4+ years of experience in rotating equipment design. Familiarity with GD&T and ISO 2768 tolerancing standards is essential."
+    },
+    {
+      "id": "fs-04",
+      "category": "reject",
+      "expected_band": [1, 3],
+      "title": "Social Media Manager",
+      "company": "HubSpot",
+      "location": "Remote, UK",
+      "description": "Develop and execute social media strategy across LinkedIn, Instagram, TikTok, and X. You will create content calendars, manage community engagement, and track campaign performance using HubSpot's own marketing analytics suite. Requires 3+ years of B2B social media experience and a portfolio of successful brand campaigns. Strong copywriting skills and experience with Canva or Adobe Creative Suite preferred."
+    },
+    {
+      "id": "fs-05",
+      "category": "mediocre",
+      "expected_band": [4, 6],
+      "title": "Business Analyst",
+      "company": "Accenture",
+      "location": "London, UK",
+      "description": "Support client engagements by gathering requirements, mapping business processes, and delivering data-driven recommendations for operational improvement. You will build financial models and business cases for transformation initiatives across banking and insurance verticals. Requires 3+ years of consulting experience, advanced Excel skills, and familiarity with SQL or Tableau. Some exposure to financial analysis is expected but the primary focus is on process optimization and stakeholder management."
+    },
+    {
+      "id": "fs-06",
+      "category": "mediocre",
+      "expected_band": [4, 6],
+      "title": "Data Analyst",
+      "company": "Spotify",
+      "location": "London, UK",
+      "description": "Analyze user behavior and content performance metrics to inform product decisions for Spotify's podcast platform. You will build dashboards in Looker, write complex SQL queries against BigQuery, and present findings to product and engineering leadership. Requires strong statistical skills, 2+ years with SQL and Python, and experience with A/B test analysis. This is a product analytics role with no direct finance or investment focus."
+    },
+    {
+      "id": "fs-07",
+      "category": "mediocre",
+      "expected_band": [4, 6],
+      "title": "Accounting Manager",
+      "company": "Deloitte",
+      "location": "London, UK",
+      "description": "Oversee month-end close processes, manage a team of 4 staff accountants, and ensure compliance with IFRS standards for audit clients in the technology sector. You will review journal entries, prepare consolidated financial statements, and liaise with external auditors. Requires ACA/ACCA qualification and 5+ years of accounting experience. Strong knowledge of SAP and Excel required, but this is an accounting operations role rather than financial analysis or modeling."
+    },
+    {
+      "id": "fs-08",
+      "category": "mediocre",
+      "expected_band": [4, 6],
+      "title": "Operations Analyst",
+      "company": "Amazon",
+      "location": "London, UK",
+      "description": "Drive operational efficiency improvements across Amazon's UK fulfillment network by analyzing throughput data, identifying bottlenecks, and recommending process changes. You will build weekly reports on labor productivity and cost-per-unit metrics, and present findings to site leadership. Requires SQL proficiency, experience with operational KPIs, and comfort working in a fast-paced warehouse environment. Some financial reporting exposure is helpful but the core focus is logistics and operations."
+    },
+    {
+      "id": "fs-09",
+      "category": "mediocre",
+      "expected_band": [4, 6],
+      "title": "Compliance Officer",
+      "company": "HSBC",
+      "location": "London, UK",
+      "description": "Monitor and enforce regulatory compliance across HSBC's Global Banking and Markets division, focusing on MiFID II, MAR, and FCA conduct rules. You will conduct surveillance reviews, investigate potential breaches, and prepare regulatory filings. Requires 4+ years of compliance experience in financial services and strong knowledge of UK regulatory frameworks. While you will work closely with trading desks and finance teams, this is a regulatory and governance role rather than a financial analysis position."
+    },
+    {
+      "id": "fs-10",
+      "category": "mediocre",
+      "expected_band": [4, 6],
+      "title": "Management Consultant",
+      "company": "McKinsey & Company",
+      "location": "London, UK",
+      "description": "Serve clients across industries on strategic and operational problems, from market entry to organizational transformation. You will build financial models for business cases, conduct market sizing exercises, and develop executive presentations. Requires an MBA or equivalent, 3+ years of professional experience, and strong analytical skills including Excel and PowerPoint. Financial modeling is a component of the work but the role spans strategy, operations, and organizational design."
+    },
+    {
+      "id": "fs-11",
+      "category": "strong",
+      "expected_band": [7, 8],
+      "title": "Financial Analyst, Equity Research",
+      "company": "Goldman Sachs",
+      "location": "London, UK",
+      "description": "Build and maintain detailed financial models (DCF, comparables, sum-of-parts) for coverage of European technology companies. You will write earnings previews, publish research notes, and support the senior analyst in client presentations and marketing trips. Requires 2-4 years of equity research or investment banking experience, expert-level Excel and financial modeling skills, and CFA Level I or higher. Bloomberg Terminal proficiency and familiarity with FactSet are essential."
+    },
+    {
+      "id": "fs-12",
+      "category": "strong",
+      "expected_band": [7, 8],
+      "title": "Credit Risk Analyst",
+      "company": "Deutsche Bank",
+      "location": "London, UK",
+      "description": "Assess creditworthiness of corporate and institutional clients by building probability-of-default and loss-given-default models. You will analyze financial statements, evaluate covenant structures, and prepare credit memos for the risk committee. Requires strong understanding of Basel III/IV capital requirements, 3+ years in credit risk or corporate lending, and proficiency in Excel/VBA and SQL. Experience with Moody's Analytics or S&P Capital IQ is a plus."
+    },
+    {
+      "id": "fs-13",
+      "category": "strong",
+      "expected_band": [7, 8],
+      "title": "FP&A Analyst",
+      "company": "Microsoft",
+      "location": "London, UK",
+      "description": "Own the budgeting, forecasting, and variance analysis processes for Microsoft's EMEA commercial sales organization. You will build rolling forecasts in Excel and Adaptive Planning, prepare monthly business reviews for senior leadership, and partner with sales operations to improve revenue predictability. Requires 3+ years of FP&A or corporate finance experience, advanced Excel/VBA skills, and familiarity with ERP systems (SAP, Oracle). SQL or Python scripting for data automation is highly valued."
+    },
+    {
+      "id": "fs-14",
+      "category": "strong",
+      "expected_band": [7, 8],
+      "title": "Quantitative Analyst",
+      "company": "Citadel",
+      "location": "London, UK",
+      "description": "Develop and backtest quantitative trading strategies using Python, pandas, and statistical modeling techniques. You will analyze large datasets of market microstructure data, build factor models, and collaborate with portfolio managers to refine signal generation. Requires a quantitative degree (mathematics, physics, statistics, or computer science), 2+ years in a quantitative finance role, and strong programming skills in Python and SQL. Experience with time-series analysis and machine learning frameworks is preferred."
+    },
+    {
+      "id": "fs-15",
+      "category": "strong",
+      "expected_band": [7, 8],
+      "title": "Treasury Analyst",
+      "company": "BP",
+      "location": "London, UK",
+      "description": "Manage daily cash positioning, monitor FX exposures across 30+ currencies, and execute hedging strategies using forwards and options. You will maintain cash flow forecasting models, optimize intercompany lending structures, and support the Treasury Manager in bank relationship management. Requires 3+ years of corporate treasury experience, strong Excel/VBA skills, and familiarity with treasury management systems (Kyriba or FIS). Understanding of IFRS 9 hedge accounting and commodity risk is a plus."
+    },
+    {
+      "id": "fs-16",
+      "category": "strong",
+      "expected_band": [7, 8],
+      "title": "Investment Analyst",
+      "company": "BlackRock",
+      "location": "London, UK",
+      "description": "Conduct fundamental analysis of European equities for BlackRock's active funds, building detailed financial models and preparing investment recommendations for portfolio managers. You will use Bloomberg Terminal and Aladdin for portfolio analytics, monitor earnings releases, and attend company management meetings. Requires CFA Level II or higher, 3-5 years of buy-side or sell-side equity analysis experience, and expert-level financial modeling skills in Excel. Strong written communication for investment memos is essential."
+    },
+    {
+      "id": "fs-17",
+      "category": "dream",
+      "expected_band": [9, 10],
+      "title": "Senior Financial Analyst, M&A",
+      "company": "Morgan Stanley",
+      "location": "London, UK",
+      "description": "Lead financial analysis for cross-border M&A transactions in the technology sector, building LBO models, accretion/dilution analyses, and discounted cash flow valuations. You will prepare pitch materials for C-suite clients, manage due diligence workstreams, and coordinate with legal and tax advisory teams. Requires 4-6 years of investment banking experience, expert-level Excel/VBA and financial modeling skills, and proven deal execution experience. CFA or MBA preferred. This role offers direct client exposure and fast-track to VP promotion."
+    },
+    {
+      "id": "fs-18",
+      "category": "dream",
+      "expected_band": [9, 10],
+      "title": "VP Financial Planning",
+      "company": "Stripe",
+      "location": "London, UK",
+      "description": "Lead the FP&A function for Stripe's EMEA business, owning the annual planning cycle, quarterly forecasting, and board-level financial reporting as the company prepares for IPO readiness. You will build and manage a team of 4 analysts, partner with product and engineering leadership on unit economics, and develop financial infrastructure using SQL, Python, and modern FP&A tools. Requires 8+ years of progressive finance experience including fintech or high-growth tech, strong leadership skills, and deep expertise in financial modeling and data-driven decision-making."
+    },
+    {
+      "id": "fs-19",
+      "category": "dream",
+      "expected_band": [9, 10],
+      "title": "Portfolio Manager, Emerging Markets",
+      "company": "Fidelity International",
+      "location": "London, UK",
+      "description": "Manage a $2B emerging markets equity portfolio with full discretion over security selection and portfolio construction. You will conduct primary research across Asia, Latin America, and EMEA, build proprietary valuation frameworks, and present investment theses to the global CIO. Requires 10+ years of investment management experience, CFA charter, and deep expertise in emerging market economies and currencies. Bloomberg Terminal mastery, strong risk management instincts, and a documented track record of alpha generation are essential."
+    },
+    {
+      "id": "fs-20",
+      "category": "dream",
+      "expected_band": [9, 10],
+      "title": "Head of Financial Analytics",
+      "company": "Revolut",
+      "location": "London, UK",
+      "description": "Build and lead the financial analytics function at Revolut, combining traditional finance expertise with data engineering to create real-time financial intelligence across lending, trading, and payments verticals. You will architect the financial data warehouse, develop automated reporting pipelines in Python and SQL, and deliver actionable insights directly to the CFO and executive team. Requires 7+ years in finance with strong programming skills (Python, SQL, dbt), experience at a fintech or digital bank, and the ability to translate complex financial data into strategic recommendations. CFA or CPA preferred."
+    }
+  ]
+}
