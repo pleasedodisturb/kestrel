@@ -138,19 +138,43 @@ Everything runs on your machine. No account needed. No data leaves your computer
 
 ## Add real AI (optional)
 
-Kestrel works out of the box in Demo Mode — free, offline, no account needed. When you're ready for real AI-powered scoring, you have options:
+Kestrel works out of the box in Demo Mode — free, offline, no account needed. When you're ready for real AI-powered scoring, you have options. Think of AI providers like electricity companies: the light switch works the same no matter who supplies the power.
 
-| Option | Cost | Privacy | Best for |
-|--------|------|---------|----------|
-| **OpenRouter** | ~$3-10/mo | Good | Most users — one click to connect, 300+ models |
-| **Anthropic (Claude)** | ~$4-10/mo | Excellent (7-day retention) | Power users who want the best privacy-cost balance |
-| **Ollama** | Free | Perfect — nothing leaves your machine | Privacy maximalists, offline users |
+| Option | Cost | Privacy | Speed | Best for |
+|--------|------|---------|-------|----------|
+| **Demo Mode** | Free | Perfect | Instant | Exploring before committing |
+| **OpenRouter** | ~$3-10/mo | Good | Varies | Most users — one key, 300+ models |
+| **Anthropic (Claude)** | ~$3-10/mo | Excellent | ~200ms | Best quality + prompt caching savings |
+| **Together AI** | ~$1-5/mo | Good ([ZDR available](https://www.together.ai/blog/soc-2-compliance)) | ~213ms | Budget-friendly bulk scoring |
+| **Ollama** | Free | Perfect | Depends on hardware | Nothing leaves your machine, ever |
 
 **Quickest path:** Go to Settings → click "Connect to OpenRouter" → log in → done. No API keys to copy.
 
-**Want to understand the options?** Read [How Kestrel Uses AI](docs/ai-providers-explained.md) — it explains everything in plain English, no jargon.
+### How Kestrel keeps costs low
 
-**Already technical?** Jump to the [AI Provider Setup](docs/AI-PROVIDERS.md) for detailed configuration.
+AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get expensive — unless you're smart about it. Kestrel stacks several tricks that compound:
+
+| What Kestrel does | How it helps | Savings |
+|-------------------|-------------|---------|
+| **Prompt caching** | Your profile is sent once, then "remembered" by the API. Scoring 50 jobs doesn't resend your CV 50 times. | [90% off input tokens](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) |
+| **Response caching** | Asked the same question twice? Kestrel serves it from local cache. Zero API calls, encrypted at rest. | 100% (free) |
+| **Token-efficient tool use** | When Kestrel calls AI tools, it uses a compact format that cuts output size. | [70% off output tokens](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/token-efficient-tool-use) |
+| **Smart model selection** | Not every task needs the biggest brain. Simple yes/no classification uses a smaller, cheaper model. Complex analysis uses the full thing. | [60-95% on simple tasks](https://github.com/lm-sys/RouteLLM) |
+| **Batch scoring** | Scoring a big backlog overnight? Batch APIs give a flat 50% discount for non-urgent work. | [50% off everything](https://docs.anthropic.com/en/api/creating-message-batches) |
+
+**The math:** Naive approach = $15-30/month. With all optimizations = **$1-5/month** for the same results. [Deep dive on token economics →](docs/llms-tokens-privacy.md)
+
+### Choosing a provider
+
+**Don't want to think about it?** Use OpenRouter. It's the universal adapter — one account gives you Claude, GPT, Gemini, and open-source models. You can always switch later.
+
+**Care about privacy?** Anthropic has [7-day data retention](https://docs.anthropic.com/en/docs/about-claude/pricing) (shortest in industry). Together AI has a [one-click ZDR toggle](https://www.together.ai/blog/soc-2-compliance) (SOC 2 Type 2 certified). Ollama keeps everything on your machine.
+
+**On a tight budget?** Together AI runs open-source models (Llama 3.3, Mixtral) on their own GPUs — no middleman markup. If you're in Europe, their **Frankfurt data center** means lower latency too. Great for bulk scoring where you don't need Claude-level intelligence.
+
+**Want the best of everything?** Kestrel can use multiple providers at once — route simple scoring to Together (cheap), complex analysis to Anthropic (quality), and never worry about which is which.
+
+**Want to understand more?** Read [How Kestrel Uses AI](docs/ai-providers-explained.md) — it explains everything in plain English, no jargon. For the full technical comparison with pricing tables and privacy audits, see the [AI Provider Setup](docs/AI-PROVIDERS.md) guide or the [LLM landscape research](docs/llms-tokens-privacy.md).
 
 ---
 
