@@ -13,7 +13,11 @@ import logging
 import httpx
 
 from career_os.ai.base import AIProvider, ProviderQuotaError
-from career_os.ai.openrouter_provider import _system_prompt_for_feature, _try_parse_structured
+from career_os.ai.openrouter_provider import (
+    _SCHEMA_MAP,
+    _system_prompt_for_feature,
+    _try_parse_structured,
+)
 from career_os.schemas.ai import AIFeature, AIResponse
 
 logger = logging.getLogger(__name__)
@@ -48,74 +52,104 @@ class AnthropicProvider(AIProvider):
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        max_retries: int = 1,
         **kwargs: object,
     ) -> AIResponse:
         """Send a completion request to the Anthropic Messages API."""
-        messages = [{"role": "user", "content": prompt}]
+        expects_structured = feature in _SCHEMA_MAP
 
-        # Build system blocks with cache_control for prompt caching
-        system_blocks: list[dict] | None = None
-        system_msg = _system_prompt_for_feature(feature)
-        if system_msg:
-            system_blocks = [
-                {
-                    "type": "text",
-                    "text": system_msg,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ]
-
-        payload: dict = {
-            "model": self._model,
-            "max_tokens": 4096,
-            "messages": messages,
-        }
-        if system_blocks:
-            payload["system"] = system_blocks
-
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    ANTHROPIC_API_URL,
-                    headers={
-                        "x-api-key": self._api_key,
-                        "anthropic-version": ANTHROPIC_VERSION,
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
+        for attempt in range(1, max_retries + 2):
+            user_content = prompt
+            if attempt > 1:
+                user_content += (
+                    "\n\nIMPORTANT: Return ONLY valid JSON"
+                    " with no surrounding text or markdown fences."
                 )
-                if response.status_code in (402, 429):
-                    detail = _extract_error_detail(response)
-                    if response.status_code == 429:
-                        retry_after = response.headers.get("retry-after")
-                        if retry_after:
-                            retry_msg = f"retry-after: {retry_after}s"
-                            detail = f"{detail} ({retry_msg})" if detail else retry_msg
-                    raise ProviderQuotaError("anthropic", response.status_code, detail)
-                response.raise_for_status()
-                data = response.json()
-        except httpx.ConnectError as exc:
-            raise httpx.ConnectError(
-                f"Cannot connect to Anthropic API at {ANTHROPIC_API_URL}: {exc}"
-            ) from exc
-        except httpx.TimeoutException as exc:
-            raise httpx.TimeoutException(f"Anthropic API request timed out: {exc}") from exc
 
-        # Anthropic Messages API returns content as array of blocks
-        content_blocks = data.get("content", [])
-        content = "".join(
-            block.get("text", "") for block in content_blocks if block.get("type") == "text"
-        )
-        model_used = data.get("model", self._model)
+            messages = [{"role": "user", "content": user_content}]
 
-        # Try to parse structured data for known features
-        structured = _try_parse_structured(content, feature)
+            # Build system blocks with cache_control for prompt caching
+            system_blocks: list[dict] | None = None
+            system_msg = _system_prompt_for_feature(feature)
+            if system_msg:
+                system_blocks = [
+                    {
+                        "type": "text",
+                        "text": system_msg,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
 
+            payload: dict = {
+                "model": self._model,
+                "max_tokens": 4096,
+                "messages": messages,
+            }
+            if system_blocks:
+                payload["system"] = system_blocks
+
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(
+                        ANTHROPIC_API_URL,
+                        headers={
+                            "x-api-key": self._api_key,
+                            "anthropic-version": ANTHROPIC_VERSION,
+                            "Content-Type": "application/json",
+                        },
+                        json=payload,
+                    )
+                    if response.status_code in (402, 429):
+                        detail = _extract_error_detail(response)
+                        if response.status_code == 429:
+                            retry_after = response.headers.get("retry-after")
+                            if retry_after:
+                                retry_msg = f"retry-after: {retry_after}s"
+                                detail = f"{detail} ({retry_msg})" if detail else retry_msg
+                        raise ProviderQuotaError("anthropic", response.status_code, detail)
+                    response.raise_for_status()
+                    data = response.json()
+            except httpx.ConnectError as exc:
+                raise httpx.ConnectError(
+                    f"Cannot connect to Anthropic API at {ANTHROPIC_API_URL}: {exc}"
+                ) from exc
+            except httpx.TimeoutException as exc:
+                raise httpx.TimeoutException(f"Anthropic API request timed out: {exc}") from exc
+
+            # Anthropic Messages API returns content as array of blocks
+            content_blocks = data.get("content", [])
+            content = "".join(
+                block.get("text", "") for block in content_blocks if block.get("type") == "text"
+            )
+            model_used = data.get("model", self._model)
+
+            # Try to parse structured data for known features
+            structured = _try_parse_structured(content, feature)
+
+            if structured is not None or not expects_structured:
+                return AIResponse(
+                    content=content,
+                    provider="anthropic",
+                    feature=feature,
+                    structured=structured,
+                    model=model_used,
+                )
+
+            # Structured parse failed — retry if we have attempts left
+            if attempt <= max_retries:
+                logger.warning(
+                    "Structured parse failed for %s, retrying (attempt %d/%d)",
+                    feature,
+                    attempt,
+                    max_retries + 1,
+                )
+
+        # Exhausted retries — return last response without structured data
         return AIResponse(
             content=content,
             provider="anthropic",
             feature=feature,
-            structured=structured,
+            structured=None,
             model=model_used,
         )
 
@@ -138,7 +172,12 @@ class AnthropicProvider(AIProvider):
             f"company_fit), "
             f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
             f"category (one of technical/soft_skill/tool/certification/domain), "
-            f"matched (boolean -- true if the profile demonstrates this keyword)).\n\n"
+            f"matched (boolean -- true if the profile demonstrates this keyword)), "
+            f"desire_score (0-10, how much the candidate would WANT this job -- "
+            f"considering company reputation, growth potential, culture signals, "
+            f"role excitement, compensation attractiveness, work-life balance), "
+            f"desire_reasoning (string explaining what makes this job desirable "
+            f"or undesirable from the candidate's perspective).\n\n"
             f"Job Description:\n{job_description}\n\n"
             f"Profile:\n{json.dumps(profile_data, indent=2)}"
         )

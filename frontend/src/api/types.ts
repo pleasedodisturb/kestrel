@@ -134,10 +134,54 @@ export interface ATSKeyword {
 }
 
 /**
+ * Percentile context for a score relative to a user's full scoring history.
+ * Only present when the profile has >= 5 non-stale scored jobs.
+ */
+export interface ScoreContext {
+  /** Percentage of scored jobs this score is higher than (0-100) */
+  percentile: number;
+  /** Rank among all scored jobs, 1 = highest */
+  rank: number;
+  /** Total number of non-stale scored jobs for this profile */
+  total_scored: number;
+  /** Average fit_score across all non-stale scored jobs */
+  avg_score: number;
+  /** Number of jobs in the same letter grade band as this score */
+  score_band_count: number;
+}
+
+/**
+ * Profile richness + confidence interval for a scored job (Epic 10 / G-278).
+ * Computed at read time; never stored in DB.
+ */
+export interface ProfileCompleteness {
+  /** Profile richness 0-100%. Higher = more data = tighter confidence range. */
+  completeness: number;
+  /**
+   * [low_bound, high_bound] interval around the fit_score, clamped to [0, 10].
+   * At 100% completeness: ~±0.3. At 25%: ~±3.0.
+   */
+  confidence_range: [number, number];
+  /**
+   * Fields that would most improve confidence.
+   * Only populated when completeness < 50%.
+   */
+  missing_fields: string[];
+  /**
+   * Human-readable hint shown when completeness < 50%.
+   * E.g. "This score has high uncertainty. Add skills, goals to improve accuracy."
+   */
+  improvement_hint: string | null;
+}
+
+/**
  * Shape of the /api/score/application/{id} response. Mirrors the backend
  * `ScoreResponse` pydantic schema — only the fields we actively consume on
  * the application detail page are listed.
  */
+/** 2D quadrant classification based on fit_score and desire_score. */
+export type ScoreQuadrant = "dream_job" | "stretch_goal" | "safe_bet" | "skip";
+
 export interface ScoreResponseShape {
   fit_score: number;
   readiness_score: number;
@@ -147,6 +191,24 @@ export interface ScoreResponseShape {
   ats_keywords?: ATSKeyword[];
   red_flags?: RedFlag[];
   reasoning: string;
+  score_context?: ScoreContext | null;
+  /** Desirability score 0-10 (how much user would want this job). */
+  desire_score?: number | null;
+  /** Method used to compute desire_score: "derived" or "ai_generated". */
+  desire_score_method?: string | null;
+  /** Reasoning for the desire score (AI-generated only). */
+  desire_reasoning?: string | null;
+  /** Profile richness and confidence interval. Present on GET endpoints. */
+  profile_completeness?: ProfileCompleteness | null;
+}
+
+/** Standalone desire score response from the dual-score API. */
+export interface DesireScoreResponse {
+  desire_score: number | null;
+  desire_score_method: string | null;
+  desire_reasoning: string | null;
+  quadrant: ScoreQuadrant | null;
+  fit_score: number | null;
 }
 
 export interface Application {
@@ -756,4 +818,53 @@ export interface ContactApplicationLink {
 export interface ContactDetailResponse extends Contact {
   interactions: ContactInteraction[];
   linked_applications: ContactApplicationLink[];
+}
+
+// ---------------------------------------------------------------------------
+// Scoring Feedback types (Epic 6 / G-274)
+// ---------------------------------------------------------------------------
+
+export type FeedbackDirection =
+  | "too_high"
+  | "too_low"
+  | "correct"
+  | "implicit_positive"
+  | "implicit_negative"
+  | "implicit_strong_positive";
+
+export interface FeedbackCreate {
+  direction: FeedbackDirection;
+  /** Optional: what the user thinks the score should be (0–10) */
+  user_score?: number | null;
+  /** Optional: free-text explanation */
+  reason?: string | null;
+}
+
+export interface FeedbackResponse {
+  id: number;
+  scored_job_id: number;
+  profile_id: number;
+  direction: FeedbackDirection;
+  user_score: number | null;
+  reason: string | null;
+  original_fit_score: number;
+  created_at: string;
+}
+
+export interface FeedbackStats {
+  total_count: number;
+  explicit_count: number;
+  implicit_count: number;
+  /** Average |user_score - original_fit_score|. Null if no records with user_score. */
+  avg_deviation: number | null;
+  direction_counts: Record<FeedbackDirection, number>;
+}
+
+export interface CalibrationExample {
+  job_title: string | null;
+  company: string | null;
+  ai_score: number;
+  user_score: number;
+  reason: string | null;
+  deviation: number;
 }

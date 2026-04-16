@@ -25,6 +25,7 @@ dependencies = [
     "icalendar>=7.0.0",
     "slowapi>=0.1.9",
     "cryptography>=42.0.0",
+    "rapidfuzz>=3.6.0",
 ]
 
 [project.urls]
@@ -34,6 +35,9 @@ Documentation = "https://github.com/pleasedodisturb/kestrel/blob/main/docs/QUICK
 "Bug Tracker" = "https://github.com/pleasedodisturb/kestrel/issues"
 
 [project.optional-dependencies]
+warn = [
+    "warn-scraper>=0.4.0",
+]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.25.0",
@@ -78,7 +82,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 # B008: FastAPI's Depends() pattern is a false positive for function-call-in-default-argument
 "src/career_os/api/*.py" = ["B008", "E741"]
-"src/career_os/cli/*.py" = ["E501"]
+"src/career_os/cli/*.py" = ["E501", "B008"]
 "src/career_os/migration/*.py" = ["E402"]
 "src/career_os/models/*.py" = ["E501"]
 "src/career_os/services/*.py" = ["E501", "SIM117", "E402"]

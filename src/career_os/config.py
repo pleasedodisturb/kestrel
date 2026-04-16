@@ -34,6 +34,35 @@ class Settings(BaseSettings):
     cache_enabled: bool = True
     cache_encryption_key: str = ""  # User-provided Fernet key; auto-generated if empty
 
+    # Feedback calibration (Epic 6 / G-274) — inject top feedback examples into
+    # scoring prompts. Self-gating: get_feedback_calibration() returns [] when
+    # fewer than 10 explicit corrections exist, so no data leaks into prompts
+    # until the user has provided enough feedback. Can be disabled via env var.
+    feedback_calibration_enabled: bool = True
+
+    # Active query selection (Epic 11 / G-279) — when enabled, borderline
+    # scores may include a prompt asking the user for feedback to reduce
+    # preference model uncertainty.  Disabled by default to avoid annoying
+    # users with too many prompts.
+    active_query_enabled: bool = False
+
+    # Embedding pre-filter (Epic 4 / G-272) — compute embedding cosine
+    # similarity before sending jobs through the full LLM scoring pipeline.
+    # Shadow mode (default): similarities are computed and logged but jobs are
+    # NOT filtered.  Set to True to actually skip low-similarity jobs.
+    embedding_prefilter_enabled: bool = False
+    embedding_prefilter_threshold: float = 0.65
+    embedding_model: str = "nomic-embed-text"
+
+    # Borderline 2-pass scoring (Epic 5 / G-273) — when a job's fit_score falls
+    # in the borderline zone [BORDERLINE_LOW, BORDERLINE_HIGH], a second scoring
+    # pass is run and the two results are averaged.  This reduces variance by ~50%
+    # in the borderline zone (LLM-as-Judge on a Budget, 2026) at ~1.3x cost.
+    # Set BORDERLINE_SCORING_ENABLED=false to disable entirely.
+    borderline_scoring_enabled: bool = True
+    borderline_low_threshold: float = 4.0
+    borderline_high_threshold: float = 6.5
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).

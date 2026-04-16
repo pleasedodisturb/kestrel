@@ -2,6 +2,7 @@
 
 import json as json_mod
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -99,6 +100,63 @@ class ATSKeywordItem(BaseModel):
     matched: bool
 
 
+class ScoreContextResponse(BaseModel):
+    """Percentile context for a score relative to a user's scoring history.
+
+    Only populated when the profile has >= 5 non-stale scored jobs.
+    """
+
+    percentile: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Percentage of scored jobs this score is higher than",
+    )
+    rank: int = Field(..., ge=1, description="Rank among all scored jobs (1 = highest)")
+    total_scored: int = Field(..., ge=1, description="Total number of non-stale scored jobs")
+    avg_score: float = Field(
+        ..., ge=0, le=10, description="Average fit_score across all scored jobs"
+    )
+    score_band_count: int = Field(
+        ...,
+        ge=0,
+        description="Number of jobs in the same letter grade band as this score",
+    )
+
+
+class ProfileCompletenessResponse(BaseModel):
+    """Profile richness and confidence interval for a scored job.
+
+    Computed dynamically at read time — not stored in DB.
+    Always present on ScoreResponse GET endpoints.
+    """
+
+    completeness: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Profile richness 0-100% (higher = more data → tighter range)",
+    )
+    confidence_range: tuple[float, float] = Field(
+        ...,
+        description=(
+            "Uncertainty interval (low_bound, high_bound) around the fit_score. Clamped to [0, 10]."
+        ),
+    )
+    missing_fields: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Fields that would most improve confidence. Only populated when completeness < 50%."
+        ),
+    )
+    improvement_hint: str | None = Field(
+        default=None,
+        description=(
+            "Human-readable hint shown when completeness < 50%. Tells the user what to add."
+        ),
+    )
+
+
 class ScoreResponse(BaseModel):
     """Full scoring breakdown response."""
 
@@ -111,6 +169,17 @@ class ScoreResponse(BaseModel):
     fit_score: float = Field(..., ge=0, le=10, description="Overall fit 1-10")
     readiness_score: float = Field(..., ge=0, le=100, description="Skills readiness 0-100")
     career_alignment: float = Field(..., ge=0, le=10, description="Career alignment 0-10")
+
+    # Desire score (dual-score architecture, G-275)
+    desire_score: float | None = Field(
+        default=None, ge=0, le=10, description="Desirability score 0-10 (how much user wants job)"
+    )
+    desire_score_method: str | None = Field(
+        default=None, description="Method used: 'derived' or 'ai_generated'"
+    )
+    desire_reasoning: str | None = Field(
+        default=None, description="Reasoning for desire score (Option B only)"
+    )
 
     # Letter grade derived from fit_score (A, A-, B+, B, C+, C, D, F)
     letter_grade: str | None = Field(
@@ -153,6 +222,25 @@ class ScoreResponse(BaseModel):
     effort_flag: str = Field(..., description="Effort level: low / medium / high")
     prep_level: str = Field(..., description="Preparation level: light / moderate / intensive")
     prep_notes: str = Field(..., description="Prep recommendations")
+
+    # Score context — percentile/rank relative to this profile's history.
+    # Computed dynamically on GET; not stored in DB. None when < 5 scored jobs exist.
+    score_context: ScoreContextResponse | None = Field(
+        default=None,
+        description=(
+            "Percentile context relative to profile's scoring history (null when < 5 scores)"
+        ),
+    )
+
+    # Profile completeness + confidence interval (Epic 10 / G-278).
+    # Computed dynamically on GET; not stored in DB. Always present on GET endpoints.
+    profile_completeness: ProfileCompletenessResponse | None = Field(
+        default=None,
+        description=(
+            "Profile richness score (0-100) and confidence interval around fit_score. "
+            "Computed at read time; null immediately after POST /api/score."
+        ),
+    )
 
     is_stale: bool = False
     created_at: datetime | None = None
@@ -249,6 +337,43 @@ class ScoreResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def classify_quadrant(fit_score: float | None, desire_score: float | None) -> str | None:
+    """Classify a job into a 2D quadrant based on fit and desire scores.
+
+    Quadrants (threshold = 5.0):
+        - "dream_job"   — high fit, high desire
+        - "stretch_goal" — low fit, high desire
+        - "safe_bet"    — high fit, low desire
+        - "skip"        — low fit, low desire
+
+    Returns None if either score is None.
+    """
+    if fit_score is None or desire_score is None:
+        return None
+    threshold = 5.0
+    if fit_score >= threshold and desire_score >= threshold:
+        return "dream_job"
+    if fit_score < threshold and desire_score >= threshold:
+        return "stretch_goal"
+    if fit_score >= threshold and desire_score < threshold:
+        return "safe_bet"
+    return "skip"
+
+
+class DesireScoreResponse(BaseModel):
+    """Standalone desire score response for the dual-score API."""
+
+    desire_score: float | None = Field(default=None, ge=0, le=10, description="Desirability 0-10")
+    desire_score_method: str | None = Field(default=None, description="'derived' or 'ai_generated'")
+    desire_reasoning: str | None = Field(default=None, description="Reasoning (ai_generated only)")
+    quadrant: str | None = Field(
+        default=None, description="2D quadrant: dream_job / stretch_goal / safe_bet / skip"
+    )
+    fit_score: float | None = Field(
+        default=None, ge=0, le=10, description="Corresponding fit_score for context"
+    )
+
+
 class ScoringWeightsResponse(BaseModel):
     """Response schema for scoring weight configuration."""
 
@@ -314,4 +439,129 @@ class BatchScoreResponse(BaseModel):
     credits_exhausted: bool = Field(
         default=False,
         description="True if scoring stopped due to AI provider credits being exhausted",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scoring Feedback
+# ---------------------------------------------------------------------------
+
+
+class FeedbackDirection(StrEnum):
+    """Valid directions for scoring feedback."""
+
+    TOO_HIGH = "too_high"
+    TOO_LOW = "too_low"
+    CORRECT = "correct"
+    IMPLICIT_POSITIVE = "implicit_positive"
+    IMPLICIT_NEGATIVE = "implicit_negative"
+    IMPLICIT_STRONG_POSITIVE = "implicit_strong_positive"
+
+
+class FeedbackCreate(BaseModel):
+    """Request body for POST /api/score/{scored_job_id}/feedback."""
+
+    direction: FeedbackDirection = Field(..., description="Feedback direction")
+    user_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=10,
+        description="Optional: what the user thinks the score should be (0–10)",
+    )
+    reason: str | None = Field(
+        default=None,
+        max_length=1000,
+        description="Optional: free-text explanation",
+    )
+
+
+class FeedbackResponse(BaseModel):
+    """Response schema for a single feedback record."""
+
+    id: int
+    scored_job_id: int
+    profile_id: int
+    direction: str
+    user_score: float | None = None
+    reason: str | None = None
+    original_fit_score: float
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def _ensure_utc(cls, v: Any) -> datetime | None:
+        return _ensure_utc(v)
+
+
+class FeedbackStats(BaseModel):
+    """Summary statistics for feedback submitted by a profile."""
+
+    total_count: int = Field(..., description="Total number of feedback records")
+    explicit_count: int = Field(..., description="Explicit corrections (too_high/too_low/correct)")
+    implicit_count: int = Field(..., description="Implicit signals (promoted/dismissed/interview)")
+    avg_deviation: float | None = Field(
+        default=None,
+        description="Average |user_score - original_fit_score| for records with user_score",
+    )
+    direction_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Count of feedback records per direction",
+    )
+
+
+class CalibrationExample(BaseModel):
+    """A single calibration example for the scoring prompt."""
+
+    job_title: str | None = None
+    company: str | None = None
+    ai_score: float
+    user_score: float
+    reason: str | None = None
+    deviation: float
+
+
+# ---------------------------------------------------------------------------
+# Bayesian Preference Learning (Epic 11 / G-279)
+# ---------------------------------------------------------------------------
+
+
+class WeightSuggestionResponse(BaseModel):
+    """A single weight adjustment suggestion from the preference model."""
+
+    dimension: str = Field(..., description="Weight dimension name (e.g. 'skills_match')")
+    current_weight: float = Field(..., ge=0, le=1, description="Current configured weight")
+    suggested_weight: float = Field(..., ge=0, le=1, description="Suggested new weight")
+    confidence: float = Field(..., ge=0, le=1, description="Confidence in the suggestion (0-1)")
+    reason: str = Field(..., description="Human-readable explanation of the suggestion")
+
+
+class SuggestionsResponse(BaseModel):
+    """Response for GET /api/score/suggestions — weight adjustment suggestions."""
+
+    suggestions: list[WeightSuggestionResponse] = Field(
+        default_factory=list,
+        description="Weight adjustment suggestions based on feedback patterns",
+    )
+    feedback_count: int = Field(
+        ..., description="Total feedback records used to generate suggestions"
+    )
+    min_feedback_required: int = Field(
+        ..., description="Minimum feedback records needed before suggestions appear"
+    )
+    ready: bool = Field(..., description="True when enough feedback exists to generate suggestions")
+
+
+class ActiveQueryResponse(BaseModel):
+    """Optional active query suggestion returned with a score."""
+
+    should_query: bool = Field(..., description="Whether to prompt the user for feedback")
+    uncertain_dimensions: list[str] = Field(
+        default_factory=list,
+        description="Dimensions with highest uncertainty that would benefit from feedback",
+    )
+    message: str | None = Field(
+        default=None,
+        description="Suggested prompt message for the user (e.g. 'Would you apply to this?')",
     )

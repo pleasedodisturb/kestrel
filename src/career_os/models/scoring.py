@@ -114,6 +114,11 @@ class ScoredJob(Base):
     # ATS keywords extracted by AI (JSON array of {keyword, category, matched})
     ats_keywords: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Desire score — measures "how much would the user want this job?" (0-10)
+    desire_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    desire_score_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    desire_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Dimensional sub-scores (0-10, each may be null on legacy rows)
     dim_technical_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
     dim_seniority_alignment: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -121,6 +126,10 @@ class ScoredJob(Base):
     dim_location_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
     dim_career_trajectory: Mapped[float | None] = mapped_column(Float, nullable=True)
     dim_company_fit: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Borderline 2-pass scoring (Epic 5 / G-273) — number of scoring passes used.
+    # 1 = single pass (default), 2 = borderline zone triggered second pass.
+    scoring_passes: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
@@ -132,4 +141,47 @@ class ScoredJob(Base):
     def __repr__(self) -> str:
         return (
             f"<ScoredJob(id={self.id}, fit_score={self.fit_score}, profile_id={self.profile_id})>"
+        )
+
+
+class ScoringFeedback(Base):
+    """User feedback on an AI-generated score.
+
+    Captures explicit corrections ("too high" / "too low") and implicit
+    signals (promoted to application, reached interview stage).
+
+    Referenced by Epic 11 (Bayesian Learning) to calibrate scoring behavior.
+    """
+
+    __tablename__ = "scoring_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    scored_job_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("scored_jobs.id"), nullable=False, index=True
+    )
+    profile_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+    )
+
+    # "too_high", "too_low", "correct", "implicit_positive",
+    # "implicit_negative", "implicit_strong_positive"
+    direction: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # Optional: what the user thinks the score should be (0-10 scale)
+    user_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Optional: free-text explanation from the user
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Snapshot of the AI-generated score at the time feedback was submitted
+    original_fit_score: Mapped[float] = mapped_column(Float, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ScoringFeedback(id={self.id}, scored_job_id={self.scored_job_id}, "
+            f"direction='{self.direction}')>"
         )

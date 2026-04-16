@@ -31,6 +31,9 @@ class Skill(Base):
         Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    esco_uri: Mapped[str | None] = mapped_column(
+        String(500), nullable=True, index=True
+    )  # ESCO concept URI, populated by skill normalizer
     category: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # technical, domain, soft, tools
@@ -165,6 +168,9 @@ class JobRequirement(Base):
         Integer, ForeignKey(FK_PROFILES_ID), nullable=False, index=True
     )
     skill_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    esco_uri: Mapped[str | None] = mapped_column(
+        String(500), nullable=True, index=True
+    )  # ESCO concept URI for deterministic skill matching
     required_level: Mapped[str] = mapped_column(
         String(50), nullable=False, default="intermediate"
     )  # beginner, intermediate, advanced, expert

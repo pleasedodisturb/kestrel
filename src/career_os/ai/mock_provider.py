@@ -73,6 +73,30 @@ class MockProvider(AIProvider):
         """Return deterministic scoring response."""
         return _handle_score(job_description, {"profile": profile_data})
 
+    async def embed(self, text: str, **kwargs: object) -> list[float]:
+        """Return a deterministic 768-dim embedding vector for testing.
+
+        Uses an MD5 hash of the input to seed a simple PRNG so different
+        texts produce different (but reproducible) vectors.  Vectors are
+        normalized to unit length so cosine-similarity math works correctly.
+        """
+        import math
+
+        seed = _deterministic_seed(text)
+        # Simple LCG-based PRNG seeded from the text hash
+        dim = 768
+        values: list[float] = []
+        x = seed
+        for _ in range(dim):
+            x = (x * 6364136223846793005 + 1442695040888963407) & 0xFFFFFFFFFFFFFFFF
+            # Map to [-1, 1]
+            values.append((x / 0xFFFFFFFFFFFFFFFF) * 2 - 1)
+        # L2-normalize
+        norm = math.sqrt(sum(v * v for v in values))
+        if norm > 0:
+            values = [v / norm for v in values]
+        return values
+
 
 def _deterministic_seed(text: str) -> int:
     """Produce a deterministic integer seed from input text."""
@@ -240,6 +264,14 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
         for idx, (keyword, category) in enumerate(_MOCK_ATS_KEYWORDS)
     ]
 
+    # Desire score (Option B: AI-generated) — deterministic from seed
+    desire = round(1.0 + ((seed + 42) % 90) / 10.0, 1)
+    desire = min(desire, 10.0)
+    desire_reasoning = (
+        f"Company culture aligns well with candidate preferences. "
+        f"Growth potential rated {desire}/10 based on role trajectory and industry outlook."
+    )
+
     structured = ScoreResult(
         fit_score=fit,
         reasoning=reasoning,
@@ -254,6 +286,8 @@ def _handle_score(prompt: str, context: dict | None) -> AIResponse:
         score_breakdown=breakdown_factors,
         dimensional_scores=dimensional,
         ats_keywords=ats_keywords,
+        desire_score=desire,
+        desire_reasoning=desire_reasoning,
     )
     return AIResponse(
         content=structured.reasoning,
