@@ -14,7 +14,7 @@ import httpx
 
 from career_os.ai.base import AIProvider, ProviderQuotaError
 from career_os.ai.openrouter_provider import _system_prompt_for_feature, _try_parse_structured
-from career_os.schemas.ai import AIFeature, AIResponse
+from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,15 @@ class AnthropicProvider(AIProvider):
         )
         model_used = data.get("model", self._model)
 
+        # Extract token usage from Anthropic response
+        usage_data = data.get("usage", {})
+        usage = TokenUsage(
+            input_tokens=usage_data.get("input_tokens", 0),
+            output_tokens=usage_data.get("output_tokens", 0),
+            cache_creation_input_tokens=usage_data.get("cache_creation_input_tokens", 0),
+            cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
+        )
+
         # Try to parse structured data for known features
         structured = _try_parse_structured(content, feature)
 
@@ -117,6 +126,7 @@ class AnthropicProvider(AIProvider):
             feature=feature,
             structured=structured,
             model=model_used,
+            usage=usage,
         )
 
     async def score(
