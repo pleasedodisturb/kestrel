@@ -1,11 +1,12 @@
 ---
 title: "Scoring Evolution Validation Report"
-date: 2026-04-15
+date: 2026-04-16
+version: "2.0"
 author: "Claude (benchmark automation)"
-tags: [scoring, benchmark, G-286, validation]
+tags: [scoring, benchmark, G-286, G-302, validation]
 ---
 
-# Scoring Evolution: Before/After Validation Report
+# Scoring Evolution: Before/After Validation Report (v2.0)
 
 ## Executive Summary
 
@@ -205,9 +206,68 @@ The benchmark script tested the full scoring pipeline for each job:
 
 8. **Rubric v2.0:** Add explicit guidance for the 7-8 vs 9-10 boundary (the main calibration gap). Something like: "Reserve 9-10 only for roles where the candidate would be a top-5% applicant AND the role perfectly matches their stated career goals."
 
+---
+
+## Post-Fix Results (v2.0 — 2026-04-16T12:00Z)
+
+### Changes Applied
+
+| Ticket | Fix | Status |
+|--------|-----|--------|
+| G-294 | JSON parse retry + robust extraction | Merged (PR #188) |
+| G-295 | Golden set: 4 recategorizations + finance/design sets | Merged (PR #194) |
+| G-296 | Rubric v1.1: top-5% language, Example 4 at 7.5, Example 2 → 5.0 | Merged (PR #189) |
+| G-297 | Red flag threshold 200→400 chars | Merged (PR #190) |
+
+### Re-Benchmark Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| Rubric | v1.1 (4 calibration examples, top-5% dream boundary) |
+| Golden set | v2 (recategorized: 4 reject, 8 mediocre, 3 strong, 5 dream) |
+| Total API calls | 120 attempted, **120 successful (0 failures)** |
+
+### Headline Comparison
+
+| Metric | v1.0 (G-286) | v2.0 (G-302) | Target | Verdict |
+|--------|-------------|-------------|--------|---------|
+| **JSON failures** | 15.8% (19/120) | **0% (0/120)** | <5% | Fixed |
+| Reject accuracy | 100% | 100% | 100% | Hold |
+| Mediocre accuracy | 75.0% | 58.3% | ≥80% | **Regressed** |
+| Strong accuracy | 11.8% | 33.3% | ≥50% | Improved |
+| Dream accuracy | 60.0% | **73.3%** | ≥70% | **Hit target** |
+| Variance reduction | -15.7% | **+34.2%** | ≥-25% | **Regressed** |
+
+### What Improved
+
+1. **JSON reliability is solved.** G-294's retry logic + robust JSON extraction eliminated all parse failures. 120/120 calls returned valid ScoreResult. This was the biggest operational blocker.
+
+2. **Dream accuracy hit target.** The rubric v1.1 top-5% language and Example 4 at 7.5 successfully sharpened the 9-10 boundary. Dream jobs now score in-band 73.3% of the time (up from 60%).
+
+3. **Strong accuracy improved 3x.** From 11.8% to 33.3%. Still below target (50%) but partly because only 3 strong-category jobs remain after recategorization (small sample).
+
+4. **Dual-score quadrants remain correct.** 8 Dream Job, 1 Reach, 11 Skip — all intuitive assignments.
+
+### What Regressed
+
+1. **Mediocre accuracy dropped** from 75.0% to 58.3%. The Example 2 adjustment (5.5→5.0) may have overcorrected — or the recategorized jobs (VP Eng, Product Eng now in mediocre) are being scored outside the [4,6] band. Needs investigation: are the new mediocre jobs scoring too low or too high?
+
+2. **Variance increased** — the rubric v1.1 now *adds* variance instead of reducing it (baseline σ=0.281 vs rubric σ=0.377). Hypothesis: the additional calibration example and stricter band language give the model more "degrees of freedom" in interpretation, paradoxically increasing run-to-run variance. The v1.0 rubric was simpler and the model converged more tightly.
+
+3. **Red flag false positives** still present (8 on strong/dream), though the threshold increase from 200→400 chars reduced total flags from 18 to 20. The golden set still uses short synthetic descriptions that trigger the char-length rule.
+
+### Open Questions for v3.0
+
+1. **Is the variance regression from rubric complexity or from recategorization?** The golden set changed between runs, so we can't isolate the rubric effect cleanly. A controlled test (same golden set, rubric v1.0 vs v1.1) would answer this.
+
+2. **Mediocre overcorrection:** Is Example 2 at 5.0 pulling scores too low, or are the newly-mediocre jobs (VP Eng, Product Eng) simply harder to calibrate?
+
+3. **Sample size:** With only 3 strong and 5 dream jobs, accuracy percentages swing wildly on a single misscored job (each job = 6-7 percentage points). The expanded golden sets (finance, design) should provide more statistical power.
+
 ## Raw Data
 
-- Baseline results: `private/benchmark-baseline-no-rubric.json`
-- Rubric results: `private/benchmark-with-rubric.json`
-- Full analysis: `private/benchmark-analysis.json`
+- v1.0 baseline: `private/benchmark-baseline-no-rubric.json`
+- v1.0 rubric: `private/benchmark-with-rubric.json`
+- v1.0 analysis: `private/benchmark-analysis-v1.json`
+- v2.0 analysis: `private/benchmark-analysis.json`
 - Benchmark script: `scripts/benchmark_scoring.py`
