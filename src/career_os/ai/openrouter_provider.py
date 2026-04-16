@@ -6,6 +6,7 @@ Requires OPENROUTER_API_KEY in environment.
 
 import json
 import logging
+import re
 
 import httpx
 
@@ -78,49 +79,81 @@ class OpenRouterProvider(AIProvider):
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        max_retries: int = 1,
         **kwargs: object,
     ) -> AIResponse:
         """Send a completion request to OpenRouter."""
-        messages = [{"role": "user", "content": prompt}]
+        expects_structured = feature in _SCHEMA_MAP
 
-        # Add system message for structured features
-        system_msg = _system_prompt_for_feature(feature)
-        if system_msg:
-            messages.insert(0, {"role": "system", "content": system_msg})
+        for attempt in range(1, max_retries + 2):  # 1-based, up to max_retries+1
+            user_content = prompt
+            if attempt > 1:
+                user_content += (
+                    "\n\nIMPORTANT: Return ONLY valid JSON"
+                    " with no surrounding text or markdown fences."
+                )
 
-        payload = {
-            "model": self._model,
-            "messages": messages,
-        }
+            messages: list[dict[str, str]] = [
+                {"role": "user", "content": user_content},
+            ]
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                OPENROUTER_API_URL,
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://career-os.local",
-                    "X-Title": "Career OS",
-                },
-                json=payload,
-            )
-            if response.status_code in (402, 429):
-                detail = _extract_error_detail(response)
-                raise CreditsExhaustedError(status_code=response.status_code, detail=detail)
-            response.raise_for_status()
-            data = response.json()
+            # Add system message for structured features
+            system_msg = _system_prompt_for_feature(feature)
+            if system_msg:
+                messages.insert(0, {"role": "system", "content": system_msg})
 
-        content = data["choices"][0]["message"]["content"]
-        model_used = data.get("model", self._model)
+            payload = {
+                "model": self._model,
+                "messages": messages,
+            }
 
-        # Try to parse structured data for known features
-        structured = _try_parse_structured(content, feature)
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    OPENROUTER_API_URL,
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://career-os.local",
+                        "X-Title": "Career OS",
+                    },
+                    json=payload,
+                )
+                if response.status_code in (402, 429):
+                    detail = _extract_error_detail(response)
+                    raise CreditsExhaustedError(status_code=response.status_code, detail=detail)
+                response.raise_for_status()
+                data = response.json()
 
+            content = data["choices"][0]["message"]["content"]
+            model_used = data.get("model", self._model)
+
+            # Try to parse structured data for known features
+            structured = _try_parse_structured(content, feature)
+
+            if structured is not None or not expects_structured:
+                return AIResponse(
+                    content=content,
+                    provider="openrouter",
+                    feature=feature,
+                    structured=structured,
+                    model=model_used,
+                )
+
+            # Structured parse failed — retry if we have attempts left
+            if attempt <= max_retries:
+                logger.warning(
+                    "Structured parse failed for %s, retrying (attempt %d/%d)",
+                    feature,
+                    attempt,
+                    max_retries + 1,
+                )
+
+        # Exhausted retries — return last response without structured data
         return AIResponse(
             content=content,
             provider="openrouter",
             feature=feature,
-            structured=structured,
+            structured=None,
             model=model_used,
         )
 
@@ -221,6 +254,54 @@ def _system_prompt_for_feature(feature: AIFeature) -> str | None:
     return prompts.get(feature)
 
 
+_SCHEMA_MAP: dict[AIFeature, type] = {
+    AIFeature.score: ScoreResult,
+    AIFeature.gap_analysis: GapAnalysisResult,
+    AIFeature.coaching: CoachingResult,
+    AIFeature.goal_recalibration: GoalRecalibrationResult,
+    AIFeature.interview_prep: InterviewPrepResult,
+    AIFeature.company_research: CompanyResearchResult,
+    AIFeature.learning_recommendations: LearningRecommendationsResult,
+    AIFeature.interview_format: InterviewFormatResult,
+    AIFeature.interview_patterns: InterviewPatternsResult,
+}
+
+
+def _extract_first_json_object(text: str) -> str | None:
+    """Extract the first top-level ``{...}`` block using brace-depth counting.
+
+    Returns the substring from the first ``{`` to its matching ``}`` or
+    ``None`` if no balanced block is found.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    in_string = False
+    escape_next = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == "\\":
+            if in_string:
+                escape_next = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return None
+
+
 def _try_parse_structured(
     content: str, feature: AIFeature
 ) -> (
@@ -250,24 +331,36 @@ def _try_parse_structured(
         if text.startswith("```"):
             # Strip markdown code fences
             lines = text.split("\n")
-            text = "\n".join(lines[1:-1]) if len(lines) > 2 else text
-        data = json.loads(text)
+            # Handle partial closing fence too
+            end = -1 if lines[-1].startswith("```") else len(lines)
+            text = "\n".join(lines[1:end]) if len(lines) > 2 else text
 
-        schema_map: dict[AIFeature, type] = {
-            AIFeature.score: ScoreResult,
-            AIFeature.gap_analysis: GapAnalysisResult,
-            AIFeature.coaching: CoachingResult,
-            AIFeature.goal_recalibration: GoalRecalibrationResult,
-            AIFeature.interview_prep: InterviewPrepResult,
-            AIFeature.company_research: CompanyResearchResult,
-            AIFeature.learning_recommendations: LearningRecommendationsResult,
-            AIFeature.interview_format: InterviewFormatResult,
-            AIFeature.interview_patterns: InterviewPatternsResult,
-        }
-        schema_cls = schema_map.get(feature)
+        # Strip trailing commas before } or ] (common LLM artifact)
+        text = re.sub(r",\s*([}\]])", r"\1", text)
+
+        # Try direct parse first
+        data = None
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            # Try extracting the first JSON object from surrounding text
+            extracted = _extract_first_json_object(text)
+            if extracted:
+                extracted = re.sub(r",\s*([}\]])", r"\1", extracted)
+                data = json.loads(extracted)
+
+        if data is None:
+            raise ValueError("No JSON object found in content")
+
+        schema_cls = _SCHEMA_MAP.get(feature)
         if schema_cls:
             return schema_cls.model_validate(data)
     except Exception as exc:
-        logger.debug("Could not parse structured response for %s: %s", feature, exc)
+        logger.warning(
+            "Could not parse structured response for %s: %s | raw (first 200 chars): %.200s",
+            feature,
+            exc,
+            content,
+        )
 
     return None
