@@ -169,9 +169,9 @@ Our proof is in the research artifacts. Before building anything, we run paralle
 
 | Topic | For users | For developers | Raw research |
 |-------|-----------|---------------|--------------|
-| **Scoring** | [How Scoring Works](docs/how-scoring-works.md) | — | [Benchmark Results](docs/research/benchmark-results-summary.json) |
+| **Scoring** | [How Scoring Works](docs/how-scoring-works.md) | [Scoring Strategy](docs/research/scoring-research.md) | [Raw Findings](docs/research/scoring-raw-research.md) |
 | **Testing** | [How Testing Works](docs/how-testing-works.md) | [Testing Strategy](docs/research/testing-research.md) | [Raw Findings](docs/research/testing-raw-research.md) |
-| **CI/CD** | — | [CI/CD Strategy](docs/research/cicd-research.md) | [Raw Findings](docs/research/cicd-raw-research.md) |
+| **CI/CD** | [How CI/CD Works](docs/how-cicd-works.md) | [CI/CD Strategy](docs/research/cicd-research.md) | [Raw Findings](docs/research/cicd-raw-research.md) |
 
 ## License
 
