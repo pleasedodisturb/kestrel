@@ -80,6 +80,7 @@ class AnthropicProvider(AIProvider):
                     headers={
                         "x-api-key": self._api_key,
                         "anthropic-version": ANTHROPIC_VERSION,
+                        "anthropic-beta": "token-efficient-tool-use-2025-04-14",
                         "Content-Type": "application/json",
                     },
                     json=payload,
