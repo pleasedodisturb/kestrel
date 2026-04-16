@@ -271,7 +271,7 @@ def _detect_staffing_agency(
 
 
 def _detect_vague_responsibilities(description: str) -> dict[str, str] | None:
-    if len(description) < 200:
+    if len(description) < 400:
         return _flag(
             "vague_responsibilities",
             "info",
