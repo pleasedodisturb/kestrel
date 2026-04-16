@@ -415,7 +415,11 @@ class TestGoldenSetFixture:
         path = FIXTURES_DIR / "scoring_golden_set.json"
         assert path.exists(), f"Golden set fixture not found at {path}"
         with open(path) as f:
-            return json.load(f)
+            data = json.load(f)
+        # Support both legacy (bare array) and profile-aware (wrapper) formats
+        if isinstance(data, list):
+            return data
+        return data["jobs"]
 
     def test_golden_set_has_20_jobs(self, golden_set):
         """Golden set should have exactly 20 jobs."""
@@ -427,14 +431,14 @@ class TestGoldenSetFixture:
         assert categories == {"reject", "mediocre", "strong", "dream"}
 
     def test_golden_set_category_distribution(self, golden_set):
-        """Distribution: 4 reject, 6 mediocre, 6 strong, 4 dream."""
+        """Distribution: 4 reject, 8 mediocre, 3 strong, 5 dream (after G-295 recategorization)."""
         from collections import Counter
 
         counts = Counter(job["category"] for job in golden_set)
         assert counts["reject"] == 4
-        assert counts["mediocre"] == 6
-        assert counts["strong"] == 6
-        assert counts["dream"] == 4
+        assert counts["mediocre"] == 8
+        assert counts["strong"] == 3
+        assert counts["dream"] == 5
 
     def test_golden_set_has_required_fields(self, golden_set):
         """Every job must have id, category, expected_band, title, company, description."""
