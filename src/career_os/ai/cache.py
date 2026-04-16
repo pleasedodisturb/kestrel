@@ -22,7 +22,7 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
 
-from career_os.ai.base import AIProvider
+from career_os.ai.base import AIProvider, ComplexityTier
 from career_os.schemas.ai import AIFeature, AIResponse
 
 logger = logging.getLogger(__name__)
@@ -130,16 +130,20 @@ class CachedProvider(AIProvider):
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         key = _cache_key(feature.value, prompt, context)
         cached = await asyncio.to_thread(self._get, key)
         if cached is not None:
             self._hits += 1
+            cached.usage = None  # No tokens consumed on cache hit
             return cached
 
         self._misses += 1
-        response = await self._inner.complete(prompt, feature=feature, context=context, **kwargs)
+        response = await self._inner.complete(
+            prompt, feature=feature, context=context, tier=tier, **kwargs
+        )
         await asyncio.to_thread(self._put, key, response, feature.value)
         return response
 
@@ -147,6 +151,8 @@ class CachedProvider(AIProvider):
         self,
         job_description: str,
         profile_data: dict,
+        *,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         feature = AIFeature.score
@@ -154,10 +160,11 @@ class CachedProvider(AIProvider):
         cached = await asyncio.to_thread(self._get, key)
         if cached is not None:
             self._hits += 1
+            cached.usage = None  # No tokens consumed on cache hit
             return cached
 
         self._misses += 1
-        response = await self._inner.score(job_description, profile_data, **kwargs)
+        response = await self._inner.score(job_description, profile_data, tier=tier, **kwargs)
         await asyncio.to_thread(self._put, key, response, feature.value)
         return response
 

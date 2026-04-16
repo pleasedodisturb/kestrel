@@ -10,9 +10,9 @@ from urllib.parse import urlparse
 
 import httpx
 
-from career_os.ai.base import AIProvider
+from career_os.ai.base import AIProvider, ComplexityTier
 from career_os.ai.openrouter_provider import _system_prompt_for_feature, _try_parse_structured
-from career_os.schemas.ai import AIFeature, AIResponse
+from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +73,14 @@ class OllamaProvider(AIProvider):
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
-        """Send a completion request to Ollama."""
+        """Send a completion request to Ollama.
+
+        The tier parameter is accepted for interface compatibility but ignored
+        — Ollama uses a single local model for all tiers.
+        """
         messages = [{"role": "user", "content": prompt}]
 
         system_msg = _system_prompt_for_feature(feature)
@@ -112,6 +117,14 @@ class OllamaProvider(AIProvider):
         content = data["choices"][0]["message"]["content"]
         model_used = data.get("model", self._model)
 
+        # Extract token usage from Ollama response
+        usage_data = data.get("usage", {})
+        usage = TokenUsage(
+            input_tokens=usage_data.get("prompt_tokens", 0)
+            or usage_data.get("prompt_eval_count", 0),
+            output_tokens=usage_data.get("completion_tokens", 0) or usage_data.get("eval_count", 0),
+        )
+
         # Try to parse structured data for known features
         structured = _try_parse_structured(content, feature)
 
@@ -125,6 +138,7 @@ class OllamaProvider(AIProvider):
             feature=feature,
             structured=structured,
             model=model_used,
+            usage=usage,
         )
 
     async def _retry_json(
@@ -198,6 +212,8 @@ class OllamaProvider(AIProvider):
         self,
         job_description: str,
         profile_data: dict,
+        *,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile via Ollama."""

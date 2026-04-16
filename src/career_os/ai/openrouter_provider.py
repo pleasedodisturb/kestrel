@@ -10,7 +10,7 @@ import re
 
 import httpx
 
-from career_os.ai.base import AIProvider
+from career_os.ai.base import AIProvider, ComplexityTier
 from career_os.schemas.ai import (
     AIFeature,
     AIResponse,
@@ -23,6 +23,7 @@ from career_os.schemas.ai import (
     InterviewPrepResult,
     LearningRecommendationsResult,
     ScoreResult,
+    TokenUsage,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,13 @@ def _extract_error_detail(response: httpx.Response) -> str:
         return ""
 
 
+_TIER_MODELS: dict[ComplexityTier, str] = {
+    ComplexityTier.SIMPLE: "anthropic/claude-haiku-4-5",
+    ComplexityTier.STANDARD: "anthropic/claude-sonnet-4",
+    ComplexityTier.COMPLEX: "anthropic/claude-opus-4",
+}
+
+
 class OpenRouterProvider(AIProvider):
     """AI provider backed by OpenRouter API."""
 
@@ -73,16 +81,30 @@ class OpenRouterProvider(AIProvider):
     def name(self) -> str:
         return "openrouter"
 
+    def _resolve_model(self, tier: ComplexityTier | None) -> str:
+        """Return the model to use for a request.
+
+        If the provider was constructed with an explicit model override,
+        that always wins.  Otherwise, the tier selects the model from
+        ``_TIER_MODELS``.  If tier is None, STANDARD is used.
+        """
+        if self._model != DEFAULT_MODEL:
+            return self._model
+        effective_tier = tier or ComplexityTier.STANDARD
+        return _TIER_MODELS[effective_tier]
+
     async def complete(
         self,
         prompt: str,
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        tier: ComplexityTier | None = None,
         max_retries: int = 1,
         **kwargs: object,
     ) -> AIResponse:
         """Send a completion request to OpenRouter."""
+        model = self._resolve_model(tier)
         expects_structured = feature in _SCHEMA_MAP
 
         for attempt in range(1, max_retries + 2):  # 1-based, up to max_retries+1
@@ -103,7 +125,7 @@ class OpenRouterProvider(AIProvider):
                 messages.insert(0, {"role": "system", "content": system_msg})
 
             payload = {
-                "model": self._model,
+                "model": model,
                 "messages": messages,
             }
 
@@ -127,6 +149,13 @@ class OpenRouterProvider(AIProvider):
             content = data["choices"][0]["message"]["content"]
             model_used = data.get("model", self._model)
 
+            # Extract token usage from OpenAI-format response
+            usage_data = data.get("usage", {})
+            usage = TokenUsage(
+                input_tokens=usage_data.get("prompt_tokens", 0),
+                output_tokens=usage_data.get("completion_tokens", 0),
+            )
+
             # Try to parse structured data for known features
             structured = _try_parse_structured(content, feature)
 
@@ -137,6 +166,7 @@ class OpenRouterProvider(AIProvider):
                     feature=feature,
                     structured=structured,
                     model=model_used,
+                    usage=usage,
                 )
 
             # Structured parse failed — retry if we have attempts left
@@ -161,6 +191,8 @@ class OpenRouterProvider(AIProvider):
         self,
         job_description: str,
         profile_data: dict,
+        *,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile via OpenRouter."""
@@ -185,7 +217,7 @@ class OpenRouterProvider(AIProvider):
             f"Job Description:\n{job_description}\n\n"
             f"Profile:\n{json.dumps(profile_data, indent=2)}"
         )
-        return await self.complete(prompt, feature=AIFeature.score)
+        return await self.complete(prompt, feature=AIFeature.score, tier=tier)
 
 
 def _system_prompt_for_feature(feature: AIFeature) -> str | None:

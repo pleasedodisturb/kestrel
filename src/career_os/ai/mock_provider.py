@@ -6,7 +6,7 @@ AI-dependent feature across M2-M5.
 
 import hashlib
 
-from career_os.ai.base import AIProvider
+from career_os.ai.base import AIProvider, ComplexityTier
 from career_os.schemas.ai import (
     AIFeature,
     AIResponse,
@@ -58,9 +58,14 @@ class MockProvider(AIProvider):
         *,
         feature: AIFeature = AIFeature.complete,
         context: dict | None = None,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
-        """Return deterministic response based on feature type."""
+        """Return deterministic response based on feature type.
+
+        The tier parameter is accepted for interface compatibility but ignored
+        — the mock provider always returns the same deterministic responses.
+        """
         handler = _FEATURE_HANDLERS.get(feature, _handle_complete)
         return handler(prompt, context)
 
@@ -68,6 +73,8 @@ class MockProvider(AIProvider):
         self,
         job_description: str,
         profile_data: dict,
+        *,
+        tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
         """Return deterministic scoring response."""
