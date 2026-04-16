@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0](https://github.com/pleasedodisturb/kestrel/compare/v0.4.0...v0.5.0) (2026-04-16)
+
+
+### Features
+
+* **G-350:** add token usage tracking to AIResponse ([#211](https://github.com/pleasedodisturb/kestrel/issues/211)) ([00f6bdf](https://github.com/pleasedodisturb/kestrel/commit/00f6bdfde0730d3f697a892c9a3d64027576de85))
+* **G-351:** add Batch API support for discovery scoring sweeps ([#213](https://github.com/pleasedodisturb/kestrel/issues/213)) ([8b4ed96](https://github.com/pleasedodisturb/kestrel/commit/8b4ed965be73e25be57bc74a92658cdfdd5f791a))
+* **G-352:** add task-based model routing with complexity tiers ([#212](https://github.com/pleasedodisturb/kestrel/issues/212)) ([ea99e03](https://github.com/pleasedodisturb/kestrel/commit/ea99e03e3b615b44febcbe8e464311d7e4cc4529))
+* **G-354:** add Together.ai provider for open-source model routing ([#210](https://github.com/pleasedodisturb/kestrel/issues/210)) ([0c53060](https://github.com/pleasedodisturb/kestrel/commit/0c530601a00b3b12d86ef58b46136e1972d1a871))
+
+
+### Documentation
+
+* add session summary for 2026-04-16 ([#209](https://github.com/pleasedodisturb/kestrel/issues/209)) ([a6076b8](https://github.com/pleasedodisturb/kestrel/commit/a6076b89a60c58e909f473a5f7ce156fd1d2677b))
+
 ## [0.4.0](https://github.com/pleasedodisturb/kestrel/compare/v0.3.1...v0.4.0) (2026-04-16)
 
 
