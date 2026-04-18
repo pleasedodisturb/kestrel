@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from career_os import __version__
 from career_os.api.ai import router as ai_router
 from career_os.api.analytics import router as analytics_router
 from career_os.api.applications import router as applications_router
@@ -132,7 +133,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="AI-Powered Job Search & Career Strategy Platform",
-    version="0.1.0",
+    version=__version__,
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
