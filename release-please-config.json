@@ -27,6 +27,11 @@
           "type": "json",
           "path": "npm-package/package.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "frontend/package.json",
+          "jsonpath": "$.version"
         }
       ]
     }
