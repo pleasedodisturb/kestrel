@@ -1033,10 +1033,25 @@ def discover(
     try:
         profile = _get_default_profile(db)
 
-        # Parse keywords
+        # Parse keywords — if none supplied, auto-select from profile's job family
         kw_list: list[str] | None = None
         if keywords:
             kw_list = [k.strip() for k in keywords.split(",") if k.strip()]
+        else:
+            # Auto-select keywords based on the profile's job_family
+            from tools.scraper import get_keywords_for_profile
+
+            job_family = getattr(profile, "job_family", None)
+            auto_keywords = get_keywords_for_profile(job_family=job_family)
+            # Only use auto keywords if they differ from the hardcoded defaults
+            from tools.scraper import DEFAULT_KEYWORDS
+
+            if auto_keywords != DEFAULT_KEYWORDS:
+                kw_list = auto_keywords
+                console.print(
+                    f"[dim]Using keywords for job family '{job_family}': "
+                    f"{', '.join(kw_list[:3])}{'...' if len(kw_list) > 3 else ''}[/dim]"
+                )
 
         loc_list: list[str] | None = None
         if location:
