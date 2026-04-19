@@ -20,6 +20,42 @@ sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
 
 
+# ---------------------------------------------------------------------------
+# Automatic test marker classification (D-01, D-02)
+# ---------------------------------------------------------------------------
+
+INTEGRATION_FIXTURES = frozenset({
+    "db_session", "client", "authenticated_client", "db_engine",
+})
+
+
+def pytest_collection_modifyitems(items):
+    """Auto-mark tests as unit or integration based on fixture usage.
+
+    Tests using database/client fixtures are integration tests.
+    Everything else is a unit test. Explicit markers take precedence.
+    """
+    for item in items:
+        # Skip items that already have explicit markers
+        if any(item.get_closest_marker(m) for m in ("unit", "integration", "smoke")):
+            continue
+        fixture_names = set(getattr(item, "fixturenames", []))
+        if fixture_names & INTEGRATION_FIXTURES:
+            item.add_marker(pytest.mark.integration)
+        else:
+            item.add_marker(pytest.mark.unit)
+
+
+def pytest_runtest_makereport(item, call):
+    """Mark tests exceeding 5s as slow (informational, post-execution only).
+
+    Note: This marker is applied AFTER execution. It cannot be used for
+    pre-selection with pytest -m slow. It is for reporting visibility only.
+    """
+    if call.when == "call" and call.duration > 5.0:
+        item.add_marker(pytest.mark.slow)
+
+
 @pytest.fixture
 def client() -> TestClient:
     """Create a FastAPI test client."""
