@@ -440,6 +440,181 @@ EU_LOCATIONS: list[str] = [
 ]
 
 
+
+# --------------------------------------------------------------------------
+# Hard caps -- post-scoring enforcement AFTER AI or fallback scoring
+# --------------------------------------------------------------------------
+
+# Each rule: (pattern_list, max_score, cap_name)
+# Pattern matching is case-insensitive substring against job title.
+HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
+    # Sales/finance/HR/legal/healthcare/support titles: MAX 1
+    (
+        [
+            "sales", "account executive", "sdr", "bdr",
+            "accountant", "accounting", "bookkeeper", "payroll",
+            "tax ", "auditor", "treasury", "financial analyst",
+            "fincrime", "financial crime",
+            "hr specialist", "hr manager", "hr generalist", "recruiter",
+            "talent acquisition", "people ops",
+            "paralegal", "legal counsel", "compliance officer",
+            "nurse", "nursing", "physician", "therapist", "pharmacist",
+            "clinical",
+            "customer support", "customer service", "help desk",
+            "support analyst", "support specialist", "support technician",
+        ],
+        1,
+        "sales_finance_hr_legal_healthcare_support",
+    ),
+    # Customer Success/Support titles: MAX 2
+    (
+        ["customer success", "client success"],
+        2,
+        "customer_success",
+    ),
+    # Marketing/media/SEO/CRM/content titles: MAX 2
+    (
+        [
+            "marketing manager", "seo ", "seo specialist",
+            "content writer", "copywriter", "social media",
+            "content reviewer", "content moderator",
+            "crm manager", "crm specialist",
+            "media buyer", "media planner",
+            "affiliate marketing", "marketing operations",
+        ],
+        2,
+        "marketing_media_seo_crm",
+    ),
+    # Design/UX titles (no product): MAX 3
+    # Allowlist: if title also contains "product", skip this cap
+    (
+        [
+            "graphic designer", "visual designer", "ui designer",
+            "ux designer", "ux researcher", "interaction designer",
+            "motion designer", "brand designer",
+        ],
+        3,
+        "design_ux_no_product",
+    ),
+    # Junior/entry-level: MAX 1
+    (
+        [
+            "junior ", "entry level", "entry-level", "intern ",
+            "internship", "werkstudent", "working student",
+        ],
+        1,
+        "junior_entry_level",
+    ),
+    # DevOps/SRE (no AI/product): MAX 3
+    (
+        [
+            "devops", "site reliability", "sre ",
+            "infrastructure engineer", "platform engineer",
+        ],
+        3,
+        "devops_sre_no_ai_product",
+    ),
+    # Pure backend/frontend engineer (no PM/product in title): MAX 4
+    (
+        [
+            "backend engineer", "frontend engineer", "fullstack engineer",
+            "full stack engineer", "full-stack engineer",
+            "software engineer", "software developer",
+            "web developer", "java developer", "python developer",
+            ".net developer", "golang developer", "rust developer",
+        ],
+        4,
+        "pure_engineer_no_product",
+    ),
+]
+
+# Title keywords that exempt a job from certain caps
+PRODUCT_KEYWORDS = [
+    "product", "pm ", "tpm", "program manager",
+    "devrel", "developer advocate", "developer relations",
+]
+AI_KEYWORDS = [
+    "ai ", "ai/ml", "machine learning", "ml ",
+    "artificial intelligence", "llm", "genai",
+]
+
+
+def apply_hard_caps(jobs: list[dict]) -> list[dict]:
+    """
+    Apply hard score caps AFTER AI or fallback scoring.
+
+    This is a safety net that enforces maximum scores for job categories
+    that are objectively poor fits, regardless of what the AI scored.
+
+    Mutates and returns the same list of dicts. Each capped job gets:
+        cap_applied: True
+        cap_reason: "<rule_name>"
+    """
+    for job in jobs:
+        title_lower = (job.get("title") or "").lower().strip()
+        location_lower = (job.get("location") or "").lower().strip()
+        current_score = job.get("fit_score", 0)
+
+        if current_score <= 0:
+            continue  # Already filtered or zero-scored
+
+        has_product = any(kw in title_lower for kw in PRODUCT_KEYWORDS)
+        has_ai = any(kw in title_lower for kw in AI_KEYWORDS)
+
+        for patterns, max_score, cap_name in HARD_CAP_RULES:
+            if current_score <= max_score:
+                continue  # Already below cap
+
+            matched = any(p in title_lower for p in patterns)
+            if not matched:
+                continue
+
+            # Exemptions for certain cap categories
+            if cap_name == "design_ux_no_product" and has_product:
+                continue
+            if cap_name == "devops_sre_no_ai_product" and (has_ai or has_product):
+                continue
+            if cap_name == "pure_engineer_no_product" and (has_product or has_ai):
+                continue
+            if cap_name == "junior_entry_level":
+                # Don't cap if title also has senior/lead/staff
+                senior_kws = [
+                    "lead", "senior", "staff",
+                    "principal", "head", "director",
+                ]
+                if any(kw in title_lower for kw in senior_kws):
+                    continue
+
+            # Apply cap
+            job["fit_score"] = max_score
+            job["cap_applied"] = True
+            job["cap_reason"] = cap_name
+            job["fit_reasoning"] = (
+                f"Hard-capped from {current_score} to {max_score} ({cap_name}): "
+                + (job.get("fit_reasoning") or "")
+            )
+            break  # Only apply the first (most restrictive) matching cap
+
+        # US-only non-remote cap: MAX 3
+        if current_score > 3 and not job.get("cap_applied"):
+            is_remote = bool(job.get("remote", False))
+            has_eu_signal = any(eu in location_lower for eu in EU_LOCATIONS)
+            has_us_signal = any(
+                us in location_lower for us in US_ONLY_LOCATIONS
+            )
+            if has_us_signal and not has_eu_signal and not is_remote:
+                job["fit_score"] = 3
+                job["cap_applied"] = True
+                job["cap_reason"] = "us_only_non_remote"
+                job["fit_reasoning"] = (
+                    f"Hard-capped from {current_score} to 3 "
+                    f"(us_only_non_remote): "
+                    + (job.get("fit_reasoning") or "")
+                )
+
+    return jobs
+
+
 def pre_filter_job(
     title: str, company: str, location: str, remote: bool = False
 ) -> tuple[bool, str, int | None]:
