@@ -11,6 +11,7 @@ dist/
 build/
 .eggs/
 *.egg
+.testmondata
 venv/
 .venv/
 .venv-career/
