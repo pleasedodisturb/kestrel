@@ -92,15 +92,17 @@ class TestMockProvider:
         assert r1.structured.fit_score == r2.structured.fit_score
 
     @pytest.mark.asyncio
-    async def test_score_varied(self, provider: MockProvider) -> None:
-        """Different jobs produce different scores."""
+    async def test_score_demo_mode(self, provider: MockProvider) -> None:
+        """Mock provider returns zeroed demo scores regardless of input."""
         r1 = await provider.score("Frontend Developer at Small Startup", {"name": "V"})
         r2 = await provider.score("VP Engineering at Enterprise Corp", {"name": "V"})
-        # At least one field should differ (with different input text the hash seed differs)
-        assert (
-            r1.structured.fit_score != r2.structured.fit_score
-            or r1.structured.readiness_score != r2.structured.readiness_score
-        )
+        # Demo mode: all scores are zero for any input
+        assert r1.structured.fit_score == 0.0
+        assert r2.structured.fit_score == 0.0
+        assert r1.structured.readiness_score == 0.0
+        assert r2.structured.readiness_score == 0.0
+        assert "DEMO MODE" in r1.structured.reasoning
+        assert "DEMO MODE" in r2.structured.reasoning
 
     @pytest.mark.asyncio
     async def test_gap_analysis(self, provider: MockProvider) -> None:
