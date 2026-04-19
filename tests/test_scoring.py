@@ -98,7 +98,7 @@ JOB_DESCRIPTION_A = (
     "initiatives. The ideal candidate has 5+ years of experience in "
     "program management, strong technical background in cloud infrastructure, "
     "and experience with cross-functional team leadership. "
-    "Location: Frankfurt, Germany. Remote-friendly. "
+    "Location: Berlin, Germany. Remote-friendly. "
     "Salary: 130,000-160,000 EUR base."
 )
 

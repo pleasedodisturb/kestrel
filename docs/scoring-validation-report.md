@@ -20,7 +20,7 @@ The rubric produces **measurably better scores**, but improvements are modest an
 | Runs per job | 3 (60 calls per phase, 120 total) |
 | AI provider | OpenRouter |
 | Model | anthropic/claude-sonnet-4 (default) |
-| Profile | Benchmark TPM: Frankfurt, Germany; Python/AI/ML/PM skills; goal: AI program lead at top tech company |
+| Profile | Benchmark TPM: Berlin, Germany; Python/AI/ML/PM skills; goal: AI program lead at top tech company |
 | Baseline | Rubric monkey-patched to empty string |
 | Rubric | v1.0 with band definitions and 3 calibration examples |
 | Total API calls | 120 attempted, 101 successful (19 JSON parse failures = 15.8% error rate) |

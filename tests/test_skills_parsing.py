@@ -152,20 +152,20 @@ cv:
       - label: Soft Skills
         details: Teamwork, Empathy, Active Listening
     experience:
-      - company: Amazon -- Alexa AGI
+      - company: TechCorp -- AI Research
         position: Technical Program Manager
         start_date: 2022-08
         end_date: 2024-10
         highlights:
           - Ran continuous ASR training and deployment pipeline
           - Drove early LLM integration initiative
-      - company: Amazon -- Ring
+      - company: TechCorp -- Devices
         position: Technical Program Manager -- Sensor Research
         start_date: 2018-10
         end_date: 2022-08
         highlights:
-          - Led Ring Ultra radar camera from sensor research to 800k units shipped
-          - Ran ANVIL compliance overhaul on AWS
+          - Led consumer hardware from sensor research to 800k units shipped
+          - Ran compliance overhaul on AWS
           - Delivered portfolio of 7 products fusing ML, hardware, firmware, and software
 """
     cv_path = tmp_path / "cv.yaml"
@@ -429,7 +429,7 @@ class TestCVParsing:
         skills = parse_cv_yaml(cv_yaml_path)
         asr_skills = [s for s in skills if s.name == "Speech Recognition (ASR)"]
         assert len(asr_skills) == 1
-        assert "Alexa" in asr_skills[0].evidence_detail
+        assert "TechCorp" in asr_skills[0].evidence_detail
 
     def test_cv_nonexistent_file_returns_empty(self, tmp_path: Path):
         skills = parse_cv_yaml(tmp_path / "nonexistent.yaml")

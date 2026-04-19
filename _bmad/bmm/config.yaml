@@ -10,7 +10,7 @@ implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"
 project_knowledge: "{project-root}/docs"
 
 # Core Configuration Values
-user_name: Vitalik
+user_name: User
 communication_language: English
 document_output_language: English
 output_folder: _bmad-output

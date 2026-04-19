@@ -165,7 +165,7 @@ Additional properties: `name` (provider identifier), `privacy_tier` (default: "y
 | Total API calls attempted | 120 (60 baseline + 60 rubric) |
 | AI provider | OpenRouter |
 | Model | anthropic/claude-sonnet-4 (default) |
-| Profile | Benchmark TPM: Frankfurt, Germany; Python/AI/ML/PM skills |
+| Profile | Benchmark TPM: Berlin, Germany; Python/AI/ML/PM skills |
 | Baseline | Rubric monkey-patched to empty string |
 | Rubric | v1.0 (later updated to v1.1 via G-296) |
 
