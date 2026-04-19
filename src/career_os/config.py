@@ -2,8 +2,14 @@
 
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+# Ensure .env vars are in os.environ before pydantic-settings reads them.
+# pydantic-settings 2.13.1 silently fails to load some variables from .env;
+# explicit load_dotenv fixes this.
+load_dotenv(override=True)
 
 
 class Settings(BaseSettings):
