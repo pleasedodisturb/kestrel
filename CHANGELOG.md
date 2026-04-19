@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.1](https://github.com/pleasedodisturb/kestrel/compare/v0.5.0...v0.5.1) (2026-04-19)
+
+
+### Bug Fixes
+
+* **G-379:** sync all version artifacts with release-please ([#218](https://github.com/pleasedodisturb/kestrel/issues/218)) ([4471148](https://github.com/pleasedodisturb/kestrel/commit/4471148c15516aec78243971e2c95d8469b284b3))
+* **G-382:** resolve frontend TS build errors blocking PyPI publish ([#219](https://github.com/pleasedodisturb/kestrel/issues/219)) ([ce2ebae](https://github.com/pleasedodisturb/kestrel/commit/ce2ebaea319e19e96f6e7034ae565aa06aa13cd4))
+
+
+### Documentation
+
+* **G-268:** add Jekyll front matter to scoring-evolution-epics ([#216](https://github.com/pleasedodisturb/kestrel/issues/216)) ([96f5a93](https://github.com/pleasedodisturb/kestrel/commit/96f5a93067b67128b4f238ee5b9dbb01600d6300))
+
 ## [0.5.0](https://github.com/pleasedodisturb/kestrel/compare/v0.4.0...v0.5.0) (2026-04-16)
 
 
