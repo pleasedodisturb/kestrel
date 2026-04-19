@@ -127,6 +127,7 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
         PROFILE_CRITERIA,
         SCORING_SYSTEM_PROMPT_WITH_REVIEW,
         apply_hard_caps,
+        parse_scoring_response,
         pre_filter_job,
     )
 
@@ -178,11 +179,9 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
             )
 
             raw = response.choices[0].message.content.strip()
-            try:
-                result = json.loads(raw)
-            except json.JSONDecodeError:
-                # Handle single quotes from some models
-                result = json.loads(raw.replace("'", '"'))
+            result = parse_scoring_response(raw)
+            if result is None:
+                raise ValueError(f"Could not parse scoring response: {raw[:200]}")
 
             ai_score = int(result.get("score", 2))
 

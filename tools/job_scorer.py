@@ -21,6 +21,123 @@ import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+
+# --------------------------------------------------------------------------
+# Robust JSON response parser
+# --------------------------------------------------------------------------
+
+
+def _strip_trailing_commas(text: str) -> str:
+    """Remove trailing commas before } or ] (common LLM output quirk)."""
+    return re.sub(r",\s*([}\]])", r"\1", text)
+
+
+def _extract_first_json_object(text: str) -> str | None:
+    """Extract the first top-level JSON object using brace-depth counting.
+
+    Handles nested objects/arrays correctly, unlike a simple regex.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape_next = False
+
+    for i in range(start, len(text)):
+        ch = text[i]
+
+        if escape_next:
+            escape_next = False
+            continue
+
+        if ch == "\\":
+            if in_string:
+                escape_next = True
+            continue
+
+        if ch == '"':
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+
+    return None
+
+
+def parse_scoring_response(raw: str) -> dict | None:
+    """Parse AI scoring response, handling common LLM quirks.
+
+    Handles:
+    - Markdown code blocks (```json ... ```)
+    - Single quotes instead of double quotes
+    - Trailing commas before } or ]
+    - Extra text before/after JSON
+    - Nested objects (brace-depth counting)
+
+    Returns parsed dict or None on failure.
+    """
+    if not raw or not raw.strip():
+        return None
+
+    text = raw.strip()
+
+    # Strip markdown code fences
+    if text.startswith("```"):
+        # Remove opening fence (```json or ```)
+        first_newline = text.find("\n")
+        if first_newline > 0:
+            text = text[first_newline + 1 :]
+        # Remove closing fence
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[:-3].rstrip()
+
+    # Try direct parse first (fast path)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Try stripping trailing commas
+    try:
+        return json.loads(_strip_trailing_commas(text))
+    except json.JSONDecodeError:
+        pass
+
+    # Try replacing single quotes
+    try:
+        return json.loads(text.replace("'", '"'))
+    except json.JSONDecodeError:
+        pass
+
+    # Try extracting JSON object from surrounding text (handles nested objects)
+    extracted = _extract_first_json_object(text)
+    if extracted:
+        try:
+            return json.loads(extracted)
+        except json.JSONDecodeError:
+            # Try with trailing comma removal
+            try:
+                return json.loads(_strip_trailing_commas(extracted))
+            except json.JSONDecodeError:
+                # Try with single quote replacement
+                try:
+                    return json.loads(extracted.replace("'", '"'))
+                except json.JSONDecodeError:
+                    pass
+
+    return None
+
+
 # --------------------------------------------------------------------------
 # Profile loading -- reads from config/personal.yaml with generic defaults
 # --------------------------------------------------------------------------
@@ -692,26 +809,30 @@ def score_job(
         temperature=0.3,
     )
 
-    try:
-        result = json.loads(response.choices[0].message.content)
-        return (
-            int(result["score"]),
-            result["reasoning"],
-            result.get("estimated_salary", "unknown"),
-            result.get("effort_flag", "unknown"),
-            int(result.get("prep_level", 0)),
-            result.get("prep_notes", "unknown"),
-        )
-    except (json.JSONDecodeError, KeyError, ValueError):
-        # Fallback to 2 (not 5) -- unknown jobs should not pass the filter
-        return (
-            2,
-            f"Parse error: {response.choices[0].message.content[:100]}",
-            "unknown",
-            "unknown",
-            0,
-            "unknown",
-        )
+    raw_content = response.choices[0].message.content
+    result = parse_scoring_response(raw_content)
+    if result is not None:
+        try:
+            return (
+                int(result["score"]),
+                result["reasoning"],
+                result.get("estimated_salary", "unknown"),
+                result.get("effort_flag", "unknown"),
+                int(result.get("prep_level", 0)),
+                result.get("prep_notes", "unknown"),
+            )
+        except (KeyError, ValueError):
+            pass
+
+    # Fallback to 2 (not 5) -- unknown jobs should not pass the filter
+    return (
+        2,
+        f"Parse error: {(raw_content or '')[:100]}",
+        "unknown",
+        "unknown",
+        0,
+        "unknown",
+    )
 
 
 def main():
