@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/pleasedodisturb/kestrel/compare/v0.5.1...v0.5.2) (2026-04-19)
+
+
+### Bug Fixes
+
+* **G-385:** scrub personal data from public repo (29 files) ([#220](https://github.com/pleasedodisturb/kestrel/issues/220)) ([74c826d](https://github.com/pleasedodisturb/kestrel/commit/74c826d6f6937eab26d9fdde7d190efc4ce1f0e4))
+
 ## [0.5.1](https://github.com/pleasedodisturb/kestrel/compare/v0.5.0...v0.5.1) (2026-04-19)
 
 
