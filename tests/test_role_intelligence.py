@@ -86,7 +86,7 @@ def discovered_jobs(test_db: Session, test_profile: Profile) -> list[DiscoveredJ
         {
             "title": "Senior TPM",
             "company": "Stripe",
-            "location": "Frankfurt, Germany",
+            "location": "Berlin, Germany",
             "url": "https://stripe.com/jobs/1",
             "sources": '["linkedin"]',
             "source_urls": '["https://stripe.com/jobs/1"]',
@@ -371,7 +371,7 @@ class TestSalaryBenchmarks:
             "/api/intelligence/salary",
             params={
                 "role": "TPM",
-                "location": "Frankfurt",
+                "location": "Berlin",
                 "profile_id": test_profile.id,
             },
         )
@@ -765,7 +765,7 @@ class TestRoleTitleNormalization:
         job = DiscoveredJob(
             title="Technical Program Manager",
             company="Acme Corp",
-            location="Frankfurt, Germany",
+            location="Berlin, Germany",
             url="https://acme.com/jobs/tpm",
             sources='["linkedin"]',
             source_urls='["https://acme.com/jobs/tpm"]',
@@ -775,7 +775,7 @@ class TestRoleTitleNormalization:
             profile_id=test_profile.id,
             title_normalized="technical program manager",
             company_normalized="acme corp",
-            location_normalized="frankfurt, germany",
+            location_normalized="berlin, germany",
         )
         test_db.add(job)
         test_db.commit()

@@ -402,26 +402,26 @@ def _handle_goal_recalibration(prompt: str, context: dict | None) -> AIResponse:
     """Goal recalibration response."""
     structured = GoalRecalibrationResult(
         recalibration_notes=(
-            "Market data indicates strong demand for AI TPM roles in Frankfurt. "
-            "Salary expectations of 120-160k EUR are realistic for your experience level. "
+            "Market data indicates strong demand for AI TPM roles in Berlin. "
+            "Salary expectations of 100-150k EUR are realistic for your experience level. "
             "Consider expanding to fully remote EU roles to increase opportunity pool."
         ),
         suggested_adjustments=[
             {
                 "goal": "Senior TPM at tier-1 tech",
-                "adjustment": "Expand from Frankfurt-only to remote-EU",
-                "reason": "3x more openings in remote-EU vs Frankfurt-only",
+                "adjustment": "Expand from Berlin-only to remote-EU",
+                "reason": "3x more openings in remote-EU vs Berlin-only",
             },
             {
-                "goal": "160k EUR base",
-                "adjustment": "Target 140-160k for Frankfurt, 130-150k for remote",
+                "goal": "150k EUR base",
+                "adjustment": "Target 130-150k for Berlin, 120-140k for remote",
                 "reason": "Remote roles trade slight salary for flexibility",
             },
         ],
         market_reality=(
             "AI TPM roles up 23% YoY in DACH region. "
             "Average time-to-hire is 6-8 weeks. "
-            "Remote-EU positions outnumber Frankfurt-local 3:1."
+            "Remote-EU positions outnumber Berlin-local 3:1."
         ),
     )
     return AIResponse(

@@ -18,174 +18,174 @@ RENDERCV = str(Path(__file__).resolve().parent.parent / ".venv" / "bin" / "rende
 
 # Tailored summaries per role
 ROLES = {
-    "mistral-ai-deployment-strategist": {
-        "filename": "user-mistral-cv",
+    "example-ai-deployment-strategist": {
+        "filename": "user-ai-strategist-cv",
         "summary": (
             "10+ years shipping complex technical programs across AI/ML, IoT, and hardware -- "
             "now focused on bringing AI from prototype to production. Built an AI-augmented "
-            "program system at Wolt integrating 6 LLMs with enterprise APIs. Ran ASR model "
-            "deployment at Alexa across 3 continents. Shipped Ring Ultra radar camera to "
-            "800k-2M units across 10+ teams in 5 countries. Conducted 200+ live AI product "
-            "demos to OEM executives at CloudMade, driving $1M+ contracts. Based in Frankfurt. "
+            "program system integrating multiple LLMs with enterprise APIs. Ran ML model "
+            "deployment across 3 continents. Shipped consumer hardware product to "
+            "high volume across 10+ teams. Conducted 200+ live AI product "
+            "demos to executives, driving $1M+ contracts. Based in Berlin. "
             "The pattern: take the ambiguous, cross-functional, hard-to-own problem and find "
             "the path through it. Builder first, operator by method."
         ),
     },
-    "plain-sr-product-engineer-ai": {
-        "filename": "user-plain-cv",
+    "example-sr-product-engineer-ai": {
+        "filename": "user-product-eng-cv",
         "summary": (
             "Builder who lives at the intersection of AI systems and product thinking. "
-            "Built an AI agent operating system at Wolt -- 6 LLMs orchestrated through 4 "
+            "Built an AI agent operating system -- 6 LLMs orchestrated through 4 "
             "enterprise APIs, persistent context, RAG-adjacent document registry indexing "
-            "1,140 files, AI provenance tracking, write guardrails. Ran ASR model deployment "
-            "pipelines at Alexa scale. Shipped Ring Ultra radar camera from sensor research "
-            "to 800k-2M units. 15+ production Python tools, real API integration experience, "
+            "1,000+ files, AI provenance tracking, write guardrails. Ran ML model deployment "
+            "pipelines at scale. Shipped consumer hardware from sensor research "
+            "to high volume. 15+ production Python tools, real API integration experience, "
             "end-to-end ownership instinct. The gap is the title -- the muscle is engineering-adjacent "
             "product building under real constraints."
         ),
     },
-    "jetbrains-pm-bonsai": {
-        "filename": "user-jetbrains-cv",
+    "example-pm-developer-tools": {
+        "filename": "user-devtools-pm-cv",
         "summary": (
-            "Built an AI version of myself at Wolt -- 4 API keys, a Cursor prompt, and a repo "
+            "Built an AI-powered workflow system -- 4 API keys, a code editor, and a repo "
             "that became a giant story about the program. Still fighting the context problem daily: "
-            "5th generation memory architecture, 4 layers, 2 laptops, still not solved. That's the "
-            "product intuition Bonsai needs -- not from market research, from being the frustrated "
-            "user every day. Ring Ultra: sensor research to 800k-2M units. CloudMade: 5 demo cars, "
-            "200+ live drives, $1M+ contracts. Titles are ephemeral. The work is what matters."
+            "multi-generation memory architecture, 4 layers, 2 laptops, still not solved. That's the "
+            "product intuition developer tools need -- not from market research, from being the frustrated "
+            "user every day. Shipped consumer hardware from sensor research to high volume. "
+            "Built demo fleet from scratch -- 200+ live demos, $1M+ contracts. Titles are ephemeral. The work is what matters."
         ),
     },
-    "n8n-sr-developer-advocate": {
-        "filename": "user-n8n-cv",
+    "example-sr-developer-advocate": {
+        "filename": "user-devrel-cv",
         "summary": (
             "I connect people and build things -- usually at the same time. 10 years bridging "
             "developers, scientists, and business teams across three continents. Built 15+ "
-            "automation pipelines at Wolt, ran 200+ live demos of automotive AI at CloudMade "
+            "automation pipelines, ran 200+ live demos of automotive AI "
             "(messy, honest ones -- they worked 5x better than slide decks). I care about open "
             "source, honest documentation, and keeping engineering work at least 30% fun. "
-            "CliftonStrengths #1: Communication. Working in Europe all around since 2016, "
-            "originally from Ukraine, currently in Frankfurt."
+            "CliftonStrengths #1: Communication. Working in Europe since 2016, "
+            "currently in Berlin."
         ),
     },
-    "mongodb-technical-project-manager": {
-        "filename": "user-mongodb-cv",
+    "example-technical-project-manager": {
+        "filename": "user-tpm-cv",
         "summary": (
             "10+ years shipping enterprise-scale technical programs. Not a human calendar -- "
-            "I build tools, automate mechanical work, and ship. Wolt: Salesforce CRM amid "
-            "DoorDash/Deliveroo acquisition chaos, MongoDB audit logging, SOX compliance, zero "
-            "critical bugs. Ring: split monolithic AWS account into 25 certified services, 30 weeks "
-            "ahead of schedule. Shipped Ring Ultra across 10+ teams in 5 countries. Alexa: ML "
-            "deployment across 3 continents. I care about sustainable teams and long-term "
-            "relationships. Frankfurt, available for customer travel."
+            "I build tools, automate mechanical work, and ship. Led Salesforce CRM amid "
+            "M&A acquisition chaos, audit logging, SOX compliance, zero "
+            "critical bugs. Split monolithic AWS account into 25 certified services, 30 weeks "
+            "ahead of schedule. Shipped hardware product across 10+ teams in 5 countries. "
+            "ML deployment across 3 continents. I care about sustainable teams and long-term "
+            "relationships. Berlin, available for customer travel."
         ),
     },
-    "shopware-ai-native-tpm": {
-        "filename": "user-shopware-tpm-cv",
+    "example-ai-native-tpm": {
+        "filename": "user-ai-tpm-cv",
         "summary": (
-            "AI-native builder -- four iTerm panels, Claude Code, Superwhisper, barely touching "
-            "the keyboard. Built an AI-augmented program system at Wolt from scratch: 6 LLMs, "
-            "4 enterprise APIs, persistent context, 1,140 documents indexed. No ticket, no budget "
-            "-- just saw the problem and built the solution. Shipped Ring Ultra radar camera from "
-            "sensor research to 800k-2M units. Worked on EverLearn at Alexa AGI -- a continuous-learning "
+            "AI-native builder -- four terminal panels, AI coding assistant, voice input, barely touching "
+            "the keyboard. Built an AI-augmented program system from scratch: 6 LLMs, "
+            "4 enterprise APIs, persistent context, 1,000+ documents indexed. No ticket, no budget "
+            "-- just saw the problem and built the solution. Shipped consumer hardware from "
+            "sensor research to high volume. Worked on a continuous-learning "
             "ML framework that became obsolete when LLMs arrived. I don't speculate about AI disruption; "
             "I've been disrupted. Not a cultist, not a Luddite -- I build with AI every day because "
-            "it works. Zero-to-one is where I'm best. Originally from Ukraine, working across Europe "
-            "since 2016, currently in Frankfurt."
+            "it works. Zero-to-one is where I'm best. Working across Europe "
+            "since 2016, currently in Berlin."
         ),
     },
-    "shopware-ai-native-pm": {
-        "filename": "user-shopware-pm-cv",
+    "example-ai-native-pm": {
+        "filename": "user-ai-pm-cv",
         "summary": (
             "Same person, different hat. Also applied for the AI-Native TPM role -- writing "
             "separately because PM and TPM in a team like this are the same problem-solving "
             "persona on different days. 10+ years shipping across AI/ML, IoT, and hardware. "
-            "Built AI agent system at Wolt from scratch, drove 200+ live demos at CloudMade, "
-            "shipped Ring Ultra to 800k-2M units. I learn tools, frameworks, and measurement "
-            "systems on the fly. The work is the same. Frankfurt-based, immediately available."
+            "Built AI agent system from scratch, drove 200+ live demos, "
+            "shipped consumer hardware to high volume. I learn tools, frameworks, and measurement "
+            "systems on the fly. The work is the same. Berlin-based, immediately available."
         ),
     },
-    "deepl-sr-technical-pm-ai": {
-        "filename": "user-deepl-cv",
+    "example-sr-technical-pm-ai": {
+        "filename": "user-sr-tpm-ai-cv",
         "summary": (
             "I sit between research teams that want to experiment forever and engineering teams "
-            "that need to ship yesterday. At Alexa AGI, ran ASR deployment across Seattle, Aachen, "
-            "and Bangalore -- cut release SLA from multi-day to 1 business day. Worked on EverLearn, "
-            "a continuous-learning ML framework made obsolete when LLMs arrived. I don't speculate "
-            "about AI disruption; I've been disrupted. Built AI-augmented program system at Wolt "
-            "from scratch -- 6 LLMs, 4 enterprise APIs, no ticket, no budget. Shipped Ring Ultra "
-            "radar camera to 800k-2M units. I care about European AI sovereignty -- not as a slogan, "
-            "but as someone who stood at Maidan in 2013. Working across Europe since 2016, currently "
-            "in Frankfurt."
+            "that need to ship yesterday. Ran ASR deployment across 3 continents -- "
+            "cut release SLA from multi-day to 1 business day. Worked on a continuous-learning "
+            "ML framework made obsolete when LLMs arrived. I don't speculate "
+            "about AI disruption; I've been disrupted. Built AI-augmented program system "
+            "from scratch -- 6 LLMs, 4 enterprise APIs, no ticket, no budget. Shipped consumer "
+            "hardware to high volume. I care about European AI sovereignty -- not as a slogan, "
+            "but as genuine conviction. Working across Europe since 2016, currently "
+            "in Berlin."
         ),
     },
-    "ashby-sr-swe-product-eng": {
-        "filename": "user-ashby-cv",
+    "example-sr-swe-product-eng": {
+        "filename": "user-swe-product-cv",
         "summary": (
             "Builder crossing from TPM into product engineering via AI tools. Built an AI agent "
-            "operating system at Wolt -- 15+ Python scripts, 6 LLMs, 4 enterprise APIs, persistent "
+            "operating system -- 15+ Python scripts, 6 LLMs, 4 enterprise APIs, persistent "
             "context, custom enterprise search CLI, AI provenance tracking. End-to-end ownership: "
-            "I research, spec, wireframe, build, and ship. Shipped Ring Ultra across 10+ teams in "
-            "5 countries. Built CloudMade demo car fleet from nothing -- 200+ live demos. "
+            "I research, spec, wireframe, build, and ship. Shipped hardware across 10+ teams in "
+            "5 countries. Built demo fleet from nothing -- 200+ live demos. "
             "High ownership, minimal process, product thinking built from a decade of shipping."
         ),
     },
-    "attio-product-engineer": {
-        "filename": "user-attio-cv",
+    "example-product-engineer": {
+        "filename": "user-product-eng-crm-cv",
         "summary": (
-            "CRM data platform owner. Wolt: Pipedrive-to-Salesforce amid DoorDash/Deliveroo "
-            "acquisition -- custom objects, permissions models, SOX-compliant connectors, MongoDB "
+            "CRM data platform owner. Led Pipedrive-to-Salesforce migration amid M&A "
+            "acquisition -- custom objects, permissions models, SOX-compliant connectors, "
             "audit logging. 12+ stakeholders, 3 merging companies, hundreds of millions in revenue "
             "running blind without proper infrastructure. Built AI agent system in parallel -- 6 LLMs, "
-            "enterprise APIs, 1,140-file document registry. I think about data models instinctively "
+            "enterprise APIs, 1,000+-file document registry. I think about data models instinctively "
             "because I've had to build them. Founder mentality. Germany remote."
         ),
     },
-    "mistral-tpm-science-ops": {
-        "filename": "user-mistral-science-cv",
+    "example-tpm-science-ops": {
+        "filename": "user-tpm-science-cv",
         "summary": (
-            "Execution engine builder for research-to-production pipelines. Ran ASR model "
-            "deployment at Alexa across 3 continents -- bridging Science and Engineering, cutting "
-            "release SLA from multi-day to 1 business day. Split Ring's monolithic AWS account "
+            "Execution engine builder for research-to-production pipelines. Ran ML model "
+            "deployment across 3 continents -- bridging Science and Engineering, cutting "
+            "release SLA from multi-day to 1 business day. Split monolithic AWS account "
             "into 25 independently certified services -- 30 weeks ahead of schedule, zero downtime. "
-            "Built AI-augmented program system at Wolt with persistent context, automated synthesis, "
+            "Built AI-augmented program system with persistent context, automated synthesis, "
             "and retrospective-ready data capture. The pattern: structure ambiguity into coordinated "
             "execution without killing the science."
         ),
     },
-    "mistral-tpm-engineering": {
-        "filename": "user-mistral-eng-cv",
+    "example-tpm-engineering": {
+        "filename": "user-tpm-eng-cv",
         "summary": (
-            "10+ years driving cross-functional technical delivery at scale. 7 years at Amazon: "
-            "shipped Ring Ultra radar camera to 800k-2M units across 10+ teams in 5 countries, "
+            "10+ years driving cross-functional technical delivery at scale. 7 years at BigTech: "
+            "shipped consumer hardware to high volume across 10+ teams in 5 countries, "
             "split monolithic AWS account into 25 certified services 30 weeks ahead of schedule, "
-            "ran ASR model deployment at Alexa across 3 continents. At Wolt: managed Salesforce "
+            "ran ML model deployment across 3 continents. Led Salesforce "
             "CRM migration with 12+ stakeholders, built AI-augmented program system from scratch. "
             "Development and deployment process ownership. Technical depth to sit in architecture "
             "reviews and add value."
         ),
     },
-    "gitlab-sr-tpm-cto": {
-        "filename": "user-gitlab-cv",
+    "example-sr-tpm-remote": {
+        "filename": "user-sr-tpm-remote-cv",
         "summary": (
             "Async-first TPM who writes documentation because it's how organizations remember "
             "what they decided and why. 10+ years running cross-functional programs across "
-            "Engineering, Product, Finance, and Legal. Wolt: CRM transformation amid "
-            "DoorDash/Deliveroo acquisition, 12+ stakeholders, built AI system with 1,140-file "
-            "document registry as a living handbook. Ring: split monolithic AWS into 25 certified "
-            "services, 30 weeks ahead. Alexa: ML deployment across 3 continents. I build tools, "
-            "automate mechanical work, and care about sustainable teams. Frankfurt, remote-ready."
+            "Engineering, Product, Finance, and Legal. Led CRM transformation amid "
+            "M&A acquisition, 12+ stakeholders, built AI system with 1,000+-file "
+            "document registry as a living handbook. Split monolithic AWS into 25 certified "
+            "services, 30 weeks ahead. ML deployment across 3 continents. I build tools, "
+            "automate mechanical work, and care about sustainable teams. Berlin, remote-ready."
         ),
     },
-    "huggingface-ai-ml-pm": {
-        "filename": "user-huggingface-cv",
+    "example-ai-ml-pm": {
+        "filename": "user-ai-ml-pm-cv",
         "summary": (
-            "Drove $1M+ partner deals by building things, not slide decks. CloudMade: 5 demo "
+            "Drove $1M+ partner deals by building things, not slide decks. 5 demo "
             "cars, 200+ live drives to OEM executives across 3 continents, 5x sales engagement. "
-            "Wolt: CRM transformation across 3 merging companies, 12+ stakeholders. Alexa: ML "
-            "deployment across Seattle, Aachen, Bangalore. I care about open-source AI and "
-            "European sovereignty -- not as a slogan, as someone who stood at Maidan in 2013. "
+            "CRM transformation across 3 merging companies, 12+ stakeholders. ML "
+            "deployment across multiple continents. I care about open-source AI and "
+            "European sovereignty -- not as a slogan, as genuine conviction. "
             "15+ Python tools, AI agent systems, API integrations. I sit in the room with the "
-            "partner's ML team and add value. Frankfurt, EMEA remote."
+            "partner's ML team and add value. Berlin, EMEA remote."
         ),
     },
 }

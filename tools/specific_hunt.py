@@ -20,7 +20,7 @@ SEARCHES = [
         "results": 10,
         "group": "IoT/Robotics",
     },
-    # 3. Wolt Competitors / Food Delivery
+    # 3. Food Delivery / Logistics
     {
         "term": "Product Manager food delivery Delivery Hero Flink",
         "location": "Germany",

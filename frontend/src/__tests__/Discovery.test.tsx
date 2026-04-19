@@ -111,7 +111,7 @@ const SAMPLE_JOBS: DiscoveredJob[] = [
     profile_id: 1,
     title: "AI Program Lead",
     company: "SAP",
-    location: "Frankfurt, Germany",
+    location: "Berlin, Germany",
     url: "https://sap.com/job4",
     description: "Lead AI transformation programs across divisions",
     salary_range: "130000-160000 EUR",

@@ -17,7 +17,7 @@ When CliftonStrengths, EPP, CCAT, and Workplace Insights documents are ingested,
 **Evidence:** GET `/api/skills?category=soft` returns entries with `source` values including `"cliftonstrengths"`, `"epp"`, `"ccat"`, and `"workplace_insights"`; proficiency levels reflect assessment scores (e.g., Communication → expert-level based on #1 ranking).
 
 ### VAL-SKILL-003: Profile document skill extraction
-When profile documents (`profile/README.md`, `profile/wolt-capability-digest.md`) are parsed, the system identifies domain and technical skills from narrative descriptions (e.g., "CRM migration" → Salesforce, Pipedrive; "15+ Python scripts" → Python automation) and adds them with evidence quotes.
+When profile documents (`profile/README.md`, `profile/capability-digest.md`) are parsed, the system identifies domain and technical skills from narrative descriptions (e.g., "CRM migration" -> Salesforce, Pipedrive; "15+ Python scripts" -> Python automation) and adds them with evidence quotes.
 **Evidence:** Skills extracted from profile docs have `source: "profile"` and `evidence` containing a snippet or reference to the originating document paragraph.
 
 ### VAL-SKILL-004: Skill categories are correctly assigned

@@ -1,7 +1,7 @@
 {
   "profile": {
     "job_family": "TPM",
-    "location": "Frankfurt, Germany",
+    "location": "Berlin, Germany",
     "key_skills": ["Python", "AI/ML", "Program Management", "Cross-functional Leadership", "Cloud Infrastructure"]
   },
   "jobs": [
@@ -56,7 +56,7 @@
       "expected_band": [4, 6],
       "title": "Project Manager, Cloud Migration",
       "company": "T-Systems",
-      "location": "Frankfurt, Germany",
+      "location": "Berlin, Germany",
       "description": "Lead cloud migration projects for enterprise clients. PMP/PRINCE2 certification required. Manage budgets, timelines, vendor relationships. Some technical oversight."
     },
     {
