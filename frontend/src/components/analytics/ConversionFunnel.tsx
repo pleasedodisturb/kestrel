@@ -69,10 +69,10 @@ export function ConversionFunnel({ data }: Props) {
                 allowDecimals={false}
               />
               <Tooltip
-                formatter={(value, _name, { payload }: { payload: { percentage: number } }) => [
-                  `${value} (${payload.percentage}%)`,
-                  "Count",
-                ]}
+                formatter={(value, _name, props) => {
+                  const entry = props.payload as { percentage: number } | undefined;
+                  return [`${value} (${entry?.percentage ?? 0}%)`, "Count"];
+                }}
                 contentStyle={{
                   borderRadius: "8px",
                   border: "1px solid #e2e8f0",

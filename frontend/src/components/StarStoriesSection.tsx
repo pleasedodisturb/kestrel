@@ -297,7 +297,7 @@ function StoryCard({
 
       {(matchingSkills?.length ?? 0) > 0 && !expanded && (
         <p className="text-xs text-green-600 mt-1 pl-6">
-          Matches: {matchingSkills.join(", ")}
+          Matches: {matchingSkills!.join(", ")}
         </p>
       )}
     </div>
