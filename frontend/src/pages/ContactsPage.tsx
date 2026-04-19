@@ -74,7 +74,7 @@ function ContactCard({
 
       {(contact.tags?.length ?? 0) > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {contact.tags.map((tag) => (
+          {contact.tags!.map((tag) => (
             <span
               key={tag}
               className="rounded bg-gray-50 px-1.5 py-0.5 text-xs text-gray-500"

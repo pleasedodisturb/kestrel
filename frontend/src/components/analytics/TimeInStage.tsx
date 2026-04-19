@@ -81,8 +81,9 @@ export function TimeInStage({ data }: Props) {
                 }}
               />
               <Tooltip
-                formatter={(value, _name, { payload }: { payload: { hasData: boolean } }) => {
-                  if (!payload.hasData) return ["No data", "Avg. Days"];
+                formatter={(value, _name, props) => {
+                  const entry = props.payload as { hasData: boolean } | undefined;
+                  if (!entry?.hasData) return ["No data", "Avg. Days"];
                   return [`${Number(value).toFixed(1)} days`, "Avg. Days"];
                 }}
                 contentStyle={{

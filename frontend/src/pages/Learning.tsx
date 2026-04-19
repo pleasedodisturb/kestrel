@@ -445,7 +445,7 @@ function GapSection({
   } else if ((data?.recommendations?.length ?? 0) > 0) {
     gapContent = (
       <div className="space-y-3">
-        {data.recommendations.map((resource) => (
+        {data!.recommendations.map((resource) => (
           <ResourceCard
             key={resource.id}
             resource={resource}
@@ -801,7 +801,7 @@ export function Learning() {
       )}
 
       {/* All requirements met */}
-      {applicationId && gapData?.total_requirements > 0 && gapsWithIds.length === 0 && (
+      {applicationId && (gapData?.total_requirements ?? 0) > 0 && gapsWithIds.length === 0 && (
         <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white py-8 text-center">
           <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" />
           <h2 className="mt-3 text-lg font-semibold text-gray-900">
