@@ -1,4 +1,4 @@
-"""Career OS CLI — main entry point."""
+"""Kestrel CLI — main entry point."""
 
 from __future__ import annotations
 
@@ -28,8 +28,8 @@ console = Console()
 _HELP_OUTPUT_FORMAT = "Output format: table or json"
 
 app = typer.Typer(
-    name="career",
-    help="Career OS — AI-Powered Job Search & Career Strategy Platform",
+    name="kestrel",
+    help="Kestrel — AI-Powered Job Search & Career Strategy Platform",
     no_args_is_help=True,
 )
 
@@ -58,7 +58,7 @@ goals_app = typer.Typer(
 app.add_typer(goals_app, name="goals")
 
 # Interview-prep subcommand group (uses Click Group to handle both
-# `career interview-prep <id>` and `career interview-prep stories <subcmd>`)
+# `kestrel interview-prep <id>` and `kestrel interview-prep stories <subcmd>`)
 
 
 class InterviewPrepGroup(typer_core.TyperGroup):
@@ -118,7 +118,7 @@ def _get_default_profile(db: Session) -> Profile:
 
 
 # ---------------------------------------------------------------------------
-# career pipeline list
+# kestrel pipeline list
 # ---------------------------------------------------------------------------
 
 
@@ -179,7 +179,7 @@ def pipeline_list(
 
 
 # ---------------------------------------------------------------------------
-# career pipeline add
+# kestrel pipeline add
 # ---------------------------------------------------------------------------
 
 
@@ -227,7 +227,7 @@ def pipeline_add(
 
 
 # ---------------------------------------------------------------------------
-# career pipeline update
+# kestrel pipeline update
 # ---------------------------------------------------------------------------
 
 
@@ -329,7 +329,7 @@ def pipeline_update(
 
 
 # ---------------------------------------------------------------------------
-# career pipeline stats
+# kestrel pipeline stats
 # ---------------------------------------------------------------------------
 
 
@@ -420,7 +420,7 @@ def pipeline_stats() -> None:
 
 
 # ---------------------------------------------------------------------------
-# career pipeline follow-ups
+# kestrel pipeline follow-ups
 # ---------------------------------------------------------------------------
 
 
@@ -486,7 +486,7 @@ def pipeline_follow_ups() -> None:
 
 
 # ---------------------------------------------------------------------------
-# career skills list
+# kestrel skills list
 # ---------------------------------------------------------------------------
 
 
@@ -552,7 +552,7 @@ def skills_list(
 
 
 # ---------------------------------------------------------------------------
-# career skills gaps
+# kestrel skills gaps
 # ---------------------------------------------------------------------------
 
 
@@ -736,7 +736,7 @@ def _show_aggregate_gaps(db: Session, profile_id: int, aggregate_fn) -> None:
 
 
 # ---------------------------------------------------------------------------
-# career goals (list + show)
+# kestrel goals (list + show)
 # ---------------------------------------------------------------------------
 
 
@@ -868,7 +868,7 @@ def goals_show(
 
 
 # ---------------------------------------------------------------------------
-# career coach
+# kestrel coach
 # ---------------------------------------------------------------------------
 
 
@@ -998,7 +998,7 @@ def _is_valid_url(url: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# career discover
+# kestrel discover
 # ---------------------------------------------------------------------------
 
 
@@ -1222,7 +1222,7 @@ def _handle_schedule(
 
 
 # ---------------------------------------------------------------------------
-# career score <url>
+# kestrel score <url>
 # ---------------------------------------------------------------------------
 
 
@@ -1436,7 +1436,7 @@ def _score_output_json(scored) -> None:
 
 
 # ---------------------------------------------------------------------------
-# career market
+# kestrel market
 # ---------------------------------------------------------------------------
 
 
@@ -1477,7 +1477,7 @@ def market(
         if not has_data:
             console.print(
                 "[yellow]No market data available. "
-                "Run `career discover` first to populate market intelligence.[/yellow]"
+                "Run `kestrel discover` first to populate market intelligence.[/yellow]"
             )
             return
 
@@ -1675,7 +1675,7 @@ def _run_interview_prep_async(
 
 
 # ---------------------------------------------------------------------------
-# career research <company>
+# kestrel research <company>
 # ---------------------------------------------------------------------------
 
 
@@ -1825,7 +1825,7 @@ def _render_research_report(report) -> None:
 
 
 # ---------------------------------------------------------------------------
-# career interview-prep <application_id> (default command)
+# kestrel interview-prep <application_id> (default command)
 # ---------------------------------------------------------------------------
 
 
@@ -1974,7 +1974,7 @@ def _render_interview_prep(prep) -> None:
 
 
 # ---------------------------------------------------------------------------
-# career interview-prep stories (list / add / view / edit)
+# kestrel interview-prep stories (list / add / view / edit)
 # ---------------------------------------------------------------------------
 
 
@@ -2010,7 +2010,7 @@ def stories_list_default(ctx: typer.Context) -> None:
         if not stories:
             console.print(
                 "[yellow]No STAR stories yet. "
-                "Add one with: career interview-prep stories add[/yellow]"
+                "Add one with: kestrel interview-prep stories add[/yellow]"
             )
             return
 

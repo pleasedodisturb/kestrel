@@ -149,24 +149,24 @@ When a user completes learning items or achieves goals, the coaching suggestions
 ## CLI Commands
 
 ### VAL-CLI-SKILL-001: List skills via CLI
-`career skills list` outputs the full skills inventory in a formatted table with columns: Name, Category, Proficiency, Source. Supports `--category technical` and `--source cv.yaml` filters.
-**Evidence:** Running `career skills list --category technical` prints a table containing only technical skills; exit code 0.
+`kestrel skills list` outputs the full skills inventory in a formatted table with columns: Name, Category, Proficiency, Source. Supports `--category technical` and `--source cv.yaml` filters.
+**Evidence:** Running `kestrel skills list --category technical` prints a table containing only technical skills; exit code 0.
 
 ### VAL-CLI-SKILL-002: Gap analysis via CLI
-`career skills gaps --application <id>` outputs the gap report for a specific application: skill name, required level, current level, severity, distance. Supports `--severity critical` to filter.
-**Evidence:** Running `career skills gaps --application 1 --severity critical` prints only critical gaps; exit code 0.
+`kestrel skills gaps --application <id>` outputs the gap report for a specific application: skill name, required level, current level, severity, distance. Supports `--severity critical` to filter.
+**Evidence:** Running `kestrel skills gaps --application 1 --severity critical` prints only critical gaps; exit code 0.
 
 ### VAL-CLI-SKILL-003: Career goals via CLI
-`career goals` lists all active goals with title, type, target date, and overall progress percentage. `career goals show <id>` displays the full reality map for a specific goal.
-**Evidence:** Running `career goals` prints a goals table; `career goals show 1` prints the reality map with current vs. required state; exit code 0.
+`kestrel goals` lists all active goals with title, type, target date, and overall progress percentage. `kestrel goals show <id>` displays the full reality map for a specific goal.
+**Evidence:** Running `kestrel goals` prints a goals table; `kestrel goals show 1` prints the reality map with current vs. required state; exit code 0.
 
 ### VAL-CLI-SKILL-004: Coaching via CLI
-`career coach` outputs the top 5 coaching suggestions with effort estimates. `career coach --all` shows the full list.
-**Evidence:** Running `career coach` prints 5 prioritized suggestions with effort hours; exit code 0.
+`kestrel coach` outputs the top 5 coaching suggestions with effort estimates. `kestrel coach --all` shows the full list.
+**Evidence:** Running `kestrel coach` prints 5 prioritized suggestions with effort hours; exit code 0.
 
 ### VAL-CLI-SKILL-005: Aggregate gaps via CLI
-`career skills gaps --aggregate` outputs the cross-application gap summary: most common missing skills ranked by frequency and severity.
-**Evidence:** Running `career skills gaps --aggregate` prints a ranked table of skills appearing as gaps across applications; exit code 0.
+`kestrel skills gaps --aggregate` outputs the cross-application gap summary: most common missing skills ranked by frequency and severity.
+**Evidence:** Running `kestrel skills gaps --aggregate` prints a ranked table of skills appearing as gaps across applications; exit code 0.
 
 ---
 
