@@ -88,7 +88,7 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 - **Discovery Engine** (`src/career_os/discovery/`): Scrapes multiple job boards via python-jobspy. Adapters normalize results. Scheduler runs as asyncio background task during app lifespan.
 - **Application State Machine**: Status transitions enforced in `src/career_os/schemas/applications.py` via `VALID_TRANSITIONS` dict (not in service layer).
 - **Schemas parallel API routes**: Each domain (applications, skills, contacts...) has matching files in `api/`, `services/`, `models/`, `schemas/`.
-- **CLI** (`src/career_os/cli/`): Typer-based, entry points `kestrel` and `career` in pyproject.toml. Subcommands: pipeline, skills, goals, interview-prep, contacts.
+- **CLI** (`src/career_os/cli/`): Typer-based, primary entry point `kestrel` with `career` as a backward-compatible alias (both in pyproject.toml). Subcommands: pipeline, skills, goals, interview-prep, contacts.
 - **Auto-migration**: Alembic runs automatically on app startup via `_auto_migrate()` in `main.py`.
 
 ### Web Frontend
