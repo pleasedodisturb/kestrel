@@ -4,11 +4,15 @@ import json
 from unittest.mock import MagicMock
 
 from job_scorer import (
+    AI_KEYWORDS,
     BLOCKED_COMPANIES,
     EU_LOCATIONS,
+    HARD_CAP_RULES,
+    PRODUCT_KEYWORDS,
     PROFILE_CRITERIA,
     REJECT_TITLE_PATTERNS,
     US_ONLY_LOCATIONS,
+    apply_hard_caps,
     pre_filter_job,
     score_job,
 )
@@ -577,3 +581,332 @@ class TestBatchScanSample:
                     rejected += 1
         ratio = rejected / total_bad
         assert ratio >= 0.6, f"Only {ratio:.0%} of bad roles were rejected (need >= 60%)"
+
+
+# ==================== Hard cap constants ====================
+
+
+class TestHardCapConstants:
+    def test_hard_cap_rules_not_empty(self):
+        assert len(HARD_CAP_RULES) >= 7
+
+    def test_product_keywords_not_empty(self):
+        assert len(PRODUCT_KEYWORDS) >= 5
+
+    def test_ai_keywords_not_empty(self):
+        assert len(AI_KEYWORDS) >= 4
+
+    def test_all_rules_have_three_elements(self):
+        for rule in HARD_CAP_RULES:
+            assert len(rule) == 3, f"Rule missing elements: {rule}"
+            patterns, max_score, name = rule
+            assert isinstance(patterns, list)
+            assert isinstance(max_score, int)
+            assert isinstance(name, str)
+
+    def test_max_scores_are_reasonable(self):
+        for _patterns, max_score, name in HARD_CAP_RULES:
+            assert 1 <= max_score <= 5, f"Rule {name} has unreasonable max_score={max_score}"
+
+
+# ==================== apply_hard_caps ====================
+
+
+class TestApplyHardCaps:
+    """Test post-scoring hard cap enforcement."""
+
+    def _make_job(self, title, score, location="Remote", remote=False, reasoning="AI scored"):
+        return {
+            "title": title,
+            "fit_score": score,
+            "location": location,
+            "remote": remote,
+            "fit_reasoning": reasoning,
+        }
+
+    # --- Sales/finance/HR/legal/healthcare/support: MAX 1 ---
+
+    def test_caps_sales_role_to_1(self):
+        jobs = [self._make_job("Sales Manager", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+        assert result[0]["cap_applied"] is True
+        assert result[0]["cap_reason"] == "sales_finance_hr_legal_healthcare_support"
+
+    def test_caps_account_executive_to_1(self):
+        jobs = [self._make_job("Account Executive, DACH", 6)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+
+    def test_caps_accountant_to_1(self):
+        jobs = [self._make_job("Senior Accountant", 4)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+
+    def test_caps_nurse_to_1(self):
+        jobs = [self._make_job("Registered Nurse", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+
+    def test_caps_recruiter_to_1(self):
+        jobs = [self._make_job("Technical Recruiter", 4)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+
+    def test_caps_compliance_officer_to_1(self):
+        jobs = [self._make_job("Compliance Officer", 3)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+
+    def test_caps_help_desk_to_1(self):
+        jobs = [self._make_job("Help Desk Specialist", 4)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+
+    # --- Customer Success: MAX 2 ---
+
+    def test_caps_customer_success_to_2(self):
+        jobs = [self._make_job("Customer Success Manager", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 2
+        assert result[0]["cap_reason"] == "customer_success"
+
+    def test_caps_client_success_to_2(self):
+        jobs = [self._make_job("Client Success Lead", 6)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 2
+
+    # --- Marketing/media: MAX 2 ---
+
+    def test_caps_copywriter_to_2(self):
+        jobs = [self._make_job("Senior Copywriter", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 2
+        assert result[0]["cap_reason"] == "marketing_media_seo_crm"
+
+    def test_caps_seo_specialist_to_2(self):
+        jobs = [self._make_job("SEO Specialist", 4)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 2
+
+    def test_caps_crm_manager_to_2(self):
+        jobs = [self._make_job("CRM Manager", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 2
+
+    # --- Design/UX (no product): MAX 3 ---
+
+    def test_caps_ux_designer_to_3(self):
+        jobs = [self._make_job("UX Designer", 6)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 3
+        assert result[0]["cap_reason"] == "design_ux_no_product"
+
+    def test_caps_graphic_designer_to_3(self):
+        jobs = [self._make_job("Graphic Designer", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 3
+
+    def test_exempts_product_designer(self):
+        """UX designer with 'product' in title should NOT be capped."""
+        jobs = [self._make_job("Product UX Designer", 7)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 7
+        assert "cap_applied" not in result[0]
+
+    # --- DevOps/SRE (no AI/product): MAX 3 ---
+
+    def test_caps_devops_to_3(self):
+        jobs = [self._make_job("DevOps Engineer", 6)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 3
+        assert result[0]["cap_reason"] == "devops_sre_no_ai_product"
+
+    def test_caps_sre_to_3(self):
+        jobs = [self._make_job("SRE Engineer", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 3
+
+    def test_exempts_ai_devops(self):
+        """DevOps with AI keyword should NOT be capped."""
+        jobs = [self._make_job("AI DevOps Engineer", 7)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 7
+
+    def test_exempts_product_platform_engineer(self):
+        """Platform engineer with 'product' in title should NOT be capped."""
+        jobs = [self._make_job("Product Platform Engineer", 6)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 6
+
+    # --- Pure engineer (no PM/product): MAX 4 ---
+
+    def test_caps_software_engineer_to_4(self):
+        jobs = [self._make_job("Software Engineer", 7)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 4
+        assert result[0]["cap_reason"] == "pure_engineer_no_product"
+
+    def test_caps_backend_engineer_to_4(self):
+        jobs = [self._make_job("Backend Engineer", 6)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 4
+
+    def test_exempts_product_software_engineer(self):
+        """Software engineer with 'product' keyword should NOT be capped."""
+        jobs = [self._make_job("Product Software Engineer", 7)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 7
+
+    def test_exempts_ai_software_engineer(self):
+        """Software engineer with AI keyword should NOT be capped."""
+        jobs = [self._make_job("AI Software Engineer", 8)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 8
+
+    def test_exempts_ml_software_developer(self):
+        """Software developer with ML keyword should NOT be capped."""
+        jobs = [self._make_job("ML Software Developer", 7)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 7
+
+    # --- Junior/entry-level: MAX 1 ---
+
+    def test_caps_junior_role_to_1(self):
+        jobs = [self._make_job("Junior Developer", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+        assert result[0]["cap_reason"] == "junior_entry_level"
+
+    def test_caps_intern_to_1(self):
+        jobs = [self._make_job("Intern Product Manager", 4)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+
+    def test_exempts_senior_with_junior_in_title(self):
+        """Title with both 'junior' and 'senior' should NOT be capped."""
+        jobs = [self._make_job("Senior (ex Junior) Lead", 6)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 6
+
+    # --- US-only non-remote: MAX 3 ---
+
+    def test_caps_us_non_remote_to_3(self):
+        jobs = [self._make_job("Product Manager", 7, location="San Francisco", remote=False)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 3
+        assert result[0]["cap_reason"] == "us_only_non_remote"
+
+    def test_no_cap_us_if_remote(self):
+        """US location with remote=True should NOT be location-capped."""
+        jobs = [self._make_job("Product Manager", 7, location="San Francisco", remote=True)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 7
+
+    def test_no_cap_eu_location(self):
+        """EU location should NOT be capped."""
+        jobs = [self._make_job("Product Manager", 8, location="Berlin, Germany")]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 8
+
+    # --- Edge cases ---
+
+    def test_skips_zero_scored_jobs(self):
+        """Jobs with score 0 should not be processed."""
+        jobs = [self._make_job("Sales Manager", 0)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 0
+        assert "cap_applied" not in result[0]
+
+    def test_no_cap_when_already_below(self):
+        """If score is already at or below the cap, no cap is applied."""
+        jobs = [self._make_job("Sales Manager", 1)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+        assert "cap_applied" not in result[0]
+
+    def test_preserves_original_reasoning(self):
+        """Cap should prepend to existing reasoning, not replace it."""
+        jobs = [self._make_job("Sales Manager", 5, reasoning="AI thinks this is great")]
+        result = apply_hard_caps(jobs)
+        assert "AI thinks this is great" in result[0]["fit_reasoning"]
+        assert "Hard-capped from 5 to 1" in result[0]["fit_reasoning"]
+
+    def test_empty_title_no_crash(self):
+        jobs = [self._make_job("", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 5  # No pattern matches empty title
+
+    def test_none_title_no_crash(self):
+        jobs = [{"title": None, "fit_score": 5, "location": "Remote"}]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 5
+
+    def test_multiple_jobs_independent(self):
+        """Each job is capped independently."""
+        jobs = [
+            self._make_job("Sales Manager", 5),
+            self._make_job("AI Product Manager", 8, location="Berlin"),
+            self._make_job("Software Engineer", 7),
+        ]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1  # Sales capped
+        assert result[1]["fit_score"] == 8  # AI PM untouched
+        assert result[2]["fit_score"] == 4  # Pure engineer capped
+
+    def test_first_matching_rule_wins(self):
+        """Only the first (most restrictive) matching rule should apply."""
+        # "customer support" matches both MAX 1 rule and potentially others
+        jobs = [self._make_job("Customer Support Specialist", 5)]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+        assert result[0]["cap_reason"] == "sales_finance_hr_legal_healthcare_support"
+
+    def test_returns_same_list(self):
+        """apply_hard_caps mutates and returns the same list."""
+        jobs = [self._make_job("Product Manager", 8)]
+        result = apply_hard_caps(jobs)
+        assert result is jobs
+
+
+# ==================== Pre-filter + Hard cap interaction ====================
+
+
+class TestPreFilterAndHardCapInteraction:
+    """Test that pre-filters and hard caps work correctly together."""
+
+    def test_pre_filtered_job_not_hard_capped(self):
+        """Jobs rejected by pre-filter (score 0) should not be processed by hard caps."""
+        # Pre-filter would reject this
+        skip, _, _ = pre_filter_job("Senior Accountant", "BigCo", "Remote")
+        assert skip is True
+        # If somehow it got through with score 0, hard caps should skip it
+        jobs = [{"title": "Senior Accountant", "fit_score": 0, "location": "Remote"}]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 0
+
+    def test_pre_filter_location_cap_then_hard_cap(self):
+        """
+        A job that passes pre-filter with a location cap of 3
+        should then also be checked by hard caps.
+        The more restrictive cap should win.
+        """
+        # Pre-filter gives US-only cap of 3
+        skip, _, cap = pre_filter_job("Sales Manager", "BigCo", "New York", remote=False)
+        assert skip is False
+        assert cap == 3
+        # After AI scoring gives 3 (due to pre-filter cap), hard caps check title
+        # Sales Manager matches MAX 1 rule, so it goes to 1
+        jobs = [{"title": "Sales Manager", "fit_score": 3, "location": "New York"}]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 1
+
+    def test_good_job_passes_both_layers(self):
+        """A genuinely good job should pass both pre-filter and hard caps untouched."""
+        skip, _, cap = pre_filter_job("Senior AI Product Manager", "Mistral", "Paris")
+        assert skip is False
+        assert cap is None
+        jobs = [{"title": "Senior AI Product Manager", "fit_score": 9, "location": "Paris"}]
+        result = apply_hard_caps(jobs)
+        assert result[0]["fit_score"] == 9
+        assert "cap_applied" not in result[0]
