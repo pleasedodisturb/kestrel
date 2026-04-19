@@ -75,7 +75,7 @@ def create_benchmark_profile(db, profile_data: dict | None = None):
     from career_os.models.skills import Goal, Skill
 
     job_family = (profile_data or {}).get("job_family", "TPM")
-    location = (profile_data or {}).get("location", "Frankfurt, Germany")
+    location = (profile_data or {}).get("location", "Berlin, Germany")
     key_skills = (profile_data or {}).get("key_skills")
 
     profile = Profile(
@@ -495,7 +495,7 @@ async def embedding_analysis(golden_set: list[dict], rubric_analysis: dict) -> d
     profile_text = (
         "Technical Program Manager with expertise in AI/ML, Python, "
         "cross-functional leadership, cloud infrastructure, and stakeholder management. "
-        "Based in Frankfurt, Germany. Seeking AI program lead role at a top-tier tech company."
+        "Based in Berlin, Germany. Seeking AI program lead role at a top-tier tech company."
     )
     log.info("Generating profile embedding...")
     profile_emb = await get_embedding(profile_text)

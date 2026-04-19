@@ -17,8 +17,46 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import yaml
 
-PROFILE_CRITERIA = """
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# --------------------------------------------------------------------------
+# Profile loading -- reads from config/personal.yaml with generic defaults
+# --------------------------------------------------------------------------
+
+_DEFAULT_PROFILE = {
+    "background_summary": "Senior engineer with 8+ years in tech",
+    "target_roles": ["Senior Software Engineer", "Staff Engineer", "Engineering Manager"],
+    "location": "Berlin, Germany",
+    "salary_range": {"min": 80000, "max": 140000, "currency": "EUR"},
+    "languages": "English (fluent)",
+    "values": ["builder culture", "shipping over process"],
+}
+
+
+def _load_profile():
+    """Load candidate profile from config/personal.yaml, falling back to defaults."""
+    config_path = PROJECT_ROOT / "config" / "personal.yaml"
+    if config_path.exists():
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f) or {}
+    else:
+        cfg = {}
+    return {
+        "background_summary": cfg.get("background_summary", _DEFAULT_PROFILE["background_summary"]),
+        "target_roles": cfg.get("target_roles", _DEFAULT_PROFILE["target_roles"]),
+        "location": cfg.get("location", _DEFAULT_PROFILE["location"]),
+        "salary_min": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get("min", 80000),
+        "salary_max": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get("max", 140000),
+        "salary_currency": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get("currency", "EUR"),
+        "languages": cfg.get("languages", _DEFAULT_PROFILE["languages"]),
+    }
+
+
+_PROFILE = _load_profile()
+
+PROFILE_CRITERIA = f"""
 Ideal candidate profile for job scoring:
 
 MUST-HAVES (weight heavily):
@@ -29,7 +67,7 @@ MUST-HAVES (weight heavily):
 - Leadership or senior IC role
 
 STRONG POSITIVES:
-- Remote-friendly or Frankfurt-based
+- Remote-friendly or {_PROFILE["location"]}-based
 - Equity/RSU component
 - Startup or scale-up environment
 - Building things, not just reporting on them
@@ -44,13 +82,9 @@ RED FLAGS (score down):
 - "Must have 10+ years in [narrow specialty]"
 
 SALARY & EFFORT CONTEXT:
-- Target: 120-160k EUR base. Below 100k is a dealbreaker unless exceptional trajectory.
-- Sweet spot: Staff/Lead at Series B-D (100-140k base, PMF achieved, reasonable hours, real equity).
-- Caution: Director+ at hypergrowth companies (Delivery Hero, HelloFresh) -- intense culture.
-- Caution: Founding roles at pre-seed/seed -- equity lottery + 60hr weeks.
+- Target: {_PROFILE["salary_min"]//1000}-{_PROFILE["salary_max"]//1000}k {_PROFILE["salary_currency"]} base. Below {_PROFILE["salary_min"]*3//4//1000}k is a dealbreaker unless exceptional trajectory.
+- Sweet spot: Staff/Lead at Series B-D (PMF achieved, reasonable hours, real equity).
 - Green flags: "sustainable pace", "work-life balance", 4-day week, async-first.
-- Germany market bands: Senior 80-110k, Staff/Lead 100-140k, Director 120-160k.
-- Remote-first international companies pay 15-30% above local German market.
 - If salary not posted, estimate based on company stage, role level, and location.
 
 SALARY SCORING:
@@ -76,19 +110,18 @@ SCORING_SYSTEM_PROMPT_BASE = (
     "do NOT fit this specific candidate. Your job is to save the candidate time by "
     "ruthlessly filtering out poor matches.\n\n"
     "THE CANDIDATE:\n"
-    "- Senior TPM/Product Manager with 10+ years at Amazon (Ring, Alexa), Wolt, CloudMade\n"
+    f"- {_PROFILE['background_summary']}\n"
     "- Building AI tools: LLM pipelines, MCP servers, agentic systems\n"
-    "- Target roles: Senior TPM at AI companies, Product Engineer, AI Program Lead, "
-    "DevRel (AI), Founding Engineer at AI startups\n"
-    "- Location: Frankfurt, Germany. Remote EMEA OK. Cannot relocate outside Germany.\n"
-    "- Salary: 120-160k EUR base\n"
-    "- Languages: English (fluent), German (A2), Ukrainian/Russian (native)\n\n"
+    f"- Target roles: {', '.join(_PROFILE['target_roles'])}\n"
+    f"- Location: {_PROFILE['location']}. Remote EMEA OK.\n"
+    f"- Salary: {_PROFILE['salary_min']//1000}-{_PROFILE['salary_max']//1000}k {_PROFILE['salary_currency']} base\n"
+    f"- Languages: {_PROFILE['languages']}\n\n"
     "SCORING CALIBRATION (follow EXACTLY):\n"
     "- 9-10: DREAM JOB. Must meet ALL: (a) AI-native company or strong AI mandate, "
-    "(b) exact role match (TPM/PM/DevRel/Product Eng/AI Lead), (c) Frankfurt or full "
-    "remote EU, (d) 120k+ EUR realistic. Max 2-3 per 200 jobs.\n"
+    f"(b) exact role match (TPM/PM/DevRel/Product Eng/AI Lead), (c) {_PROFILE['location']} or full "
+    f"remote EU, (d) {_PROFILE['salary_min']//1000}k+ {_PROFILE['salary_currency']} realistic. Max 2-3 per 200 jobs.\n"
     "- 7-8: STRONG FIT. Right type of role (PM/TPM/DevRel/Product) at a good company. "
-    "Minor gaps like Berlin not Frankfurt, or good company but role is slightly adjacent. "
+    f"Minor gaps like different city than {_PROFILE['location']}, or good company but role is slightly adjacent. "
     "Max 10-15 per 200.\n"
     "- 5-6: MAYBE. Interesting company but role is process-heavy, OR good role type but "
     "at a non-tech company. Requires compromise.\n"

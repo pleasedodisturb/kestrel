@@ -620,23 +620,23 @@ async def fill_custom_questions(page, app: dict) -> None:
     if "lever.co" in url and "mistral" in url.lower():
         # Fill "Current location" field
         try:
-            await _fill_field_by_label(page, "Current location", "Frankfurt, Germany")
+            await _fill_field_by_label(page, "Current location", PERSONAL["location"])
         except Exception as e:
             print(f"    [custom] Lever/Mistral: could not fill 'Current location': {e}")
 
         # Fill custom textareas by scanning all textareas on the page
         # and matching by nearby text content
         product_exp = (
-            "At Wolt, I built an AI-augmented program management system from scratch - "
-            "6 LLMs (Claude, OpenAI, Gemini) orchestrated through 4 enterprise APIs "
-            "(Atlassian, GSuite, Slack, Glean). B2B internal tooling, enterprise-grade, "
+            "REDACTED - "
+            "REDACTED. "
+            "B2B internal tooling, enterprise-grade, "
             "REDACTED.\n\n"
-            "At Amazon Ring, I shipped Ring Ultra - a radar-based security camera from "
-            "sensor research to 800k-2M units. B2C hardware product, 10 teams, 5 countries, "
+            "REDACTED "
+            "sensor research to high-volume production. REDACTED, "
             "full hardware/ML/firmware/software stack.\n\n"
-            "Currently building CareerOS - a full-stack career operations platform "
+            "Currently building Kestrel - a full-stack career operations platform "
             "(Python/FastAPI backend, React frontend, multi-agent AI scoring pipelines, "
-            "CI/CD, automated job scraping). Solo-built in Claude Code."
+            "CI/CD, automated job scraping). Solo-built with AI coding tools."
         )
         try:
             # Use JavaScript to find textareas and check nearby text
@@ -775,7 +775,7 @@ async def fill_custom_questions(page, app: dict) -> None:
             ("Will you require sponsorship", "No", False),
             ("interviewed at Anthropic before", "No", False),
             ("experience with Claude Code", ANTHROPIC_CLAUDE_CODE_EXP, False),
-            ("Working address", "Frankfurt, Germany", False),
+            ("Working address", PERSONAL["location"], False),
         ]
         for label, value, exact in gh_fields:
             try:

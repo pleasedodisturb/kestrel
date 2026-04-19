@@ -377,7 +377,7 @@ def score_job_local(job: dict) -> dict:
     if "founding" in title or "founding" in description[:200]:
         salary = "90-120k EUR + equity"
     elif any(kw in title for kw in ["head of", "director", "vp "]):
-        salary = "120-160k EUR"
+        salary = "100-150k EUR"
     elif any(kw in title for kw in ["staff", "principal", "lead"]):
         salary = "100-140k EUR"
     elif any(kw in title for kw in ["senior"]):

@@ -28,7 +28,7 @@ class TestDefaults:
         assert DEFAULT_SITES == ["linkedin", "indeed", "glassdoor", "google"]
 
     def test_default_location(self):
-        assert DEFAULT_LOCATION == "Frankfurt, Germany"
+        assert DEFAULT_LOCATION == "Berlin, Germany"
 
     def test_default_hours_old(self):
         assert DEFAULT_HOURS_OLD == 72

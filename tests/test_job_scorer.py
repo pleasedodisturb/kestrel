@@ -33,7 +33,7 @@ class TestProfileCriteria:
         assert "prep_level" in PROFILE_CRITERIA
 
     def test_salary_target_present(self):
-        assert "120-160k" in PROFILE_CRITERIA
+        assert "EUR" in PROFILE_CRITERIA  # salary range loaded from config
 
 
 # ==================== Pre-filter constants ====================
@@ -431,7 +431,7 @@ class TestScoreJob:
         assert "EXTREMELY strict" in system_msg
         assert "HARD CAPS" in system_msg
         assert "MAX 1" in system_msg  # Sales, accounting, etc. capped at 1
-        assert "120-160k EUR" in system_msg
+        assert "EUR" in system_msg  # salary range from config
 
     def test_prompt_contains_candidate_profile(self):
         """Verify the system prompt includes candidate details."""
@@ -440,9 +440,9 @@ class TestScoreJob:
 
         call_args = client.chat.completions.create.call_args
         system_msg = call_args[1]["messages"][0]["content"]
-        assert "Amazon" in system_msg
-        assert "Frankfurt" in system_msg
-        assert "TPM" in system_msg
+        assert "THE CANDIDATE" in system_msg  # profile section present
+        assert "SCORING CALIBRATION" in system_msg
+        assert "HARD CAPS" in system_msg
 
 
 # ==================== Integration: pre_filter + score_job ====================

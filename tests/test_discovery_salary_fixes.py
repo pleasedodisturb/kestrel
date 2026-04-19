@@ -664,6 +664,6 @@ class TestPassesSpFilters:
         assert _passes_sp_filters(merged, {"company": "Google"}) is False
 
     def test_location_filter(self):
-        merged = self._make_merged(location="Frankfurt, Germany")
-        assert _passes_sp_filters(merged, {"location": "Frankfurt"}) is True
-        assert _passes_sp_filters(merged, {"location": "Berlin"}) is False
+        merged = self._make_merged(location="Berlin, Germany")
+        assert _passes_sp_filters(merged, {"location": "Berlin"}) is True
+        assert _passes_sp_filters(merged, {"location": "Munich"}) is False
