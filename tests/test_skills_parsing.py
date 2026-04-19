@@ -429,7 +429,7 @@ class TestCVParsing:
         skills = parse_cv_yaml(cv_yaml_path)
         asr_skills = [s for s in skills if s.name == "Speech Recognition (ASR)"]
         assert len(asr_skills) == 1
-        assert "Alexa" in asr_skills[0].evidence_detail
+        assert "TechCorp" in asr_skills[0].evidence_detail
 
     def test_cv_nonexistent_file_returns_empty(self, tmp_path: Path):
         skills = parse_cv_yaml(tmp_path / "nonexistent.yaml")

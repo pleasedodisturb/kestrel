@@ -371,7 +371,7 @@ class TestSalaryBenchmarks:
             "/api/intelligence/salary",
             params={
                 "role": "TPM",
-                "location": "Frankfurt",
+                "location": "Berlin",
                 "profile_id": test_profile.id,
             },
         )
