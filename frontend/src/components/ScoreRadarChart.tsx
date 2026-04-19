@@ -101,9 +101,10 @@ export function ScoreRadarChart({ scores }: ScoreRadarChartProps) {
                 borderRadius: 8,
                 border: "1px solid #e2e8f0",
               }}
-              formatter={(value: number, _name, payload) => {
-                const full = payload?.payload?.full as string | undefined;
-                return [`${value.toFixed(1)} / 10`, full ?? "Score"];
+              formatter={(value, _name, props) => {
+                const v = Number(value);
+                const full = props?.payload?.full as string | undefined;
+                return [`${v.toFixed(1)} / 10`, full ?? "Score"];
               }}
             />
             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -139,9 +140,10 @@ export function ScoreRadarChart({ scores }: ScoreRadarChartProps) {
               borderRadius: 8,
               border: "1px solid #e2e8f0",
             }}
-            formatter={(value: number, _name, payload) => {
-              const full = payload?.payload?.full as string | undefined;
-              return [`${value.toFixed(1)} / 10`, full ?? "Score"];
+            formatter={(value, _name, props) => {
+              const v = Number(value);
+              const full = props?.payload?.full as string | undefined;
+              return [`${v.toFixed(1)} / 10`, full ?? "Score"];
             }}
           />
         </RadarChart>
