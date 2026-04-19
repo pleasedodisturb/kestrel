@@ -102,7 +102,7 @@ def sample_goal(test_db: Session, test_profile: Profile) -> Goal:
         goal_type="aspirational",
         target_date=datetime(2026, 6, 1, tzinfo=UTC),
         status="active",
-        description="Target 120-160k EUR base + equity at a top tech company.",
+        description="Target 100-150k EUR base + equity at a top tech company.",
     )
     test_db.add(goal)
     test_db.commit()

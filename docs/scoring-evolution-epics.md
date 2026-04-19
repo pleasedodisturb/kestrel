@@ -499,7 +499,7 @@ Eugene Yan's RecSys+LLM patterns: cheap embedding filter → expensive LLM score
   Job Family: Technical Program Manager
   Skills: Python (expert), React (intermediate), Kubernetes (beginner), ...
   Goals: AI-native company, senior IC track, remote-first
-  Location: Frankfurt, Germany (open to EU remote)
+  Location: Berlin, Germany (open to EU remote)
   ```
 - **JD text:** Use the full `description` from DiscoveredJob. If >8K tokens, truncate to first
   8K (nomic-embed-text context limit).

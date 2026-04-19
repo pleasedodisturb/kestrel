@@ -68,7 +68,7 @@ const SAMPLE_PROFILE: ProfileResponse = {
   id: 1,
   name: "Kestrel User",
   email: "user@example.com",
-  location: "Frankfurt, Germany",
+  location: "Berlin, Germany",
   job_family: "Senior TPM",
   created_at: "2026-03-01T08:00:00Z",
   updated_at: "2026-03-10T14:30:00Z",
@@ -134,7 +134,7 @@ describe("SettingsPage — Profiles tab", () => {
       await renderSettingsProfilesTab();
       expect(
         await screen.findByTestId("profile-location-1"),
-      ).toHaveTextContent("Frankfurt, Germany");
+      ).toHaveTextContent("Berlin, Germany");
     });
 
     it("shows profile job family", async () => {

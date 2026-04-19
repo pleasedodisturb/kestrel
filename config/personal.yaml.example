@@ -24,3 +24,12 @@ salary_range:
   min: 80000
   max: 140000
   currency: "EUR"
+
+languages: "English (fluent), German (B1)"
+
+values:
+  - "builder culture"
+  - "shipping over process"
+  - "user empathy"
+
+background_summary: "Senior engineer with 8+ years at TechCorp, StartupAI, DataInc"
