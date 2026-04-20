@@ -62,13 +62,12 @@ Plans:
   1. Ten pre-baked sample jobs spanning 3+ job families (not just tech -- includes marketing, operations, finance) ship as fixture data in the package
   2. Demo records display relative dates (never look stale), carry an `is_demo=True` flag, and show a "Sample Results" banner in the UI
   3. The demo seeder is idempotent -- running it multiple times produces exactly the same result with no duplicate records
-**Plans**: 4 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Profile migration + resume extraction utilities
-- [ ] 02-02-PLAN.md — kestrel doctor health check command
-- [ ] 02-03-PLAN.md — kestrel init wizard core + first-run callback
-- [ ] 02-04-PLAN.md — Resume paste integration + resume-from-last-step
+- [ ] 03-01-PLAN.md — Alembic migration, fixture JSON, and demo seeder module (DEMO-01, DEMO-02, DEMO-03, DEMO-05)
+- [ ] 03-02-PLAN.md — CLI integration: init seeding, doctor auto-fix, pipeline banner (DEMO-04, DEMO-05)
+- [ ] 03-03-PLAN.md — Auto-clear hook and full test suite (DEMO-01 through DEMO-05, D-13)
 
 ### Phase 4: Web Welcome Flow
 **Goal**: A first-time web visitor is guided from an empty dashboard to a populated profile with demo results, knows what was configured and what was skipped, and sees the path to full AI-powered scoring
@@ -117,6 +116,6 @@ Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 |-------|----------------|--------|-----------|
 | 1. Onboarding State Foundation | 4/4 | Complete | 2026-04-20 |
 | 2. CLI Wizard | 4/4 | Complete | 2026-04-20 |
-| 3. Demo Data | 0/0 | Not started | - |
+| 3. Demo Data | 0/3 | Planned | - |
 | 4. Web Welcome Flow | 0/0 | Not started | - |
 | 5. Interactive Tour, Feedback, and Polish | 0/0 | Not started | - |
