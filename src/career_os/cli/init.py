@@ -239,6 +239,7 @@ def init(
                             profile_id=profile.id,
                             name=skill_name,
                             category="technical",  # default; normalizer refines later
+                            evidence_source="resume_paste",
                         )
                     )
                     skills_added += 1
