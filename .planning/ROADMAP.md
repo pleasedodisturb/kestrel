@@ -46,7 +46,13 @@ Plans:
   3. Extracted/entered data is shown for user confirmation before saving to the profile
   4. `kestrel init --skip` creates a complete default profile and exits immediately; non-TTY environments get a clear message with `--non-interactive` guidance
   5. `kestrel doctor` verifies setup health (DB, config, sample data, Python version) and every error during onboarding includes what happened, why, and what to do next
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Profile migration + resume extraction utilities
+- [ ] 02-02-PLAN.md — kestrel doctor health check command
+- [ ] 02-03-PLAN.md — kestrel init wizard core + first-run callback
+- [ ] 02-04-PLAN.md — Resume paste integration + resume-from-last-step
 
 ### Phase 3: Demo Data
 **Goal**: Users see realistic scored job results immediately after onboarding completes, proving the tool works without requiring any API key or external service
@@ -56,7 +62,13 @@ Plans:
   1. Ten pre-baked sample jobs spanning 3+ job families (not just tech -- includes marketing, operations, finance) ship as fixture data in the package
   2. Demo records display relative dates (never look stale), carry an `is_demo=True` flag, and show a "Sample Results" banner in the UI
   3. The demo seeder is idempotent -- running it multiple times produces exactly the same result with no duplicate records
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Profile migration + resume extraction utilities
+- [ ] 02-02-PLAN.md — kestrel doctor health check command
+- [ ] 02-03-PLAN.md — kestrel init wizard core + first-run callback
+- [ ] 02-04-PLAN.md — Resume paste integration + resume-from-last-step
 
 ### Phase 4: Web Welcome Flow
 **Goal**: A first-time web visitor is guided from an empty dashboard to a populated profile with demo results, knows what was configured and what was skipped, and sees the path to full AI-powered scoring
@@ -67,7 +79,13 @@ Plans:
   2. The welcome flow walks through setup steps including the same profile questions as the CLI (name, location, roles, salary, skills, experience), and users can resume from last completed step after closing the browser
   3. End-of-onboarding summary shows what was configured and what was skipped, with "do it later" signposting providing exact navigation paths (e.g., "Settings > Profile")
   4. After onboarding completes, an "Unlock full scoring" card shows AI provider options (OpenRouter one-click OAuth, Together.ai, Ollama) with a link to provider settings
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Profile migration + resume extraction utilities
+- [ ] 02-02-PLAN.md — kestrel doctor health check command
+- [ ] 02-03-PLAN.md — kestrel init wizard core + first-run callback
+- [ ] 02-04-PLAN.md — Resume paste integration + resume-from-last-step
 **UI hint**: yes
 
 ### Phase 5: Interactive Tour, Feedback, and Polish
@@ -80,7 +98,13 @@ Plans:
   3. A persistent feedback button is visible on all web pages (bottom-right) that opens a pre-filled GitHub issue URL with system info (OS, Python version, Kestrel version)
   4. End-of-onboarding screen prompts for feedback with a link to GitHub issues and contact info
   5. A "Getting Started for Non-Developers" documentation page exists explaining terminal basics needed for Kestrel
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Profile migration + resume extraction utilities
+- [ ] 02-02-PLAN.md — kestrel doctor health check command
+- [ ] 02-03-PLAN.md — kestrel init wizard core + first-run callback
+- [ ] 02-04-PLAN.md — Resume paste integration + resume-from-last-step
 **UI hint**: yes
 
 ## Progress
