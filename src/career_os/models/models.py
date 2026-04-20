@@ -75,6 +75,11 @@ class Profile(Base):
         cascade=CASCADE_ALL_DELETE_ORPHAN
     )
 
+    # Onboarding state (one-to-one, optional — may not exist for pre-onboarding profiles)
+    onboarding_state: Mapped["OnboardingState | None"] = relationship(  # noqa: F821
+        "OnboardingState", back_populates="profile", uselist=False
+    )
+
     def __repr__(self) -> str:
         return f"<Profile(id={self.id}, name='{self.name}')>"
 
