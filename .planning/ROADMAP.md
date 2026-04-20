@@ -81,7 +81,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Infrastructure: backend schema fix, API layer, hooks, OnboardingGuard, route wiring, wizard removal
+- [x] 04-01-PLAN.md — Infrastructure: backend schema fix, API layer, hooks, OnboardingGuard, route wiring, wizard removal — COMPLETE 2026-04-21
 - [ ] 04-02-PLAN.md — WelcomePage + StepProgress: full welcome/step/summary flow implementation
 - [ ] 04-03-PLAN.md — Test suite: OnboardingGuard, WelcomePage, StepProgress tests
 - [ ] 04-04-PLAN.md — Visual verification checkpoint
@@ -111,5 +111,5 @@ Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 | 1. Onboarding State Foundation | 4/4 | Complete | 2026-04-20 |
 | 2. CLI Wizard | 4/4 | Complete | 2026-04-20 |
 | 3. Demo Data | 3/3 | Complete | 2026-04-20 |
-| 4. Web Welcome Flow | 0/4 | Planned | - |
+| 4. Web Welcome Flow | 1/4 | Executing | - |
 | 5. Interactive Tour, Feedback, and Polish | 0/0 | Not started | - |

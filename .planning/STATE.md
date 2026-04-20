@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 execution complete — verifying
-last_updated: "2026-04-20T17:25:00Z"
-last_activity: 2026-04-20
+stopped_at: Phase 4 Plan 01 complete — infrastructure layer done
+last_updated: "2026-04-21T00:28:00Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_plans: 15
+  completed_plans: 12
+  percent: 80
 ---
 
 # Project State
@@ -21,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-19)
 
 **Core value:** A user who has never seen Kestrel finishes onboarding understanding what it does, has their profile populated, has seen scored results, and knows where to go next -- all in under 10 minutes.
-**Current focus:** Phase 3 — Demo Data (complete, verifying)
+**Current focus:** Phase 4 — Web Welcome Flow (planned, ready to execute)
 
 ## Current Position
 
-Phase: 3 (demo-data) — COMPLETE
-Plan: 3 of 3
-Status: Phase 3 executed — 3 plans, 2 waves, 10/11 tests passed
-Last activity: 2026-04-20
+Phase: 4 (web-welcome-flow) — EXECUTING
+Plan: 1 of 4
+Status: Plan 01 complete — infrastructure layer (guard, API, hooks, schema fix)
+Last activity: 2026-04-21
 
-Progress: [██████████] 100% (Phase 3)
+Progress: [████████░░] 80% (Phase 4, Plan 1/4)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: 7 min
-- Total execution time: 0.46 hours
+- Total execution time: 0.56 hours
 
 **By Phase:**
 
@@ -48,13 +48,14 @@ Progress: [██████████] 100% (Phase 3)
 
 **Recent Trend:**
 
-- Last 5 plans: 01-00 (4 min), 01-01 (9 min), 01-02 (10 min), 01-03 (5 min)
+- Last 5 plans: 01-01 (9 min), 01-02 (10 min), 01-03 (5 min), 04-01 (6 min)
 - Trend: stable
 
 *Updated after each plan completion*
 | Phase 01-onboarding-state-foundation P01 | 9min | 3 tasks | 5 files |
 | Phase 01-onboarding-state-foundation P02 | 10min | 2 tasks | 6 files |
 | Phase 01-onboarding-state-foundation P03 | 5min | 3 tasks | 3 files |
+| Phase 04-web-welcome-flow P01 | 6min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Used # noqa: F821 on cross-module forward references (OnboardingState, Profile) consistent with existing models.py patterns
 - [Phase ?]: Did not add from __future__ import annotations to models.py — absent before and adding it caused UP037 regressions on pre-existing annotations
 - [Phase ?]: OnboardingStepUpdate.step is plain str; step name validation happens in service layer for user-friendly 422 errors (D-09)
+- [Phase 4]: OnboardingGuard checks welcome_completed_at (not completed_at) to allow Phase 5 tour without re-blocking users
+- [Phase 4]: Guard fails open on API error -- self-hosted, prefer usability over strictness
+- [Phase 4]: WelcomePage placeholder created for TS compilation; full implementation in Plan 02
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-20T12:02:04Z
-Stopped at: Phase 1 Plan 03 complete (API routes + exception handler + 12-test suite)
+Last session: 2026-04-21T00:28:00Z
+Stopped at: Phase 4 Plan 01 complete (OnboardingGuard + API layer + schema fix + wizard removal)
 Resume file: None
