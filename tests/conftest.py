@@ -11,13 +11,11 @@ from sqlalchemy.orm import Session, sessionmaker
 from career_os.database import Base, get_db
 from career_os.main import app
 from career_os.models.models import Application, Profile
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
 
 # Ensure tools/ is importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
-
-
-from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
 
 
 # ---------------------------------------------------------------------------
