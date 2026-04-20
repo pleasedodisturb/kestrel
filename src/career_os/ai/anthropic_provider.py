@@ -23,6 +23,9 @@ from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
 logger = logging.getLogger(__name__)
 
+# Compact JSON separators — eliminates whitespace tokens (~30% reduction on profile data)
+_COMPACT = (",", ":")
+
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_BATCH_API_URL = "https://api.anthropic.com/v1/messages/batches"
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
@@ -228,7 +231,7 @@ class AnthropicProvider(AIProvider):
             f"desire_reasoning (string explaining what makes this job desirable "
             f"or undesirable from the candidate's perspective).\n\n"
             f"Job Description:\n{job_description}\n\n"
-            f"Profile:\n{json.dumps(profile_data, indent=2)}"
+            f"Profile:\n{json.dumps(profile_data, separators=_COMPACT)}"
         )
         return await self.complete(prompt, feature=AIFeature.score, tier=tier)
 
@@ -282,7 +285,7 @@ class AnthropicProvider(AIProvider):
                 f"certification/domain), matched (boolean)), "
                 f"desire_score (0-10), desire_reasoning (string).\n\n"
                 f"Job Description:\n{job['description']}\n\n"
-                f"Profile:\n{json.dumps(profile_data, indent=2)}"
+                f"Profile:\n{json.dumps(profile_data, separators=_COMPACT)}"
             )
 
             params: dict = {
