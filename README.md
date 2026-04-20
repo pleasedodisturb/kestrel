@@ -232,7 +232,8 @@ Our proof is in the research artifacts. Before building anything, we run paralle
 | **Testing** | [How Testing Works](docs/how-testing-works.md) | [Testing Strategy](docs/research/testing-research.md) | [Raw Findings](docs/research/testing-raw-research.md) |
 | **CI/CD** | [How CI/CD Works](docs/how-cicd-works.md) | [CI/CD Strategy](docs/research/cicd-research.md) | [Raw Findings](docs/research/cicd-raw-research.md) |
 | **Observability** | [How Observability Works](docs/how-observability-works.md) | [Observability Strategy](docs/research/observability-research.md) | [Setup Guide](docs/observability.md) |
-| **[LLM Token Costs](https://github.com/pleasedodisturb/awesome-llm-token-optimization)** | [Quick Wins](https://github.com/pleasedodisturb/awesome-llm-token-optimization#quick-wins) | [Tools & Strategies](https://github.com/pleasedodisturb/awesome-llm-token-optimization#contents) | [52 Papers + Sources](https://github.com/pleasedodisturb/awesome-llm-token-optimization/tree/main/research) |
+| **Token Optimization** | [How Token Optimization Works](docs/how-token-optimization-works.md) | [Strategy & Implementation](docs/research/token-optimization-research.md) | [Raw Findings](docs/research/token-optimization-raw-research.md) |
+| **[LLM Research Corpus](https://github.com/pleasedodisturb/awesome-llm-token-optimization)** | [Quick Wins](https://github.com/pleasedodisturb/awesome-llm-token-optimization#quick-wins) | [Tools & Strategies](https://github.com/pleasedodisturb/awesome-llm-token-optimization#contents) | [52 Papers + Sources](https://github.com/pleasedodisturb/awesome-llm-token-optimization/tree/main/research) |
 
 ## License
 
