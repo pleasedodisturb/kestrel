@@ -2,12 +2,14 @@
 
 from pydantic import BaseModel, Field
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 
 class FunnelStage(BaseModel):
     """A single stage in the conversion funnel."""
 
     stage: str = Field(..., description="Pipeline status name")
-    count: int = Field(..., description="Number of applications in this stage")
+    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number of applications in this stage")
     percentage: float = Field(
         ...,
         description=(
@@ -29,36 +31,36 @@ class WeeklyCount(BaseModel):
     """Weekly application count."""
 
     week: str = Field(..., description="ISO week start date (YYYY-MM-DD)")
-    count: int = Field(..., description="Number of applications created that week")
+    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number of applications created that week")
 
 
 class ScoreBucket(BaseModel):
     """A histogram bucket for score distribution."""
 
     range: str = Field(..., description="Score range label (e.g. '8-9')")
-    count: int = Field(..., description="Number of applications in this range")
+    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number of applications in this range")
 
 
 class PrepMetrics(BaseModel):
     """Interview prep completion metrics."""
 
-    total_sessions: int = Field(0, description="Total prep sessions created")
+    total_sessions: int = Field(0, ge=INT64_MIN, le=INT64_MAX, description="Total prep sessions created")
     completed_sessions: int = Field(
-        0, description="Sessions where all checklist items are completed"
+        0, ge=INT64_MIN, le=INT64_MAX, description="Sessions where all checklist items are completed"
     )
     completion_rate: float | None = Field(
         None, description="Percentage of prep sessions fully completed (0-100)"
     )
-    total_items: int = Field(0, description="Total checklist items across all sessions")
-    completed_items: int = Field(0, description="Total completed checklist items")
+    total_items: int = Field(0, ge=INT64_MIN, le=INT64_MAX, description="Total checklist items across all sessions")
+    completed_items: int = Field(0, ge=INT64_MIN, le=INT64_MAX, description="Total completed checklist items")
 
 
 class NotificationMetrics(BaseModel):
     """Notification delivery metrics."""
 
-    total_sent: int = Field(0, description="Total notifications sent")
-    total_failed: int = Field(0, description="Total failed notifications")
-    total_queued: int = Field(0, description="Total queued notifications")
+    total_sent: int = Field(0, ge=INT64_MIN, le=INT64_MAX, description="Total notifications sent")
+    total_failed: int = Field(0, ge=INT64_MIN, le=INT64_MAX, description="Total failed notifications")
+    total_queued: int = Field(0, ge=INT64_MIN, le=INT64_MAX, description="Total queued notifications")
     by_category: dict[str, int] = Field(
         default_factory=dict,
         description="Sent notification count per category (follow_up, ghost, discovery, interview)",

@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -294,10 +296,10 @@ class InterviewPatternsResult(BaseModel):
 class TokenUsage(BaseModel):
     """Token usage statistics from an AI provider response."""
 
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cache_creation_input_tokens: int = 0
-    cache_read_input_tokens: int = 0
+    input_tokens: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX)
+    output_tokens: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX)
+    cache_creation_input_tokens: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX)
+    cache_read_input_tokens: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX)
 
 
 # ---------------------------------------------------------------------------

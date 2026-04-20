@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -100,7 +102,7 @@ def is_valid_transition(from_status: str, to_status: str) -> bool:
 class ApplicationCreate(BaseModel):
     """Request body for POST /api/applications."""
 
-    profile_id: int = Field(..., description="Profile this application belongs to")
+    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile this application belongs to")
     company: str = Field(..., min_length=1, description="Company name")
     role: str = Field(..., min_length=1, description="Role / job title")
     url: str | None = Field(default=None, description="Job posting URL")
@@ -162,7 +164,7 @@ def _ensure_utc(v: Any) -> datetime | None:
 class ActivityLogResponse(BaseModel):
     """Response schema for an activity log entry."""
 
-    id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
     action: str
     details: str | None = None
     source: str | None = None
@@ -179,8 +181,8 @@ class ActivityLogResponse(BaseModel):
 class ApplicationResponse(BaseModel):
     """Response schema for a single application."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     company: str
     role: str
     url: str | None = None
@@ -217,7 +219,7 @@ class ApplicationResponse(BaseModel):
 class FollowUpSummaryResponse(BaseModel):
     """Minimal follow-up info embedded in application detail."""
 
-    id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
     due_date: datetime
     follow_up_type: str
     notes: str | None = None
@@ -235,7 +237,7 @@ class FollowUpSummaryResponse(BaseModel):
 class ApplicationPackageSummaryResponse(BaseModel):
     """Minimal application-package info embedded in application detail."""
 
-    id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
     package_name: str
     file_path: str
     package_type: str
@@ -255,4 +257,4 @@ class ApplicationListResponse(BaseModel):
     """Response schema for list of applications."""
 
     applications: list[ApplicationResponse]
-    total: int
+    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
