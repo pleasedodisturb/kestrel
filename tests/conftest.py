@@ -22,9 +22,14 @@ sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 # Automatic test marker classification (D-01, D-02)
 # ---------------------------------------------------------------------------
 
-INTEGRATION_FIXTURES = frozenset({
-    "db_session", "client", "authenticated_client", "db_engine",
-})
+INTEGRATION_FIXTURES = frozenset(
+    {
+        "db_session",
+        "client",
+        "authenticated_client",
+        "db_engine",
+    }
+)
 
 
 def pytest_collection_modifyitems(items):
