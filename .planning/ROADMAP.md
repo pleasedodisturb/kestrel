@@ -31,7 +31,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Error hierarchy, OnboardingState model, Pydantic schemas (INF-01, INF-02 foundation)
+- [x] 01-00-PLAN.md — Wave 0 failing test stubs for INF-01, INF-02, INF-03 (TDD contract) — COMPLETE 2026-04-20
+- [x] 01-01-PLAN.md — Error hierarchy, OnboardingState model, Pydantic schemas (INF-01, INF-02 foundation)
 - [ ] 01-02-PLAN.md — Alembic migration registration, DB table creation, service layer business logic (INF-01, INF-02, INF-03 service)
 - [ ] 01-03-PLAN.md — API routes, main.py wiring, full test suite (INF-01, INF-02, INF-03 complete)
 
@@ -90,7 +91,7 @@ Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Onboarding State Foundation | 0/3 | Not started | - |
+| 1. Onboarding State Foundation | 2/4 | In Progress|  |
 | 2. CLI Wizard | 0/0 | Not started | - |
 | 3. Demo Data | 0/0 | Not started | - |
 | 4. Web Welcome Flow | 0/0 | Not started | - |
