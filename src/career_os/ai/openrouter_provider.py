@@ -211,28 +211,41 @@ class OpenRouterProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile via OpenRouter."""
-        prompt = (
-            f"Score this job against the candidate profile. "
-            f"Return a JSON object with: fit_score (0-10), reasoning (detailed, ≥100 chars), "
-            f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
-            f"readiness_score (0-100), career_alignment (0-10), "
-            f"score_breakdown (array of ≥3 objects, each with: factor (string), "
-            f"contribution (positive or negative float), description (string)), "
-            f"dimensional_scores (object with 6 floats 0-10: technical_fit, "
-            f"seniority_alignment, compensation_fit, location_fit, career_trajectory, "
-            f"company_fit), "
-            f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
-            f"category (one of technical/soft_skill/tool/certification/domain), "
-            f"matched (boolean — true if the profile demonstrates this keyword)), "
-            f"desire_score (0-10, how much the candidate would WANT this job — "
-            f"considering company reputation, growth potential, culture signals, "
-            f"role excitement, compensation attractiveness, work-life balance), "
-            f"desire_reasoning (string explaining what makes this job desirable "
-            f"or undesirable from the candidate's perspective).\n\n"
-            f"Job Description:\n{job_description}\n\n"
-            f"Profile:\n{json.dumps(profile_data, separators=_COMPACT)}"
+        prompt = _scoring_user_prompt(
+            job_description, json.dumps(profile_data, separators=_COMPACT)
         )
         return await self.complete(prompt, feature=AIFeature.score, tier=tier)
+
+
+def _scoring_user_prompt(job_description: str, profile_json: str | None = None) -> str:
+    """Build the user-message scoring prompt with job and optional profile.
+
+    Shared across all providers to avoid prompt drift between implementations.
+    The Anthropic provider passes profile_json=None (profile is in system block).
+    """
+    preamble = (
+        "Score this job against the candidate profile. "
+        "Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
+        "estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
+        "readiness_score (0-100), career_alignment (0-10), "
+        "score_breakdown (array of >=3 objects, each with: factor (string), "
+        "contribution (positive or negative float), description (string)), "
+        "dimensional_scores (object with 6 floats 0-10: technical_fit, "
+        "seniority_alignment, compensation_fit, location_fit, career_trajectory, "
+        "company_fit), "
+        "ats_keywords (array of 10-15 objects, each with: keyword (string), "
+        "category (one of technical/soft_skill/tool/certification/domain), "
+        "matched (boolean -- true if the profile demonstrates this keyword)), "
+        "desire_score (0-10, how much the candidate would WANT this job -- "
+        "considering company reputation, growth potential, culture signals, "
+        "role excitement, compensation attractiveness, work-life balance), "
+        "desire_reasoning (string explaining what makes this job desirable "
+        "or undesirable from the candidate's perspective)."
+    )
+    parts = [preamble, f"\n\nJob Description:\n{job_description}"]
+    if profile_json is not None:
+        parts.append(f"\n\nProfile:\n{profile_json}")
+    return "".join(parts)
 
 
 def _system_prompt_for_feature(feature: AIFeature) -> str | None:
