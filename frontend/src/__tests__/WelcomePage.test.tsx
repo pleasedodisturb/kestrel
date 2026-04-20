@@ -331,6 +331,84 @@ describe("WelcomePage", () => {
     });
   });
 
+  describe("Save behavior", () => {
+    it("calls updateProfile on Next with field value", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      await waitFor(() => {
+        expect(screen.getByText("What's your name?")).toBeInTheDocument();
+      });
+
+      const input = screen.getByRole("textbox");
+      fireEvent.change(input, { target: { value: "Alice" } });
+      fireEvent.click(screen.getByText("Next"));
+
+      await waitFor(() => {
+        expect(mockUpdateProfile).toHaveBeenCalledWith(1, { name: "Alice" });
+      });
+    });
+
+    it("calls createSkill for skills step", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      // Skip to skills step (step index 4)
+      for (let i = 0; i < 4; i++) {
+        await waitFor(() => {
+          expect(screen.getByText("Skip")).toBeInTheDocument();
+        });
+        fireEvent.click(screen.getByText("Skip"));
+      }
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("What are your key skills?"),
+        ).toBeInTheDocument();
+      });
+
+      const input = screen.getByRole("textbox");
+      fireEvent.change(input, { target: { value: "TypeScript, React" } });
+      fireEvent.click(screen.getByText("Next"));
+
+      await waitFor(() => {
+        expect(mockCreateSkill).toHaveBeenCalledWith({
+          profile_id: 1,
+          name: "TypeScript",
+          category: "technical",
+          evidence_source: "onboarding",
+        });
+        expect(mockCreateSkill).toHaveBeenCalledWith({
+          profile_id: 1,
+          name: "React",
+          category: "technical",
+          evidence_source: "onboarding",
+        });
+      });
+    });
+
+    it("treats empty Next as skip (no API call)", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      await waitFor(() => {
+        expect(screen.getByText("What's your name?")).toBeInTheDocument();
+      });
+
+      // Click Next with empty input
+      fireEvent.click(screen.getByText("Next"));
+
+      await waitFor(() => {
+        // Should advance to step 2 without calling updateProfile
+        expect(screen.getByText("Where are you based?")).toBeInTheDocument();
+      });
+      expect(mockUpdateProfile).not.toHaveBeenCalled();
+    });
+  });
+
   describe("Error handling", () => {
     it("shows error message when save fails", async () => {
       mockUpdateProfile.mockRejectedValueOnce(new Error("Network error"));
