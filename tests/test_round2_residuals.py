@@ -178,14 +178,11 @@ class TestOpenRouterScoreBreakdown:
         assert "contribution" in system_prompt
 
     def test_score_method_prompt_contains_score_breakdown(self):
-        """The user-facing prompt in score() should mention score_breakdown."""
-        from career_os.ai.openrouter_provider import OpenRouterProvider
+        """The scoring prompt template should mention score_breakdown."""
+        from career_os.ai.openrouter_provider import _scoring_user_prompt
 
-        provider = OpenRouterProvider(api_key="test-key")
-        import inspect
-
-        source = inspect.getsource(provider.score)
-        assert "score_breakdown" in source
+        prompt = _scoring_user_prompt("test job description")
+        assert "score_breakdown" in prompt
 
 
 # ---------------------------------------------------------------------------
