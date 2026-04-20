@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/pleasedodisturb/kestrel/compare/v0.8.0...v0.9.0) (2026-04-20)
+
+
+### Features
+
+* **G-405:** provider fallback chain — automatic retry on quota/timeout ([#249](https://github.com/pleasedodisturb/kestrel/issues/249)) ([e6c3adb](https://github.com/pleasedodisturb/kestrel/commit/e6c3adba692cee581d4d8c3511fe8bd5f391f92f))
+
 ## [0.8.0](https://github.com/pleasedodisturb/kestrel/compare/v0.7.1...v0.8.0) (2026-04-20)
 
 
