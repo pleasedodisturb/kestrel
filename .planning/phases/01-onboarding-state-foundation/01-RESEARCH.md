@@ -373,6 +373,7 @@ STEP_ORDER = [
     "welcome_completed",
     "tour_completed",
     "feedback_prompted",
+    "completed",
 ]
 
 def compute_next_step(state: OnboardingState) -> str | None:
@@ -407,7 +408,7 @@ def compute_progress_pct(state: OnboardingState) -> int:
 | A2 | GET endpoint for non-existent onboarding state should return a default "empty" response (all nulls, 0%) rather than 404 | Architecture Patterns | Medium -- if 404 is intended, frontend must handle it differently |
 | A3 | The `via` field per step is stored as a separate column per step (e.g., `profile_completed_via`) rather than a JSON blob | Code Examples | Low -- column-per-step is consistent with D-01 timestamp pattern |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **GET behavior when no OnboardingState exists**
    - What we know: D-13 says row created on first PATCH, not on profile creation

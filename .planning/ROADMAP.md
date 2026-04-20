@@ -28,7 +28,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. Onboarding state is persisted per-profile in the backend DB with timestamps (not booleans) and survives server restarts
   2. `GET /api/onboarding/status` returns the current onboarding state for a profile and `PATCH /api/onboarding/status` updates it
   3. Any onboarding error raised anywhere in the codebase carries a `user_message` and `resolution` field (no raw stack traces reach the user unless --verbose)
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Error hierarchy, OnboardingState model, Pydantic schemas (INF-01, INF-02 foundation)
+- [ ] 01-02-PLAN.md — Alembic migration registration, DB table creation, service layer business logic (INF-01, INF-02, INF-03 service)
+- [ ] 01-03-PLAN.md — API routes, main.py wiring, full test suite (INF-01, INF-02, INF-03 complete)
 
 ### Phase 2: CLI Wizard
 **Goal**: A user who runs `pip install kestrel-app` and types `kestrel` is guided through profile setup, sees their data confirmed, and knows exactly what to do next -- all from the terminal
@@ -85,7 +90,7 @@ Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Onboarding State Foundation | 0/0 | Not started | - |
+| 1. Onboarding State Foundation | 0/3 | Not started | - |
 | 2. CLI Wizard | 0/0 | Not started | - |
 | 3. Demo Data | 0/0 | Not started | - |
 | 4. Web Welcome Flow | 0/0 | Not started | - |
