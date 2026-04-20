@@ -173,6 +173,19 @@ def pipeline_list(
         query = query.order_by(Application.created_at.desc())
         applications = query.all()
 
+        # D-14: "Sample Results" banner when demo records present
+        has_demo = any(getattr(app, "is_demo", False) for app in applications)
+        if has_demo:
+            console.print(
+                Panel(
+                    "These are sample results to show how scoring works. "
+                    "They'll disappear once you add real jobs.",
+                    title="Sample Results",
+                    border_style="yellow",
+                )
+            )
+            console.print()  # spacing before table
+
         if not applications:
             if status:
                 console.print(f"[yellow]No matching applications with status '{status}'.[/yellow]")
