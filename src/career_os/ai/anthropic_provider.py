@@ -16,6 +16,7 @@ from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
 from career_os.ai.observability import observe, update_current_generation
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
+    _scoring_user_prompt,
     _system_prompt_for_feature,
     _try_parse_structured,
 )
@@ -233,26 +234,7 @@ class AnthropicProvider(AIProvider):
         block — enabling cross-call cache reuse when scoring multiple jobs
         for the same user.
         """
-        prompt = (
-            "Score this job against the candidate profile. "
-            "Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
-            "estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
-            "readiness_score (0-100), career_alignment (0-10), "
-            "score_breakdown (array of >=3 objects, each with: factor (string), "
-            "contribution (positive or negative float), description (string)), "
-            "dimensional_scores (object with 6 floats 0-10: technical_fit, "
-            "seniority_alignment, compensation_fit, location_fit, career_trajectory, "
-            "company_fit), "
-            "ats_keywords (array of 10-15 objects, each with: keyword (string), "
-            "category (one of technical/soft_skill/tool/certification/domain), "
-            "matched (boolean -- true if the profile demonstrates this keyword)), "
-            "desire_score (0-10, how much the candidate would WANT this job -- "
-            "considering company reputation, growth potential, culture signals, "
-            "role excitement, compensation attractiveness, work-life balance), "
-            "desire_reasoning (string explaining what makes this job desirable "
-            f"or undesirable from the candidate's perspective).\n\n"
-            f"Job Description:\n{job_description}"
-        )
+        prompt = _scoring_user_prompt(job_description)
         return await self.complete(prompt, feature=AIFeature.score, context=profile_data, tier=tier)
 
     async def batch_score(
@@ -292,25 +274,7 @@ class AnthropicProvider(AIProvider):
 
         requests: list[dict] = []
         for job in jobs:
-            prompt = (
-                "Score this job against the candidate profile. "
-                "Return a JSON object with: fit_score (0-10), reasoning "
-                "(detailed, >=100 chars), "
-                "estimated_salary (string), effort_flag (low/medium/high), "
-                "prep_level, prep_notes, "
-                "readiness_score (0-100), career_alignment (0-10), "
-                "score_breakdown (array of >=3 objects, each with: factor "
-                "(string), contribution (positive or negative float), "
-                "description (string)), "
-                "dimensional_scores (object with 6 floats 0-10: technical_fit, "
-                "seniority_alignment, compensation_fit, location_fit, "
-                "career_trajectory, company_fit), "
-                "ats_keywords (array of 10-15 objects, each with: keyword "
-                "(string), category (one of technical/soft_skill/tool/"
-                "certification/domain), matched (boolean)), "
-                f"desire_score (0-10), desire_reasoning (string).\n\n"
-                f"Job Description:\n{job['description']}"
-            )
+            prompt = _scoring_user_prompt(job["description"])
 
             params: dict = {
                 "model": self._model,
