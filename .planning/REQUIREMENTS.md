@@ -55,7 +55,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **INF-01**: Onboarding state persisted in backend DB (per-profile, timestamps not booleans), shared between CLI and web
 - [x] **INF-02**: `OnboardingError` exception hierarchy with `user_message` and `resolution` fields
-- [ ] **INF-03**: `GET/PATCH /api/onboarding/status` endpoints for state tracking
+- [x] **INF-03**: `GET/PATCH /api/onboarding/status` endpoints for state tracking
 - [ ] **INF-04**: Non-developer terminal guidance docs page ("Getting Started for Non-Developers")
 
 ## v2 Requirements
@@ -132,7 +132,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FB-03 | Phase 5 | Pending |
 | INF-01 | Phase 1 | Complete |
 | INF-02 | Phase 1 | Complete |
-| INF-03 | Phase 1 | Pending |
+| INF-03 | Phase 1 | Complete |
 | INF-04 | Phase 5 | Pending |
 
 **Coverage:**
