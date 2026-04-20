@@ -24,7 +24,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
-      docs_only: ${{ steps.filter.outputs.docs_only }}
+      docs_only: ${{ steps.filter.outputs.backend != 'true' && steps.filter.outputs.frontend != 'true' }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
@@ -46,14 +46,6 @@ jobs:
             docs_only:
               - '**/*.md'
               - 'docs/**'
-              - '!frontend/**'
-              - '!src/**'
-              - '!tests/**'
-              - '!pyproject.toml'
-              - '!alembic.ini'
-              - '!config/**'
-              - '!docker-compose*'
-              - '!.github/**'
 
   backend:
     name: Backend (Python 3.11)
