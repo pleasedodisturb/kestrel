@@ -1,3 +1,8 @@
+---
+title: "Observability Setup Guide"
+description: "How to set up Langfuse LLM observability for Kestrel"
+---
+
 # Observability with Langfuse
 
 Kestrel includes optional LLM observability via [Langfuse](https://langfuse.com) (v3, MIT licensed, self-hosted). When enabled, every AI provider call is traced with model, token usage, latency, cache hit/miss, and PII detection counts.

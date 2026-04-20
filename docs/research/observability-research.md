@@ -1,3 +1,8 @@
+---
+title: "Observability Research"
+description: "Research synthesis for LLM observability — platform selection, integration patterns, deployment model"
+---
+
 # Observability Research: Seeing Inside Your AI Pipeline
 
 **Researched:** 2026-04-20
