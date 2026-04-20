@@ -13,6 +13,7 @@ import logging
 import httpx
 
 from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
+from career_os.ai.observability import observe, update_current_generation
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
     _system_prompt_for_feature,
@@ -66,6 +67,7 @@ class AnthropicProvider(AIProvider):
         effective_tier = tier or ComplexityTier.STANDARD
         return _TIER_MODELS[effective_tier]
 
+    @observe(name="anthropic-complete", as_type="generation")
     async def complete(
         self,
         prompt: str,
@@ -78,6 +80,11 @@ class AnthropicProvider(AIProvider):
     ) -> AIResponse:
         """Send a completion request to the Anthropic Messages API."""
         model = self._resolve_model(tier)
+        update_current_generation(
+            input=prompt[:500],
+            model=model,
+            metadata={"feature": feature.value, "tier": (tier or "standard")},
+        )
         expects_structured = feature in _SCHEMA_MAP
 
         for attempt in range(1, max_retries + 2):
@@ -159,6 +166,15 @@ class AnthropicProvider(AIProvider):
             structured = _try_parse_structured(content, feature)
 
             if structured is not None or not expects_structured:
+                update_current_generation(
+                    output=content[:500],
+                    usage_details={
+                        "input": usage.input_tokens,
+                        "output": usage.output_tokens,
+                        "cache_read_input_tokens": usage.cache_read_input_tokens,
+                        "cache_creation_input_tokens": usage.cache_creation_input_tokens,
+                    },
+                )
                 return AIResponse(
                     content=content,
                     provider="anthropic",

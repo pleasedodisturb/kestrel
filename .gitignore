@@ -35,6 +35,7 @@ Thumbs.db
 .env.production
 .env.staging
 .env.*.local
+langfuse.env
 *.key
 credentials.json
 

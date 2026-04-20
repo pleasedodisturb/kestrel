@@ -1,0 +1,145 @@
+# docker-compose.langfuse.yml — Langfuse v3 observability stack (optional)
+#
+# Usage (with Kestrel):
+#   docker compose -f docker-compose.yml -f docker-compose.langfuse.yml up
+#
+# Usage (standalone):
+#   docker compose -f docker-compose.langfuse.yml up
+#
+# Langfuse UI: http://localhost:3100
+# Requires: 4 vCPU / 8 GB RAM minimum
+#
+# First-time setup:
+#   1. Copy langfuse.env.example to langfuse.env
+#   2. Generate secrets (see langfuse.env.example for instructions)
+#   3. Run docker compose up
+#   4. Langfuse auto-creates org/project/keys via LANGFUSE_INIT_* vars
+#
+# All credentials are sourced from langfuse.env — this file contains no secrets.
+
+services:
+  langfuse-web:
+    image: langfuse/langfuse:3
+    restart: unless-stopped
+    depends_on: &langfuse-depends-on
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+    ports:
+      - "3100:3000"
+    env_file: langfuse.env
+    environment: &langfuse-env
+      NEXTAUTH_URL: http://localhost:3100
+      PORT: 3000
+      # DATABASE_URL is constructed in langfuse.env from LANGFUSE_POSTGRES_* vars
+      # ClickHouse
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      # Redis
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: 6379
+      REDIS_TLS_ENABLED: "false"
+      # S3 / MinIO — event upload
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      # S3 / MinIO — media upload
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      # Telemetry
+      TELEMETRY_ENABLED: "true"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/public/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    restart: unless-stopped
+    depends_on: *langfuse-depends-on
+    env_file: langfuse.env
+    environment:
+      <<: *langfuse-env
+
+  langfuse-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5433:5432"
+    env_file: langfuse.env
+    volumes:
+      - langfuse-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:24
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8124:8123"
+      - "127.0.0.1:9001:9000"
+    env_file: langfuse.env
+    environment:
+      CLICKHOUSE_USER: default
+    volumes:
+      - langfuse-clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  langfuse-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    env_file: langfuse.env
+    command: redis-server --requirepass $${REDIS_AUTH}
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - langfuse-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  langfuse-minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9090:9000"
+      - "127.0.0.1:9091:9001"
+    env_file: langfuse.env
+    volumes:
+      - langfuse-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  langfuse-postgres-data:
+  langfuse-clickhouse-data:
+  langfuse-redis-data:
+  langfuse-minio-data:
