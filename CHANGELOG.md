@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1](https://github.com/pleasedodisturb/kestrel/compare/v0.7.0...v0.7.1) (2026-04-20)
+
+
+### Performance
+
+* **G-428:** use compact JSON serialization in AI provider score() calls ([#239](https://github.com/pleasedodisturb/kestrel/issues/239)) ([34b4995](https://github.com/pleasedodisturb/kestrel/commit/34b4995d13ce1e304f22d913fca881e644ccd973))
+* **G-429:** system prompt deduplication — profile in cached system block ([#242](https://github.com/pleasedodisturb/kestrel/issues/242)) ([b759290](https://github.com/pleasedodisturb/kestrel/commit/b759290c7b324a64857581be95e76e19b906b709))
+
 ## [0.7.0](https://github.com/pleasedodisturb/kestrel/compare/v0.6.0...v0.7.0) (2026-04-20)
 
 
