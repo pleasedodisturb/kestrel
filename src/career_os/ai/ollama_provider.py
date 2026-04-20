@@ -17,6 +17,9 @@ from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
 logger = logging.getLogger(__name__)
 
+# Compact JSON separators — eliminates whitespace tokens (~30% reduction on profile data)
+_COMPACT = (",", ":")
+
 DEFAULT_BASE_URL = "http://localhost:11434"
 DEFAULT_MODEL = "llama3.3"
 _TIMEOUT_SECONDS = 120.0
@@ -244,6 +247,6 @@ class OllamaProvider(AIProvider):
             f"category (one of technical/soft_skill/tool/certification/domain), "
             f"matched (boolean — true if the profile demonstrates this keyword)).\n\n"
             f"Job Description:\n{job_description}\n\n"
-            f"Profile:\n{json.dumps(profile_data, indent=2)}"
+            f"Profile:\n{json.dumps(profile_data, separators=_COMPACT)}"
         )
         return await self.complete(prompt, feature=AIFeature.score)
