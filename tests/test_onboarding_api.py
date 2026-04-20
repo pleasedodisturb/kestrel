@@ -15,10 +15,21 @@ import pytest
 
 
 def test_state_persisted(client, db_session, profile):
-    """INF-01: OnboardingState row persisted in DB after PATCH (D-01)."""
-    pytest.importorskip("career_os.models.onboarding")
-    pytest.importorskip("career_os.services.onboarding")
-    pytest.fail("stub — implement in Plan 02 Task 2")
+    """INF-01: OnboardingState row persisted in DB after first mark_step_complete call (D-01, D-13)."""
+    from career_os.models.onboarding import OnboardingState
+    from career_os.services.onboarding import mark_step_complete
+
+    # No row exists before first PATCH
+    before = db_session.query(OnboardingState).filter_by(profile_id=profile.id).first()
+    assert before is None
+
+    # After mark_step_complete, row exists with timestamp set
+    result = mark_step_complete("profile_started", "cli", profile.id, db_session)
+    after = db_session.query(OnboardingState).filter_by(profile_id=profile.id).first()
+    assert after is not None
+    assert after.profile_started_at is not None
+    assert after.profile_started_via == "cli"
+    assert result.profile_started_at is not None
 
 
 def test_state_survives_restart(client, db_session, profile):
@@ -35,8 +46,23 @@ def test_state_survives_restart(client, db_session, profile):
 
 def test_error_fields():
     """INF-02: OnboardingError has user_message, resolution, status_code (D-08)."""
-    pytest.importorskip("career_os.errors.onboarding")
-    pytest.fail("stub — implement in Plan 01 Task 1")
+    from career_os.errors.onboarding import (
+        OnboardingError,
+        OnboardingStateError,
+        OnboardingValidationError,
+    )
+
+    base = OnboardingError("base message", "base resolution", status_code=400)
+    assert base.user_message == "base message"
+    assert base.resolution == "base resolution"
+    assert base.status_code == 400
+
+    validation_err = OnboardingValidationError("bad step", "Valid steps are: ...")
+    assert validation_err.status_code == 422
+    assert validation_err.user_message == "bad step"
+
+    state_err = OnboardingStateError("already complete", "No action needed")
+    assert state_err.status_code == 409
 
 
 def test_error_response_format(client, db_session, profile):

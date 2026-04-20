@@ -22,6 +22,7 @@ from career_os.models.models import (
     FollowUp,
     Profile,
 )
+from career_os.models.onboarding import OnboardingState
 from career_os.models.pushover import NotificationLog, NotificationPreference
 from career_os.models.scoring import (
     ScoredJob,
@@ -63,6 +64,7 @@ __all__ = [
     "LearningResource",
     "NotificationLog",
     "NotificationPreference",
+    "OnboardingState",
     "Profile",
     "ScoredJob",
     "ScoringWeights",
