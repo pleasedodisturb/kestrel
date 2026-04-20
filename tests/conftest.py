@@ -19,14 +19,18 @@ sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 
 from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
 
-
 # ---------------------------------------------------------------------------
 # Automatic test marker classification (D-01, D-02)
 # ---------------------------------------------------------------------------
 
-INTEGRATION_FIXTURES = frozenset({
-    "db_session", "client", "authenticated_client", "db_engine",
-})
+INTEGRATION_FIXTURES = frozenset(
+    {
+        "db_session",
+        "client",
+        "authenticated_client",
+        "db_engine",
+    }
+)
 
 
 def pytest_collection_modifyitems(items):
