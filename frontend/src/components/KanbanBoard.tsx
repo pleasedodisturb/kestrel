@@ -23,13 +23,12 @@ import { APPLICATION_STATUSES, normalizeStatus } from "@/api/types";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCard } from "@/components/KanbanCard";
 import { CreateApplicationDialog } from "@/components/CreateApplicationDialog";
-import { PipelineFilters, type FilterState } from "@/components/PipelineFilters";
+import {
+  PipelineFilters,
+  type FilterState,
+} from "@/components/PipelineFilters";
 import { OverdueBanner } from "@/components/OverdueBanner";
 import { CreditsExhaustedBanner } from "@/components/CreditsExhaustedBanner";
-import {
-  OnboardingWizard,
-  WIZARD_DISMISSED_KEY,
-} from "@/components/OnboardingWizard";
 import {
   DiscoveryNudge,
   NUDGE_DISMISSED_KEY,
@@ -59,9 +58,6 @@ export function KanbanBoard() {
   const updateMutation = useUpdateApplication();
   const [activeApp, setActiveApp] = useState<Application | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showWizard, setShowWizard] = useState(
-    () => localStorage.getItem(WIZARD_DISMISSED_KEY) !== "true",
-  );
   const [nudgeDismissed, setNudgeDismissed] = useState(
     () => localStorage.getItem(NUDGE_DISMISSED_KEY) === "true",
   );
@@ -193,7 +189,9 @@ export function KanbanBoard() {
         className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-red-700"
       >
         <p className="font-medium">Failed to load applications</p>
-        <p className="mt-1 text-sm">{error instanceof Error ? error.message : String(error)}</p>
+        <p className="mt-1 text-sm">
+          {error instanceof Error ? error.message : String(error)}
+        </p>
       </div>
     );
   }
@@ -229,12 +227,6 @@ export function KanbanBoard() {
             Add Application
           </button>
         </div>
-        {showWizard && (
-          <OnboardingWizard
-            onClose={() => setShowWizard(false)}
-            onAddApplication={() => setShowCreateDialog(true)}
-          />
-        )}
         <CreateApplicationDialog
           open={showCreateDialog}
           onClose={() => setShowCreateDialog(false)}
@@ -288,18 +280,24 @@ export function KanbanBoard() {
           data-testid="kanban-update-error"
           className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
         >
-          {updateMutation.error instanceof Error ? updateMutation.error.message : String(updateMutation.error)}
+          {updateMutation.error instanceof Error
+            ? updateMutation.error.message
+            : String(updateMutation.error)}
         </div>
       )}
 
       {/* Filtered empty state */}
-      {totalCount === 0 && (filters.status || filters.search || filters.sort) && (
-        <div data-testid="kanban-filtered-empty" className="py-12 text-center">
-          <p className="text-sm text-gray-500">
-            No applications match your filters.
-          </p>
-        </div>
-      )}
+      {totalCount === 0 &&
+        (filters.status || filters.search || filters.sort) && (
+          <div
+            data-testid="kanban-filtered-empty"
+            className="py-12 text-center"
+          >
+            <p className="text-sm text-gray-500">
+              No applications match your filters.
+            </p>
+          </div>
+        )}
 
       {/* Kanban columns */}
       {totalCount > 0 && (
