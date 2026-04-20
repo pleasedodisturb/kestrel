@@ -9,7 +9,7 @@ Covers:
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_PROFILE_ID, RESP_404
@@ -34,6 +34,7 @@ from career_os.services.star_stories import (
     list_star_stories,
     update_star_story,
 )
+from career_os.schemas.constraints import INT64_MAX
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ router = APIRouter(prefix="/api/star-stories", tags=["star-stories"])
 @router.post("", status_code=201, responses=RESP_404)
 async def create_star_story_endpoint(
     body: StarStoryCreate,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StarStoryResponse:
     """Create a new STAR story."""
@@ -60,7 +61,7 @@ async def create_star_story_endpoint(
 
 @router.get("", responses=RESP_404)
 async def list_star_stories_endpoint(
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StarStoryListResponse:
     """List all STAR stories for a profile."""
@@ -72,8 +73,8 @@ async def list_star_stories_endpoint(
 
 @router.get("/{story_id}", responses=RESP_404)
 async def get_star_story_endpoint(
-    story_id: int,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    story_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StarStoryResponse:
     """Get a single STAR story by ID."""
@@ -87,9 +88,9 @@ async def get_star_story_endpoint(
 
 @router.put("/{story_id}", responses=RESP_404)
 async def update_star_story_endpoint(
-    story_id: int,
+    story_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
     body: StarStoryUpdate,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StarStoryResponse:
     """Update an existing STAR story."""
@@ -103,8 +104,8 @@ async def update_star_story_endpoint(
 
 @router.delete("/{story_id}", status_code=204, responses=RESP_404)
 async def delete_star_story_endpoint(
-    story_id: int,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    story_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a STAR story."""
@@ -128,8 +129,8 @@ app_router = APIRouter(prefix="/api/applications", tags=["star-stories"])
     responses=RESP_404,
 )
 async def get_recommended_stories_endpoint(
-    application_id: int,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RecommendedStoriesResponse:
     """Get STAR stories recommended for an application.
@@ -149,8 +150,8 @@ async def get_recommended_stories_endpoint(
     responses=RESP_404,
 )
 async def get_story_gaps_endpoint(
-    application_id: int,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> StoryGapsResponse:
     """Identify skills with no corresponding STAR story.

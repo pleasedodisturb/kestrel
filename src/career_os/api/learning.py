@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404, RESP_404_422
@@ -23,6 +23,7 @@ from career_os.services.learning import (
     get_gap_recommendations,
     update_learning_status,
 )
+from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(tags=["learning"])
 
@@ -32,8 +33,8 @@ router = APIRouter(tags=["learning"])
     responses=RESP_404,
 )
 async def get_recommendations(
-    gap_id: int,
-    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
+    gap_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GapRecommendationsResponse:
     """Get learning recommendations for a specific gap.
@@ -76,7 +77,7 @@ async def get_recommendations(
     responses=RESP_404,
 )
 async def add_recommendation(
-    gap_id: int,
+    gap_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
     payload: LearningResourceCreate,
     db: Annotated[Session, Depends(get_db)],
 ) -> LearningResourceResponse:
@@ -112,7 +113,7 @@ async def add_recommendation(
     responses=RESP_404_422,
 )
 async def update_status(
-    resource_id: int,
+    resource_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
     payload: LearningStatusUpdate,
     db: Annotated[Session, Depends(get_db)],
 ) -> LearningResourceResponse:

@@ -26,6 +26,7 @@ from career_os.services.market import (
     get_skill_trends,
     refresh_market_data,
 )
+from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(tags=["market-intelligence"])
 
@@ -37,7 +38,7 @@ router = APIRouter(tags=["market-intelligence"])
 
 @router.get("/api/market/salary-trends", responses=RESP_404)
 async def salary_trends_endpoint(
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     role: Annotated[str | None, Query(description="Filter by role substring")] = None,
     location: Annotated[str | None, Query(description="Filter by location substring")] = None,
@@ -62,7 +63,7 @@ async def salary_trends_endpoint(
 
 @router.get("/api/market/skill-trends", responses=RESP_404)
 async def skill_trends_endpoint(
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SkillTrendsResponse:
     """Get most-demanded skills ranked by mention count.
@@ -85,7 +86,7 @@ async def skill_trends_endpoint(
 
 @router.get("/api/market/hiring-patterns", responses=RESP_404)
 async def hiring_patterns_endpoint(
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> HiringPatternsResponse:
     """Get company hiring patterns.
@@ -108,7 +109,7 @@ async def hiring_patterns_endpoint(
 
 @router.get("/api/market/positioning", responses=RESP_404)
 async def positioning_endpoint(
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> PositioningResponse:
     """Get market positioning - profile match % by role type.
@@ -131,7 +132,7 @@ async def positioning_endpoint(
 
 @router.get("/api/market/opportunity-radar", responses=RESP_404)
 async def opportunity_radar_endpoint(
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     dream_companies: Annotated[
         str | None,
