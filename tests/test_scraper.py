@@ -229,10 +229,21 @@ class TestJobFamilyKeywords:
         get_keywords_for_profile().
         """
         core_families = [
-            "TPM", "SWE", "Product Engineer", "DevRel", "AI Program Lead",
-            "Backend Engineer", "Frontend Engineer", "Full-Stack Developer",
-            "DevOps Engineer", "ML Engineer", "Data Engineer", "Data Scientist",
-            "Engineering Manager", "Product Manager", "UX Designer",
+            "TPM",
+            "SWE",
+            "Product Engineer",
+            "DevRel",
+            "AI Program Lead",
+            "Backend Engineer",
+            "Frontend Engineer",
+            "Full-Stack Developer",
+            "DevOps Engineer",
+            "ML Engineer",
+            "Data Engineer",
+            "Data Scientist",
+            "Engineering Manager",
+            "Product Manager",
+            "UX Designer",
         ]
         for family in core_families:
             assert family in JOB_FAMILY_KEYWORDS, (
@@ -326,9 +337,7 @@ class TestGetKeywordsForProfile:
         assert "Chief Llama Wrangler" in result
 
     def test_target_roles_mixed_recognized_and_unrecognized(self):
-        result = get_keywords_for_profile(
-            target_roles=["TPM", "Chief Llama Wrangler"]
-        )
+        result = get_keywords_for_profile(target_roles=["TPM", "Chief Llama Wrangler"])
         # TPM keywords should be present
         assert any("Technical Program Manager" in kw for kw in result)
         # Unrecognized role used as-is
