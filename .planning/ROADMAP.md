@@ -13,7 +13,7 @@ This roadmap takes a new Kestrel user from "just installed" to "seeing scored re
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Onboarding State Foundation** - Shared state model, API endpoints, and error infrastructure that all onboarding surfaces depend on — COMPLETE 2026-04-20
-- [ ] **Phase 2: CLI Wizard** - Complete `kestrel init` interactive wizard with profile questions, paste-text extraction, health check, and guided next steps
+- [x] **Phase 2: CLI Wizard** - Complete `kestrel init` interactive wizard with profile questions, paste-text extraction, health check, and guided next steps — COMPLETE 2026-04-20
 - [ ] **Phase 3: Demo Data** - Pre-baked sample jobs with pre-computed scores that deliver the "aha moment" without requiring an API key
 - [ ] **Phase 4: Web Welcome Flow** - First-time welcome screen, onboarding guard, web profile questions, resume/skip/complete flow, and post-onboarding AI provider nudge
 - [ ] **Phase 5: Interactive Tour, Feedback, and Polish** - Shepherd.js guided tour, empty state coaching, persistent feedback button, and non-developer documentation
@@ -49,10 +49,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Profile migration + resume extraction utilities
-- [ ] 02-02-PLAN.md — kestrel doctor health check command
-- [ ] 02-03-PLAN.md — kestrel init wizard core + first-run callback
-- [ ] 02-04-PLAN.md — Resume paste integration + resume-from-last-step
+- [x] 02-01-PLAN.md — Profile migration + resume extraction utilities — COMPLETE 2026-04-20
+- [x] 02-02-PLAN.md — kestrel doctor health check command — COMPLETE 2026-04-20
+- [x] 02-03-PLAN.md — kestrel init wizard core + first-run callback — COMPLETE 2026-04-20
+- [x] 02-04-PLAN.md — Resume paste integration + resume-from-last-step — COMPLETE 2026-04-20
 
 ### Phase 3: Demo Data
 **Goal**: Users see realistic scored job results immediately after onboarding completes, proving the tool works without requiring any API key or external service
@@ -116,7 +116,7 @@ Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Onboarding State Foundation | 4/4 | Complete | 2026-04-20 |
-| 2. CLI Wizard | 0/0 | Not started | - |
+| 2. CLI Wizard | 4/4 | Complete | 2026-04-20 |
 | 3. Demo Data | 0/0 | Not started | - |
 | 4. Web Welcome Flow | 0/0 | Not started | - |
 | 5. Interactive Tour, Feedback, and Polish | 0/0 | Not started | - |
