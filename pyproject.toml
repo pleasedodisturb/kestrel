@@ -69,6 +69,7 @@ career_os = [
     "_alembic/versions/*.py",
     "_alembic.ini",
     "privacy_registry.json",
+    "fixtures/*.json",
 ]
 
 [tool.ruff]
