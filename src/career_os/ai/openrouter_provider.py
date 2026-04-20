@@ -145,7 +145,7 @@ class OpenRouterProvider(AIProvider):
                         "Authorization": f"Bearer {self._api_key}",
                         "Content-Type": "application/json",
                         "HTTP-Referer": "https://career-os.local",
-                        "X-Title": "Career OS",
+                        "X-Title": "kestrel",
                     },
                     json=payload,
                 )
