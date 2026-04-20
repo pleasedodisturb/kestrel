@@ -81,7 +81,6 @@ class AnthropicProvider(AIProvider):
         """Send a completion request to the Anthropic Messages API."""
         model = self._resolve_model(tier)
         update_current_generation(
-            input=prompt[:500],
             model=model,
             metadata={"feature": feature.value, "tier": (tier or "standard")},
         )
@@ -167,7 +166,6 @@ class AnthropicProvider(AIProvider):
 
             if structured is not None or not expects_structured:
                 update_current_generation(
-                    output=content[:500],
                     usage_details={
                         "input": usage.input_tokens,
                         "output": usage.output_tokens,

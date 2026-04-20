@@ -84,7 +84,6 @@ class OllamaProvider(AIProvider):
         — Ollama uses a single local model for all tiers.
         """
         update_current_generation(
-            input=prompt[:500],
             model=self._model,
             metadata={"feature": feature.value},
         )
@@ -140,7 +139,6 @@ class OllamaProvider(AIProvider):
             structured = await self._retry_json(messages, payload, url, feature)
 
         update_current_generation(
-            output=content[:500],
             usage_details={
                 "input": usage.input_tokens,
                 "output": usage.output_tokens,

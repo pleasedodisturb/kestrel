@@ -62,7 +62,6 @@ class TogetherProvider(AIProvider):
     ) -> AIResponse:
         """Send a completion request to the Together.ai API."""
         update_current_generation(
-            input=prompt[:500],
             model=self._model,
             metadata={"feature": feature.value},
         )
@@ -110,9 +109,12 @@ class TogetherProvider(AIProvider):
             structured = _try_parse_structured(content, feature)
 
             if structured is not None or not expects_structured:
+                usage_data = data.get("usage", {})
                 update_current_generation(
-                    output=content[:500],
-                    usage_details={"input": 0, "output": 0},
+                    usage_details={
+                        "input": usage_data.get("prompt_tokens", 0),
+                        "output": usage_data.get("completion_tokens", 0),
+                    },
                 )
                 return AIResponse(
                     content=content,

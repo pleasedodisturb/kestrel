@@ -31,7 +31,7 @@ services:
       langfuse-minio:
         condition: service_healthy
     ports:
-      - "3100:3000"
+      - "127.0.0.1:3100:3000"
     env_file: langfuse.env
     environment: &langfuse-env
       NEXTAUTH_URL: http://localhost:3100
@@ -99,6 +99,7 @@ services:
     env_file: langfuse.env
     environment:
       CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
     volumes:
       - langfuse-clickhouse-data:/var/lib/clickhouse
     healthcheck:
@@ -117,7 +118,7 @@ services:
     volumes:
       - langfuse-redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_AUTH ping"]
       interval: 5s
       timeout: 3s
       retries: 5
