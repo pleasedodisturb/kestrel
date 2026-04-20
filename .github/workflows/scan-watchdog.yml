@@ -1,0 +1,112 @@
+# Kestrel Scan Watchdog
+#
+# Detects missed daily scans and triggers backfill.
+# Uses `gh run list` to check recent workflow run status instead of
+# inspecting committed files, so it works even when the daily-scan
+# workflow fails before committing a digest.
+#
+# Runs every day at 07:17 UTC (offset to avoid :00 thundering herd).
+# The daily-scan runs at 07:00 UTC, so the watchdog checks 17 minutes
+# later whether it fired. Uses a 26-hour lookback window to handle
+# timezone edge cases and minor schedule drift.
+#
+# Also triggerable manually from the Actions tab.
+#
+# Optional secrets (for push notifications):
+#   PUSHOVER_APP_TOKEN  - Pushover application token
+#   PUSHOVER_USER_KEY   - Pushover user key
+
+name: Scan Watchdog
+
+on:
+  schedule:
+    # Every day at 07:17 UTC - check if today's scan ran
+    - cron: '17 7 * * *'
+
+  # Allow manual trigger for testing
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write     # needed to trigger workflow_dispatch on daily-scan
+
+jobs:
+  check-daily-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check for missed daily scan
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=== Scan Watchdog ==="
+          echo "Checking if daily-scan ran successfully in the last 26 hours..."
+
+          # Get successful runs from the last 26 hours
+          CUTOFF=$(date -u -d '26 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          echo "Cutoff: ${CUTOFF}"
+
+          # List recent daily-scan runs
+          RECENT_SUCCESS=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow daily-scan.yml \
+            --limit 5 \
+            --json createdAt,status,conclusion \
+            --jq "[.[] | select(.createdAt > \"${CUTOFF}\" and .conclusion == \"success\")] | length")
+
+          echo "Successful runs in last 26h: ${RECENT_SUCCESS}"
+
+          if [ "$RECENT_SUCCESS" -eq 0 ]; then
+            echo "NO successful daily-scan in the last 26 hours!"
+            echo "scan_missing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Daily scan ran successfully. All good."
+            echo "scan_missing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "date=$(date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger daily-scan backfill
+        if: steps.check.outputs.scan_missing == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Triggering backfill for ${{ steps.check.outputs.date }}"
+          gh workflow run daily-scan.yml \
+            --repo "${{ github.repository }}" \
+            -f hours_old=48
+
+      - name: Send Pushover alert
+        if: steps.check.outputs.scan_missing == 'true'
+        env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_APP_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER_KEY }}
+        run: |
+          # Gracefully skip if Pushover secrets are not configured (OSS-friendly)
+          if [ -z "$PUSHOVER_TOKEN" ] || [ -z "$PUSHOVER_USER" ]; then
+            echo "Pushover secrets not set -- skipping notification"
+            exit 0
+          fi
+
+          DATE="${{ steps.check.outputs.date }}"
+          MSG=$(printf "Daily scan missed on %s.\nBackfill triggered with hours_old=48.\nCheck workflow logs for details." "$DATE")
+
+          curl -s \
+            --form-string "token=$PUSHOVER_TOKEN" \
+            --form-string "user=$PUSHOVER_USER" \
+            --form-string "title=Kestrel Scan Watchdog" \
+            --form-string "message=$MSG" \
+            --form-string "priority=0" \
+            --form-string "url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --form-string "url_title=View watchdog run" \
+            https://api.pushover.net/1/messages.json
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.check.outputs.scan_missing }}" = "false" ]; then
+            echo "Daily scan present. No action needed."
+          else
+            echo "Daily scan missed. Backfill triggered."
+          fi

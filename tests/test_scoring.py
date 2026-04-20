@@ -253,8 +253,8 @@ class TestScoreEndpoint:
         assert "profile_id" in data
         assert "is_stale" in data
 
-        # Value ranges
-        assert 1.0 <= data["fit_score"] <= 10.0
+        # Value ranges (mock provider returns 0.0 demo scores)
+        assert 0.0 <= data["fit_score"] <= 10.0
         assert 0.0 <= data["readiness_score"] <= 100.0
         assert 0.0 <= data["career_alignment"] <= 10.0
         assert data["profile_id"] == 1
@@ -274,7 +274,7 @@ class TestScoreEndpoint:
         # Verify in DB
         scored = db_session.query(ScoredJob).filter(ScoredJob.profile_id == 1).first()
         assert scored is not None
-        assert scored.fit_score > 0
+        assert scored.fit_score >= 0  # mock provider returns 0.0 (demo mode)
 
     def test_score_response_surfaces_red_flags(self, client):
         """A staffing-agency JD should produce a red_flags entry (#73)."""
@@ -731,8 +731,8 @@ class TestScoringExplanation:
         reasoning = resp.json()["reasoning"]
         assert len(reasoning) >= 100
 
-    def test_reasoning_contains_at_least_3_factors(self, client, db_session):
-        """Explanation must contain ≥3 specific factors."""
+    def test_reasoning_indicates_demo_mode(self, client, db_session):
+        """Mock provider reasoning clearly indicates demo mode."""
         resp = client.post(
             "/api/score",
             json={
@@ -743,14 +743,12 @@ class TestScoringExplanation:
         assert resp.status_code == 201
         reasoning = resp.json()["reasoning"]
 
-        # Count distinct factor markers (+ and -)
-        positive_factors = reasoning.count("(+")
-        negative_factors = reasoning.count("(−") + reasoning.count("(-")
-        total_factors = positive_factors + negative_factors
-        assert total_factors >= 3, f"Expected ≥3 factors but found {total_factors} in: {reasoning}"
+        # Demo mode reasoning must clearly indicate no real scoring occurred
+        assert "DEMO MODE" in reasoning
+        assert "API key" in reasoning or "provider" in reasoning
 
-    def test_reasoning_is_not_generic(self, client, db_session):
-        """Different jobs produce different reasoning strings."""
+    def test_reasoning_is_consistent_in_demo_mode(self, client, db_session):
+        """Demo mode returns same reasoning for all jobs (no fake variation)."""
         resp_a = client.post(
             "/api/score",
             json={
@@ -768,8 +766,8 @@ class TestScoringExplanation:
         assert resp_a.status_code == 201
         assert resp_b.status_code == 201
 
-        # Different jobs should produce different reasoning
-        assert resp_a.json()["reasoning"] != resp_b.json()["reasoning"]
+        # Demo mode: same reasoning for all jobs (no misleading variation)
+        assert resp_a.json()["reasoning"] == resp_b.json()["reasoning"]
 
 
 # ===========================================================================
@@ -1088,8 +1086,8 @@ class TestMockScoring:
         assert resp1.json()["readiness_score"] == resp2.json()["readiness_score"]
         assert resp1.json()["career_alignment"] == resp2.json()["career_alignment"]
 
-    def test_mock_different_jobs_different_scores(self, client, db_session):
-        """Different job descriptions produce different scores."""
+    def test_mock_returns_demo_zero_scores(self, client, db_session):
+        """Mock provider returns zeroed demo scores for any job description."""
         resp_a = client.post(
             "/api/score",
             json={
@@ -1107,12 +1105,13 @@ class TestMockScoring:
         assert resp_a.status_code == 201
         assert resp_b.status_code == 201
 
-        # At least one score field should differ
-        assert (
-            resp_a.json()["fit_score"] != resp_b.json()["fit_score"]
-            or resp_a.json()["readiness_score"] != resp_b.json()["readiness_score"]
-            or resp_a.json()["career_alignment"] != resp_b.json()["career_alignment"]
-        ), "Different jobs should produce at least one different score component"
+        # Demo mode: all scores are zero regardless of input
+        for resp in (resp_a, resp_b):
+            data = resp.json()
+            assert data["fit_score"] == 0.0
+            assert data["readiness_score"] == 0.0
+            assert data["career_alignment"] == 0.0
+            assert "DEMO MODE" in data["reasoning"]
 
     def test_mock_effort_flag_valid_values(self, client, db_session):
         """effort_flag is one of low/medium/high."""
@@ -1256,7 +1255,7 @@ class TestGoalsInformScoring:
         assert resp.status_code == 201
         data = resp.json()
         assert "career_alignment" in data
-        assert data["career_alignment"] > 0
+        assert data["career_alignment"] >= 0  # mock provider returns 0.0 (demo mode)
 
 
 # ===========================================================================
