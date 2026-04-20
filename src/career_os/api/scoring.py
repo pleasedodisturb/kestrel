@@ -10,6 +10,7 @@ from career_os.ai.base import ProviderQuotaError
 from career_os.ai.openrouter_provider import CreditsExhaustedError
 from career_os.api.constants import DESC_PROFILE_ID, RESP_404
 from career_os.database import get_db
+from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.scoring import (
     BatchScoreRequest,
     BatchScoreResponse,
@@ -51,7 +52,6 @@ from career_os.services.scoring import (
     submit_feedback,
     update_weights,
 )
-from career_os.schemas.constraints import INT64_MAX
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ async def score_endpoint(
 
 @router.get("/api/scoring-weights", responses=RESP_404)
 async def get_weights_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoringWeightsResponse:
     """Get scoring weights for a profile."""
@@ -136,7 +136,7 @@ async def get_weights_endpoint(
 @router.put("/api/scoring-weights", responses=RESP_404)
 async def update_weights_endpoint(
     payload: ScoringWeightsUpdate,
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoringWeightsResponse:
     """Update scoring weights for a profile.
@@ -267,8 +267,8 @@ def _build_profile_completeness(
 
 @router.get("/api/score/job/{discovered_job_id}", responses=RESP_404)
 async def get_job_score_endpoint(
-    discovered_job_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    discovered_job_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
     """Get the latest score for a discovered job.
@@ -289,8 +289,8 @@ async def get_job_score_endpoint(
     responses=RESP_404,
 )
 async def get_application_score_endpoint(
-    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    application_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ScoreResponse | None:
     """Get the latest score for an application.
@@ -313,7 +313,7 @@ async def get_application_score_endpoint(
 
 @router.post("/api/scoring/flag-stale")
 async def flag_stale_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict[str, int]:
     """Mark all scores for a profile as stale.
@@ -339,9 +339,9 @@ async def flag_stale_endpoint(
     },
 )
 async def submit_feedback_endpoint(
-    scored_job_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    scored_job_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
     payload: FeedbackCreate,
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> FeedbackResponse:
     """Submit user feedback on an AI-generated score.
@@ -369,7 +369,7 @@ async def submit_feedback_endpoint(
 
 @router.get("/api/score/feedback")
 async def list_feedback_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[FeedbackResponse]:
     """List all feedback records for a profile, newest first."""
@@ -379,7 +379,7 @@ async def list_feedback_endpoint(
 
 @router.get("/api/score/feedback/stats")
 async def feedback_stats_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> FeedbackStats:
     """Return summary statistics for feedback submitted by a profile.
@@ -398,7 +398,7 @@ async def feedback_stats_endpoint(
 
 @router.get("/api/score/suggestions")
 async def suggestions_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SuggestionsResponse:
     """Get weight adjustment suggestions based on accumulated feedback.

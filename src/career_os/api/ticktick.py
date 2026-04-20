@@ -11,6 +11,7 @@ from career_os.database import get_db
 from career_os.models.models import Application, FollowUp
 from career_os.models.skills import Goal
 from career_os.models.ticktick_sync import TickTickSyncTask
+from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.ticktick import (
     TickTickConnectionTestResponse,
     TickTickPullResponse,
@@ -29,14 +30,13 @@ from career_os.services.ticktick_sync import (
     sync_learning_goal_to_ticktick,
     sync_pipeline_action_to_ticktick,
 )
-from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(prefix="/api/ticktick", tags=["ticktick"])
 
 
 @router.get("/status")
 async def ticktick_sync_status(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> TickTickSyncStatusResponse:
     """Get the current TickTick sync status for a profile."""
@@ -135,7 +135,7 @@ def _fetch_entity(db: Session, model, entity_id: int, profile_id: int, label: st
 
 @router.post("/pull", responses={400: {"description": "Bad request"}})
 async def ticktick_pull(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> TickTickPullResponse:
     """Pull completed tasks from TickTick and update Career OS entities."""

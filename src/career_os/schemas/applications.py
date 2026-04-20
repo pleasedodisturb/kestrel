@@ -102,7 +102,9 @@ def is_valid_transition(from_status: str, to_status: str) -> bool:
 class ApplicationCreate(BaseModel):
     """Request body for POST /api/applications."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile this application belongs to")
+    profile_id: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Profile this application belongs to"
+    )
     company: str = Field(..., min_length=1, description="Company name")
     role: str = Field(..., min_length=1, description="Role / job title")
     url: str | None = Field(default=None, description="Job posting URL")
@@ -138,6 +140,8 @@ class ApplicationUpdate(BaseModel):
         """
         if v is None:
             return v
+        if not isinstance(v, str):
+            raise ValueError("status must be a string")
         try:
             return normalize_status(v)
         except ValueError:

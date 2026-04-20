@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404, RESP_404_422
 from career_os.database import get_db
+from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.voice import (
     VoiceMessageCreate,
     VoiceMessageResponse,
@@ -26,7 +27,6 @@ from career_os.services.voice import (
     list_sessions,
     send_message,
 )
-from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
@@ -67,7 +67,7 @@ async def create_voice_session(
 
 @router.get("/sessions")
 async def list_voice_sessions(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     mode: Annotated[str | None, Query(description="Filter by mode")] = None,
 ) -> VoiceSessionListResponse:
@@ -81,8 +81,8 @@ async def list_voice_sessions(
 
 @router.get("/sessions/{session_id}", responses=RESP_404)
 async def get_voice_session(
-    session_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    session_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> VoiceSessionResponse:
     """Get a voice session with all messages."""
@@ -99,7 +99,7 @@ async def get_voice_session(
     responses=RESP_404,
 )
 async def send_voice_message(
-    session_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    session_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
     data: VoiceMessageCreate,
     db: Annotated[Session, Depends(get_db)],
 ) -> VoiceSendResponse:
@@ -132,8 +132,8 @@ async def send_voice_message(
     responses=RESP_404,
 )
 async def complete_voice_session(
-    session_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    session_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> VoiceSessionResponse:
     """Mark a voice session as completed."""

@@ -9,6 +9,7 @@ from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
 from career_os.models.models import Application
 from career_os.models.skills import JobRequirement
+from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.gaps import (
     AggregateGapItem,
     AggregateGapResponse,
@@ -25,7 +26,6 @@ from career_os.services.gap_analysis import (
     analyze_gaps,
     create_job_requirements,
 )
-from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(tags=["gaps"])
 
@@ -35,8 +35,8 @@ router = APIRouter(tags=["gaps"])
     responses={**RESP_404, 400: {"description": "Bad request"}},
 )
 async def get_application_gaps(
-    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    application_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GapAnalysisResponse:
     """Perform gap analysis for a specific application.
@@ -71,7 +71,7 @@ async def get_application_gaps(
     responses=RESP_404,
 )
 async def get_aggregate_gaps(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AggregateGapResponse:
     """Get aggregate gap analysis across all applications.
@@ -95,8 +95,8 @@ async def get_aggregate_gaps(
     "/api/applications/{application_id}/requirements",
 )
 async def get_requirements(
-    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    application_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[JobRequirementResponse]:
     """Get job requirements for an application.
@@ -124,7 +124,7 @@ async def get_requirements(
     responses=RESP_404,
 )
 async def create_requirements(
-    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    application_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
     payload: JobRequirementBulkCreate,
     db: Annotated[Session, Depends(get_db)],
 ) -> list[JobRequirementResponse]:

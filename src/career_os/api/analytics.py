@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from career_os.database import get_db
 from career_os.schemas.analytics import AnalyticsResponse
-from career_os.schemas.constraints import INT64_MAX
+from career_os.schemas.constraints import INT32_MAX
 from career_os.services.analytics import get_analytics
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -15,7 +15,9 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 @router.get("")
 async def analytics(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description="Profile to show analytics for")],
+    profile_id: Annotated[
+        int, Query(ge=1, le=INT32_MAX, description="Profile to show analytics for")
+    ],
     db: Annotated[Session, Depends(get_db)],
 ) -> AnalyticsResponse:
     """Get analytics dashboard data.

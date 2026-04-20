@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from career_os.schemas.constraints import INT64_MIN, INT64_MAX
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
 
 # ---- Integration definitions ----
 

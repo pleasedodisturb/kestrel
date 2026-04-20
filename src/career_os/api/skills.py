@@ -12,6 +12,7 @@ from career_os.api.constants import (
     RESP_404,
 )
 from career_os.database import get_db
+from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.skills import (
     IngestRequest,
     IngestResponse,
@@ -32,7 +33,6 @@ from career_os.services.skills import (
     list_skills,
     update_skill,
 )
-from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 
@@ -44,13 +44,13 @@ _DEFAULT_PROFILE_DIR = _PROJECT_ROOT / "profile"
 
 @router.get("")
 async def list_skills_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description="Profile to list skills for")],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description="Profile to list skills for")],
     db: Annotated[Session, Depends(get_db)],
     category: Annotated[str | None, Query(description=DESC_FILTER_BY_CATEGORY)] = None,
     source: Annotated[str | None, Query(description="Filter by evidence source")] = None,
     proficiency: Annotated[str | None, Query(description="Filter by proficiency")] = None,
     q: Annotated[str | None, Query(description="Search by name")] = None,
-    page: Annotated[int, Query(ge=1, le=INT64_MAX, description="Page number")] = 1,
+    page: Annotated[int, Query(ge=1, le=INT32_MAX, description="Page number")] = 1,
     page_size: Annotated[int, Query(ge=1, le=200, description="Results per page")] = 50,
 ) -> SkillListResponse | SkillsEmptyStateResponse:
     """List skills with optional filters.
@@ -80,8 +80,8 @@ async def list_skills_endpoint(
 
 @router.get("/{skill_id}", responses=RESP_404)
 async def get_skill_endpoint(
-    skill_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    skill_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SkillResponse:
     """Get a single skill by ID."""
@@ -94,8 +94,8 @@ async def get_skill_endpoint(
 
 @router.get("/{skill_id}/history", responses=RESP_404)
 async def get_skill_history_endpoint(
-    skill_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    skill_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[SkillHistoryResponse]:
     """Get proficiency change history for a skill."""
@@ -136,9 +136,9 @@ async def create_skill_endpoint(
 
 @router.put("/{skill_id}", responses=RESP_404)
 async def update_skill_endpoint(
-    skill_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    skill_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
     payload: SkillUpdate,
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SkillResponse:
     """Update a skill. Records history if proficiency changes."""

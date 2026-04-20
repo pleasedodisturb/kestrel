@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
+from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.contacts import (
     ContactApplicationCreate,
     ContactApplicationResponse,
@@ -36,7 +37,6 @@ from career_os.services.contacts import (
     unlink_contact_from_application,
     update_contact,
 )
-from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(prefix="/api", tags=["contacts"])
 
@@ -61,7 +61,9 @@ async def create(
 
 @router.get("/contacts")
 async def list_all(
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description="Profile to list contacts for")],
+    profile_id: Annotated[
+        int, Query(ge=1, le=INT32_MAX, description="Profile to list contacts for")
+    ],
     db: Annotated[Session, Depends(get_db)],
     company: Annotated[str | None, Query(description="Filter by company")] = None,
     relationship_type: Annotated[str | None, Query(description="Filter by type")] = None,
@@ -88,7 +90,7 @@ async def list_all(
 @router.get("/contacts/by-company/{company}")
 async def contacts_at_company(
     company: str,
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ContactListResponse:
     """Get all contacts at a company."""
@@ -101,8 +103,8 @@ async def contacts_at_company(
 
 @router.get("/contacts/{contact_id}", responses=RESP_404)
 async def get_detail(
-    contact_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    contact_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ContactDetailResponse:
     """Get contact detail with interactions and linked applications."""
@@ -125,9 +127,9 @@ async def get_detail(
 
 @router.patch("/contacts/{contact_id}", responses=RESP_404)
 async def update(
-    contact_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    contact_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
     payload: ContactUpdate,
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ContactResponse:
     """Update a contact."""
@@ -144,8 +146,8 @@ async def update(
     responses=RESP_404,
 )
 async def delete(
-    contact_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    contact_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Soft-delete a contact."""
@@ -166,9 +168,9 @@ async def delete(
     responses=RESP_404,
 )
 async def log_interaction(
-    contact_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    contact_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
     payload: InteractionCreate,
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InteractionResponse:
     """Log an interaction with a contact."""
@@ -184,8 +186,8 @@ async def log_interaction(
     responses=RESP_404,
 )
 async def get_interactions(
-    contact_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    contact_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InteractionListResponse:
     """List interactions for a contact."""
@@ -210,9 +212,9 @@ async def get_interactions(
     responses={**RESP_404, 409: {"description": "Conflict"}},
 )
 async def link_application(
-    contact_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    contact_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
     payload: ContactApplicationCreate,
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ContactApplicationResponse:
     """Link a contact to an application."""
@@ -229,8 +231,8 @@ async def link_application(
 
 @router.get("/contacts/{contact_id}/applications", responses=RESP_404)
 async def get_linked_applications(
-    contact_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    contact_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ):
     """List applications linked to a contact."""
@@ -251,9 +253,9 @@ async def get_linked_applications(
     responses=RESP_404,
 )
 async def unlink_application(
-    contact_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    contact_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    application_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Unlink a contact from an application."""
@@ -270,8 +272,8 @@ async def unlink_application(
 
 @router.get("/applications/{application_id}/contacts")
 async def get_application_contacts(
-    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    application_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ):
     """Get contacts linked to an application (reverse lookup)."""
