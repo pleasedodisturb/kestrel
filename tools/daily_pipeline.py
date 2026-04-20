@@ -127,6 +127,7 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
         PROFILE_CRITERIA,
         SCORING_SYSTEM_PROMPT_WITH_REVIEW,
         apply_hard_caps,
+        parse_scoring_response,
         pre_filter_job,
     )
 
@@ -160,7 +161,8 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
 
         if not description or description == "nan":
             # Use title + company + tags as description proxy
-            description = f"Title: {title}\nCompany: {company}\nLocation: {location}\nTags: {', '.join(job.get('tags', []))}"
+            tags = ", ".join(job.get("tags", []))
+            description = f"Title: {title}\nCompany: {company}\nLocation: {location}\nTags: {tags}"
 
         desc_truncated = description[:3000]
 
@@ -171,18 +173,22 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
                     {"role": "system", "content": SCORING_SYSTEM_PROMPT_WITH_REVIEW},
                     {
                         "role": "user",
-                        "content": f"CANDIDATE PROFILE:\n{PROFILE_CRITERIA}\n\nADDITIONAL CONTEXT:\n{profile_context[:1000]}\n\nJOB POSTING:\nTitle: {title}\nCompany: {company}\nDescription: {desc_truncated}",
+                        "content": (
+                            f"CANDIDATE PROFILE:\n{PROFILE_CRITERIA}\n\n"
+                            f"ADDITIONAL CONTEXT:\n{profile_context[:1000]}\n\n"
+                            f"JOB POSTING:\nTitle: {title}\n"
+                            f"Company: {company}\n"
+                            f"Description: {desc_truncated}"
+                        ),
                     },
                 ],
                 temperature=0.1,
             )
 
             raw = response.choices[0].message.content.strip()
-            try:
-                result = json.loads(raw)
-            except json.JSONDecodeError:
-                # Handle single quotes from some models
-                result = json.loads(raw.replace("'", '"'))
+            result = parse_scoring_response(raw)
+            if result is None:
+                raise ValueError(f"Could not parse scoring response: {raw[:200]}")
 
             ai_score = int(result.get("score", 2))
 
@@ -423,7 +429,10 @@ def step_generate_digest(
     lines = [
         f"# Daily Job Scan — {config.date}",
         "",
-        f"**Pipeline mode:** {config.mode} | **Min score:** {config.min_score} | **Hours old:** {config.hours_old}h",
+        (
+            f"**Pipeline mode:** {config.mode} | **Min score:** "
+            f"{config.min_score} | **Hours old:** {config.hours_old}h"
+        ),
         "",
     ]
 
@@ -440,7 +449,10 @@ def step_generate_digest(
             f"- **Total scraped:** {len(all_scraped)}",
             f"- **After dedup + scoring:** {len(scored)}",
             f"- **Score >= {config.min_score} (new):** {len(filtered)}",
-            f"- **Score distribution:** {' | '.join(f'{s}/10: {c}' for s, c in sorted(score_dist.items(), reverse=True))}",
+            (
+                "- **Score distribution:** "
+                + " | ".join(f"{s}/10: {c}" for s, c in sorted(score_dist.items(), reverse=True))
+            ),
             "",
         ]
     )
@@ -466,7 +478,8 @@ def step_generate_digest(
             url = j.get("url", "")
             url_display = f"[Link]({url})" if url else "—"
             lines.append(
-                f"| {score}/10 | {company} | {title} | {loc} | {salary} | {effort} | {source} | {url_display} |"
+                f"| {score}/10 | {company} | {title} | {loc} "
+                f"| {salary} | {effort} | {source} | {url_display} |"
             )
 
         lines.append("")
@@ -481,9 +494,10 @@ def step_generate_digest(
         )
         for j in top5:
             url = j.get("url", "N/A")
-            lines.append(
-                f"- [{j.get('fit_score', '?')}/10] {j.get('company', '?')} — {j.get('title', '?')}: {url}"
-            )
+            score = j.get("fit_score", "?")
+            co = j.get("company", "?")
+            ttl = j.get("title", "?")
+            lines.append(f"- [{score}/10] {co} — {ttl}: {url}")
         lines.append("")
 
         # Reasoning details
@@ -494,9 +508,10 @@ def step_generate_digest(
             ]
         )
         for j in filtered[:15]:
-            lines.append(
-                f"**[{j.get('fit_score', '?')}/10] {j.get('company', '?')} — {j.get('title', '?')}**"
-            )
+            score = j.get("fit_score", "?")
+            co = j.get("company", "?")
+            ttl = j.get("title", "?")
+            lines.append(f"**[{score}/10] {co} — {ttl}**")
             lines.append(f"  - {j.get('fit_reasoning', 'No reasoning')}")
             if j.get("prep_notes"):
                 lines.append(f"  - Prep ({j.get('prep_level', '?')}/5): {j.get('prep_notes', '')}")
@@ -601,13 +616,14 @@ def run_pipeline() -> int:
     filtered = step_filter(config, new_jobs)
 
     # Step 5: Generate digest
-    digest = step_generate_digest(config, all_scraped, scored, filtered)
+    step_generate_digest(config, all_scraped, scored, filtered)
 
     # Print summary to stdout
     print("\n" + "=" * 60)
     print(f"DAILY PIPELINE COMPLETE — {config.date}")
     print(
-        f"Scraped: {len(all_scraped)} | Scored: {len(scored)} | New: {len(new_jobs)} | Above threshold: {len(filtered)}"
+        f"Scraped: {len(all_scraped)} | Scored: {len(scored)} "
+        f"| New: {len(new_jobs)} | Above threshold: {len(filtered)}"
     )
     print(f"Digest: {config.digest_path}")
     print("=" * 60)
