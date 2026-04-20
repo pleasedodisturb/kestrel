@@ -96,17 +96,33 @@ class AnthropicProvider(AIProvider):
 
             messages = [{"role": "user", "content": user_content}]
 
-            # Build system blocks with cache_control for prompt caching
+            # Build system blocks with cache_control for prompt caching.
+            # When context is provided (e.g. profile data for scoring), it's
+            # appended to the system block so repeated calls for the same user
+            # hit the prompt cache across features (Anthropic caches by prefix).
             system_blocks: list[dict] | None = None
             system_msg = _system_prompt_for_feature(feature)
             if system_msg:
-                system_blocks = [
-                    {
-                        "type": "text",
-                        "text": system_msg,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ]
+                if context:
+                    # Combine system prompt + context into one cached block.
+                    # Profile data pushes block past 1024-token cache minimum.
+                    ctx_json = json.dumps(context, separators=(",", ":"))
+                    combined = f"{system_msg}\n\nCandidate Profile:\n{ctx_json}"
+                    system_blocks = [
+                        {
+                            "type": "text",
+                            "text": combined,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ]
+                else:
+                    system_blocks = [
+                        {
+                            "type": "text",
+                            "text": system_msg,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ]
 
             payload: dict = {
                 "model": model,
@@ -208,29 +224,33 @@ class AnthropicProvider(AIProvider):
         tier: ComplexityTier | None = None,
         **kwargs: object,
     ) -> AIResponse:
-        """Score a job against a profile via the Anthropic API."""
+        """Score a job against a profile via the Anthropic API.
+
+        Profile data is passed as context so it lands in the cached system
+        block — enabling cross-call cache reuse when scoring multiple jobs
+        for the same user.
+        """
         prompt = (
-            f"Score this job against the candidate profile. "
-            f"Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
-            f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
-            f"readiness_score (0-100), career_alignment (0-10), "
-            f"score_breakdown (array of >=3 objects, each with: factor (string), "
-            f"contribution (positive or negative float), description (string)), "
-            f"dimensional_scores (object with 6 floats 0-10: technical_fit, "
-            f"seniority_alignment, compensation_fit, location_fit, career_trajectory, "
-            f"company_fit), "
-            f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
-            f"category (one of technical/soft_skill/tool/certification/domain), "
-            f"matched (boolean -- true if the profile demonstrates this keyword)), "
-            f"desire_score (0-10, how much the candidate would WANT this job -- "
-            f"considering company reputation, growth potential, culture signals, "
-            f"role excitement, compensation attractiveness, work-life balance), "
-            f"desire_reasoning (string explaining what makes this job desirable "
+            "Score this job against the candidate profile. "
+            "Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
+            "estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
+            "readiness_score (0-100), career_alignment (0-10), "
+            "score_breakdown (array of >=3 objects, each with: factor (string), "
+            "contribution (positive or negative float), description (string)), "
+            "dimensional_scores (object with 6 floats 0-10: technical_fit, "
+            "seniority_alignment, compensation_fit, location_fit, career_trajectory, "
+            "company_fit), "
+            "ats_keywords (array of 10-15 objects, each with: keyword (string), "
+            "category (one of technical/soft_skill/tool/certification/domain), "
+            "matched (boolean -- true if the profile demonstrates this keyword)), "
+            "desire_score (0-10, how much the candidate would WANT this job -- "
+            "considering company reputation, growth potential, culture signals, "
+            "role excitement, compensation attractiveness, work-life balance), "
+            "desire_reasoning (string explaining what makes this job desirable "
             f"or undesirable from the candidate's perspective).\n\n"
-            f"Job Description:\n{job_description}\n\n"
-            f"Profile:\n{json.dumps(profile_data, indent=2)}"
+            f"Job Description:\n{job_description}"
         )
-        return await self.complete(prompt, feature=AIFeature.score, tier=tier)
+        return await self.complete(prompt, feature=AIFeature.score, context=profile_data, tier=tier)
 
     async def batch_score(
         self,
@@ -251,13 +271,18 @@ class AnthropicProvider(AIProvider):
         Returns:
             Batch ID string for polling results.
         """
+        # Build system block with profile in cached prefix — same pattern
+        # as score(). For batch, every request shares this system block so
+        # Anthropic can cache it server-side across the batch.
         system_msg = _system_prompt_for_feature(AIFeature.score)
         system_blocks: list[dict] | None = None
         if system_msg:
+            ctx_json = json.dumps(profile_data, separators=(",", ":"))
+            combined = f"{system_msg}\n\nCandidate Profile:\n{ctx_json}"
             system_blocks = [
                 {
                     "type": "text",
-                    "text": system_msg,
+                    "text": combined,
                     "cache_control": {"type": "ephemeral"},
                 }
             ]
@@ -265,24 +290,23 @@ class AnthropicProvider(AIProvider):
         requests: list[dict] = []
         for job in jobs:
             prompt = (
-                f"Score this job against the candidate profile. "
-                f"Return a JSON object with: fit_score (0-10), reasoning "
-                f"(detailed, >=100 chars), "
-                f"estimated_salary (string), effort_flag (low/medium/high), "
-                f"prep_level, prep_notes, "
-                f"readiness_score (0-100), career_alignment (0-10), "
-                f"score_breakdown (array of >=3 objects, each with: factor "
-                f"(string), contribution (positive or negative float), "
-                f"description (string)), "
-                f"dimensional_scores (object with 6 floats 0-10: technical_fit, "
-                f"seniority_alignment, compensation_fit, location_fit, "
-                f"career_trajectory, company_fit), "
-                f"ats_keywords (array of 10-15 objects, each with: keyword "
-                f"(string), category (one of technical/soft_skill/tool/"
-                f"certification/domain), matched (boolean)), "
+                "Score this job against the candidate profile. "
+                "Return a JSON object with: fit_score (0-10), reasoning "
+                "(detailed, >=100 chars), "
+                "estimated_salary (string), effort_flag (low/medium/high), "
+                "prep_level, prep_notes, "
+                "readiness_score (0-100), career_alignment (0-10), "
+                "score_breakdown (array of >=3 objects, each with: factor "
+                "(string), contribution (positive or negative float), "
+                "description (string)), "
+                "dimensional_scores (object with 6 floats 0-10: technical_fit, "
+                "seniority_alignment, compensation_fit, location_fit, "
+                "career_trajectory, company_fit), "
+                "ats_keywords (array of 10-15 objects, each with: keyword "
+                "(string), category (one of technical/soft_skill/tool/"
+                "certification/domain), matched (boolean)), "
                 f"desire_score (0-10), desire_reasoning (string).\n\n"
-                f"Job Description:\n{job['description']}\n\n"
-                f"Profile:\n{json.dumps(profile_data, indent=2)}"
+                f"Job Description:\n{job['description']}"
             )
 
             params: dict = {
