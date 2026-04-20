@@ -1,5 +1,45 @@
 """Shared test fixtures."""
 
+# ---------------------------------------------------------------------------
+# SAFETY: Force mock provider for ALL test runs.  This MUST run before any
+# application code imports (config.py reads env at import time).
+# Without this, load_dotenv can load .env with AI_PROVIDER=openrouter
+# and tests will hit real APIs, burning real money.
+# ---------------------------------------------------------------------------
+import os
+
+os.environ["AI_PROVIDER"] = "mock"
+os.environ["OPENROUTER_API_KEY"] = ""
+os.environ["ANTHROPIC_API_KEY"] = ""
+os.environ["TOGETHER_API_KEY"] = ""
+
+# ---------------------------------------------------------------------------
+# Network guard: block outbound HTTP to AI provider domains.
+# This is a second safety net — even if env vars are somehow wrong, no
+# real HTTP request can escape to a paid API during tests.
+# ---------------------------------------------------------------------------
+import httpx
+
+_BLOCKED_AI_HOSTS = frozenset(
+    {"openrouter.ai", "api.anthropic.com", "api.together.xyz", "api.openai.com"}
+)
+_original_async_send = httpx.AsyncClient.send
+
+
+async def _guarded_async_send(self, request, **kwargs):
+    if request.url.host in _BLOCKED_AI_HOSTS:
+        raise RuntimeError(
+            f"TEST ISOLATION VIOLATION: HTTP request to {request.url.host} blocked. "
+            f"Tests must use AI_PROVIDER=mock. Check conftest.py."
+        )
+    return await _original_async_send(self, request, **kwargs)
+
+
+httpx.AsyncClient.send = _guarded_async_send  # type: ignore[assignment]
+
+# ---------------------------------------------------------------------------
+# Standard imports (AFTER safety guards are in place)
+# ---------------------------------------------------------------------------
 import sys
 from pathlib import Path
 

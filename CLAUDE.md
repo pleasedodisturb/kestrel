@@ -122,6 +122,11 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 - `.env` / `.env.example` — Backend environment variables
 - `.github/workflows/ci.yml` — CI: Python lint+test, frontend lint+test, CodeQL, PII scan
 
+### Test Safety
+- **Never use `load_dotenv(override=True)`** in application config — it overrides test environment variables and can cause tests to hit real AI providers (this burned ~$20 in real API calls).
+- `tests/conftest.py` forces `AI_PROVIDER=mock` and blanks all API keys before any application imports.
+- An HTTP network guard in `conftest.py` blocks outbound requests to AI provider domains (`openrouter.ai`, `api.anthropic.com`, `api.together.xyz`, `api.openai.com`) during tests. Any attempt raises `RuntimeError` with a clear isolation violation message.
+
 ## Workflow Rules
 
 ### Commits
