@@ -1,27 +1,5 @@
 # Changelog
 
-## [0.6.0](https://github.com/pleasedodisturb/kestrel/compare/v0.5.2...v0.6.0) (2026-04-20)
-
-
-### Features
-
-* **G-291:** add post-scoring hard caps and keyword exemption system ([#231](https://github.com/pleasedodisturb/kestrel/issues/231)) ([454a187](https://github.com/pleasedodisturb/kestrel/commit/454a18737a2018f74230087a043a2fcd7dce3979))
-* **G-293:** add daily scan watchdog and external trigger script ([#228](https://github.com/pleasedodisturb/kestrel/issues/228)) ([6329e67](https://github.com/pleasedodisturb/kestrel/commit/6329e6733ce80ebcb33247620eb2fececd479f97))
-* **G-305:** CI optimization — markers, path filtering, testmon, PR comments ([#234](https://github.com/pleasedodisturb/kestrel/issues/234)) ([30396e9](https://github.com/pleasedodisturb/kestrel/commit/30396e93febb3f86ae97557cb0b13e571f2b6182))
-* **G-345:** add scoring prompt calibration with distribution enforcement ([#223](https://github.com/pleasedodisturb/kestrel/issues/223)) ([5f13dd8](https://github.com/pleasedodisturb/kestrel/commit/5f13dd80ff41dc7d5012a18d3b1001686c9b7384))
-* **G-394, G-305:** rename CLI to kestrel + CI optimization phase 1 ([#233](https://github.com/pleasedodisturb/kestrel/issues/233)) ([e8be92b](https://github.com/pleasedodisturb/kestrel/commit/e8be92b414270a1a851d02f90db2ce247eec6cb5))
-* **G-394:** rename CLI entry point from career to kestrel ([#232](https://github.com/pleasedodisturb/kestrel/issues/232)) ([0deb120](https://github.com/pleasedodisturb/kestrel/commit/0deb120b5597a011e06d0b82335629acb96f6917))
-
-
-### Bug Fixes
-
-* **G-385:** add load_dotenv for reliable .env file reading ([#225](https://github.com/pleasedodisturb/kestrel/issues/225)) ([7be6be5](https://github.com/pleasedodisturb/kestrel/commit/7be6be52d53eed31c79e2e6e1b7eb29cb24b637f))
-
-
-### Documentation
-
-* free tier pricing, real cost table, PII safety boundary ([#235](https://github.com/pleasedodisturb/kestrel/issues/235)) ([9eacff4](https://github.com/pleasedodisturb/kestrel/commit/9eacff49e945abea7ce52363220b9f18fb16024d))
-
 ## [0.5.2](https://github.com/pleasedodisturb/kestrel/compare/v0.5.1...v0.5.2) (2026-04-19)
 
 

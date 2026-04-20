@@ -51,7 +51,6 @@ def _load_profile():
         "salary_max": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get("max", 140000),
         "salary_currency": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get("currency", "EUR"),
         "languages": cfg.get("languages", _DEFAULT_PROFILE["languages"]),
-        "values": cfg.get("values", _DEFAULT_PROFILE["values"]),
     }
 
 
@@ -114,75 +113,22 @@ SCORING_SYSTEM_PROMPT_BASE = (
     f"- {_PROFILE['background_summary']}\n"
     "- Building AI tools: LLM pipelines, MCP servers, agentic systems\n"
     f"- Target roles: {', '.join(_PROFILE['target_roles'])}\n"
-    f"- Location: {_PROFILE['location']}. Remote EU/EMEA OK.\n"
+    f"- Location: {_PROFILE['location']}. Remote EMEA OK.\n"
     f"- Salary: {_PROFILE['salary_min']//1000}-{_PROFILE['salary_max']//1000}k {_PROFILE['salary_currency']} base\n"
-    f"- Languages: {_PROFILE['languages']}\n"
-    f"- Values: {', '.join(_PROFILE['values'])}\n\n"
-    "TARGET DISTRIBUTION (enforce strictly):\n"
-    "Out of every 100 jobs scored, the distribution MUST look like this:\n"
-    "- Score 9-10: 1-2 jobs (truly exceptional -- all criteria met perfectly)\n"
-    "- Score 7-8: 5-8 jobs (strong fits with minor gaps)\n"
-    "- Score 5-6: 10-15 jobs (interesting but significant compromises)\n"
-    "- Score 3-4: 30-40 jobs (most jobs land here -- mediocre or wrong focus)\n"
-    "- Score 1-2: 40-50 jobs (clearly wrong field or level)\n"
-    "Most jobs should score 3-5. Scores of 6+ should be RARE and reserved for roles "
-    "with clear AI/ML focus, EU-compatible location, AND senior-level autonomy. "
-    "When in doubt, score LOWER.\n\n"
-    "SCORING CALIBRATION (follow EXACTLY):\n\n"
-    "9-10 DREAM JOB (max 1-2 per 100 jobs):\n"
-    "Must meet ALL of these -- no exceptions:\n"
-    "  (a) AI-native company OR company with strong AI-first mandate\n"
-    f"  (b) Exact role match: {', '.join(_PROFILE['target_roles'][:4])}\n"
-    f"  (c) {_PROFILE['location']} or fully remote EU\n"
-    f"  (d) {_PROFILE['salary_min']//1000}k+ {_PROFILE['salary_currency']} realistic salary\n"
-    "  (e) High autonomy signals: small team, builder culture, ships product\n"
-    f"  (f) Values alignment: {', '.join(_PROFILE['values'][:3])}\n"
-    "Missing even ONE of (a)-(d) means it CANNOT be 9-10.\n\n"
-    "7-8 STRONG FIT (max 5-8 per 100 jobs):\n"
-    "Must meet at least 4 of these 5:\n"
-    "  (a) AI/ML is central to the role or company\n"
-    "  (b) Role type matches target roles\n"
-    f"  (c) EU-compatible location ({_PROFILE['location']}, remote EU)\n"
-    f"  (d) Salary {_PROFILE['salary_min']//1000}k+ {_PROFILE['salary_currency']} realistic\n"
-    "  (e) Autonomy/builder signals in JD\n"
-    "A role at a great company but in the wrong function is NOT 7-8.\n"
-    "A perfect role type at a non-tech company is NOT 7-8.\n\n"
-    "5-6 MAYBE (requires real tradeoffs):\n"
-    "Has ONE strong positive but MULTIPLE gaps. Examples:\n"
-    "  - Great company but role is process-heavy or not AI-focused\n"
-    "  - Right role type but at a non-AI company, or company has weak tech culture\n"
-    "  - AI focus exists but location is problematic (on-site non-EU)\n"
-    "  - Interesting domain overlap but title is generic PM\n"
-    "A generic 'Product Manager' at a tech company with no AI keywords = 5, not 6.\n"
-    "Only give 6 if there are clear builder/AI signals beyond just being at a tech company.\n\n"
-    "3-4 WEAK (this is where most jobs belong):\n"
-    "  - Generic PM/TPM role with no AI/ML mention = 3-4\n"
-    "  - Right seniority but wrong domain (insurance, logistics, banking without AI)\n"
-    "  - 'Product Manager' with backlog management, stakeholder coordination, sprints = 3\n"
-    "  - Good company but completely wrong function (e.g., data engineer, QA, pure ops)\n"
-    "  - TPM role heavy on PMBOK/PMO/governance/status tracking = 3\n"
-    "  - US-only on-site roles regardless of how good the company is = 3-4\n"
-    "  - Non-tech companies even with 'PM' title = 3\n"
-    "Score 4 only if there is at least one transferable aspect worth noting.\n\n"
-    "1-2 NO FIT:\n"
-    "  - Completely wrong field: sales, accounting, HR, legal, nursing, support, "
-    "marketing-only, finance, construction, trades\n"
-    "  - Junior/entry-level roles\n"
-    "  - Roles requiring skills completely outside candidate's background\n\n"
-    "CONCRETE EXAMPLES (use these as anchors):\n"
-    "- 'Senior AI Product Manager' at AI-native company, remote EU = 9 (dream job)\n"
-    "- 'DevRel Engineer' at open-source AI company, major EU city = 8 (right domain+location)\n"
-    "- 'Product Engineer, AI Platform' at fintech startup, remote EU = 7 "
-    "(right domain, right location, startup autonomy)\n"
-    "- 'Senior Product Manager, Payments' at top fintech, hybrid = 5 "
-    "(great company, but payments not AI, hybrid limits autonomy)\n"
-    "- 'Product Manager' at insurance company, managing backlog = 3 "
-    "(generic PM, no AI, no autonomy signals)\n"
-    "- 'Technical Program Manager' at FAANG, US on-site = 4 "
-    "(right role type but wrong location, likely bureaucratic at scale)\n"
-    "- 'Project Manager' at consulting firm = 3 (process-heavy, no product ownership)\n"
-    "- 'Backend Developer' at non-tech company = 3 (wrong function, no product angle)\n"
-    "- 'Customer Success Manager' at SaaS = 2 (wrong function entirely)\n\n"
+    f"- Languages: {_PROFILE['languages']}\n\n"
+    "SCORING CALIBRATION (follow EXACTLY):\n"
+    "- 9-10: DREAM JOB. Must meet ALL: (a) AI-native company or strong AI mandate, "
+    f"(b) exact role match (TPM/PM/DevRel/Product Eng/AI Lead), (c) {_PROFILE['location']} or full "
+    f"remote EU, (d) {_PROFILE['salary_min']//1000}k+ {_PROFILE['salary_currency']} realistic. Max 2-3 per 200 jobs.\n"
+    "- 7-8: STRONG FIT. Right type of role (PM/TPM/DevRel/Product) at a good company. "
+    f"Minor gaps like different city than {_PROFILE['location']}, or good company but role is slightly adjacent. "
+    "Max 10-15 per 200.\n"
+    "- 5-6: MAYBE. Interesting company but role is process-heavy, OR good role type but "
+    "at a non-tech company. Requires compromise.\n"
+    "- 3-4: WEAK. Wrong domain (pure backend, DevOps, QA, design) but some transferable "
+    "skills. Or right domain but too junior/senior.\n"
+    "- 1-2: NO FIT. Completely wrong field: sales, accounting, HR, legal, nursing, "
+    "support, marketing-only, finance, construction, trades.\n\n"
     "HARD CAPS (override everything above):\n"
     "- Sales roles (SDR, AE, Account Exec, BDR): MAX 1\n"
     "- Accounting/Finance/Tax/Audit: MAX 1\n"
@@ -201,9 +147,6 @@ SCORING_SYSTEM_PROMPT_BASE = (
     "- Roles with no AI/tech/product component: MAX 3\n\n"
     "IMPORTANT: If the job title alone tells you it's wrong (Accountant, Nurse, "
     "Sales Rep, HR Specialist), score 1 immediately. Do not overthink it.\n\n"
-    "FINAL CHECK: Before returning your score, ask yourself: 'Would I confidently "
-    "tell this candidate to spend 2 hours on this application?' If the answer is "
-    "'maybe' or 'probably not', the score should be 5 or below.\n\n"
 )
 
 # job_scorer.py uses this directly (no review_flag)
@@ -438,181 +381,6 @@ EU_LOCATIONS: list[str] = [
     "dach",
     "brazil",  # some remote-ok roles list Brazil
 ]
-
-
-
-# --------------------------------------------------------------------------
-# Hard caps -- post-scoring enforcement AFTER AI or fallback scoring
-# --------------------------------------------------------------------------
-
-# Each rule: (pattern_list, max_score, cap_name)
-# Pattern matching is case-insensitive substring against job title.
-HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
-    # Sales/finance/HR/legal/healthcare/support titles: MAX 1
-    (
-        [
-            "sales", "account executive", "sdr", "bdr",
-            "accountant", "accounting", "bookkeeper", "payroll",
-            "tax ", "auditor", "treasury", "financial analyst",
-            "fincrime", "financial crime",
-            "hr specialist", "hr manager", "hr generalist", "recruiter",
-            "talent acquisition", "people ops",
-            "paralegal", "legal counsel", "compliance officer",
-            "nurse", "nursing", "physician", "therapist", "pharmacist",
-            "clinical",
-            "customer support", "customer service", "help desk",
-            "support analyst", "support specialist", "support technician",
-        ],
-        1,
-        "sales_finance_hr_legal_healthcare_support",
-    ),
-    # Customer Success/Support titles: MAX 2
-    (
-        ["customer success", "client success"],
-        2,
-        "customer_success",
-    ),
-    # Marketing/media/SEO/CRM/content titles: MAX 2
-    (
-        [
-            "marketing manager", "seo ", "seo specialist",
-            "content writer", "copywriter", "social media",
-            "content reviewer", "content moderator",
-            "crm manager", "crm specialist",
-            "media buyer", "media planner",
-            "affiliate marketing", "marketing operations",
-        ],
-        2,
-        "marketing_media_seo_crm",
-    ),
-    # Design/UX titles (no product): MAX 3
-    # Allowlist: if title also contains "product", skip this cap
-    (
-        [
-            "graphic designer", "visual designer", "ui designer",
-            "ux designer", "ux researcher", "interaction designer",
-            "motion designer", "brand designer",
-        ],
-        3,
-        "design_ux_no_product",
-    ),
-    # Junior/entry-level: MAX 1
-    (
-        [
-            "junior ", "entry level", "entry-level", "intern ",
-            "internship", "werkstudent", "working student",
-        ],
-        1,
-        "junior_entry_level",
-    ),
-    # DevOps/SRE (no AI/product): MAX 3
-    (
-        [
-            "devops", "site reliability", "sre ",
-            "infrastructure engineer", "platform engineer",
-        ],
-        3,
-        "devops_sre_no_ai_product",
-    ),
-    # Pure backend/frontend engineer (no PM/product in title): MAX 4
-    (
-        [
-            "backend engineer", "frontend engineer", "fullstack engineer",
-            "full stack engineer", "full-stack engineer",
-            "software engineer", "software developer",
-            "web developer", "java developer", "python developer",
-            ".net developer", "golang developer", "rust developer",
-        ],
-        4,
-        "pure_engineer_no_product",
-    ),
-]
-
-# Title keywords that exempt a job from certain caps
-PRODUCT_KEYWORDS = [
-    "product", "pm ", "tpm", "program manager",
-    "devrel", "developer advocate", "developer relations",
-]
-AI_KEYWORDS = [
-    "ai ", "ai/ml", "machine learning", "ml ",
-    "artificial intelligence", "llm", "genai",
-]
-
-
-def apply_hard_caps(jobs: list[dict]) -> list[dict]:
-    """
-    Apply hard score caps AFTER AI or fallback scoring.
-
-    This is a safety net that enforces maximum scores for job categories
-    that are objectively poor fits, regardless of what the AI scored.
-
-    Mutates and returns the same list of dicts. Each capped job gets:
-        cap_applied: True
-        cap_reason: "<rule_name>"
-    """
-    for job in jobs:
-        title_lower = (job.get("title") or "").lower().strip()
-        location_lower = (job.get("location") or "").lower().strip()
-        current_score = job.get("fit_score", 0)
-
-        if current_score <= 0:
-            continue  # Already filtered or zero-scored
-
-        has_product = any(kw in title_lower for kw in PRODUCT_KEYWORDS)
-        has_ai = any(kw in title_lower for kw in AI_KEYWORDS)
-
-        for patterns, max_score, cap_name in HARD_CAP_RULES:
-            if current_score <= max_score:
-                continue  # Already below cap
-
-            matched = any(p in title_lower for p in patterns)
-            if not matched:
-                continue
-
-            # Exemptions for certain cap categories
-            if cap_name == "design_ux_no_product" and has_product:
-                continue
-            if cap_name == "devops_sre_no_ai_product" and (has_ai or has_product):
-                continue
-            if cap_name == "pure_engineer_no_product" and (has_product or has_ai):
-                continue
-            if cap_name == "junior_entry_level":
-                # Don't cap if title also has senior/lead/staff
-                senior_kws = [
-                    "lead", "senior", "staff",
-                    "principal", "head", "director",
-                ]
-                if any(kw in title_lower for kw in senior_kws):
-                    continue
-
-            # Apply cap
-            job["fit_score"] = max_score
-            job["cap_applied"] = True
-            job["cap_reason"] = cap_name
-            job["fit_reasoning"] = (
-                f"Hard-capped from {current_score} to {max_score} ({cap_name}): "
-                + (job.get("fit_reasoning") or "")
-            )
-            break  # Only apply the first (most restrictive) matching cap
-
-        # US-only non-remote cap: MAX 3
-        if current_score > 3 and not job.get("cap_applied"):
-            is_remote = bool(job.get("remote", False))
-            has_eu_signal = any(eu in location_lower for eu in EU_LOCATIONS)
-            has_us_signal = any(
-                us in location_lower for us in US_ONLY_LOCATIONS
-            )
-            if has_us_signal and not has_eu_signal and not is_remote:
-                job["fit_score"] = 3
-                job["cap_applied"] = True
-                job["cap_reason"] = "us_only_non_remote"
-                job["fit_reasoning"] = (
-                    f"Hard-capped from {current_score} to 3 "
-                    f"(us_only_non_remote): "
-                    + (job.get("fit_reasoning") or "")
-                )
-
-    return jobs
 
 
 def pre_filter_job(

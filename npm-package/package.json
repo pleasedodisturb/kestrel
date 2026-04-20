@@ -1,6 +1,6 @@
 {
   "name": "kestrel-app",
-  "version": "0.6.0",
+  "version": "0.5.2",
   "description": "AI-powered job search platform — installer. Installs and launches Kestrel via Python/pip.",
   "bin": {
     "kestrel-app": "index.js"

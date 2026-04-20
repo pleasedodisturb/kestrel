@@ -123,12 +123,7 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
     if config.profile_path.exists():
         profile_context = config.profile_path.read_text()[:3000]
 
-    from job_scorer import (
-        PROFILE_CRITERIA,
-        SCORING_SYSTEM_PROMPT_WITH_REVIEW,
-        apply_hard_caps,
-        pre_filter_job,
-    )
+    from job_scorer import PROFILE_CRITERIA, SCORING_SYSTEM_PROMPT_WITH_REVIEW, pre_filter_job
 
     scored = []
     skipped = 0
@@ -243,12 +238,6 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
 
     logger.info(f"Scoring complete: {len(scored)} jobs scored")
 
-    # Apply hard caps -- enforce score ceilings for poor-fit categories
-    scored = apply_hard_caps(scored)
-    capped = sum(1 for j in scored if j.get("cap_applied"))
-    if capped:
-        logger.info(f"Hard caps applied: {capped} jobs capped")
-
     # Save scored results
     config.scored_path.write_text(json.dumps(scored, indent=2, ensure_ascii=False))
 
@@ -325,11 +314,6 @@ def _fallback_score(jobs: list[dict]) -> list[dict]:
         job["effort_flag"] = "unknown"
         job["prep_level"] = 0
         job["prep_notes"] = ""
-
-    # Apply hard caps -- enforce score ceilings for poor-fit categories
-    from job_scorer import apply_hard_caps as _apply_hard_caps
-
-    jobs = _apply_hard_caps(jobs)
 
     # Save scored results (same as OpenAI path)
     config.scored_path.write_text(json.dumps(jobs, indent=2, ensure_ascii=False))

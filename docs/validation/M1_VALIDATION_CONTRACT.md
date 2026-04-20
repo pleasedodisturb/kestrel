@@ -22,7 +22,7 @@ On first startup, the backend creates (or migrates) a SQLite database file at th
 **Evidence:** `sqlite3 data/career_os.db ".tables"` lists all expected tables. No migration errors in backend logs.
 
 ### VAL-INFRA-004: Typer CLI is installable and responds to --help
-Running `kestrel --help` (or `career --help` as alias) (or `python -m career_os --help`) prints the top-level command group with subcommands including `pipeline`, and exits 0.  
+Running `career --help` (or `python -m career_os --help`) prints the top-level command group with subcommands including `pipeline`, and exits 0.  
 **Evidence:** Terminal output shows help text with `pipeline` subcommand listed. Exit code is 0.
 
 ### VAL-INFRA-005: Docker Compose orchestrates full stack
@@ -145,36 +145,36 @@ Loading the analytics page with zero applications shows placeholder messages or 
 
 ## CLI Pipeline Commands (VAL-CLI-PIPE)
 
-### VAL-CLI-PIPE-001: `kestrel pipeline list` shows all applications
-Running `kestrel pipeline list` prints a table of all applications with columns: ID, Company, Role, Status, Fit Score, Date Applied. The output is sorted by date (newest first) by default. With migrated data, shows 42+ rows.  
+### VAL-CLI-PIPE-001: `career pipeline list` shows all applications
+Running `career pipeline list` prints a table of all applications with columns: ID, Company, Role, Status, Fit Score, Date Applied. The output is sorted by date (newest first) by default. With migrated data, shows 42+ rows.  
 **Evidence:** Terminal output showing the table. Row count matches database. Columns are aligned and readable.
 
-### VAL-CLI-PIPE-002: `kestrel pipeline list --status applied` filters by status
-Running `kestrel pipeline list --status applied` shows only applications with status "applied". The count matches the number of applied applications in the database.  
+### VAL-CLI-PIPE-002: `career pipeline list --status applied` filters by status
+Running `career pipeline list --status applied` shows only applications with status "applied". The count matches the number of applied applications in the database.  
 **Evidence:** Terminal output filtered to "applied" only. Cross-check with `sqlite3 data/career_os.db "SELECT COUNT(*) FROM applications WHERE status='applied'"`.
 
-### VAL-CLI-PIPE-003: `kestrel pipeline add` creates a new application
-Running `kestrel pipeline add --company "TestCorp" --role "Engineer" --url "https://example.com" --source "manual"` creates a new application in "discovered" status. The CLI confirms creation with the new application ID. The application appears in the web UI Kanban board.  
-**Evidence:** CLI output shows "Application created: ID=XX". `kestrel pipeline list` shows the new entry. Web UI Kanban board shows the card in "Discovered" column after refresh.
+### VAL-CLI-PIPE-003: `career pipeline add` creates a new application
+Running `career pipeline add --company "TestCorp" --role "Engineer" --url "https://example.com" --source "manual"` creates a new application in "discovered" status. The CLI confirms creation with the new application ID. The application appears in the web UI Kanban board.  
+**Evidence:** CLI output shows "Application created: ID=XX". `career pipeline list` shows the new entry. Web UI Kanban board shows the card in "Discovered" column after refresh.
 
-### VAL-CLI-PIPE-004: `kestrel pipeline update` changes application fields
-Running `kestrel pipeline update <id> --status interested --notes "Great fit"` updates the application's status and notes. The change is reflected in both `kestrel pipeline list` and the web UI.  
-**Evidence:** CLI output confirms update. `kestrel pipeline list` shows new status. Web UI detail page shows updated notes and status. Activity log records the CLI-initiated change with `source=cli`.
+### VAL-CLI-PIPE-004: `career pipeline update` changes application fields
+Running `career pipeline update <id> --status interested --notes "Great fit"` updates the application's status and notes. The change is reflected in both `career pipeline list` and the web UI.  
+**Evidence:** CLI output confirms update. `career pipeline list` shows new status. Web UI detail page shows updated notes and status. Activity log records the CLI-initiated change with `source=cli`.
 
-### VAL-CLI-PIPE-005: `kestrel pipeline stats` shows summary statistics
-Running `kestrel pipeline stats` prints a summary including: total applications, count per status, average fit score, top companies by application count, and date range of applications.  
+### VAL-CLI-PIPE-005: `career pipeline stats` shows summary statistics
+Running `career pipeline stats` prints a summary including: total applications, count per status, average fit score, top companies by application count, and date range of applications.  
 **Evidence:** Terminal output showing all summary fields. Numbers match database aggregates.
 
-### VAL-CLI-PIPE-006: `kestrel pipeline follow-ups` lists due follow-ups
-Running `kestrel pipeline follow-ups` (or `kestrel follow-ups`) lists all follow-ups due today or overdue, with: application company/role, due date, type, and days overdue. With no due follow-ups, prints "No follow-ups due. You're all caught up!".  
+### VAL-CLI-PIPE-006: `career pipeline follow-ups` lists due follow-ups
+Running `career pipeline follow-ups` (or `career follow-ups`) lists all follow-ups due today or overdue, with: application company/role, due date, type, and days overdue. With no due follow-ups, prints "No follow-ups due. You're all caught up!".  
 **Evidence:** With an overdue follow-up in the system, the CLI output shows it with correct days-overdue count. With none due, shows the friendly message.
 
 ### VAL-CLI-PIPE-007: CLI error handling for invalid input
-Running `kestrel pipeline add` without required arguments prints a clear usage error message with the required fields listed (not a Python traceback). Running `kestrel pipeline update 99999 --status applied` with a nonexistent ID prints "Application not found" (not a crash).  
+Running `career pipeline add` without required arguments prints a clear usage error message with the required fields listed (not a Python traceback). Running `career pipeline update 99999 --status applied` with a nonexistent ID prints "Application not found" (not a crash).  
 **Evidence:** Terminal output for both error cases shows user-friendly messages. Exit codes are non-zero. No Python tracebacks visible.
 
 ### VAL-CLI-PIPE-008: CLI and web UI share the same database
-An application created via CLI (`kestrel pipeline add`) is immediately visible in the web UI (after page refresh). An application created via web UI is immediately visible via CLI (`kestrel pipeline list`). Both use the same SQLite database file.  
+An application created via CLI (`career pipeline add`) is immediately visible in the web UI (after page refresh). An application created via web UI is immediately visible via CLI (`career pipeline list`). Both use the same SQLite database file.  
 **Evidence:** Create via CLI → verify in web UI. Create via web UI → verify in CLI. Both reference the same `data/career_os.db` file.
 
 ---

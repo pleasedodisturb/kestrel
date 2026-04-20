@@ -11,7 +11,6 @@ dist/
 build/
 .eggs/
 *.egg
-.testmondata
 venv/
 .venv/
 .venv-career/
@@ -95,18 +94,12 @@ htmlcov/
 frontend/coverage/
 lcov.info
 
-# BMAD (local dev tooling, not shipped to users)
+# BMAD output artifacts (branch-specific, not infrastructure)
 _bmad-output/
-_bmad/
 
-# GSD (local dev tooling, not shipped to users)
+# GSD state (per-session, not infrastructure)
 .planning/
 GSD-CLAUDE.md
-.claude/commands/gsd/
-.claude/get-shit-done/
-.claude/agents/gsd-*
-.claude/hooks/gsd-*
-gsd-local-patches/
 
 # Internal business docs
 docs/pricing-strategy.md

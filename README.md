@@ -150,25 +150,12 @@ Kestrel works out of the box in Demo Mode — free, offline, no account needed. 
 | Option | Cost | Privacy | Speed | Best for |
 |--------|------|---------|-------|----------|
 | **Demo Mode** | Free | Perfect | Instant | Exploring before committing |
-| **OpenRouter (free tier)** | **$0/mo** | Good | Varies | Start here — Llama 3.3 70B scores jobs for free |
-| **OpenRouter (paid models)** | $1-30+/mo | Good | Varies | Premium models (Claude, GPT). Cost depends on model and volume — see note below |
-| **Anthropic (Claude)** | $1-10/mo | Excellent | ~200ms | Best quality + prompt caching savings. Can spike if scoring high volumes without caching |
+| **OpenRouter** | ~$3-10/mo | Good | Varies | Most users — one key, 300+ models |
+| **Anthropic (Claude)** | ~$3-10/mo | Excellent | ~200ms | Best quality + prompt caching savings |
 | **Together AI** | ~$1-5/mo | Good ([ZDR available](https://www.together.ai/blog/soc-2-compliance)) | ~213ms | Budget-friendly bulk scoring |
 | **Ollama** | Free | Perfect | Depends on hardware | Nothing leaves your machine, ever |
 
-> **Cost depends on model and volume.** A typical daily scan scrapes 1,000-1,500 jobs from multiple boards. That's a lot of AI calls. Here's what it actually costs:
->
-> | Model | Cost per job | 1,500 jobs/day | Monthly (30 days) |
-> |---|---|---|---|
-> | Llama 3.3 70B (OpenRouter free) | $0 | $0 | **$0** |
-> | Llama 3.1 8B (Together AI) | $0.0002 | $0.30 | **$9** |
-> | GPT-4o-mini (OpenRouter) | $0.0006 | $0.90 | **$27** |
-> | Llama 3.3 70B (Together AI) | $0.002 | $3.00 | **$90** |
-> | Claude Sonnet (OpenRouter) | $0.02 | $30.00 | **$900** |
->
-> Kestrel defaults to free-tier models for bulk scanning. Premium models like Claude Sonnet are best reserved for deep analysis of shortlisted roles, not bulk filtering. The optimizations below help keep costs in check regardless of which model you use.
-
-**Quickest path:** Go to Settings → click "Connect to OpenRouter" → log in → done. No API keys to copy. Free-tier models like Llama 3.3 70B handle job scoring at zero cost — add $10 of credits to unlock 1,000 requests/day.
+**Quickest path:** Go to Settings → click "Connect to OpenRouter" → log in → done. No API keys to copy.
 
 ### How Kestrel keeps costs low
 
@@ -195,28 +182,6 @@ AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get exp
 **Want the best of everything?** Kestrel can use multiple providers at once — route simple scoring to Together (cheap), complex analysis to Anthropic (quality), and never worry about which is which.
 
 **Want to understand more?** Read [How Kestrel Uses AI](docs/ai-providers-explained.md) — it explains everything in plain English, no jargon. For the full technical comparison with pricing tables and privacy audits, see the [AI Provider Setup](docs/AI-PROVIDERS.md) guide or the [LLM landscape research](docs/llms-tokens-privacy.md).
-
-### Privacy and free/cheap models
-
-Free and cheap AI models often train on your data or have weaker privacy guarantees. That's fine for some tasks and dangerous for others. Kestrel distinguishes between the two:
-
-**Safe to send without ZDR** (generic, non-identifying):
-- Job descriptions (public postings)
-- Career preferences (target roles, salary range, location)
-- Scoring criteria and rubrics
-
-**Never sent without ZDR** (personally identifying):
-- Your name, email, phone number, or address
-- CV/resume content and work history
-- Cover letters and application materials
-- Interview preparation with personal STAR stories
-- Contact details and networking notes
-
-**Currently:** Kestrel does not enforce this boundary automatically - it's your responsibility to choose an appropriate provider for sensitive features. If you disable ZDR for cheap scoring, be mindful of which features you use with that provider.
-
-**Planned:** Automatic routing that blocks personal data from reaching non-ZDR providers, so you can use free models for scoring without worrying about accidentally leaking personal data through other features.
-
-**Rule of thumb:** If it's about the job market, cheap models are fine. If it's about *you*, use Ollama (local), Anthropic (strong privacy), or a provider with ZDR enabled.
 
 ---
 
