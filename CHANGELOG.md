@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.0](https://github.com/pleasedodisturb/kestrel/compare/v0.7.1...v0.8.0) (2026-04-20)
+
+
+### Features
+
+* **G-397:** AI cost visibility — token usage logging and OpenRouter attribution ([#244](https://github.com/pleasedodisturb/kestrel/issues/244)) ([b41ac3a](https://github.com/pleasedodisturb/kestrel/commit/b41ac3a70d71c2c0ad7958dabe871a798e5dc284))
+* **G-427:** cache break detection — alert on prompt cache invalidation ([#246](https://github.com/pleasedodisturb/kestrel/issues/246)) ([382fcc8](https://github.com/pleasedodisturb/kestrel/commit/382fcc894a37a4f86e36221ce49559e76d431afe))
+
+
+### Performance
+
+* **G-261:** compress system prompts — 67% token reduction ([#243](https://github.com/pleasedodisturb/kestrel/issues/243)) ([115d576](https://github.com/pleasedodisturb/kestrel/commit/115d576543ba662491d037e78d4cef6ec98316dd))
+
+
+### Documentation
+
+* **G-348:** add 3-layer token optimization documentation ([#247](https://github.com/pleasedodisturb/kestrel/issues/247)) ([9b597e5](https://github.com/pleasedodisturb/kestrel/commit/9b597e57631448fcc49334707d28073a20e8dad7))
+
 ## [0.7.1](https://github.com/pleasedodisturb/kestrel/compare/v0.7.0...v0.7.1) (2026-04-20)
 
 
