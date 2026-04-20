@@ -17,6 +17,7 @@ from career_os.cli.extract import (
     read_multiline_paste,
 )
 from career_os.database import SessionLocal
+from career_os.migration.demo_seed import seed_demo_data
 from career_os.errors.onboarding import OnboardingError
 from career_os.models.models import Profile
 from career_os.models.skills import Skill
@@ -90,6 +91,10 @@ def init(
                 db.flush()
             mark_step_complete(step="profile_started", via="cli", profile_id=profile.id, db=db)
             mark_step_complete(step="profile_completed", via="cli", profile_id=profile.id, db=db)
+            count = seed_demo_data(db, profile_id=profile.id)
+            if count > 0:
+                mark_step_complete(step="demo_seeded", via="cli", profile_id=profile.id, db=db)
+                console.print(f"[green]\u2713[/green] Demo data seeded ({count} sample jobs)")
             console.print(
                 "[green]check[/green] Default profile created. You can re-run "
                 "[bold]kestrel init[/bold] later to fill in details."
@@ -249,6 +254,12 @@ def init(
 
         # Mark profile_completed
         mark_step_complete(step="profile_completed", via="cli", profile_id=profile.id, db=db)
+
+        # D-02: Seed demo data for immediate aha-moment
+        count = seed_demo_data(db, profile_id=profile.id)
+        if count > 0:
+            mark_step_complete(step="demo_seeded", via="cli", profile_id=profile.id, db=db)
+            console.print(f"[green]\u2713[/green] Demo data seeded ({count} sample jobs)")
 
         # D-12/CLI-08: Success + next step suggestion
         console.print("[green]check[/green] Profile saved!")
