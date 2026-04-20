@@ -1,14 +1,17 @@
-"""Langfuse observability integration for AI providers.
+"""Langfuse observability integration and local token usage logging.
 
 Provides conditional instrumentation that activates only when:
 1. The ``langfuse`` package is installed (``pip install kestrel-app[observability]``)
 2. ``LANGFUSE_PUBLIC_KEY`` is set in the environment
 
 When either condition is not met, all exports are no-ops — zero overhead.
+
+Also provides ``log_usage()`` for local SQLite token usage logging (always active).
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import contextmanager
@@ -16,6 +19,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
+
+    from career_os.schemas.ai import AIFeature, TokenUsage
 
 logger = logging.getLogger(__name__)
 
@@ -190,3 +195,86 @@ def flush() -> None:
         logger.info("Langfuse client flushed")
     except Exception:
         logger.warning("Failed to flush Langfuse client", exc_info=True)
+
+
+# ---------------------------------------------------------------------------
+# log_usage() — local SQLite token usage logging (always active)
+# ---------------------------------------------------------------------------
+
+# Approximate pricing per million tokens (input/output) as of 2026-04.
+# Used for cost estimation only — not billing.
+_MODEL_PRICING: dict[str, tuple[float, float]] = {
+    # (input $/MTok, output $/MTok)
+    "claude-opus-4-20250514": (15.0, 75.0),
+    "claude-sonnet-4-20250514": (3.0, 15.0),
+    "claude-haiku-4-5-20251001": (0.80, 4.0),
+    "anthropic/claude-opus-4": (15.0, 75.0),
+    "anthropic/claude-sonnet-4": (3.0, 15.0),
+    "anthropic/claude-haiku-4-5": (0.80, 4.0),
+    "meta-llama/Llama-3.3-70B-Instruct-Turbo": (0.88, 0.88),
+}
+_DEFAULT_PRICING = (3.0, 15.0)  # Sonnet-class fallback
+
+
+def _estimate_cost(
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+) -> float:
+    """Estimate USD cost from token counts and model pricing."""
+    input_rate, output_rate = _MODEL_PRICING.get(model, _DEFAULT_PRICING)
+    return (input_tokens * input_rate + output_tokens * output_rate) / 1_000_000
+
+
+def log_usage(
+    *,
+    provider: str,
+    model: str | None,
+    feature: AIFeature,
+    usage: TokenUsage | None,
+) -> None:
+    """Log AI call token usage to SQLite (fire-and-forget).
+
+    Runs the DB write in a background task so it never blocks the AI call.
+    Safe to call from any async context.
+    """
+    if usage is None:
+        return
+
+    def _write_sync() -> None:
+        try:
+            from career_os.database import SessionLocal
+            from career_os.models.ai_usage import AIUsageLog
+
+            cost = _estimate_cost(
+                model or "unknown",
+                usage.input_tokens,
+                usage.output_tokens,
+            )
+            db = SessionLocal()
+            try:
+                db.add(
+                    AIUsageLog(
+                        provider=provider,
+                        model=model or "unknown",
+                        feature=feature.value,
+                        input_tokens=usage.input_tokens,
+                        output_tokens=usage.output_tokens,
+                        cache_read_tokens=usage.cache_read_input_tokens,
+                        cache_creation_tokens=usage.cache_creation_input_tokens,
+                        estimated_cost_usd=cost,
+                    )
+                )
+                db.commit()
+            finally:
+                db.close()
+        except Exception:
+            logger.debug("Failed to log AI usage", exc_info=True)
+
+    # Fire-and-forget in thread pool to avoid blocking the async call
+    try:
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(None, _write_sync)
+    except RuntimeError:
+        # No running loop (CLI or test context) — run synchronously
+        _write_sync()
