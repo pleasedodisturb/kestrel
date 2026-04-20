@@ -236,66 +236,66 @@ class OpenRouterProvider(AIProvider):
 
 
 def _system_prompt_for_feature(feature: AIFeature) -> str | None:
-    """Return a system prompt tailored to the feature type."""
+    """Return a compressed system prompt tailored to the feature type.
+
+    Prompts use telegraphic notation to minimize token count while preserving
+    all schema constraints. Compression techniques: remove filler words, use
+    shorthand types (:str, :0-10), inline options with |, enumerate with ×.
+    """
     prompts: dict[AIFeature, str] = {
         AIFeature.score: (
-            "You are a career scoring AI. Return valid JSON matching the ScoreResult schema: "
-            "fit_score (0-10), reasoning (≥100 chars with ≥3 specific factors), "
-            "estimated_salary, effort_flag, prep_level, prep_notes, "
-            "readiness_score (0-100), career_alignment (0-10), "
-            "score_breakdown (REQUIRED array of ≥3 objects, each with: "
-            "factor (string), contribution (positive or negative float), "
-            "description (string explaining impact)), "
-            "dimensional_scores (REQUIRED object with 6 floats (0-10): "
-            "technical_fit, seniority_alignment, compensation_fit, location_fit, "
-            "career_trajectory, company_fit), "
-            "ats_keywords (REQUIRED array of 10-15 objects, each with: "
-            "keyword (string), category (one of technical/soft_skill/tool/"
-            "certification/domain), matched (boolean — true iff the candidate "
-            "profile demonstrates this keyword))."
+            "Career scoring AI. Valid JSON output:\n"
+            "fit_score:0-10, reasoning:str≥100ch with ≥3 factors, "
+            "estimated_salary:str, effort_flag:low|medium|high, "
+            "prep_level:str, prep_notes:str, "
+            "readiness_score:0-100, career_alignment:0-10, "
+            "score_breakdown:[≥3×{factor:str, contribution:±float, description:str}], "
+            "dimensional_scores:{technical_fit,seniority_alignment,compensation_fit,"
+            "location_fit,career_trajectory,company_fit}:each 0-10, "
+            "ats_keywords:[10-15×{keyword:str, "
+            "category:technical|soft_skill|tool|certification|domain, "
+            "matched:bool (true iff profile demonstrates it)}]."
         ),
         AIFeature.gap_analysis: (
-            "You are a skills gap analysis AI. Return valid JSON with: gaps (list of "
-            "{skill_name, required_level, current_level, severity, distance}), "
-            "readiness_score (0-100), summary."
+            "Skills gap analysis AI. Valid JSON: "
+            "gaps:[{skill_name,required_level,current_level,severity,distance}], "
+            "readiness_score:0-100, summary:str."
         ),
         AIFeature.coaching: (
-            "You are a career coaching AI. Return valid JSON with: suggestions (list of "
-            "{action, hours, weeks, difficulty, priority}), focus_area."
+            "Career coaching AI. Valid JSON: "
+            "suggestions:[{action,hours,weeks,difficulty,priority}], focus_area:str."
         ),
         AIFeature.goal_recalibration: (
-            "You are a career goal recalibration AI. Return valid JSON with: "
-            "recalibration_notes, suggested_adjustments (list), market_reality."
+            "Goal recalibration AI. Valid JSON: "
+            "recalibration_notes:str, suggested_adjustments:list, market_reality:str."
         ),
         AIFeature.interview_prep: (
-            "You are an interview preparation AI. Return valid JSON with: topics (list), "
-            "questions (list of ≥5), checklist (list with time_minutes), total_prep_hours."
+            "Interview prep AI. Valid JSON: "
+            "topics:list, questions:[≥5], checklist:[{...,time_minutes}], total_prep_hours:num."
         ),
         AIFeature.company_research: (
-            "You are a company research AI. Return valid JSON with: tech_stack (dict with "
-            "frontend/backend/infrastructure/analytics lists), funding (dict with stage, "
-            "total_raised, lead_investor, last_round_date), glassdoor (dict with "
-            "overall_rating, ceo_approval, culture_keywords, work_life_balance), "
-            "values_alignment (dict with score 0-10 and rationale string), ats_platform "
-            "(string or null), hiring_patterns (dict with active_postings, posting_velocity, "
-            "top_departments), industry_segment (string), employee_count (string or null), "
-            "news (list of {title, url, date, summary} or null)."
+            "Company research AI. Valid JSON:\n"
+            "tech_stack:{frontend,backend,infrastructure,analytics:[str]}, "
+            "funding:{stage,total_raised,lead_investor,last_round_date}, "
+            "glassdoor:{overall_rating,ceo_approval,culture_keywords,work_life_balance}, "
+            "values_alignment:{score:0-10,rationale:str}, ats_platform:str|null, "
+            "hiring_patterns:{active_postings,posting_velocity,top_departments}, "
+            "industry_segment:str, employee_count:str|null, "
+            "news:[{title,url,date,summary}]|null."
         ),
         AIFeature.learning_recommendations: (
-            "You are a learning path recommender. Return valid JSON with: recommendations "
-            "(list of {title, url, hours, provider, difficulty, type}), total_hours."
+            "Learning recommender. Valid JSON: "
+            "recommendations:[{title,url,hours,provider,difficulty,type}], total_hours:num."
         ),
         AIFeature.interview_format: (
-            "You are an interview format AI. Return valid JSON with: rounds (list of "
-            "{round_number (int), type (string), description (string), duration_minutes (int)}), "
-            "total_duration (string, e.g., '3-4 weeks'), "
-            "process_description (string describing the overall interview process)."
+            "Interview format AI. Valid JSON: "
+            "rounds:[{round_number:int,type:str,description:str,duration_minutes:int}], "
+            "total_duration:str (e.g. '3-4 weeks'), process_description:str."
         ),
         AIFeature.interview_patterns: (
-            "You are an interview patterns AI. Return valid JSON with: question_categories "
-            "(list of {name, description, example_questions (list of strings)}), "
-            "assessment_criteria (list of {name, description}), "
-            "frequently_tested_skills (list of strings)."
+            "Interview patterns AI. Valid JSON: "
+            "question_categories:[{name,description,example_questions:[str]}], "
+            "assessment_criteria:[{name,description}], frequently_tested_skills:[str]."
         ),
     }
     return prompts.get(feature)
