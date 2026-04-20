@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
@@ -40,6 +38,11 @@ def db_session(monkeypatch, tmp_path):
     session = testing_session_cls()
     profile = Profile(id=1, name="Test User", email="test@test.com", location="Frankfurt")
     session.add(profile)
+    # Add demo data so all checks pass
+    demo_app = Application(
+        profile_id=1, company="Demo Corp", role="Demo Role", source="demo", status="discovered"
+    )
+    session.add(demo_app)
     session.commit()
 
     yield session
