@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/pleasedodisturb/kestrel/compare/v0.6.0...v0.7.0) (2026-04-20)
+
+
+### Features
+
+* **G-291:** port robust JSON scoring parser from CareerOS ([#230](https://github.com/pleasedodisturb/kestrel/issues/230)) ([c32c0eb](https://github.com/pleasedodisturb/kestrel/commit/c32c0ebc35e58ea4a22f26214d9bdcbd2643de85))
+* **G-408:** Langfuse observability blueprint ([#236](https://github.com/pleasedodisturb/kestrel/issues/236)) ([0d2d579](https://github.com/pleasedodisturb/kestrel/commit/0d2d57992c98959e67527288c55e74b681f4a313))
+
+
+### Bug Fixes
+
+* **G-412:** add test isolation guard — prevent tests from hitting real AI providers ([#237](https://github.com/pleasedodisturb/kestrel/issues/237)) ([374b937](https://github.com/pleasedodisturb/kestrel/commit/374b937292d022f533a629cd8c2dc310a1fbddea))
+
 ## [0.6.0](https://github.com/pleasedodisturb/kestrel/compare/v0.5.2...v0.6.0) (2026-04-20)
 
 
