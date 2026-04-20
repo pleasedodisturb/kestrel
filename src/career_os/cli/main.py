@@ -2268,5 +2268,10 @@ def start(
     )
 
 
+# Health check command (Phase 2 / G-392)
+from career_os.cli.doctor import doctor  # noqa: E402
+
+app.command("doctor")(doctor)
+
 if __name__ == "__main__":
     app()
