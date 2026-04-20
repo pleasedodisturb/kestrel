@@ -1,0 +1,356 @@
+/**
+ * Tests for the WelcomePage component.
+ *
+ * Covers:
+ * - WEB-02: Welcome screen with Get Started CTA
+ * - WEB-04: Resume from last step
+ * - WEB-07: Summary screen with completed/skipped checklist
+ * - WEB-08: Skipped steps show Settings path
+ * - WEB-09: AI provider nudge card on summary
+ * - PROF-04: Same 6 questions as CLI wizard
+ */
+
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import { WelcomePage } from "@/pages/WelcomePage";
+import type { OnboardingStatus } from "@/api/onboarding";
+
+// ---- mocks ----
+
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
+const mockFetchOnboardingStatus = vi.fn<() => Promise<OnboardingStatus>>();
+const mockPatchOnboardingStep = vi.fn<() => Promise<OnboardingStatus>>();
+
+vi.mock("@/api/onboarding", () => ({
+  DEFAULT_PROFILE_ID: 1,
+  fetchOnboardingStatus: (...args: unknown[]) =>
+    mockFetchOnboardingStatus(...(args as [])),
+  patchOnboardingStep: (...args: unknown[]) =>
+    mockPatchOnboardingStep(...(args as [])),
+}));
+
+const mockUpdateProfile = vi.fn<() => Promise<unknown>>();
+vi.mock("@/api/profiles", () => ({
+  updateProfile: (...args: unknown[]) => mockUpdateProfile(...(args as [])),
+}));
+
+const mockCreateSkill = vi.fn<() => Promise<unknown>>();
+vi.mock("@/api/skills", () => ({
+  createSkill: (...args: unknown[]) => mockCreateSkill(...(args as [])),
+}));
+
+// ---- helpers ----
+
+function makeStatus(
+  overrides: Partial<OnboardingStatus> = {},
+): OnboardingStatus {
+  return {
+    profile_id: 1,
+    current_step: null,
+    next_step: null,
+    is_complete: false,
+    progress_pct: 0,
+    profile_started_at: null,
+    profile_completed_at: null,
+    demo_seeded_at: null,
+    welcome_completed_at: null,
+    tour_completed_at: null,
+    feedback_prompted_at: null,
+    completed_at: null,
+    profile_started_via: null,
+    profile_completed_via: null,
+    demo_seeded_via: null,
+    welcome_completed_via: null,
+    tour_completed_via: null,
+    feedback_prompted_via: null,
+    completed_via: null,
+    created_at: null,
+    updated_at: null,
+    ...overrides,
+  };
+}
+
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+    },
+  });
+}
+
+function renderWelcomePage(statusOverrides: Partial<OnboardingStatus> = {}) {
+  const qc = createQueryClient();
+  mockFetchOnboardingStatus.mockResolvedValue(makeStatus(statusOverrides));
+
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={["/welcome"]}>
+        <WelcomePage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockUpdateProfile.mockResolvedValue({});
+  mockCreateSkill.mockResolvedValue({ id: 1 });
+  mockPatchOnboardingStep.mockResolvedValue(makeStatus());
+});
+
+// ---- tests ----
+
+describe("WelcomePage", () => {
+  describe("Welcome screen (WEB-02)", () => {
+    it("renders the welcome heading and CTA", () => {
+      renderWelcomePage();
+
+      expect(screen.getByText("Welcome to Kestrel")).toBeInTheDocument();
+      expect(screen.getByText("Get Started")).toBeInTheDocument();
+    });
+
+    it("shows setup description text", () => {
+      renderWelcomePage();
+
+      expect(screen.getByText(/score jobs that match you/)).toBeInTheDocument();
+    });
+
+    it("has a welcome-page test id", () => {
+      renderWelcomePage();
+
+      expect(screen.getByTestId("welcome-page")).toBeInTheDocument();
+    });
+  });
+
+  describe("Step flow (PROF-04)", () => {
+    it("shows the first question after clicking Get Started", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      await waitFor(() => {
+        expect(screen.getByText("What's your name?")).toBeInTheDocument();
+      });
+    });
+
+    it("shows all 6 step questions in sequence", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      const questions = [
+        "What's your name?",
+        "Where are you based?",
+        "What roles are you targeting?",
+        "What's your target salary range?",
+        "What are your key skills?",
+        "What's your experience level?",
+      ];
+
+      for (const question of questions) {
+        await waitFor(() => {
+          expect(screen.getByText(question)).toBeInTheDocument();
+        });
+        // Skip to advance to next question
+        fireEvent.click(screen.getByText("Skip"));
+      }
+    });
+
+    it("shows Back, Skip, and Next buttons on step screens", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Back")).toBeInTheDocument();
+        expect(screen.getByText("Skip")).toBeInTheDocument();
+        expect(screen.getByText("Next")).toBeInTheDocument();
+      });
+    });
+
+    it("disables Back button on the first step", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Back")).toBeDisabled();
+      });
+    });
+
+    it("shows the progress bar during steps", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("step-progress")).toBeInTheDocument();
+        expect(screen.getByText("Step 1 of 6")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Summary screen (WEB-07, WEB-08, WEB-09)", () => {
+    it("shows summary after completing all steps by skipping", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      // Skip all 6 steps
+      for (let i = 0; i < 6; i++) {
+        await waitFor(() => {
+          expect(screen.getByText("Skip")).toBeInTheDocument();
+        });
+        fireEvent.click(screen.getByText("Skip"));
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText(/all set/i)).toBeInTheDocument();
+      });
+    });
+
+    it("shows summary checklist with test id", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      for (let i = 0; i < 6; i++) {
+        await waitFor(() => {
+          expect(screen.getByText("Skip")).toBeInTheDocument();
+        });
+        fireEvent.click(screen.getByText("Skip"));
+      }
+
+      await waitFor(() => {
+        expect(screen.getByTestId("summary-checklist")).toBeInTheDocument();
+      });
+    });
+
+    it("shows AI provider nudge card (WEB-09)", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      for (let i = 0; i < 6; i++) {
+        await waitFor(() => {
+          expect(screen.getByText("Skip")).toBeInTheDocument();
+        });
+        fireEvent.click(screen.getByText("Skip"));
+      }
+
+      await waitFor(() => {
+        expect(screen.getByTestId("ai-provider-nudge")).toBeInTheDocument();
+        expect(screen.getByText("Unlock full AI scoring")).toBeInTheDocument();
+        expect(screen.getByText("Configure in Settings")).toBeInTheDocument();
+      });
+    });
+
+    it("shows See your scored results CTA (D-08)", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      for (let i = 0; i < 6; i++) {
+        await waitFor(() => {
+          expect(screen.getByText("Skip")).toBeInTheDocument();
+        });
+        fireEvent.click(screen.getByText("Skip"));
+      }
+
+      await waitFor(() => {
+        expect(screen.getByTestId("see-results-cta")).toBeInTheDocument();
+        expect(screen.getByText("See your scored results")).toBeInTheDocument();
+      });
+    });
+
+    it("skipped steps show Settings > Profile path (WEB-08)", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      for (let i = 0; i < 6; i++) {
+        await waitFor(() => {
+          expect(screen.getByText("Skip")).toBeInTheDocument();
+        });
+        fireEvent.click(screen.getByText("Skip"));
+      }
+
+      await waitFor(() => {
+        const settingsLinks = screen.getAllByText(/update anytime in Settings/);
+        expect(settingsLinks.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("navigates to Pipeline when CTA is clicked", async () => {
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      for (let i = 0; i < 6; i++) {
+        await waitFor(() => {
+          expect(screen.getByText("Skip")).toBeInTheDocument();
+        });
+        fireEvent.click(screen.getByText("Skip"));
+      }
+
+      await waitFor(() => {
+        expect(screen.getByTestId("see-results-cta")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId("see-results-cta"));
+      expect(mockNavigate).toHaveBeenCalledWith("/");
+    });
+  });
+
+  describe("Resume logic (WEB-04)", () => {
+    it("shows step screen when profile_started_at is set", async () => {
+      renderWelcomePage({
+        profile_started_at: "2026-04-21T00:00:00Z",
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("What's your name?")).toBeInTheDocument();
+      });
+    });
+
+    it("shows summary screen when welcome_completed_at is set", async () => {
+      renderWelcomePage({
+        welcome_completed_at: "2026-04-21T00:00:00Z",
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/all set/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Error handling", () => {
+    it("shows error message when save fails", async () => {
+      mockUpdateProfile.mockRejectedValueOnce(new Error("Network error"));
+      renderWelcomePage();
+
+      fireEvent.click(screen.getByText("Get Started"));
+
+      await waitFor(() => {
+        expect(screen.getByText("What's your name?")).toBeInTheDocument();
+      });
+
+      const input = screen.getByRole("textbox");
+      fireEvent.change(input, { target: { value: "Test User" } });
+      fireEvent.click(screen.getByText("Next"));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Couldn't save your answer/),
+        ).toBeInTheDocument();
+      });
+    });
+  });
+});
