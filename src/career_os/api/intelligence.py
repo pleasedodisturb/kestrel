@@ -25,6 +25,7 @@ from career_os.services.role_intelligence import (
     get_interview_patterns,
     get_salary_benchmarks,
 )
+from career_os.schemas.constraints import INT64_MAX
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ router = APIRouter(prefix="/api/intelligence", tags=["role-intelligence"])
 )
 async def interview_format_endpoint(
     company: Annotated[str, Query(min_length=1, description="Company name")],
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     role: Annotated[
         str | None, Query(description="Optional role context for more specific results")
@@ -81,7 +82,7 @@ async def interview_format_endpoint(
 )
 async def salary_benchmark_endpoint(
     role: Annotated[str, Query(min_length=1, description="Role type to benchmark")],
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     location: Annotated[str | None, Query(description="Optional location filter")] = None,
     company_stage: Annotated[
@@ -123,7 +124,7 @@ async def salary_benchmark_endpoint(
 )
 async def interview_patterns_endpoint(
     role: Annotated[str, Query(min_length=1, description="Role type")],
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InterviewPatternsResponse:
     """Get common interview patterns for a role type.

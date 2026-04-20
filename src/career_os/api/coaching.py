@@ -16,13 +16,14 @@ from career_os.services.coaching import (
     ProfileNotFoundError,
     get_coaching_suggestions,
 )
+from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(prefix="/api/coaching", tags=["coaching"])
 
 
 @router.get("/suggestions", responses=RESP_404)
 async def get_suggestions(
-    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> CoachingSuggestionsResponse:
     """Get prioritized coaching suggestions.

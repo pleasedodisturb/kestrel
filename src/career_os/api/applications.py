@@ -2,11 +2,12 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404, RESP_404_422
 from career_os.database import get_db
+from career_os.schemas.constraints import INT64_MAX
 from career_os.schemas.applications import (
     ActivityLogResponse,
     ApplicationCreate,
@@ -84,16 +85,16 @@ async def create(
 
 @router.get("")
 async def list_apps(
-    profile_id: Annotated[int, Query(description="Profile to list applications for")],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description="Profile to list applications for")],
     db: Annotated[Session, Depends(get_db)],
     status: Annotated[str | None, Query(description="Filter by status")] = None,
     search: Annotated[str | None, Query(description="Search by company name")] = None,
     sort: Annotated[str | None, Query(description="Sort field: 'score' or 'date'")] = None,
     order: Annotated[str, Query(description="Sort order: 'asc' or 'desc'")] = "desc",
     ghost_alert: Annotated[bool, Query(description="Filter to ghost candidates only")] = False,
-    applied_threshold: Annotated[int, Query(description="Applied ghost threshold (days)")] = 14,
+    applied_threshold: Annotated[int, Query(ge=1, le=INT64_MAX, description="Applied ghost threshold (days)")] = 14,
     interviewing_threshold: Annotated[
-        int, Query(description="Interviewing ghost threshold (days)")
+        int, Query(ge=1, le=INT64_MAX, description="Interviewing ghost threshold (days)")
     ] = 7,
 ) -> ApplicationListResponse:
     """List applications with optional filters and sorting.
@@ -152,8 +153,8 @@ async def list_apps(
 
 @router.get("/{application_id}", responses=RESP_404)
 async def get_detail(
-    application_id: int,
-    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
+    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationDetailResponse:
     """Get application detail including activity log and follow-ups.
@@ -193,9 +194,9 @@ async def get_detail(
     responses=RESP_404_422,
 )
 async def update(
-    application_id: int,
+    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
     payload: ApplicationUpdate,
-    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationResponse:
     """Update an application.
@@ -219,8 +220,8 @@ async def update(
 
 @router.delete("/{application_id}", responses=RESP_404)
 async def delete(
-    application_id: int,
-    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
+    application_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ApplicationResponse:
     """Soft-delete (archive) an application.

@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
@@ -23,6 +23,7 @@ from career_os.services.follow_ups import (
     get_overdue_count,
     list_follow_ups,
 )
+from career_os.schemas.constraints import INT64_MAX
 
 router = APIRouter(prefix="/api/follow-ups", tags=["follow-ups"])
 
@@ -60,7 +61,7 @@ async def create(
 
 @router.get("/overdue-count")
 async def overdue_count(
-    profile_id: Annotated[int, Query(description="Profile to check overdue count for")],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description="Profile to check overdue count for")],
     db: Annotated[Session, Depends(get_db)],
 ) -> OverdueCountResponse:
     """Get the count of overdue, incomplete follow-ups."""
@@ -70,7 +71,7 @@ async def overdue_count(
 
 @router.get("")
 async def list_all(
-    profile_id: Annotated[int, Query(description="Profile to list follow-ups for")],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description="Profile to list follow-ups for")],
     db: Annotated[Session, Depends(get_db)],
     overdue: Annotated[bool, Query(description="Only show overdue follow-ups")] = False,
 ) -> FollowUpListResponse:
@@ -98,9 +99,9 @@ async def list_all(
 
 @router.patch("/{follow_up_id}", responses=RESP_404)
 async def complete(
-    follow_up_id: int,
+    follow_up_id: Annotated[int, Path(ge=1, le=INT64_MAX)],
     payload: FollowUpComplete,
-    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT64_MAX, description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> FollowUpResponse:
     """Complete a follow-up (set completed_at).
