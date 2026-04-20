@@ -53,6 +53,15 @@ describe("StepProgress", () => {
     expect(fillBar).toHaveStyle({ width: "100%" });
   });
 
+  it("shows 0% at the first step", () => {
+    const { container } = render(<StepProgress current={0} total={6} />);
+
+    const fillBar = container.querySelector(
+      "[role='progressbar'] > div",
+    ) as HTMLElement;
+    expect(fillBar).toHaveStyle({ width: "0%" });
+  });
+
   it("applies custom className", () => {
     render(<StepProgress current={1} total={6} className="custom-class" />);
 
