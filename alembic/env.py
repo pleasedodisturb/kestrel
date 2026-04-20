@@ -15,6 +15,7 @@ from career_os.database import Base  # noqa: E402
 from career_os.models import models as _models  # noqa: E402, F401
 from career_os.models import skills as _skills  # noqa: E402, F401
 from career_os.models import discovery as _discovery  # noqa: E402, F401
+from career_os.models import onboarding as _onboarding  # noqa: E402, F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
