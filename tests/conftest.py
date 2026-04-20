@@ -17,6 +17,7 @@ from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 
+
 # ---------------------------------------------------------------------------
 # Automatic test marker classification (D-01, D-02)
 # ---------------------------------------------------------------------------
