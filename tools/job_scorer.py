@@ -166,13 +166,20 @@ def _load_profile():
         "location": cfg.get("location", _DEFAULT_PROFILE["location"]),
         "salary_min": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get("min", 80000),
         "salary_max": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get("max", 140000),
-        "salary_currency": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get("currency", "EUR"),
+        "salary_currency": cfg.get("salary_range", _DEFAULT_PROFILE["salary_range"]).get(
+            "currency", "EUR"
+        ),
         "languages": cfg.get("languages", _DEFAULT_PROFILE["languages"]),
         "values": cfg.get("values", _DEFAULT_PROFILE["values"]),
     }
 
 
 _PROFILE = _load_profile()
+
+_salary_min_k = _PROFILE["salary_min"] // 1000
+_salary_max_k = _PROFILE["salary_max"] // 1000
+_salary_floor_k = _PROFILE["salary_min"] * 3 // 4 // 1000
+_salary_cur = _PROFILE["salary_currency"]
 
 PROFILE_CRITERIA = f"""
 Ideal candidate profile for job scoring:
@@ -200,14 +207,15 @@ RED FLAGS (score down):
 - "Must have 10+ years in [narrow specialty]"
 
 SALARY & EFFORT CONTEXT:
-- Target: {_PROFILE["salary_min"]//1000}-{_PROFILE["salary_max"]//1000}k {_PROFILE["salary_currency"]} base. Below {_PROFILE["salary_min"]*3//4//1000}k is a dealbreaker unless exceptional trajectory.
+- Target: {_salary_min_k}-{_salary_max_k}k {_salary_cur} base. \
+Below {_salary_floor_k}k is a dealbreaker unless exceptional trajectory.
 - Sweet spot: Staff/Lead at Series B-D (PMF achieved, reasonable hours, real equity).
 - Green flags: "sustainable pace", "work-life balance", 4-day week, async-first.
 - If salary not posted, estimate based on company stage, role level, and location.
 
 SALARY SCORING:
-- Include 'estimated_salary' (string, e.g. "110-130k EUR") in your response.
-- Include 'effort_flag' (string: "sweet-spot", "moderate", "high-intensity", or "unknown") in your response.
+- Include 'estimated_salary' (string, e.g. "110-130k EUR") in response.
+- Include 'effort_flag' ("sweet-spot", "moderate", "high-intensity", or "unknown").
 
 PREPARATION TOUGHNESS:
 - Include 'prep_level' (integer 1-5) estimating interview prep needed:
@@ -232,7 +240,7 @@ SCORING_SYSTEM_PROMPT_BASE = (
     "- Building AI tools: LLM pipelines, MCP servers, agentic systems\n"
     f"- Target roles: {', '.join(_PROFILE['target_roles'])}\n"
     f"- Location: {_PROFILE['location']}. Remote EU/EMEA OK.\n"
-    f"- Salary: {_PROFILE['salary_min']//1000}-{_PROFILE['salary_max']//1000}k {_PROFILE['salary_currency']} base\n"
+    f"- Salary: {_salary_min_k}-{_salary_max_k}k {_salary_cur} base\n"
     f"- Languages: {_PROFILE['languages']}\n"
     f"- Values: {', '.join(_PROFILE['values'])}\n\n"
     "TARGET DISTRIBUTION (enforce strictly):\n"
@@ -251,7 +259,7 @@ SCORING_SYSTEM_PROMPT_BASE = (
     "  (a) AI-native company OR company with strong AI-first mandate\n"
     f"  (b) Exact role match: {', '.join(_PROFILE['target_roles'][:4])}\n"
     f"  (c) {_PROFILE['location']} or fully remote EU\n"
-    f"  (d) {_PROFILE['salary_min']//1000}k+ {_PROFILE['salary_currency']} realistic salary\n"
+    f"  (d) {_PROFILE['salary_min'] // 1000}k+ {_PROFILE['salary_currency']} realistic salary\n"
     "  (e) High autonomy signals: small team, builder culture, ships product\n"
     f"  (f) Values alignment: {', '.join(_PROFILE['values'][:3])}\n"
     "Missing even ONE of (a)-(d) means it CANNOT be 9-10.\n\n"
@@ -260,7 +268,7 @@ SCORING_SYSTEM_PROMPT_BASE = (
     "  (a) AI/ML is central to the role or company\n"
     "  (b) Role type matches target roles\n"
     f"  (c) EU-compatible location ({_PROFILE['location']}, remote EU)\n"
-    f"  (d) Salary {_PROFILE['salary_min']//1000}k+ {_PROFILE['salary_currency']} realistic\n"
+    f"  (d) Salary {_PROFILE['salary_min'] // 1000}k+ {_PROFILE['salary_currency']} realistic\n"
     "  (e) Autonomy/builder signals in JD\n"
     "A role at a great company but in the wrong function is NOT 7-8.\n"
     "A perfect role type at a non-tech company is NOT 7-8.\n\n"
@@ -557,7 +565,6 @@ EU_LOCATIONS: list[str] = [
 ]
 
 
-
 # --------------------------------------------------------------------------
 # Hard caps -- post-scoring enforcement AFTER AI or fallback scoring
 # --------------------------------------------------------------------------
@@ -568,17 +575,41 @@ HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
     # Sales/finance/HR/legal/healthcare/support titles: MAX 1
     (
         [
-            "sales", "account executive", "sdr", "bdr",
-            "accountant", "accounting", "bookkeeper", "payroll",
-            "tax ", "auditor", "treasury", "financial analyst",
-            "fincrime", "financial crime",
-            "hr specialist", "hr manager", "hr generalist", "recruiter",
-            "talent acquisition", "people ops",
-            "paralegal", "legal counsel", "compliance officer",
-            "nurse", "nursing", "physician", "therapist", "pharmacist",
+            "sales",
+            "account executive",
+            "sdr",
+            "bdr",
+            "accountant",
+            "accounting",
+            "bookkeeper",
+            "payroll",
+            "tax ",
+            "auditor",
+            "treasury",
+            "financial analyst",
+            "fincrime",
+            "financial crime",
+            "hr specialist",
+            "hr manager",
+            "hr generalist",
+            "recruiter",
+            "talent acquisition",
+            "people ops",
+            "paralegal",
+            "legal counsel",
+            "compliance officer",
+            "nurse",
+            "nursing",
+            "physician",
+            "therapist",
+            "pharmacist",
             "clinical",
-            "customer support", "customer service", "help desk",
-            "support analyst", "support specialist", "support technician",
+            "customer support",
+            "customer service",
+            "help desk",
+            "support analyst",
+            "support specialist",
+            "support technician",
         ],
         1,
         "sales_finance_hr_legal_healthcare_support",
@@ -592,12 +623,20 @@ HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
     # Marketing/media/SEO/CRM/content titles: MAX 2
     (
         [
-            "marketing manager", "seo ", "seo specialist",
-            "content writer", "copywriter", "social media",
-            "content reviewer", "content moderator",
-            "crm manager", "crm specialist",
-            "media buyer", "media planner",
-            "affiliate marketing", "marketing operations",
+            "marketing manager",
+            "seo ",
+            "seo specialist",
+            "content writer",
+            "copywriter",
+            "social media",
+            "content reviewer",
+            "content moderator",
+            "crm manager",
+            "crm specialist",
+            "media buyer",
+            "media planner",
+            "affiliate marketing",
+            "marketing operations",
         ],
         2,
         "marketing_media_seo_crm",
@@ -606,9 +645,14 @@ HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
     # Allowlist: if title also contains "product", skip this cap
     (
         [
-            "graphic designer", "visual designer", "ui designer",
-            "ux designer", "ux researcher", "interaction designer",
-            "motion designer", "brand designer",
+            "graphic designer",
+            "visual designer",
+            "ui designer",
+            "ux designer",
+            "ux researcher",
+            "interaction designer",
+            "motion designer",
+            "brand designer",
         ],
         3,
         "design_ux_no_product",
@@ -616,8 +660,13 @@ HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
     # Junior/entry-level: MAX 1
     (
         [
-            "junior ", "entry level", "entry-level", "intern ",
-            "internship", "werkstudent", "working student",
+            "junior ",
+            "entry level",
+            "entry-level",
+            "intern ",
+            "internship",
+            "werkstudent",
+            "working student",
         ],
         1,
         "junior_entry_level",
@@ -625,8 +674,11 @@ HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
     # DevOps/SRE (no AI/product): MAX 3
     (
         [
-            "devops", "site reliability", "sre ",
-            "infrastructure engineer", "platform engineer",
+            "devops",
+            "site reliability",
+            "sre ",
+            "infrastructure engineer",
+            "platform engineer",
         ],
         3,
         "devops_sre_no_ai_product",
@@ -634,11 +686,19 @@ HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
     # Pure backend/frontend engineer (no PM/product in title): MAX 4
     (
         [
-            "backend engineer", "frontend engineer", "fullstack engineer",
-            "full stack engineer", "full-stack engineer",
-            "software engineer", "software developer",
-            "web developer", "java developer", "python developer",
-            ".net developer", "golang developer", "rust developer",
+            "backend engineer",
+            "frontend engineer",
+            "fullstack engineer",
+            "full stack engineer",
+            "full-stack engineer",
+            "software engineer",
+            "software developer",
+            "web developer",
+            "java developer",
+            "python developer",
+            ".net developer",
+            "golang developer",
+            "rust developer",
         ],
         4,
         "pure_engineer_no_product",
@@ -647,12 +707,22 @@ HARD_CAP_RULES: list[tuple[list[str], int, str]] = [
 
 # Title keywords that exempt a job from certain caps
 PRODUCT_KEYWORDS = [
-    "product", "pm ", "tpm", "program manager",
-    "devrel", "developer advocate", "developer relations",
+    "product",
+    "pm ",
+    "tpm",
+    "program manager",
+    "devrel",
+    "developer advocate",
+    "developer relations",
 ]
 AI_KEYWORDS = [
-    "ai ", "ai/ml", "machine learning", "ml ",
-    "artificial intelligence", "llm", "genai",
+    "ai ",
+    "ai/ml",
+    "machine learning",
+    "ml ",
+    "artificial intelligence",
+    "llm",
+    "genai",
 ]
 
 
@@ -696,8 +766,12 @@ def apply_hard_caps(jobs: list[dict]) -> list[dict]:
             if cap_name == "junior_entry_level":
                 # Don't cap if title also has senior/lead/staff
                 senior_kws = [
-                    "lead", "senior", "staff",
-                    "principal", "head", "director",
+                    "lead",
+                    "senior",
+                    "staff",
+                    "principal",
+                    "head",
+                    "director",
                 ]
                 if any(kw in title_lower for kw in senior_kws):
                     continue
@@ -716,17 +790,14 @@ def apply_hard_caps(jobs: list[dict]) -> list[dict]:
         if current_score > 3 and not job.get("cap_applied"):
             is_remote = bool(job.get("remote", False))
             has_eu_signal = any(eu in location_lower for eu in EU_LOCATIONS)
-            has_us_signal = any(
-                us in location_lower for us in US_ONLY_LOCATIONS
-            )
+            has_us_signal = any(us in location_lower for us in US_ONLY_LOCATIONS)
             if has_us_signal and not has_eu_signal and not is_remote:
                 job["fit_score"] = 3
                 job["cap_applied"] = True
                 job["cap_reason"] = "us_only_non_remote"
                 job["fit_reasoning"] = (
                     f"Hard-capped from {current_score} to 3 "
-                    f"(us_only_non_remote): "
-                    + (job.get("fit_reasoning") or "")
+                    f"(us_only_non_remote): " + (job.get("fit_reasoning") or "")
                 )
 
     return jobs
@@ -760,9 +831,8 @@ def pre_filter_job(
 
     # 2b. Reject by title with allowlist (skip if qualifying word present)
     for pattern, allowlist in REJECT_WITH_ALLOWLIST.items():
-        if pattern in title_lower:
-            if not any(q in title_lower for q in allowlist):
-                return True, f"Rejected title pattern: '{pattern}' in '{title}'", None
+        if pattern in title_lower and not any(q in title_lower for q in allowlist):
+            return True, f"Rejected title pattern: '{pattern}' in '{title}'", None
 
     # 2c. Reject by regex (word-boundary patterns)
     for rx in REJECT_TITLE_REGEX:
@@ -773,11 +843,10 @@ def pre_filter_job(
     if any(
         kw in title_lower
         for kw in ["junior ", "intern ", "internship", "werkstudent", "working student"]
+    ) and not any(
+        kw in title_lower for kw in ["lead", "senior", "staff", "principal", "head", "director"]
     ):
-        if not any(
-            kw in title_lower for kw in ["lead", "senior", "staff", "principal", "head", "director"]
-        ):
-            return True, f"Junior role: {title}", None
+        return True, f"Junior role: {title}", None
 
     # 4. US-only location cap (unless explicitly remote)
     if not remote and not any(eu in location_lower for eu in EU_LOCATIONS):
@@ -791,7 +860,10 @@ def pre_filter_job(
 def score_job(
     client, title: str, company: str, description: str
 ) -> tuple[int, str, str, str, int, str]:
-    """Score a single job posting. Returns (score, reasoning, salary, effort, prep_level, prep_notes)."""
+    """Score a single job posting.
+
+    Returns (score, reasoning, salary, effort, prep_level, prep_notes).
+    """
     if not description or pd.isna(description):
         return 0, "No description available", "unknown", "unknown", 0, ""
 
@@ -803,7 +875,12 @@ def score_job(
             {"role": "system", "content": SCORING_SYSTEM_PROMPT},
             {
                 "role": "user",
-                "content": f"CANDIDATE PROFILE:\n{PROFILE_CRITERIA}\n\nJOB POSTING:\nTitle: {title}\nCompany: {company}\nDescription: {desc_truncated}",
+                "content": (
+                    f"CANDIDATE PROFILE:\n{PROFILE_CRITERIA}\n\n"
+                    f"JOB POSTING:\nTitle: {title}\n"
+                    f"Company: {company}\n"
+                    f"Description: {desc_truncated}"
+                ),
             },
         ],
         temperature=0.3,
@@ -872,7 +949,7 @@ def main():
     prep_notes_list = []
 
     skipped = 0
-    for i, row in df.iterrows():
+    for _i, row in df.iterrows():
         title = row.get("title", "Unknown")
         company = row.get("company", "Unknown")
         location = row.get("location", "")
