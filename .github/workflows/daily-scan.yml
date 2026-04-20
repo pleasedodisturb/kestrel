@@ -53,7 +53,7 @@ on:
         type: boolean
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   daily-scan:
@@ -230,18 +230,6 @@ jobs:
           name: pipeline-logs-${{ github.run_number }}
           path: logs/
           retention-days: 7
-
-      - name: Commit digest to repo
-        if: success() && inputs.dry_run != true
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          DATE=$(date +%Y-%m-%d)
-          for f in tracking/daily-scan-${DATE}.md tracking/scraped_scored_${DATE}.json tracking/scraped_raw_${DATE}.json; do
-            [ -f "$f" ] && git add "$f"
-          done
-          git diff --cached --quiet || git commit -m "chore: daily scan digest ${DATE}"
-          git push
 
       - name: Notify on failure
         if: failure()
