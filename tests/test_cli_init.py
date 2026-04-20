@@ -252,3 +252,150 @@ def test_init_already_completed_shows_message(db_session, mock_tty) -> None:
     result = runner.invoke(app, ["init"])
     assert result.exit_code == 0
     assert "already set up" in result.output.lower() or "--force" in result.output
+
+
+# ---------------------------------------------------------------------------
+# D-14: Resume from last step (partial completion)
+# ---------------------------------------------------------------------------
+
+
+def test_resume_from_last_step(db_session, mock_tty) -> None:
+    """kestrel init shows 'Welcome back' when profile started but not completed."""
+    from career_os.models.models import _utcnow
+    from career_os.models.onboarding import OnboardingState
+
+    # Mark profile_started but NOT profile_completed
+    now = _utcnow()
+    state = OnboardingState(
+        profile_id=1,
+        current_step="profile_started",
+        profile_started_at=now,
+    )
+    db_session.add(state)
+    db_session.commit()
+
+    answers = iter(["Alice", "Berlin", "SWE", "100k", "senior"])
+    confirm_answers = iter([False, True])  # No to paste, Yes to save
+    with patch("career_os.cli.init.Prompt.ask", side_effect=lambda *a, **kw: next(answers)):
+        with patch(
+            "career_os.cli.init.Confirm.ask",
+            side_effect=lambda *a, **kw: next(confirm_answers),
+        ):
+            result = runner.invoke(app, ["init"])
+    assert result.exit_code == 0
+    assert "Welcome back" in result.output or "Resuming" in result.output
+
+
+def test_resume_prefills_existing_values(db_session, mock_tty) -> None:
+    """kestrel init pre-fills existing profile values as defaults when resuming."""
+    from career_os.models.models import _utcnow
+    from career_os.models.onboarding import OnboardingState
+
+    # Update profile with some existing values
+    profile = db_session.query(Profile).first()
+    profile.name = "Existing Name"
+    profile.location = "Munich"
+
+    # Mark profile_started but NOT profile_completed to trigger resume
+    now = _utcnow()
+    state = OnboardingState(
+        profile_id=1,
+        current_step="profile_started",
+        profile_started_at=now,
+    )
+    db_session.add(state)
+    db_session.commit()
+
+    # Track the defaults passed to Prompt.ask
+    prompt_defaults = []
+
+    def capture_defaults(*args, **kwargs):
+        prompt_defaults.append(kwargs.get("default", ""))
+        return kwargs.get("default", "") or "test"
+
+    confirm_answers = iter([False, True])  # No to paste, Yes to save
+    with patch("career_os.cli.init.Prompt.ask", side_effect=capture_defaults):
+        with patch(
+            "career_os.cli.init.Confirm.ask",
+            side_effect=lambda *a, **kw: next(confirm_answers),
+        ):
+            result = runner.invoke(app, ["init"])
+    assert result.exit_code == 0
+    # The first default should be "Existing Name" and second "Munich"
+    assert "Existing Name" in prompt_defaults
+    assert "Munich" in prompt_defaults
+
+
+# ---------------------------------------------------------------------------
+# PROF-02: Resume paste extraction
+# ---------------------------------------------------------------------------
+
+
+def test_resume_paste_extracts_email(db_session, mock_tty) -> None:
+    """kestrel init shows extracted email when resume paste is accepted."""
+    answers = iter(["Alice", "Berlin", "SWE", "100k", "senior"])
+    confirm_answers = iter([True, True])  # Yes to paste, Yes to save
+    with (
+        patch("career_os.cli.init.Prompt.ask", side_effect=lambda *a, **kw: next(answers)),
+        patch(
+            "career_os.cli.init.Confirm.ask",
+            side_effect=lambda *a, **kw: next(confirm_answers),
+        ),
+        patch(
+            "career_os.cli.init.read_multiline_paste",
+            return_value="Contact alice@test.com for details",
+        ),
+        patch(
+            "career_os.cli.init.extract_skills_from_text",
+            return_value=[],
+        ),
+    ):
+        result = runner.invoke(app, ["init"])
+    assert result.exit_code == 0
+    assert "alice@test.com" in result.output
+
+
+def test_resume_paste_declined(db_session, mock_tty) -> None:
+    """kestrel init skips paste step when user declines."""
+    answers = iter(["Alice", "Berlin", "SWE", "100k", "senior"])
+    confirm_answers = iter([False, True])  # No to paste, Yes to save
+    with patch("career_os.cli.init.Prompt.ask", side_effect=lambda *a, **kw: next(answers)):
+        with patch(
+            "career_os.cli.init.Confirm.ask",
+            side_effect=lambda *a, **kw: next(confirm_answers),
+        ):
+            result = runner.invoke(app, ["init"])
+    assert result.exit_code == 0
+    assert "Found in your resume" not in result.output
+
+
+def test_extracted_skills_saved(db_session, mock_tty) -> None:
+    """kestrel init saves extracted skills to the Skill table."""
+    from career_os.models.skills import Skill
+
+    answers = iter(["Alice", "Berlin", "SWE", "100k", "senior"])
+    confirm_answers = iter([True, True])  # Yes to paste, Yes to save
+    with (
+        patch("career_os.cli.init.Prompt.ask", side_effect=lambda *a, **kw: next(answers)),
+        patch(
+            "career_os.cli.init.Confirm.ask",
+            side_effect=lambda *a, **kw: next(confirm_answers),
+        ),
+        patch(
+            "career_os.cli.init.read_multiline_paste",
+            return_value="I know Python and TypeScript very well",
+        ),
+        patch(
+            "career_os.cli.init.extract_skills_from_text",
+            return_value=["Python", "TypeScript"],
+        ),
+    ):
+        result = runner.invoke(app, ["init"])
+    assert result.exit_code == 0
+    assert "Skills" in result.output
+
+    # Verify skills were saved to DB
+    skills = db_session.query(Skill).filter(Skill.profile_id == 1).all()
+    skill_names = [s.name for s in skills]
+    assert "Python" in skill_names
+    assert "TypeScript" in skill_names
