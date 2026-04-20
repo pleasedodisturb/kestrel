@@ -11,6 +11,7 @@ import re
 import httpx
 
 from career_os.ai.base import AIProvider, ComplexityTier
+from career_os.ai.observability import observe, update_current_generation
 from career_os.schemas.ai import (
     AIFeature,
     AIResponse,
@@ -93,6 +94,7 @@ class OpenRouterProvider(AIProvider):
         effective_tier = tier or ComplexityTier.STANDARD
         return _TIER_MODELS[effective_tier]
 
+    @observe(name="openrouter-complete", as_type="generation")
     async def complete(
         self,
         prompt: str,
@@ -105,6 +107,10 @@ class OpenRouterProvider(AIProvider):
     ) -> AIResponse:
         """Send a completion request to OpenRouter."""
         model = self._resolve_model(tier)
+        update_current_generation(
+            model=model,
+            metadata={"feature": feature.value, "tier": (tier or "standard")},
+        )
         expects_structured = feature in _SCHEMA_MAP
 
         for attempt in range(1, max_retries + 2):  # 1-based, up to max_retries+1
@@ -160,6 +166,12 @@ class OpenRouterProvider(AIProvider):
             structured = _try_parse_structured(content, feature)
 
             if structured is not None or not expects_structured:
+                update_current_generation(
+                    usage_details={
+                        "input": usage.input_tokens,
+                        "output": usage.output_tokens,
+                    },
+                )
                 return AIResponse(
                     content=content,
                     provider="openrouter",

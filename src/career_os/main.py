@@ -125,7 +125,10 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown: stop schedulers
+    # Shutdown: flush observability, stop schedulers
+    from career_os.ai.observability import flush as flush_observability
+
+    flush_observability()
     stop_ticktick_scheduler()
     stop_scheduler()
 
