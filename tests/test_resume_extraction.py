@@ -15,7 +15,6 @@ from sqlalchemy.orm import sessionmaker
 from career_os.database import Base
 from career_os.models.esco import ESCOSkill
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
