@@ -29,6 +29,9 @@ from career_os.schemas.ai import (
 
 logger = logging.getLogger(__name__)
 
+# Compact JSON separators — eliminates whitespace tokens (~30% reduction on profile data)
+_COMPACT = (",", ":")
+
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "anthropic/claude-sonnet-4"
 
@@ -227,7 +230,7 @@ class OpenRouterProvider(AIProvider):
             f"desire_reasoning (string explaining what makes this job desirable "
             f"or undesirable from the candidate's perspective).\n\n"
             f"Job Description:\n{job_description}\n\n"
-            f"Profile:\n{json.dumps(profile_data, indent=2)}"
+            f"Profile:\n{json.dumps(profile_data, separators=_COMPACT)}"
         )
         return await self.complete(prompt, feature=AIFeature.score, tier=tier)
 

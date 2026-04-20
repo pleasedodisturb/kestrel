@@ -22,6 +22,9 @@ from career_os.schemas.ai import AIFeature, AIResponse
 
 logger = logging.getLogger(__name__)
 
+# Compact JSON separators — eliminates whitespace tokens (~30% reduction on profile data)
+_COMPACT = (",", ":")
+
 TOGETHER_API_URL = "https://api.together.xyz/v1/chat/completions"
 DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 
@@ -167,7 +170,7 @@ class TogetherProvider(AIProvider):
             f"desire_reasoning (string explaining what makes this job desirable "
             f"or undesirable from the candidate's perspective).\n\n"
             f"Job Description:\n{job_description}\n\n"
-            f"Profile:\n{json.dumps(profile_data, indent=2)}"
+            f"Profile:\n{json.dumps(profile_data, separators=_COMPACT)}"
         )
         return await self.complete(prompt, feature=AIFeature.score)
 
