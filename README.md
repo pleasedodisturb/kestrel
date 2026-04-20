@@ -212,9 +212,11 @@ Free and cheap AI models often train on your data or have weaker privacy guarant
 - Interview preparation with personal STAR stories
 - Contact details and networking notes
 
-Kestrel enforces this boundary in code. Features that handle personal data (CV generation, cover letters, interview prep) will only use providers with Zero Data Retention enabled or local providers like Ollama. If you disable ZDR on OpenRouter for cheaper scoring, your personal documents are still protected - Kestrel won't route them through unprotected endpoints.
+**Currently:** Kestrel does not enforce this boundary automatically - it's your responsibility to choose an appropriate provider for sensitive features. If you disable ZDR for cheap scoring, be mindful of which features you use with that provider.
 
-**Rule of thumb:** If it's about the job market, cheap models are fine. If it's about *you*, it goes through a privacy-safe path or stays on your machine.
+**Planned:** Automatic routing that blocks personal data from reaching non-ZDR providers, so you can use free models for scoring without worrying about accidentally leaking personal data through other features.
+
+**Rule of thumb:** If it's about the job market, cheap models are fine. If it's about *you*, use Ollama (local), Anthropic (strong privacy), or a provider with ZDR enabled.
 
 ---
 
