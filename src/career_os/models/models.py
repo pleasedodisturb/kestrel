@@ -35,6 +35,8 @@ class Profile(Base):
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     job_family: Mapped[str | None] = mapped_column(String(255), nullable=True)
     dream_companies: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
+    salary_range: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    experience_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     last_market_refreshed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
