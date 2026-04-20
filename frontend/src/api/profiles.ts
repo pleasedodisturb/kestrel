@@ -29,6 +29,8 @@ export interface ProfileUpdate {
   email?: string;
   location?: string;
   job_family?: string;
+  salary_range?: string;
+  experience_level?: string;
 }
 
 const API_BASE = "/api/profiles";
