@@ -12,6 +12,7 @@ import logging
 import httpx
 
 from career_os.ai.base import AIProvider, ProviderQuotaError
+from career_os.ai.observability import observe, update_current_generation
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
     _system_prompt_for_feature,
@@ -49,6 +50,7 @@ class TogetherProvider(AIProvider):
         """Together.ai has ZDR/training opt-out enabled — green tier."""
         return "green"
 
+    @observe(name="together-complete", as_type="generation")
     async def complete(
         self,
         prompt: str,
@@ -59,6 +61,10 @@ class TogetherProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         """Send a completion request to the Together.ai API."""
+        update_current_generation(
+            model=self._model,
+            metadata={"feature": feature.value},
+        )
         expects_structured = feature in _SCHEMA_MAP
 
         for attempt in range(1, max_retries + 2):
@@ -103,6 +109,13 @@ class TogetherProvider(AIProvider):
             structured = _try_parse_structured(content, feature)
 
             if structured is not None or not expects_structured:
+                usage_data = data.get("usage", {})
+                update_current_generation(
+                    usage_details={
+                        "input": usage_data.get("prompt_tokens", 0),
+                        "output": usage_data.get("completion_tokens", 0),
+                    },
+                )
                 return AIResponse(
                     content=content,
                     provider="together",

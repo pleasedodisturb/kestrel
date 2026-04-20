@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import httpx
 
 from career_os.ai.base import AIProvider, ComplexityTier
+from career_os.ai.observability import observe, update_current_generation
 from career_os.ai.openrouter_provider import _system_prompt_for_feature, _try_parse_structured
 from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
@@ -67,6 +68,7 @@ class OllamaProvider(AIProvider):
     def name(self) -> str:
         return "ollama"
 
+    @observe(name="ollama-complete", as_type="generation")
     async def complete(
         self,
         prompt: str,
@@ -81,6 +83,10 @@ class OllamaProvider(AIProvider):
         The tier parameter is accepted for interface compatibility but ignored
         — Ollama uses a single local model for all tiers.
         """
+        update_current_generation(
+            model=self._model,
+            metadata={"feature": feature.value},
+        )
         messages = [{"role": "user", "content": prompt}]
 
         system_msg = _system_prompt_for_feature(feature)
@@ -131,6 +137,13 @@ class OllamaProvider(AIProvider):
         # JSON retry: if structured feature but parsing failed, retry once
         if feature != AIFeature.complete and structured is None:
             structured = await self._retry_json(messages, payload, url, feature)
+
+        update_current_generation(
+            usage_details={
+                "input": usage.input_tokens,
+                "output": usage.output_tokens,
+            },
+        )
 
         return AIResponse(
             content=content,
