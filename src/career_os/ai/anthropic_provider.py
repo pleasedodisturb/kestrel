@@ -13,6 +13,7 @@ import logging
 import httpx
 
 from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
+from career_os.ai.cache_monitor import record_cache_event
 from career_os.ai.observability import observe, update_current_generation
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
@@ -179,6 +180,9 @@ class AnthropicProvider(AIProvider):
                 cache_creation_input_tokens=usage_data.get("cache_creation_input_tokens", 0),
                 cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
             )
+
+            # Track cache hit/miss for break detection
+            record_cache_event(feature, usage)
 
             # Try to parse structured data for known features
             structured = _try_parse_structured(content, feature)
