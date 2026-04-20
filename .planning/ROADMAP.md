@@ -12,7 +12,7 @@ This roadmap takes a new Kestrel user from "just installed" to "seeing scored re
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Onboarding State Foundation** - Shared state model, API endpoints, and error infrastructure that all onboarding surfaces depend on
+- [x] **Phase 1: Onboarding State Foundation** - Shared state model, API endpoints, and error infrastructure that all onboarding surfaces depend on — COMPLETE 2026-04-20
 - [ ] **Phase 2: CLI Wizard** - Complete `kestrel init` interactive wizard with profile questions, paste-text extraction, health check, and guided next steps
 - [ ] **Phase 3: Demo Data** - Pre-baked sample jobs with pre-computed scores that deliver the "aha moment" without requiring an API key
 - [ ] **Phase 4: Web Welcome Flow** - First-time welcome screen, onboarding guard, web profile questions, resume/skip/complete flow, and post-onboarding AI provider nudge
@@ -34,7 +34,7 @@ Plans:
 - [x] 01-00-PLAN.md — Wave 0 failing test stubs for INF-01, INF-02, INF-03 (TDD contract) — COMPLETE 2026-04-20
 - [x] 01-01-PLAN.md — Error hierarchy, OnboardingState model, Pydantic schemas (INF-01, INF-02 foundation)
 - [x] 01-02-PLAN.md — Alembic migration registration, DB table creation, service layer business logic (INF-01, INF-02, INF-03 service)
-- [ ] 01-03-PLAN.md — API routes, main.py wiring, full test suite (INF-01, INF-02, INF-03 complete)
+- [x] 01-03-PLAN.md — API routes, main.py wiring, full test suite (INF-01, INF-02, INF-03 complete) — COMPLETE 2026-04-20
 
 ### Phase 2: CLI Wizard
 **Goal**: A user who runs `pip install kestrel-app` and types `kestrel` is guided through profile setup, sees their data confirmed, and knows exactly what to do next -- all from the terminal
@@ -91,7 +91,7 @@ Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Onboarding State Foundation | 3/4 | In Progress|  |
+| 1. Onboarding State Foundation | 4/4 | Complete | 2026-04-20 |
 | 2. CLI Wizard | 0/0 | Not started | - |
 | 3. Demo Data | 0/0 | Not started | - |
 | 4. Web Welcome Flow | 0/0 | Not started | - |
