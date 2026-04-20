@@ -15,22 +15,69 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docs_only: ${{ steps.filter.outputs.backend != 'true' && steps.filter.outputs.frontend != 'true' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'src/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'alembic.ini'
+              - 'config/**'
+              - 'docker-compose*'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - 'docker-compose*'
+              - '.github/workflows/ci.yml'
+            docs_only:
+              - '**/*.md'
+              - 'docs/**'
+
   backend:
     name: Backend (Python 3.11)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: >-
+      always() &&
+      (needs.changes.result == 'skipped' || needs.changes.outputs.backend == 'true') &&
+      (needs.changes.result == 'skipped' || needs.changes.outputs.docs_only != 'true')
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-          cache: pip
+
+      - name: Cache venv
+        id: cache-venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-py311-${{ hashFiles('pyproject.toml') }}
 
       - name: Install dependencies
+        if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
-          # pip<26.0 is flagged by CVE-2026-1703 (pip-audit); ensure the
-          # installer itself is patched before auditing project deps.
+          python -m venv .venv
+          source .venv/bin/activate
           python -m pip install --upgrade 'pip>=26.0'
           pip install -e ".[dev]"
+
+      - name: Activate venv
+        run: echo "${{ github.workspace }}/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Setup test config
         run: |
@@ -44,9 +91,6 @@ jobs:
 
       - name: Alembic migration check
         run: |
-          # Capture alembic heads output separately so real alembic errors
-          # surface with their actual message instead of being masked by
-          # the pipeline-count step below.
           alembic_heads_output=$(alembic heads)
           heads_count=$(printf '%s\n' "$alembic_heads_output" | grep -c '(head)' || true)
           if [ "$heads_count" -ne 1 ]; then
@@ -54,40 +98,53 @@ jobs:
             printf '%s\n' "$alembic_heads_output"
             exit 1
           fi
-          # Apply migrations against a fresh SQLite DB (path set in alembic.ini).
           rm -f data/career_os.db
           alembic upgrade head
-          # Downgrade + upgrade roundtrip verifies migrations are reversible.
           alembic downgrade base
           alembic upgrade head
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml
+      - name: Cache testmon data
+        if: github.event_name == 'pull_request'
+        uses: actions/cache@v4
+        with:
+          path: .testmondata
+          key: testmon-py311-${{ hashFiles('pyproject.toml') }}
+
+      - name: Run tests (PR - selective via testmon)
+        if: github.event_name == 'pull_request'
+        run: pytest tests/ -v --tb=short --testmon --junitxml=test-results/backend-junit.xml
+
+      - name: Run tests (main - full with coverage)
+        if: github.event_name != 'pull_request'
+        run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml --junitxml=test-results/backend-junit.xml
 
       - name: Upload coverage report
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: coverage.xml
           retention-days: 1
 
+      - name: Upload JUnit XML
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-junit
+          path: test-results/backend-junit.xml
+          retention-days: 1
+
       - name: API smoke test
         run: |
-          # Start uvicorn with logs captured to a file so we can dump them
-          # on failure — otherwise crash reasons are invisible in CI.
           uvicorn career_os.main:app --host 127.0.0.1 --port 8100 \
             > uvicorn.log 2>&1 &
           APP_PID=$!
-          # Single-quote the trap body so $APP_PID is evaluated at trap
-          # fire time, not at trap-setup time (shellcheck SC2064).
           trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
           for _ in 1 2 3 4 5 6 7 8 9 10; do
             if curl -sf http://127.0.0.1:8100/health > /dev/null; then
               echo "Health check passed."
               exit 0
             fi
-            # If uvicorn died early, surface the logs and stop waiting.
             if ! kill -0 "$APP_PID" 2>/dev/null; then
               echo "::error::uvicorn exited before becoming healthy"
               cat uvicorn.log
@@ -100,9 +157,6 @@ jobs:
           exit 1
 
       - name: Security audit (dependencies)
-        # Strict: any advisory fails the build. If an upstream advisory has
-        # no fix yet, add the vuln ID to .pip-audit-ignore (one per line,
-        # with a comment) as a temporary escape hatch.
         run: |
           pip install pip-audit
           ignore_args=()
@@ -117,8 +171,6 @@ jobs:
 
       - name: PII leak check
         run: |
-          # Check for personal data patterns defined in .github/pii-patterns.txt
-          # For forks: update that file with your own patterns
           FAIL=0
           if [ -f .github/pii-patterns.txt ]; then
             while IFS= read -r pattern; do
@@ -144,6 +196,11 @@ jobs:
   frontend:
     name: Frontend (React)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: >-
+      always() &&
+      (needs.changes.result == 'skipped' || needs.changes.outputs.frontend == 'true') &&
+      (needs.changes.result == 'skipped' || needs.changes.outputs.docs_only != 'true')
     defaults:
       run:
         working-directory: frontend
@@ -161,18 +218,6 @@ jobs:
       - name: Lint
         run: npx eslint src/
 
-      # Type check and build are disabled until ~20 pre-existing type
-      # errors are fixed (Recharts Formatter signatures, test fixture
-      # mismatches, nullable guards). Tracked as a follow-up to #103.
-      # The baseUrl deprecation (TS5101) is already suppressed via
-      # ignoreDeprecations in tsconfig.app.json.
-      #
-      # - name: Type check
-      #   run: npx tsc --noEmit -p tsconfig.app.json
-      #
-      # - name: Build
-      #   run: npm run build
-
       - name: Run tests
         run: npx vitest run --coverage
 
@@ -184,11 +229,51 @@ jobs:
           path: frontend/coverage/lcov.info
           retention-days: 1
 
+      - name: Upload JUnit XML
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-junit
+          path: frontend/test-results/frontend-junit.xml
+          retention-days: 1
+
       - name: Security audit (dependencies)
         run: npm audit --audit-level=moderate
 
       - name: Verify npm package signatures
         run: npm audit signatures
+
+  test-results:
+    name: Test Results
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'pull_request'
+    needs: [backend, frontend]
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Download backend JUnit XML
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-junit
+          path: test-results/
+        continue-on-error: true
+
+      - name: Download frontend JUnit XML
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-junit
+          path: test-results/
+        continue-on-error: true
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: test-results/**/*.xml
+          comment_title: "Test Results"
+          check_name: "Test Results"
+          comment_mode: always
 
   sonarcloud:
     name: SonarCloud Analysis
@@ -218,7 +303,7 @@ jobs:
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4 # v7.1.0
-        continue-on-error: true  # Informational — don't block CI on scan failures
+        continue-on-error: true  # Informational -- don't block CI on scan failures
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -226,7 +311,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: SonarSource/sonarqube-quality-gate-action@cf038b0e0cdecfa9e56c198bbb7d21d751d62c3b # v1.2.0
         timeout-minutes: 5
-        continue-on-error: true  # Supplementary — don't block the workflow
+        continue-on-error: true  # Supplementary -- don't block the workflow
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -318,3 +403,24 @@ jobs:
               });
               core.info('Created SonarCloud issues comment');
             }
+
+  ci-complete:
+    name: CI Complete
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [changes, backend, frontend, actionlint, sonarcloud, test-results]
+    steps:
+      - name: Check job results
+        run: |
+          echo "Job results:"
+          echo "  changes: ${{ needs.changes.result }}"
+          echo "  backend: ${{ needs.backend.result }}"
+          echo "  frontend: ${{ needs.frontend.result }}"
+          echo "  actionlint: ${{ needs.actionlint.result }}"
+          echo "  sonarcloud: ${{ needs.sonarcloud.result }}"
+          echo "  test-results: ${{ needs.test-results.result }}"
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "::error::One or more CI jobs failed"
+            exit 1
+          fi
+          echo "All CI jobs passed or were skipped"
