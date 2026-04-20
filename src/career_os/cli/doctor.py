@@ -70,18 +70,28 @@ def _check_profile_exists() -> tuple[bool, str, str]:
 
 
 def _check_demo_data() -> tuple[bool, str, str]:
-    """Check if demo/sample data is present."""
+    """Check if demo data is present. Auto-seeds if missing (D-03)."""
     try:
-        from career_os.models.models import Application
+        from career_os.models.models import Application, Profile
+        from career_os.migration.demo_seed import seed_demo_data
 
         db = _get_session()
-        demo = db.query(Application).filter(Application.source == "demo").first()
+        demo_count = db.query(Application).filter(Application.is_demo.is_(True)).count()
+        if demo_count > 0:
+            db.close()
+            return True, f"Demo data present ({demo_count} jobs)", ""
+
+        # D-03: Auto-fix -- seed demo data
+        profile = db.query(Profile).first()
+        if profile:
+            count = seed_demo_data(db, profile_id=profile.id)
+            db.close()
+            return True, f"Demo data restored ({count} jobs)", ""
+
         db.close()
-        if demo:
-            return True, "Demo data present", ""
-        return False, "Demo data missing", "Run `kestrel seed-demo` to load sample jobs"
+        return False, "Demo data missing (no profile)", "Run `kestrel init` first"
     except Exception:
-        return False, "Demo data check failed", "Run `kestrel seed-demo` to load sample jobs"
+        return False, "Demo data check failed", "Run `kestrel init` to set up"
 
 
 _CHECKS = [
