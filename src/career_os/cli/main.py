@@ -33,6 +33,37 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+
+@app.callback(invoke_without_command=True)
+def main_callback(ctx: typer.Context) -> None:
+    """Check onboarding status and show first-run hint if needed."""
+    if ctx.invoked_subcommand in ("init", "doctor"):
+        return
+    if ctx.resilient_parsing:
+        return
+    if ctx.invoked_subcommand is None:
+        # no_args_is_help handles this
+        return
+    try:
+        db = _get_session()
+        try:
+            from career_os.services.onboarding import get_onboarding_status
+
+            status = get_onboarding_status(profile_id=1, db=db)
+            if not status.is_complete:
+                console.print(
+                    Panel(
+                        "[bold]Welcome to Kestrel![/bold]\n"
+                        "Run [bold cyan]kestrel init[/bold cyan] to set up your profile.",
+                        border_style="blue",
+                    )
+                )
+        finally:
+            db.close()
+    except Exception:
+        pass  # T-02-05: Never block normal commands — silently skip hint
+
+
 # Pipeline subcommand group
 pipeline_app = typer.Typer(
     name="pipeline",
@@ -2272,6 +2303,11 @@ def start(
 from career_os.cli.doctor import doctor  # noqa: E402
 
 app.command("doctor")(doctor)
+
+# Init wizard command (Phase 2 / G-392)
+from career_os.cli.init import init  # noqa: E402
+
+app.command("init")(init)
 
 if __name__ == "__main__":
     app()
