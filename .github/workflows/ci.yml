@@ -273,7 +273,7 @@ jobs:
           files: test-results/**/*.xml
           comment_title: "Test Results"
           check_name: "Test Results"
-          comment_mode: update
+          comment_mode: always
 
   sonarcloud:
     name: SonarCloud Analysis
