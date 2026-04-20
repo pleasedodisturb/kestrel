@@ -4,6 +4,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 
 class PrivacyTier(StrEnum):
     """Privacy tier classification for AI providers.
@@ -21,7 +23,7 @@ class PrivacyTier(StrEnum):
 class DataRetention(BaseModel):
     """Data retention policy description."""
 
-    days: int | None = Field(None, description="Retention in days, None=indefinite")
+    days: int | None = Field(None, ge=INT64_MIN, le=INT64_MAX, description="Retention in days, None=indefinite")
     description: str = Field(..., description="Human-readable retention policy")
 
 

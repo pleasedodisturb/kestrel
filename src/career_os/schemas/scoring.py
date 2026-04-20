@@ -3,11 +3,12 @@
 import json as json_mod
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from career_os.schemas.ai import ATSKeywordCategory, ScoreBreakdownFactor
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
 
 
 def _ensure_utc(v: Any) -> datetime | None:
@@ -61,13 +62,13 @@ def score_to_letter_grade(score: float | None) -> str | None:
 class ScoreRequest(BaseModel):
     """Request body for POST /api/score — score a job against a profile."""
 
-    profile_id: int = Field(..., description="Profile to score against")
+    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile to score against")
     job_url: str | None = Field(default=None, description="Job posting URL (for reference)")
     job_title: str | None = Field(default=None, description="Job title")
     job_company: str | None = Field(default=None, description="Company name")
     job_description: str = Field(..., min_length=1, description="Job description text to score")
-    discovered_job_id: int | None = Field(default=None, description="Link to discovered job record")
-    application_id: int | None = Field(default=None, description="Link to application record")
+    discovered_job_id: int | None = Field(default=None, ge=1, le=INT64_MAX, description="Link to discovered job record")
+    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX, description="Link to application record")
 
 
 class RedFlag(BaseModel):
@@ -112,14 +113,15 @@ class ScoreContextResponse(BaseModel):
         le=100,
         description="Percentage of scored jobs this score is higher than",
     )
-    rank: int = Field(..., ge=1, description="Rank among all scored jobs (1 = highest)")
-    total_scored: int = Field(..., ge=1, description="Total number of non-stale scored jobs")
+    rank: int = Field(..., ge=1, le=INT64_MAX, description="Rank among all scored jobs (1 = highest)")
+    total_scored: int = Field(..., ge=1, le=INT64_MAX, description="Total number of non-stale scored jobs")
     avg_score: float = Field(
         ..., ge=0, le=10, description="Average fit_score across all scored jobs"
     )
     score_band_count: int = Field(
         ...,
         ge=0,
+        le=INT64_MAX,
         description="Number of jobs in the same letter grade band as this score",
     )
 
@@ -135,7 +137,7 @@ class ProfileCompletenessResponse(BaseModel):
         ...,
         ge=0,
         le=100,
-        description="Profile richness 0-100% (higher = more data → tighter range)",
+        description="Profile richness 0-100% (higher = more data -> tighter range)",
     )
     confidence_range: tuple[float, float] = Field(
         ...,
@@ -160,10 +162,10 @@ class ProfileCompletenessResponse(BaseModel):
 class ScoreResponse(BaseModel):
     """Full scoring breakdown response."""
 
-    id: int | None = None
-    profile_id: int
-    discovered_job_id: int | None = None
-    application_id: int | None = None
+    id: int | None = Field(default=None, ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
+    discovered_job_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
+    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
 
     # Core scores
     fit_score: float = Field(..., ge=0, le=10, description="Overall fit 1-10")
@@ -190,7 +192,7 @@ class ScoreResponse(BaseModel):
     # Detailed breakdown
     score_breakdown: list[ScoreBreakdownFactor] = Field(
         default_factory=list,
-        description="Breakdown of scoring factors with +/- contributions (≥3 factors)",
+        description="Breakdown of scoring factors with +/- contributions (>=3 factors)",
     )
     red_flags: list[RedFlag] = Field(
         default_factory=list,
@@ -216,7 +218,7 @@ class ScoreResponse(BaseModel):
     dim_career_trajectory: float | None = Field(default=None, exclude=True)
     dim_company_fit: float | None = Field(default=None, exclude=True)
     reasoning: str = Field(
-        ..., min_length=100, description="Scoring explanation (≥100 chars, ≥3 factors)"
+        ..., min_length=100, description="Scoring explanation (>=100 chars, >=3 factors)"
     )
     estimated_salary: str = Field(..., description="Estimated salary range")
     effort_flag: str = Field(..., description="Effort level: low / medium / high")
@@ -341,10 +343,10 @@ def classify_quadrant(fit_score: float | None, desire_score: float | None) -> st
     """Classify a job into a 2D quadrant based on fit and desire scores.
 
     Quadrants (threshold = 5.0):
-        - "dream_job"   — high fit, high desire
-        - "stretch_goal" — low fit, high desire
-        - "safe_bet"    — high fit, low desire
-        - "skip"        — low fit, low desire
+        - "dream_job"   -- high fit, high desire
+        - "stretch_goal" -- low fit, high desire
+        - "safe_bet"    -- high fit, low desire
+        - "skip"        -- low fit, low desire
 
     Returns None if either score is None.
     """
@@ -377,8 +379,8 @@ class DesireScoreResponse(BaseModel):
 class ScoringWeightsResponse(BaseModel):
     """Response schema for scoring weight configuration."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     skills_match: float = Field(default=0.25, ge=0, le=1)
     career_alignment: float = Field(default=0.20, ge=0, le=1)
     culture_fit: float = Field(default=0.15, ge=0, le=1)
@@ -417,8 +419,8 @@ class ScoringWeightsUpdate(BaseModel):
 class BatchScoreRequest(BaseModel):
     """Request body for POST /api/score/batch."""
 
-    profile_id: int = Field(..., description="Profile to score against")
-    discovered_job_ids: list[int] = Field(
+    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile to score against")
+    discovered_job_ids: list[Annotated[int, Field(ge=1, le=INT64_MAX)]] = Field(
         default_factory=list,
         description="Specific discovered job IDs to score (empty = all unscored)",
     )
@@ -428,7 +430,7 @@ class BatchScoreRequest(BaseModel):
 class BatchScoreResponse(BaseModel):
     """Response for batch scoring operation."""
 
-    scored_count: int = Field(..., description="Number of jobs scored")
+    scored_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number of jobs scored")
     total_time_seconds: float = Field(..., description="Total time taken in seconds")
     scores: list[ScoreResponse] = Field(
         default_factory=list, description="Individual score results"
@@ -466,7 +468,7 @@ class FeedbackCreate(BaseModel):
         default=None,
         ge=0,
         le=10,
-        description="Optional: what the user thinks the score should be (0–10)",
+        description="Optional: what the user thinks the score should be (0-10)",
     )
     reason: str | None = Field(
         default=None,
@@ -478,9 +480,9 @@ class FeedbackCreate(BaseModel):
 class FeedbackResponse(BaseModel):
     """Response schema for a single feedback record."""
 
-    id: int
-    scored_job_id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    scored_job_id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     direction: str
     user_score: float | None = None
     reason: str | None = None
@@ -498,9 +500,9 @@ class FeedbackResponse(BaseModel):
 class FeedbackStats(BaseModel):
     """Summary statistics for feedback submitted by a profile."""
 
-    total_count: int = Field(..., description="Total number of feedback records")
-    explicit_count: int = Field(..., description="Explicit corrections (too_high/too_low/correct)")
-    implicit_count: int = Field(..., description="Implicit signals (promoted/dismissed/interview)")
+    total_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Total number of feedback records")
+    explicit_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Explicit corrections (too_high/too_low/correct)")
+    implicit_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Implicit signals (promoted/dismissed/interview)")
     avg_deviation: float | None = Field(
         default=None,
         description="Average |user_score - original_fit_score| for records with user_score",
@@ -545,10 +547,10 @@ class SuggestionsResponse(BaseModel):
         description="Weight adjustment suggestions based on feedback patterns",
     )
     feedback_count: int = Field(
-        ..., description="Total feedback records used to generate suggestions"
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Total feedback records used to generate suggestions"
     )
     min_feedback_required: int = Field(
-        ..., description="Minimum feedback records needed before suggestions appear"
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Minimum feedback records needed before suggestions appear"
     )
     ready: bool = Field(..., description="True when enough feedback exists to generate suggestions")
 

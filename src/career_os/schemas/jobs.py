@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 
 def _ensure_utc(v: Any) -> datetime | None:
     """Ensure a datetime value has UTC timezone info."""
@@ -23,8 +25,8 @@ def _ensure_utc(v: Any) -> datetime | None:
 class JobSearchResult(BaseModel):
     """A single discovered job result with optional score data."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     title: str
     company: str
     location: str
@@ -37,7 +39,7 @@ class JobSearchResult(BaseModel):
     source_urls: list[str] = []
     fit_score: float | None = None
     readiness_score: float | None = None
-    application_id: int | None = None
+    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
     created_at: datetime
     updated_at: datetime
 
@@ -67,10 +69,10 @@ class JobSearchResponse(BaseModel):
     """Paginated search results response."""
 
     jobs: list[JobSearchResult]
-    total: int
-    page: int
-    page_size: int
-    total_pages: int
+    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    page: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    page_size: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total_pages: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
 
 
 # ---------------------------------------------------------------------------
@@ -84,8 +86,8 @@ class SavedSearchConfig(BaseModel):
     q: str | None = None
     source: str | None = None
     remote: bool | None = None
-    salary_min: int | None = None
-    salary_max: int | None = None
+    salary_min: int | None = Field(default=None, ge=INT64_MIN, le=INT64_MAX)
+    salary_max: int | None = Field(default=None, ge=INT64_MIN, le=INT64_MAX)
     score_min: float | None = None
     score_max: float | None = None
     date_from: str | None = None
@@ -99,7 +101,7 @@ class SavedSearchConfig(BaseModel):
 class SavedSearchCreate(BaseModel):
     """Request body for creating a saved search."""
 
-    profile_id: int = Field(..., description="Profile ID")
+    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile ID")
     name: str = Field(..., min_length=1, max_length=255, description="Saved search name")
     config: SavedSearchConfig = Field(
         default_factory=SavedSearchConfig,
@@ -117,8 +119,8 @@ class SavedSearchUpdate(BaseModel):
 class SavedSearchResponse(BaseModel):
     """Response for a saved search record."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     name: str
     config: SavedSearchConfig
     created_at: datetime
@@ -150,4 +152,4 @@ class SavedSearchListResponse(BaseModel):
     """Response for listing saved searches."""
 
     searches: list[SavedSearchResponse]
-    total: int
+    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
