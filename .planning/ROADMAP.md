@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Onboarding State Foundation** - Shared state model, API endpoints, and error infrastructure that all onboarding surfaces depend on — COMPLETE 2026-04-20
 - [x] **Phase 2: CLI Wizard** - Complete `kestrel init` interactive wizard with profile questions, paste-text extraction, health check, and guided next steps — COMPLETE 2026-04-20
-- [ ] **Phase 3: Demo Data** - Pre-baked sample jobs with pre-computed scores that deliver the "aha moment" without requiring an API key
+- [x] **Phase 3: Demo Data** - Pre-baked sample jobs with pre-computed scores that deliver the "aha moment" without requiring an API key — COMPLETE 2026-04-20
 - [ ] **Phase 4: Web Welcome Flow** - First-time welcome screen, onboarding guard, web profile questions, resume/skip/complete flow, and post-onboarding AI provider nudge
 - [ ] **Phase 5: Interactive Tour, Feedback, and Polish** - Shepherd.js guided tour, empty state coaching, persistent feedback button, and non-developer documentation
 
@@ -81,10 +81,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Profile migration + resume extraction utilities
-- [ ] 02-02-PLAN.md — kestrel doctor health check command
-- [ ] 02-03-PLAN.md — kestrel init wizard core + first-run callback
-- [ ] 02-04-PLAN.md — Resume paste integration + resume-from-last-step
+- [ ] 04-01-PLAN.md — Infrastructure: backend schema fix, API layer, hooks, OnboardingGuard, route wiring, wizard removal
+- [ ] 04-02-PLAN.md — WelcomePage + StepProgress: full welcome/step/summary flow implementation
+- [ ] 04-03-PLAN.md — Test suite: OnboardingGuard, WelcomePage, StepProgress tests
+- [ ] 04-04-PLAN.md — Visual verification checkpoint
 **UI hint**: yes
 
 ### Phase 5: Interactive Tour, Feedback, and Polish
@@ -97,13 +97,7 @@ Plans:
   3. A persistent feedback button is visible on all web pages (bottom-right) that opens a pre-filled GitHub issue URL with system info (OS, Python version, Kestrel version)
   4. End-of-onboarding screen prompts for feedback with a link to GitHub issues and contact info
   5. A "Getting Started for Non-Developers" documentation page exists explaining terminal basics needed for Kestrel
-**Plans**: 4 plans
-
-Plans:
-- [ ] 02-01-PLAN.md — Profile migration + resume extraction utilities
-- [ ] 02-02-PLAN.md — kestrel doctor health check command
-- [ ] 02-03-PLAN.md — kestrel init wizard core + first-run callback
-- [ ] 02-04-PLAN.md — Resume paste integration + resume-from-last-step
+**Plans**: [to be planned]
 **UI hint**: yes
 
 ## Progress
@@ -117,5 +111,5 @@ Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 | 1. Onboarding State Foundation | 4/4 | Complete | 2026-04-20 |
 | 2. CLI Wizard | 4/4 | Complete | 2026-04-20 |
 | 3. Demo Data | 3/3 | Complete | 2026-04-20 |
-| 4. Web Welcome Flow | 0/0 | Not started | - |
+| 4. Web Welcome Flow | 0/4 | Planned | - |
 | 5. Interactive Tour, Feedback, and Polish | 0/0 | Not started | - |

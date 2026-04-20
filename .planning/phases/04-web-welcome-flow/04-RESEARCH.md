@@ -462,22 +462,22 @@ export function StepProgress({ current, total }: StepProgressProps) {
 | A3 | Demo seeding needs an explicit trigger from the web (no auto-seed exists on the backend) | Pitfalls | If backend already auto-seeds on profile_completed, no extra work needed. Verify by reading onboarding service. |
 | A4 | The web form should mark both `profile_started` and `profile_completed` onboarding steps (matching CLI behavior) | Architecture Patterns | If different step names are expected for web, step tracking could get confused. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Which onboarding step should the guard check?**
    - What we know: STEP_ORDER has `welcome_completed` and `completed` as separate steps. The guard needs to check one of them.
    - What's unclear: Should the guard check `welcome_completed_at` (lets user through after web flow) or `profile_completed_at` (similar to CLI) or `completed_at` (all steps including Phase 5 tour)?
-   - Recommendation: Use `welcome_completed_at`. Mark it when user sees the summary screen. This lets Phase 5 add tour without re-blocking users.
+   - RESOLVED: Use `welcome_completed_at`. Mark it when user sees the summary screen. This lets Phase 5 add tour without re-blocking users.
 
 2. **How to trigger demo data seeding from web?**
    - What we know: CLI calls `seed_demo_data()` directly via Python. Web goes through REST API. No seed endpoint exists.
    - What's unclear: Should the backend auto-seed when `profile_completed` is marked, or should the web call a new endpoint?
-   - Recommendation: Add auto-seed logic in the `mark_step_complete` service function when step is `profile_completed`. This keeps the trigger server-side and works for both CLI and web without a new endpoint. The CLI already does its own seeding too, and the seeder is idempotent (D-05/DEMO-05).
+   - RESOLVED: Mark `demo_seeded` step via `patchOnboardingStep` on completion. Backend's `mark_step_complete` service handles seeding when this step is marked. Seeder is idempotent (DEMO-05).
 
 3. **Should "skills" be a simple text field or integrate with the Skills model?**
    - What we know: CLI saves skills as individual Skill rows (lines 230-253 of init.py). UI-SPEC says "Comma-separated text input with helper text."
    - What's unclear: Whether the web onboarding should create proper Skill records or just store a comma-separated string on the profile.
-   - Recommendation: For v1, save skills as Skill records (matching CLI behavior). This means calling the skills API or adding a batch endpoint. If no skills API exists for creating by name, a simple `POST /api/skills` with `{ name, profile_id }` will work.
+   - RESOLVED: Save skills as Skill records (matching CLI behavior) via existing `createSkill` API. Comma-separated input is split and each skill is posted individually.
 
 ## Environment Availability
 

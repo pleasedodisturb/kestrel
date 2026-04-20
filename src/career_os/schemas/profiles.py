@@ -15,6 +15,8 @@ class ProfileCreate(BaseModel):
     location: str | None = Field(default=None, description="Location")
     job_family: str | None = Field(default=None, description="Target job family")
     dream_companies: list[str] | None = Field(default=None, description="List of dream companies")
+    salary_range: str | None = Field(default=None, description="Target salary range")
+    experience_level: str | None = Field(default=None, description="Experience level")
 
 
 class ProfileUpdate(BaseModel):
@@ -25,6 +27,8 @@ class ProfileUpdate(BaseModel):
     location: str | None = Field(default=None, description="Location")
     job_family: str | None = Field(default=None, description="Target job family")
     dream_companies: list[str] | None = Field(default=None, description="List of dream companies")
+    salary_range: str | None = Field(default=None, description="Target salary range")
+    experience_level: str | None = Field(default=None, description="Experience level")
 
 
 class ProfileResponse(BaseModel):
@@ -36,6 +40,8 @@ class ProfileResponse(BaseModel):
     location: str | None = None
     job_family: str | None = None
     dream_companies: list[str] | None = None
+    salary_range: str | None = None
+    experience_level: str | None = None
     created_at: datetime
     updated_at: datetime
 
