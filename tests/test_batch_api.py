@@ -105,7 +105,9 @@ class TestBatchScore:
         assert len(req["params"]["messages"]) == 1
         assert req["params"]["messages"][0]["role"] == "user"
         assert "Software Engineer at Acme Corp" in req["params"]["messages"][0]["content"]
-        assert "Jane Doe" in req["params"]["messages"][0]["content"]
+        # Profile data is in the cached system block, not the user message
+        system_text = req["params"]["system"][0]["text"]
+        assert "Jane Doe" in system_text
 
     @pytest.mark.asyncio
     async def test_sends_to_batch_api_endpoint(self) -> None:
