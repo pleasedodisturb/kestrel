@@ -10,8 +10,8 @@ progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 15
-  completed_plans: 12
-  percent: 80
+  completed_plans: 13
+  percent: 87
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-19)
 ## Current Position
 
 Phase: 4 (web-welcome-flow) — EXECUTING
-Plan: 1 of 4
-Status: Plan 01 complete — infrastructure layer (guard, API, hooks, schema fix)
+Plan: 2 of 4
+Status: Plan 02 complete — WelcomePage full implementation (3-screen flow + tests)
 Last activity: 2026-04-21
 
-Progress: [████████░░] 80% (Phase 4, Plan 1/4)
+Progress: [████████░░] 87% (Phase 4, Plan 2/4)
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [████████░░] 80% (Phase 4, Plan 1/4)
 | Phase 01-onboarding-state-foundation P02 | 10min | 2 tasks | 6 files |
 | Phase 01-onboarding-state-foundation P03 | 5min | 3 tasks | 3 files |
 | Phase 04-web-welcome-flow P01 | 6min | 2 tasks | 9 files |
+| Phase 04-web-welcome-flow P02 | 4min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 4]: OnboardingGuard checks welcome_completed_at (not completed_at) to allow Phase 5 tour without re-blocking users
 - [Phase 4]: Guard fails open on API error -- self-hosted, prefer usability over strictness
 - [Phase 4]: WelcomePage placeholder created for TS compilation; full implementation in Plan 02
+- [Phase 4]: Skills saved as individual Skill records via createSkill API (matching CLI behavior)
+- [Phase 4]: Empty field on Next treated as skip (no API call, added to skippedSteps)
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T00:28:00Z
-Stopped at: Phase 4 Plan 01 complete (OnboardingGuard + API layer + schema fix + wizard removal)
+Last session: 2026-04-21T00:36:00Z
+Stopped at: Phase 4 Plan 02 complete (WelcomePage 3-screen flow + StepProgress + 23 tests)
 Resume file: None

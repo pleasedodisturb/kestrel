@@ -23,7 +23,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **PROF-01**: Wizard asks 5-7 guided questions (name, location, target roles, salary range, skills, experience level) — all skippable
 - [ ] **PROF-02**: Optional "paste your resume text" field with regex extraction for email, phone, URLs, skill keywords
 - [ ] **PROF-03**: Extracted data shown for confirmation before saving to profile
-- [ ] **PROF-04**: Same question set available in web welcome flow
+- [x] **PROF-04**: Same question set available in web welcome flow
 
 ### Demo Data
 
@@ -36,14 +36,14 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Web UI
 
 - [ ] **WEB-01**: First-time visitors redirected to `/welcome` via OnboardingGuard route wrapper
-- [ ] **WEB-02**: Welcome screen explains what Kestrel does and walks through setup steps
+- [x] **WEB-02**: Welcome screen explains what Kestrel does and walks through setup steps
 - [ ] **WEB-03**: Pipeline, Discovery, Contacts, and Skills pages show empty state coaching when no data exists
-- [ ] **WEB-04**: User can resume onboarding from last completed step after browser close
+- [x] **WEB-04**: User can resume onboarding from last completed step after browser close
 - [ ] **WEB-05**: Shepherd.js interactive tour walks through Pipeline, Discovery, Scoring pages with tooltips
 - [ ] **WEB-06**: Tour is accessible (aria-live announcements, focus management, keyboard-navigable, skip button)
-- [ ] **WEB-07**: End-of-onboarding summary shows what was configured, what was skipped (with navigation links)
-- [ ] **WEB-08**: Skipped steps show "do it later" signposting with exact navigation path (e.g. "Settings > Profile")
-- [ ] **WEB-09**: After onboarding completes, show "Unlock full scoring" card with AI provider options (OpenRouter one-click OAuth connect via G-224/G-255, Together.ai, Ollama) and link to provider settings
+- [x] **WEB-07**: End-of-onboarding summary shows what was configured, what was skipped (with navigation links)
+- [x] **WEB-08**: Skipped steps show "do it later" signposting with exact navigation path (e.g. "Settings > Profile")
+- [x] **WEB-09**: After onboarding completes, show "Unlock full scoring" card with AI provider options (OpenRouter one-click OAuth connect via G-224/G-255, Together.ai, Ollama) and link to provider settings
 
 ### Feedback
 
@@ -112,21 +112,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROF-01 | Phase 2 | Pending |
 | PROF-02 | Phase 2 | Pending |
 | PROF-03 | Phase 2 | Pending |
-| PROF-04 | Phase 4 | Pending |
+| PROF-04 | Phase 4 | Complete |
 | DEMO-01 | Phase 3 | Pending |
 | DEMO-02 | Phase 3 | Pending |
 | DEMO-03 | Phase 3 | Pending |
 | DEMO-04 | Phase 3 | Pending |
 | DEMO-05 | Phase 3 | Pending |
 | WEB-01 | Phase 4 | Pending |
-| WEB-02 | Phase 4 | Pending |
+| WEB-02 | Phase 4 | Complete |
 | WEB-03 | Phase 5 | Pending |
-| WEB-04 | Phase 4 | Pending |
+| WEB-04 | Phase 4 | Complete |
 | WEB-05 | Phase 5 | Pending |
 | WEB-06 | Phase 5 | Pending |
-| WEB-07 | Phase 4 | Pending |
-| WEB-08 | Phase 4 | Pending |
-| WEB-09 | Phase 4 | Pending |
+| WEB-07 | Phase 4 | Complete |
+| WEB-08 | Phase 4 | Complete |
+| WEB-09 | Phase 4 | Complete |
 | FB-01 | Phase 5 | Pending |
 | FB-02 | Phase 5 | Pending |
 | FB-03 | Phase 5 | Pending |
