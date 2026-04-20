@@ -90,9 +90,10 @@ def init(
                     "Use [bold]kestrel init --force[/bold] to redo."
                 )
                 raise typer.Exit(0)
+        except typer.Exit:
+            raise  # Re-raise Exit so it is not swallowed by the broad handler
         except Exception:
-            if not force:
-                pass  # No state yet — proceed with wizard
+            pass  # No state yet — proceed with wizard
 
         # D-03: Welcome Panel
         console.print(
