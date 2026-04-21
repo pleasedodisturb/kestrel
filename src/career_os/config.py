@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     # users with too many prompts.
     active_query_enabled: bool = False
 
+    # Cost preset (G-442) — one setting selects provider, model, pre-filter
+    # strategy, and batch size. Valid values: free, budget, quality, private, custom.
+    cost_preset: str = "budget"
+
     # Regex pre-filter (G-439) — lightweight keyword/title/industry filter
     # that runs BEFORE AI scoring to eliminate ~60% of irrelevant jobs.
     # Strategy: "strict" (title OR skills, NOT blacklisted industry),
