@@ -55,6 +55,8 @@ dev = [
     "pandas>=2.2.0,<3",
     "python-jobspy>=1.1.82,<1.2",
     "fpdf2>=2.8.0",
+    "hypothesis>=6.152.0",
+    "schemathesis>=4.15.0",
 ]
 
 [project.scripts]
@@ -105,7 +107,10 @@ markers = [
     "slow: Tests exceeding 5s runtime (auto-detected after execution)",
     "smoke: Health check tests (manually applied, 1-2 tests)",
     "regression: Golden set regression tests (Phase 3, ADV-01)",
+    "property: Hypothesis property-based tests (Phase 3, ADV-02)",
+    "fuzz: Schemathesis API fuzzing tests (Phase 3, ADV-03)",
 ]
+addopts = "-m 'not regression and not property and not fuzz'"
 
 [tool.diff_cover]
 compare_branch = "origin/main"
