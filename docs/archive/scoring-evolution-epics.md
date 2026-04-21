@@ -613,7 +613,7 @@ to meaningfully measure improvement.
    ```python
    BORDERLINE_LOW = 4.0
    BORDERLINE_HIGH = 6.5
-   
+
    if BORDERLINE_LOW <= score_data.fit_score <= BORDERLINE_HIGH:
        # Run second scoring pass
        response2 = await provider.score(...)
