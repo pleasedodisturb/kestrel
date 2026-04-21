@@ -15,8 +15,8 @@
       "id": "lg-01",
       "category": "strong",
       "expected_band": [
-        5.5,
-        7.5
+        4,
+        7
       ],
       "title": "Corporate Counsel",
       "company": "Clifford Chance",
@@ -27,8 +27,8 @@
       "id": "lg-02",
       "category": "mediocre",
       "expected_band": [
-        2.9,
-        4.9
+        2,
+        5
       ],
       "title": "Paralegal",
       "company": "Allen & Overy",
@@ -39,7 +39,7 @@
       "id": "lg-03",
       "category": "dream",
       "expected_band": [
-        8.3,
+        8,
         10
       ],
       "title": "Compliance Officer",
@@ -51,7 +51,7 @@
       "id": "lg-04",
       "category": "dream",
       "expected_band": [
-        8.7,
+        8,
         10
       ],
       "title": "Patent Attorney",
@@ -63,7 +63,7 @@
       "id": "lg-05",
       "category": "dream",
       "expected_band": [
-        8.8,
+        8,
         10
       ],
       "title": "Employment Lawyer",
@@ -75,8 +75,8 @@
       "id": "lg-06",
       "category": "dream",
       "expected_band": [
-        6.9,
-        8.9
+        7,
+        10
       ],
       "title": "Data Protection Officer",
       "company": "Revolut",
@@ -87,7 +87,7 @@
       "id": "lg-07",
       "category": "dream",
       "expected_band": [
-        8.2,
+        8,
         10
       ],
       "title": "Criminal Defence Barrister",
@@ -99,8 +99,8 @@
       "id": "lg-08",
       "category": "dream",
       "expected_band": [
-        7.7,
-        9.7
+        7,
+        10
       ],
       "title": "Real Estate Solicitor",
       "company": "Herbert Smith Freehills",
@@ -111,8 +111,8 @@
       "id": "lg-09",
       "category": "mediocre",
       "expected_band": [
-        3.1,
-        5.1
+        3,
+        6
       ],
       "title": "Tax Advisor",
       "company": "Deloitte Legal",
@@ -123,8 +123,8 @@
       "id": "lg-10",
       "category": "strong",
       "expected_band": [
-        5.3,
-        7.3
+        4,
+        7
       ],
       "title": "Family Law Solicitor",
       "company": "Withers",
@@ -136,7 +136,7 @@
       "category": "reject",
       "expected_band": [
         0,
-        1.3
+        2
       ],
       "title": "Marine Insurance Claims Handler",
       "company": "Hiscox",
@@ -148,7 +148,7 @@
       "category": "reject",
       "expected_band": [
         0,
-        1.7
+        2
       ],
       "title": "Competition Lawyer",
       "company": "Freshfields",
@@ -159,8 +159,8 @@
       "id": "lg-13",
       "category": "mediocre",
       "expected_band": [
-        2.0,
-        4.0
+        1,
+        4
       ],
       "title": "Legal Technology Analyst",
       "company": "Thomson Reuters",
@@ -171,8 +171,8 @@
       "id": "lg-14",
       "category": "mediocre",
       "expected_band": [
-        2.5,
-        4.5
+        2,
+        5
       ],
       "title": "Intellectual Property Litigator",
       "company": "Bird & Bird",
@@ -183,8 +183,8 @@
       "id": "lg-15",
       "category": "mediocre",
       "expected_band": [
-        2.6,
-        4.6
+        2,
+        5
       ],
       "title": "Immigration Solicitor",
       "company": "Fragomen",
@@ -195,8 +195,8 @@
       "id": "lg-16",
       "category": "strong",
       "expected_band": [
-        4.4,
-        6.4
+        4,
+        7
       ],
       "title": "Regulatory Affairs Manager",
       "company": "GSK",
@@ -207,7 +207,7 @@
       "id": "lg-17",
       "category": "dream",
       "expected_band": [
-        8.5,
+        8,
         10
       ],
       "title": "Construction Adjudicator",
@@ -219,8 +219,8 @@
       "id": "lg-18",
       "category": "mediocre",
       "expected_band": [
-        2.2,
-        4.2
+        2,
+        5
       ],
       "title": "Insolvency Practitioner",
       "company": "FTI Consulting",
@@ -231,8 +231,8 @@
       "id": "lg-19",
       "category": "reject",
       "expected_band": [
-        0.4,
-        2.4
+        0,
+        2
       ],
       "title": "Pro Bono Coordinator",
       "company": "Linklaters",
@@ -243,8 +243,8 @@
       "id": "lg-20",
       "category": "mediocre",
       "expected_band": [
-        2.6,
-        4.6
+        1,
+        4
       ],
       "title": "Shipping Solicitor",
       "company": "Ince Gordon Dadds",

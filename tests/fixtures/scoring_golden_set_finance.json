@@ -2,13 +2,23 @@
   "profile": {
     "job_family": "Financial Analyst",
     "location": "London, UK",
-    "key_skills": ["Financial Modeling", "Excel/VBA", "Bloomberg Terminal", "Risk Analysis", "SQL", "Python"]
+    "key_skills": [
+      "Financial Modeling",
+      "Excel/VBA",
+      "Bloomberg Terminal",
+      "Risk Analysis",
+      "SQL",
+      "Python"
+    ]
   },
   "jobs": [
     {
       "id": "fs-01",
       "category": "reject",
-      "expected_band": [1, 3],
+      "expected_band": [
+        0,
+        2
+      ],
       "title": "Senior Frontend Developer",
       "company": "Shopify",
       "location": "Remote, EMEA",
@@ -17,7 +27,10 @@
     {
       "id": "fs-02",
       "category": "reject",
-      "expected_band": [1, 3],
+      "expected_band": [
+        1,
+        4
+      ],
       "title": "Veterinary Technician",
       "company": "Green Lane Animal Hospital",
       "location": "London, UK",
@@ -26,7 +39,10 @@
     {
       "id": "fs-03",
       "category": "reject",
-      "expected_band": [1, 3],
+      "expected_band": [
+        0,
+        3
+      ],
       "title": "Mechanical Engineer",
       "company": "Siemens",
       "location": "Munich, Germany",
@@ -35,7 +51,10 @@
     {
       "id": "fs-04",
       "category": "reject",
-      "expected_band": [1, 3],
+      "expected_band": [
+        0,
+        2
+      ],
       "title": "Social Media Manager",
       "company": "HubSpot",
       "location": "Remote, UK",
@@ -44,7 +63,10 @@
     {
       "id": "fs-05",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        5,
+        8
+      ],
       "title": "Business Analyst",
       "company": "Accenture",
       "location": "London, UK",
@@ -53,7 +75,10 @@
     {
       "id": "fs-06",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        4,
+        7
+      ],
       "title": "Data Analyst",
       "company": "Spotify",
       "location": "London, UK",
@@ -62,7 +87,10 @@
     {
       "id": "fs-07",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        1,
+        4
+      ],
       "title": "Accounting Manager",
       "company": "Deloitte",
       "location": "London, UK",
@@ -71,7 +99,10 @@
     {
       "id": "fs-08",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        4,
+        7
+      ],
       "title": "Operations Analyst",
       "company": "Amazon",
       "location": "London, UK",
@@ -80,7 +111,10 @@
     {
       "id": "fs-09",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        4,
+        7
+      ],
       "title": "Compliance Officer",
       "company": "HSBC",
       "location": "London, UK",
@@ -89,7 +123,10 @@
     {
       "id": "fs-10",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        0,
+        2
+      ],
       "title": "Management Consultant",
       "company": "McKinsey & Company",
       "location": "London, UK",
@@ -98,7 +135,10 @@
     {
       "id": "fs-11",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        6,
+        9
+      ],
       "title": "Financial Analyst, Equity Research",
       "company": "Goldman Sachs",
       "location": "London, UK",
@@ -107,7 +147,10 @@
     {
       "id": "fs-12",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        5,
+        8
+      ],
       "title": "Credit Risk Analyst",
       "company": "Deutsche Bank",
       "location": "London, UK",
@@ -116,7 +159,10 @@
     {
       "id": "fs-13",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        0,
+        2
+      ],
       "title": "FP&A Analyst",
       "company": "Microsoft",
       "location": "London, UK",
@@ -125,7 +171,10 @@
     {
       "id": "fs-14",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        8,
+        10
+      ],
       "title": "Quantitative Analyst",
       "company": "Citadel",
       "location": "London, UK",
@@ -134,7 +183,10 @@
     {
       "id": "fs-15",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        4,
+        7
+      ],
       "title": "Treasury Analyst",
       "company": "BP",
       "location": "London, UK",
@@ -143,7 +195,10 @@
     {
       "id": "fs-16",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        4,
+        7
+      ],
       "title": "Investment Analyst",
       "company": "BlackRock",
       "location": "London, UK",
@@ -152,7 +207,10 @@
     {
       "id": "fs-17",
       "category": "dream",
-      "expected_band": [9, 10],
+      "expected_band": [
+        8,
+        10
+      ],
       "title": "Senior Financial Analyst, M&A",
       "company": "Morgan Stanley",
       "location": "London, UK",
@@ -161,7 +219,10 @@
     {
       "id": "fs-18",
       "category": "dream",
-      "expected_band": [9, 10],
+      "expected_band": [
+        2,
+        5
+      ],
       "title": "VP Financial Planning",
       "company": "Stripe",
       "location": "London, UK",
@@ -170,7 +231,10 @@
     {
       "id": "fs-19",
       "category": "dream",
-      "expected_band": [9, 10],
+      "expected_band": [
+        1,
+        4
+      ],
       "title": "Portfolio Manager, Emerging Markets",
       "company": "Fidelity International",
       "location": "London, UK",
@@ -179,7 +243,10 @@
     {
       "id": "fs-20",
       "category": "dream",
-      "expected_band": [9, 10],
+      "expected_band": [
+        4,
+        7
+      ],
       "title": "Head of Financial Analytics",
       "company": "Revolut",
       "location": "London, UK",
