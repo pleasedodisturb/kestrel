@@ -1,0 +1,140 @@
+# Roadmap: Kestrel Onboarding Experience
+
+## Overview
+
+This roadmap takes a new Kestrel user from "just installed" to "seeing scored results and knowing where to go next" in under 10 minutes. The build order follows the dependency chain: shared onboarding state first (everything reads/writes it), then the CLI wizard (first touch for pip users), then demo data (needed before web can show results), then the web welcome flow, and finally the interactive tour and feedback channel (which attach to pages that must already exist). CV file parsing is v2 -- v1 uses guided questions and paste-text extraction only.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [x] **Phase 1: Onboarding State Foundation** - Shared state model, API endpoints, and error infrastructure that all onboarding surfaces depend on — COMPLETE 2026-04-20
+- [x] **Phase 2: CLI Wizard** - Complete `kestrel init` interactive wizard with profile questions, paste-text extraction, health check, and guided next steps — COMPLETE 2026-04-20
+- [x] **Phase 3: Demo Data** - Pre-baked sample jobs with pre-computed scores that deliver the "aha moment" without requiring an API key — COMPLETE 2026-04-20
+- [ ] **Phase 4: Web Welcome Flow** - First-time welcome screen, onboarding guard, web profile questions, resume/skip/complete flow, and post-onboarding AI provider nudge
+- [x] **Phase 5: Interactive Tour, Feedback, and Polish** - Custom guided tour, empty state coaching, persistent feedback button, and non-developer documentation
+- [ ] **Phase 6: Test Suite Rewrite** - Rewrite all onboarding tests to new testing methodology, fix pre-existing environment failures
+
+## Phase Details
+
+### Phase 1: Onboarding State Foundation
+**Goal**: A shared, persistent onboarding state model exists that both CLI and web can read and write, with structured error handling that never shows stack traces to users
+**Depends on**: Nothing (first phase)
+**Requirements**: INF-01, INF-02, INF-03
+**Success Criteria** (what must be TRUE):
+  1. Onboarding state is persisted per-profile in the backend DB with timestamps (not booleans) and survives server restarts
+  2. `GET /api/onboarding/status` returns the current onboarding state for a profile and `PATCH /api/onboarding/status` updates it
+  3. Any onboarding error raised anywhere in the codebase carries a `user_message` and `resolution` field (no raw stack traces reach the user unless --verbose)
+**Plans**: 3 plans
+
+Plans:
+- [x] 01-00-PLAN.md — Wave 0 failing test stubs for INF-01, INF-02, INF-03 (TDD contract) — COMPLETE 2026-04-20
+- [x] 01-01-PLAN.md — Error hierarchy, OnboardingState model, Pydantic schemas (INF-01, INF-02 foundation)
+- [x] 01-02-PLAN.md — Alembic migration registration, DB table creation, service layer business logic (INF-01, INF-02, INF-03 service)
+- [x] 01-03-PLAN.md — API routes, main.py wiring, full test suite (INF-01, INF-02, INF-03 complete) — COMPLETE 2026-04-20
+
+### Phase 2: CLI Wizard
+**Goal**: A user who runs `pip install kestrel-app` and types `kestrel` is guided through profile setup, sees their data confirmed, and knows exactly what to do next -- all from the terminal
+**Depends on**: Phase 1
+**Requirements**: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-06, CLI-07, CLI-08, PROF-01, PROF-02, PROF-03
+**Success Criteria** (what must be TRUE):
+  1. Running `kestrel` for the first time after install prints a next-steps message pointing to `kestrel init`
+  2. `kestrel init` walks through 5-7 skippable profile questions (name, location, target roles, salary, skills, experience) with progress indicators, and optionally accepts pasted resume text for regex extraction
+  3. Extracted/entered data is shown for user confirmation before saving to the profile
+  4. `kestrel init --skip` creates a complete default profile and exits immediately; non-TTY environments get a clear message with `--non-interactive` guidance
+  5. `kestrel doctor` verifies setup health (DB, config, sample data, Python version) and every error during onboarding includes what happened, why, and what to do next
+**Plans**: 4 plans
+
+Plans:
+- [x] 02-01-PLAN.md — Profile migration + resume extraction utilities — COMPLETE 2026-04-20
+- [x] 02-02-PLAN.md — kestrel doctor health check command — COMPLETE 2026-04-20
+- [x] 02-03-PLAN.md — kestrel init wizard core + first-run callback — COMPLETE 2026-04-20
+- [x] 02-04-PLAN.md — Resume paste integration + resume-from-last-step — COMPLETE 2026-04-20
+
+### Phase 3: Demo Data
+**Goal**: Users see realistic scored job results immediately after onboarding completes, proving the tool works without requiring any API key or external service
+**Depends on**: Phase 1
+**Requirements**: DEMO-01, DEMO-02, DEMO-03, DEMO-04, DEMO-05
+**Success Criteria** (what must be TRUE):
+  1. Ten pre-baked sample jobs spanning 3+ job families (not just tech -- includes marketing, operations, finance) ship as fixture data in the package
+  2. Demo records display relative dates (never look stale), carry an `is_demo=True` flag, and show a "Sample Results" banner in the UI
+  3. The demo seeder is idempotent -- running it multiple times produces exactly the same result with no duplicate records
+**Plans**: 3 plans
+
+Plans:
+- [x] 03-01-PLAN.md — Alembic migration, fixture JSON, and demo seeder module (DEMO-01, DEMO-02, DEMO-03, DEMO-05) — COMPLETE 2026-04-20
+- [x] 03-02-PLAN.md — CLI integration: init seeding, doctor auto-fix, pipeline banner (DEMO-04, DEMO-05) — COMPLETE 2026-04-20
+- [x] 03-03-PLAN.md — Auto-clear hook and full test suite (DEMO-01 through DEMO-05, D-13) — COMPLETE 2026-04-20
+
+### Phase 4: Web Welcome Flow
+**Goal**: A first-time web visitor is guided from an empty dashboard to a populated profile with demo results, knows what was configured and what was skipped, and sees the path to full AI-powered scoring
+**Depends on**: Phase 1, Phase 3
+**Requirements**: WEB-01, WEB-02, WEB-04, WEB-07, WEB-08, WEB-09, PROF-04
+**Success Criteria** (what must be TRUE):
+  1. First-time visitors are redirected to `/welcome` via an OnboardingGuard route wrapper; returning visitors go straight to the dashboard
+  2. The welcome flow walks through setup steps including the same profile questions as the CLI (name, location, roles, salary, skills, experience), and users can resume from last completed step after closing the browser
+  3. End-of-onboarding summary shows what was configured and what was skipped, with "do it later" signposting providing exact navigation paths (e.g., "Settings > Profile")
+  4. After onboarding completes, an "Unlock full scoring" card shows AI provider options (OpenRouter one-click OAuth, Together.ai, Ollama) with a link to provider settings
+**Plans**: 4 plans
+
+Plans:
+- [x] 04-01-PLAN.md — Infrastructure: backend schema fix, API layer, hooks, OnboardingGuard, route wiring, wizard removal — COMPLETE 2026-04-21
+- [x] 04-02-PLAN.md — WelcomePage + StepProgress: full welcome/step/summary flow implementation — COMPLETE 2026-04-21
+- [x] 04-03-PLAN.md — Test suite: OnboardingGuard, WelcomePage, StepProgress tests (31 tests, all green) — COMPLETE 2026-04-21
+- [ ] 04-04-PLAN.md — Visual verification checkpoint
+**UI hint**: yes
+
+### Phase 5: Interactive Tour, Feedback, and Polish
+**Goal**: Users who completed onboarding get a contextual guided tour of the actual UI, can always reach out for help, and non-developers have a documentation safety net
+**Depends on**: Phase 4
+**Requirements**: WEB-03, WEB-05, WEB-06, FB-01, FB-02, FB-03, INF-04
+**Success Criteria** (what must be TRUE):
+  1. Custom interactive tour walks through Pipeline, Discovery, and Scoring pages with tooltips that are keyboard-navigable, have aria-live announcements, proper focus management, and a skip button (D-04: no Shepherd.js)
+  2. Pipeline, Discovery, Contacts, and Skills pages show empty state coaching when no data exists (guiding users to populate each section)
+  3. A persistent feedback button is visible on all web pages (bottom-right) that opens a pre-filled GitHub issue URL with system info
+  4. End-of-onboarding screen prompts for feedback with a link to GitHub issues
+  5. A "Getting Started for Non-Developers" documentation page exists explaining terminal basics needed for Kestrel
+**Plans**: 5 plans
+
+Plans:
+- [x] 05-01-PLAN.md — Shared EmptyState component + integration into Pipeline, Discovery, Contacts, Skills (WEB-03) — COMPLETE 2026-04-21
+- [x] 05-02-PLAN.md — FeedbackButton, HelpPage, WelcomePage feedback prompt, Layout + App.tsx wiring (FB-01, FB-02, FB-03, INF-04) — COMPLETE 2026-04-21
+- [x] 05-03-PLAN.md — Tour system: TourProvider, TourTooltip, TourOverlay + Layout integration (WEB-05, WEB-06) — COMPLETE 2026-04-21
+- [x] 05-04-PLAN.md — Full test suite for all Phase 5 components — COMPLETE 2026-04-21
+- [x] 05-05-PLAN.md — Visual verification checkpoint — COMPLETE 2026-04-21
+**UI hint**: yes
+
+### Phase 6: Test Suite Rewrite
+**Goal**: All onboarding tests rewritten to the new testing methodology standard, fixing pre-existing environment failures and ensuring comprehensive coverage across all 5 phases
+**Depends on**: Phase 5
+**Requirements**: TEST-01
+**Success Criteria** (what must be TRUE):
+  1. All onboarding test files follow the new testing methodology from main
+  2. Pre-existing localStorage/environment test failures in KanbanBoard, Skills, Discovery are fixed
+  3. Full test suite passes green (`npm run test` exits 0)
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Test infrastructure: localStorage polyfill + shared renderWithProviders wrapper
+- [ ] 06-02-PLAN.md — Pre-existing broken files: KanbanBoard, Discovery, Skills rewrite
+- [ ] 06-03-PLAN.md — Onboarding tests: OnboardingGuard + WelcomePage rewrite (API-level mocking)
+- [ ] 06-04-PLAN.md — Onboarding tests: TourProvider + HelpPage rewrite + full suite gate
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
+Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Onboarding State Foundation | 4/4 | Complete | 2026-04-20 |
+| 2. CLI Wizard | 4/4 | Complete | 2026-04-20 |
+| 3. Demo Data | 3/3 | Complete | 2026-04-20 |
+| 4. Web Welcome Flow | 3/4 | Executing | - |
+| 5. Interactive Tour, Feedback, and Polish | 5/5 | Complete | 2026-04-21 |
+| 6. Test Suite Rewrite | 0/4 | Planned | - |

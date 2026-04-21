@@ -14,6 +14,8 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
+
+hypothesis = pytest.importorskip("hypothesis", reason="hypothesis not installed")
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from pydantic import ValidationError

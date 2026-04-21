@@ -1,14 +1,25 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { describe, it, expect } from "vitest";
+import { screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 import { Layout } from "@/components/Layout";
+import { renderWithProviders } from "@/test-utils";
+
+vi.mock("@/api/onboarding", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/api/onboarding")>();
+  return {
+    ...actual,
+    fetchOnboardingStatus: vi.fn().mockResolvedValue({
+      completed_at: new Date().toISOString(),
+      welcome_completed_at: new Date().toISOString(),
+    }),
+    patchOnboardingStep: vi.fn().mockResolvedValue({}),
+  };
+});
 
 function renderWithRouter(initialEntries: string[] = ["/"]) {
-  return render(
-    <MemoryRouter initialEntries={initialEntries}>
-      <Layout />
-    </MemoryRouter>
-  );
+  return renderWithProviders(<Layout />, {
+    route: initialEntries[0],
+    routerProps: { initialEntries },
+  });
 }
 
 describe("Layout", () => {

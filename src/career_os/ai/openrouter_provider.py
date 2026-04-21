@@ -11,7 +11,6 @@ import re
 import httpx
 
 from career_os.ai.base import AIProvider, ComplexityTier
-from career_os.ai.observability import observe, update_current_generation
 from career_os.schemas.ai import (
     AIFeature,
     AIResponse,
@@ -28,9 +27,6 @@ from career_os.schemas.ai import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Compact JSON separators — eliminates whitespace tokens (~30% reduction on profile data)
-_COMPACT = (",", ":")
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "anthropic/claude-sonnet-4"
@@ -97,7 +93,6 @@ class OpenRouterProvider(AIProvider):
         effective_tier = tier or ComplexityTier.STANDARD
         return _TIER_MODELS[effective_tier]
 
-    @observe(name="openrouter-complete", as_type="generation")
     async def complete(
         self,
         prompt: str,
@@ -110,10 +105,6 @@ class OpenRouterProvider(AIProvider):
     ) -> AIResponse:
         """Send a completion request to OpenRouter."""
         model = self._resolve_model(tier)
-        update_current_generation(
-            model=model,
-            metadata={"feature": feature.value, "tier": (tier or "standard")},
-        )
         expects_structured = feature in _SCHEMA_MAP
 
         for attempt in range(1, max_retries + 2):  # 1-based, up to max_retries+1
@@ -145,7 +136,7 @@ class OpenRouterProvider(AIProvider):
                         "Authorization": f"Bearer {self._api_key}",
                         "Content-Type": "application/json",
                         "HTTP-Referer": "https://career-os.local",
-                        "X-Title": "kestrel",
+                        "X-Title": "Career OS",
                     },
                     json=payload,
                 )
@@ -169,12 +160,6 @@ class OpenRouterProvider(AIProvider):
             structured = _try_parse_structured(content, feature)
 
             if structured is not None or not expects_structured:
-                update_current_generation(
-                    usage_details={
-                        "input": usage.input_tokens,
-                        "output": usage.output_tokens,
-                    },
-                )
                 return AIResponse(
                     content=content,
                     provider="openrouter",
@@ -211,104 +196,91 @@ class OpenRouterProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile via OpenRouter."""
-        prompt = _scoring_user_prompt(
-            job_description, json.dumps(profile_data, separators=_COMPACT)
+        prompt = (
+            f"Score this job against the candidate profile. "
+            f"Return a JSON object with: fit_score (0-10), reasoning (detailed, ≥100 chars), "
+            f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
+            f"readiness_score (0-100), career_alignment (0-10), "
+            f"score_breakdown (array of ≥3 objects, each with: factor (string), "
+            f"contribution (positive or negative float), description (string)), "
+            f"dimensional_scores (object with 6 floats 0-10: technical_fit, "
+            f"seniority_alignment, compensation_fit, location_fit, career_trajectory, "
+            f"company_fit), "
+            f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
+            f"category (one of technical/soft_skill/tool/certification/domain), "
+            f"matched (boolean — true if the profile demonstrates this keyword)), "
+            f"desire_score (0-10, how much the candidate would WANT this job — "
+            f"considering company reputation, growth potential, culture signals, "
+            f"role excitement, compensation attractiveness, work-life balance), "
+            f"desire_reasoning (string explaining what makes this job desirable "
+            f"or undesirable from the candidate's perspective).\n\n"
+            f"Job Description:\n{job_description}\n\n"
+            f"Profile:\n{json.dumps(profile_data, indent=2)}"
         )
         return await self.complete(prompt, feature=AIFeature.score, tier=tier)
 
 
-def _scoring_user_prompt(job_description: str, profile_json: str | None = None) -> str:
-    """Build the user-message scoring prompt with job and optional profile.
-
-    Shared across all providers to avoid prompt drift between implementations.
-    The Anthropic provider passes profile_json=None (profile is in system block).
-    """
-    preamble = (
-        "Score this job against the candidate profile. "
-        "Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
-        "estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
-        "readiness_score (0-100), career_alignment (0-10), "
-        "score_breakdown (array of >=3 objects, each with: factor (string), "
-        "contribution (positive or negative float), description (string)), "
-        "dimensional_scores (object with 6 floats 0-10: technical_fit, "
-        "seniority_alignment, compensation_fit, location_fit, career_trajectory, "
-        "company_fit), "
-        "ats_keywords (array of 10-15 objects, each with: keyword (string), "
-        "category (one of technical/soft_skill/tool/certification/domain), "
-        "matched (boolean -- true if the profile demonstrates this keyword)), "
-        "desire_score (0-10, how much the candidate would WANT this job -- "
-        "considering company reputation, growth potential, culture signals, "
-        "role excitement, compensation attractiveness, work-life balance), "
-        "desire_reasoning (string explaining what makes this job desirable "
-        "or undesirable from the candidate's perspective)."
-    )
-    parts = [preamble, f"\n\nJob Description:\n{job_description}"]
-    if profile_json is not None:
-        parts.append(f"\n\nProfile:\n{profile_json}")
-    return "".join(parts)
-
-
 def _system_prompt_for_feature(feature: AIFeature) -> str | None:
-    """Return a compressed system prompt tailored to the feature type.
-
-    Prompts use telegraphic notation to minimize token count while preserving
-    all schema constraints. Compression techniques: remove filler words, use
-    shorthand types (:str, :0-10), inline options with |, enumerate with ×.
-    """
+    """Return a system prompt tailored to the feature type."""
     prompts: dict[AIFeature, str] = {
         AIFeature.score: (
-            "Career scoring AI. Valid JSON output:\n"
-            "fit_score:0-10, reasoning:str≥100ch with ≥3 factors, "
-            "estimated_salary:str, effort_flag:low|medium|high, "
-            "prep_level:str, prep_notes:str, "
-            "readiness_score:0-100, career_alignment:0-10, "
-            "score_breakdown:[≥3×{factor:str, contribution:±float, description:str}], "
-            "dimensional_scores:{technical_fit,seniority_alignment,compensation_fit,"
-            "location_fit,career_trajectory,company_fit}:each 0-10, "
-            "ats_keywords:[10-15×{keyword:str, "
-            "category:technical|soft_skill|tool|certification|domain, "
-            "matched:bool (true iff profile demonstrates it)}]."
+            "You are a career scoring AI. Return valid JSON matching the ScoreResult schema: "
+            "fit_score (0-10), reasoning (≥100 chars with ≥3 specific factors), "
+            "estimated_salary, effort_flag, prep_level, prep_notes, "
+            "readiness_score (0-100), career_alignment (0-10), "
+            "score_breakdown (REQUIRED array of ≥3 objects, each with: "
+            "factor (string), contribution (positive or negative float), "
+            "description (string explaining impact)), "
+            "dimensional_scores (REQUIRED object with 6 floats (0-10): "
+            "technical_fit, seniority_alignment, compensation_fit, location_fit, "
+            "career_trajectory, company_fit), "
+            "ats_keywords (REQUIRED array of 10-15 objects, each with: "
+            "keyword (string), category (one of technical/soft_skill/tool/"
+            "certification/domain), matched (boolean — true iff the candidate "
+            "profile demonstrates this keyword))."
         ),
         AIFeature.gap_analysis: (
-            "Skills gap analysis AI. Valid JSON: "
-            "gaps:[{skill_name,required_level,current_level,severity,distance}], "
-            "readiness_score:0-100, summary:str."
+            "You are a skills gap analysis AI. Return valid JSON with: gaps (list of "
+            "{skill_name, required_level, current_level, severity, distance}), "
+            "readiness_score (0-100), summary."
         ),
         AIFeature.coaching: (
-            "Career coaching AI. Valid JSON: "
-            "suggestions:[{action,hours,weeks,difficulty,priority}], focus_area:str."
+            "You are a career coaching AI. Return valid JSON with: suggestions (list of "
+            "{action, hours, weeks, difficulty, priority}), focus_area."
         ),
         AIFeature.goal_recalibration: (
-            "Goal recalibration AI. Valid JSON: "
-            "recalibration_notes:str, suggested_adjustments:list, market_reality:str."
+            "You are a career goal recalibration AI. Return valid JSON with: "
+            "recalibration_notes, suggested_adjustments (list), market_reality."
         ),
         AIFeature.interview_prep: (
-            "Interview prep AI. Valid JSON: "
-            "topics:list, questions:[≥5], checklist:[{...,time_minutes}], total_prep_hours:num."
+            "You are an interview preparation AI. Return valid JSON with: topics (list), "
+            "questions (list of ≥5), checklist (list with time_minutes), total_prep_hours."
         ),
         AIFeature.company_research: (
-            "Company research AI. Valid JSON:\n"
-            "tech_stack:{frontend,backend,infrastructure,analytics:[str]}, "
-            "funding:{stage,total_raised,lead_investor,last_round_date}, "
-            "glassdoor:{overall_rating,ceo_approval,culture_keywords,work_life_balance}, "
-            "values_alignment:{score:0-10,rationale:str}, ats_platform:str|null, "
-            "hiring_patterns:{active_postings,posting_velocity,top_departments}, "
-            "industry_segment:str, employee_count:str|null, "
-            "news:[{title,url,date,summary}]|null."
+            "You are a company research AI. Return valid JSON with: tech_stack (dict with "
+            "frontend/backend/infrastructure/analytics lists), funding (dict with stage, "
+            "total_raised, lead_investor, last_round_date), glassdoor (dict with "
+            "overall_rating, ceo_approval, culture_keywords, work_life_balance), "
+            "values_alignment (dict with score 0-10 and rationale string), ats_platform "
+            "(string or null), hiring_patterns (dict with active_postings, posting_velocity, "
+            "top_departments), industry_segment (string), employee_count (string or null), "
+            "news (list of {title, url, date, summary} or null)."
         ),
         AIFeature.learning_recommendations: (
-            "Learning recommender. Valid JSON: "
-            "recommendations:[{title,url,hours,provider,difficulty,type}], total_hours:num."
+            "You are a learning path recommender. Return valid JSON with: recommendations "
+            "(list of {title, url, hours, provider, difficulty, type}), total_hours."
         ),
         AIFeature.interview_format: (
-            "Interview format AI. Valid JSON: "
-            "rounds:[{round_number:int,type:str,description:str,duration_minutes:int}], "
-            "total_duration:str (e.g. '3-4 weeks'), process_description:str."
+            "You are an interview format AI. Return valid JSON with: rounds (list of "
+            "{round_number (int), type (string), description (string), duration_minutes (int)}), "
+            "total_duration (string, e.g., '3-4 weeks'), "
+            "process_description (string describing the overall interview process)."
         ),
         AIFeature.interview_patterns: (
-            "Interview patterns AI. Valid JSON: "
-            "question_categories:[{name,description,example_questions:[str]}], "
-            "assessment_criteria:[{name,description}], frequently_tested_skills:[str]."
+            "You are an interview patterns AI. Return valid JSON with: question_categories "
+            "(list of {name, description, example_questions (list of strings)}), "
+            "assessment_criteria (list of {name, description}), "
+            "frequently_tested_skills (list of strings)."
         ),
     }
     return prompts.get(feature)
