@@ -40,7 +40,7 @@
       "id": "fs-03",
       "category": "reject",
       "expected_band": [
-        0,
+        1,
         3
       ],
       "title": "Mechanical Engineer",
@@ -124,7 +124,7 @@
       "id": "fs-10",
       "category": "mediocre",
       "expected_band": [
-        0,
+        1,
         2
       ],
       "title": "Management Consultant",

@@ -39,7 +39,7 @@
       "id": "hc-03",
       "category": "reject",
       "expected_band": [
-        0,
+        1,
         3
       ],
       "title": "Medical Billing Specialist",
@@ -63,7 +63,7 @@
       "id": "hc-05",
       "category": "mediocre",
       "expected_band": [
-        0,
+        1,
         3
       ],
       "title": "Clinical Research Coordinator",
