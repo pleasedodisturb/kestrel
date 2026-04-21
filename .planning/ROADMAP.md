@@ -16,7 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: CLI Wizard** - Complete `kestrel init` interactive wizard with profile questions, paste-text extraction, health check, and guided next steps — COMPLETE 2026-04-20
 - [x] **Phase 3: Demo Data** - Pre-baked sample jobs with pre-computed scores that deliver the "aha moment" without requiring an API key — COMPLETE 2026-04-20
 - [ ] **Phase 4: Web Welcome Flow** - First-time welcome screen, onboarding guard, web profile questions, resume/skip/complete flow, and post-onboarding AI provider nudge
-- [ ] **Phase 5: Interactive Tour, Feedback, and Polish** - Shepherd.js guided tour, empty state coaching, persistent feedback button, and non-developer documentation
+- [x] **Phase 5: Interactive Tour, Feedback, and Polish** - Custom guided tour, empty state coaching, persistent feedback button, and non-developer documentation
+- [ ] **Phase 6: Test Suite Rewrite** - Rewrite all onboarding tests to new testing methodology, fix pre-existing environment failures
 
 ## Phase Details
 
@@ -92,18 +93,41 @@ Plans:
 **Depends on**: Phase 4
 **Requirements**: WEB-03, WEB-05, WEB-06, FB-01, FB-02, FB-03, INF-04
 **Success Criteria** (what must be TRUE):
-  1. Shepherd.js interactive tour walks through Pipeline, Discovery, and Scoring pages with tooltips that are keyboard-navigable, have aria-live announcements, proper focus management, and a skip button
+  1. Custom interactive tour walks through Pipeline, Discovery, and Scoring pages with tooltips that are keyboard-navigable, have aria-live announcements, proper focus management, and a skip button (D-04: no Shepherd.js)
   2. Pipeline, Discovery, Contacts, and Skills pages show empty state coaching when no data exists (guiding users to populate each section)
-  3. A persistent feedback button is visible on all web pages (bottom-right) that opens a pre-filled GitHub issue URL with system info (OS, Python version, Kestrel version)
-  4. End-of-onboarding screen prompts for feedback with a link to GitHub issues and contact info
+  3. A persistent feedback button is visible on all web pages (bottom-right) that opens a pre-filled GitHub issue URL with system info
+  4. End-of-onboarding screen prompts for feedback with a link to GitHub issues
   5. A "Getting Started for Non-Developers" documentation page exists explaining terminal basics needed for Kestrel
-**Plans**: [to be planned]
+**Plans**: 5 plans
+
+Plans:
+- [x] 05-01-PLAN.md — Shared EmptyState component + integration into Pipeline, Discovery, Contacts, Skills (WEB-03) — COMPLETE 2026-04-21
+- [x] 05-02-PLAN.md — FeedbackButton, HelpPage, WelcomePage feedback prompt, Layout + App.tsx wiring (FB-01, FB-02, FB-03, INF-04) — COMPLETE 2026-04-21
+- [x] 05-03-PLAN.md — Tour system: TourProvider, TourTooltip, TourOverlay + Layout integration (WEB-05, WEB-06) — COMPLETE 2026-04-21
+- [x] 05-04-PLAN.md — Full test suite for all Phase 5 components — COMPLETE 2026-04-21
+- [x] 05-05-PLAN.md — Visual verification checkpoint — COMPLETE 2026-04-21
 **UI hint**: yes
+
+### Phase 6: Test Suite Rewrite
+**Goal**: All onboarding tests rewritten to the new testing methodology standard, fixing pre-existing environment failures and ensuring comprehensive coverage across all 5 phases
+**Depends on**: Phase 5
+**Requirements**: TEST-01
+**Success Criteria** (what must be TRUE):
+  1. All onboarding test files follow the new testing methodology from main
+  2. Pre-existing localStorage/environment test failures in KanbanBoard, Skills, Discovery are fixed
+  3. Full test suite passes green (`npm run test` exits 0)
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Test infrastructure: localStorage polyfill + shared renderWithProviders wrapper
+- [ ] 06-02-PLAN.md — Pre-existing broken files: KanbanBoard, Discovery, Skills rewrite
+- [ ] 06-03-PLAN.md — Onboarding tests: OnboardingGuard + WelcomePage rewrite (API-level mocking)
+- [ ] 06-04-PLAN.md — Onboarding tests: TourProvider + HelpPage rewrite + full suite gate
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 
 | Phase | Plans Complete | Status | Completed |
@@ -112,4 +136,5 @@ Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
 | 2. CLI Wizard | 4/4 | Complete | 2026-04-20 |
 | 3. Demo Data | 3/3 | Complete | 2026-04-20 |
 | 4. Web Welcome Flow | 3/4 | Executing | - |
-| 5. Interactive Tour, Feedback, and Polish | 0/0 | Not started | - |
+| 5. Interactive Tour, Feedback, and Polish | 5/5 | Complete | 2026-04-21 |
+| 6. Test Suite Rewrite | 0/4 | Planned | - |
