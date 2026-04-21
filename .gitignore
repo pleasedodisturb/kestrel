@@ -111,5 +111,8 @@ GSD-CLAUDE.md
 .claude/hooks/gsd-*
 gsd-local-patches/
 
+# Hypothesis (property-based testing database)
+.hypothesis/
+
 # Internal business docs
 docs/pricing-strategy.md

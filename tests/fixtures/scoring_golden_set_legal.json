@@ -1,0 +1,255 @@
+{
+  "profile": {
+    "job_family": "Legal",
+    "location": "London, UK",
+    "key_skills": [
+      "Contract Law",
+      "Legal Research",
+      "Compliance",
+      "Regulatory Affairs",
+      "Corporate Governance"
+    ]
+  },
+  "jobs": [
+    {
+      "id": "lg-01",
+      "category": "strong",
+      "expected_band": [
+        5.5,
+        7.5
+      ],
+      "title": "Corporate Counsel",
+      "company": "Clifford Chance",
+      "location": "London, UK",
+      "description": "Advise multinational corporations on cross-border mergers and acquisitions. Draft and negotiate transaction documents including share purchase agreements and disclosure schedules. 8+ years corporate law experience with Magic Circle or international firm. Qualified solicitor in England and Wales."
+    },
+    {
+      "id": "lg-02",
+      "category": "mediocre",
+      "expected_band": [
+        2.9,
+        4.9
+      ],
+      "title": "Paralegal",
+      "company": "Allen & Overy",
+      "location": "London, UK",
+      "description": "Support litigation team with document review, case preparation, and legal research. Manage discovery processes using Relativity and Concordance. Organize trial bundles and coordinate with barristers' chambers. CILEX Level 3 or paralegal diploma. 2+ years commercial litigation experience."
+    },
+    {
+      "id": "lg-03",
+      "category": "dream",
+      "expected_band": [
+        8.3,
+        10
+      ],
+      "title": "Compliance Officer",
+      "company": "Barclays",
+      "location": "London, UK",
+      "description": "Ensure regulatory compliance across retail banking operations with FCA and PRA requirements. Conduct risk assessments, manage compliance monitoring programs, and advise business units. 5+ years financial services compliance experience. ICA diploma or equivalent preferred."
+    },
+    {
+      "id": "lg-04",
+      "category": "dream",
+      "expected_band": [
+        8.7,
+        10
+      ],
+      "title": "Patent Attorney",
+      "company": "Marks & Clerk",
+      "location": "London, UK",
+      "description": "Draft and prosecute patent applications in biotechnology and pharmaceutical fields before the EPO and USPTO. Advise on freedom-to-operate analyses and patent portfolio strategy. Registered European Patent Attorney with PhD in life sciences. 4+ years patent prosecution experience."
+    },
+    {
+      "id": "lg-05",
+      "category": "dream",
+      "expected_band": [
+        8.8,
+        10
+      ],
+      "title": "Employment Lawyer",
+      "company": "Lewis Silkin",
+      "location": "London, UK",
+      "description": "Advise employers on all aspects of employment law including TUPE transfers, redundancy programs, and discrimination claims. Represent clients at Employment Tribunal hearings. 6+ years employment law experience with recognized employment practice."
+    },
+    {
+      "id": "lg-06",
+      "category": "dream",
+      "expected_band": [
+        6.9,
+        8.9
+      ],
+      "title": "Data Protection Officer",
+      "company": "Revolut",
+      "location": "London, UK",
+      "description": "Lead GDPR and UK DPA compliance across fintech platform processing millions of customer records. Manage data subject requests, DPIAs, and ICO correspondence. CIPP/E certification and 4+ years data privacy experience in regulated industry."
+    },
+    {
+      "id": "lg-07",
+      "category": "dream",
+      "expected_band": [
+        8.2,
+        10
+      ],
+      "title": "Criminal Defence Barrister",
+      "company": "Doughty Street Chambers",
+      "location": "London, UK",
+      "description": "Represent defendants in Crown Court trials for serious criminal offences. Draft skeleton arguments, conduct cross-examination, and make submissions on sentencing. 7+ years criminal defence experience. Called to the Bar of England and Wales."
+    },
+    {
+      "id": "lg-08",
+      "category": "dream",
+      "expected_band": [
+        7.7,
+        9.7
+      ],
+      "title": "Real Estate Solicitor",
+      "company": "Herbert Smith Freehills",
+      "location": "London, UK",
+      "description": "Handle commercial real estate transactions including acquisitions, disposals, and complex development projects. Draft leases, licences, and development agreements. 5+ years real estate experience with major commercial property transactions."
+    },
+    {
+      "id": "lg-09",
+      "category": "mediocre",
+      "expected_band": [
+        3.1,
+        5.1
+      ],
+      "title": "Tax Advisor",
+      "company": "Deloitte Legal",
+      "location": "London, UK",
+      "description": "Advise UK and international clients on corporate tax planning, transfer pricing, and cross-border restructurings. Prepare tax opinions and coordinate with HMRC. CTA qualification and 6+ years corporate tax experience in Big Four or law firm."
+    },
+    {
+      "id": "lg-10",
+      "category": "strong",
+      "expected_band": [
+        5.3,
+        7.3
+      ],
+      "title": "Family Law Solicitor",
+      "company": "Withers",
+      "location": "London, UK",
+      "description": "Handle high-net-worth divorce proceedings, prenuptial agreements, and international child custody disputes. Manage financial remedy applications and private FDR hearings. Resolution accredited specialist. 5+ years family law experience with UHNW clients."
+    },
+    {
+      "id": "lg-11",
+      "category": "reject",
+      "expected_band": [
+        0,
+        1.3
+      ],
+      "title": "Marine Insurance Claims Handler",
+      "company": "Hiscox",
+      "location": "London, UK",
+      "description": "Process and adjust marine cargo and hull insurance claims. Assess coverage, investigate losses, and negotiate settlements with brokers and assured. Knowledge of Marine Insurance Act 1906 and Institute Cargo Clauses. 3+ years marine claims experience at Lloyd's or company market."
+    },
+    {
+      "id": "lg-12",
+      "category": "reject",
+      "expected_band": [
+        0,
+        1.7
+      ],
+      "title": "Competition Lawyer",
+      "company": "Freshfields",
+      "location": "London, UK",
+      "description": "Advise on EU and UK competition law including merger control filings, cartel investigations, and abuse of dominance cases. Coordinate multi-jurisdictional merger notifications. 7+ years competition practice experience with leading international firm."
+    },
+    {
+      "id": "lg-13",
+      "category": "mediocre",
+      "expected_band": [
+        2.0,
+        4.0
+      ],
+      "title": "Legal Technology Analyst",
+      "company": "Thomson Reuters",
+      "location": "London, UK",
+      "description": "Implement and support legal technology platforms including Westlaw, Practical Law, and HighQ. Train law firm associates on legal research tools and workflow automation. Experience with legal AI tools and document automation. 2+ years legal tech experience."
+    },
+    {
+      "id": "lg-14",
+      "category": "mediocre",
+      "expected_band": [
+        2.5,
+        4.5
+      ],
+      "title": "Intellectual Property Litigator",
+      "company": "Bird & Bird",
+      "location": "London, UK",
+      "description": "Represent technology companies in IP disputes before the High Court and IPEC. Handle patent, trademark, and copyright infringement claims. Manage complex multi-party litigation with international dimensions. 6+ years IP litigation experience."
+    },
+    {
+      "id": "lg-15",
+      "category": "mediocre",
+      "expected_band": [
+        2.6,
+        4.6
+      ],
+      "title": "Immigration Solicitor",
+      "company": "Fragomen",
+      "location": "London, UK",
+      "description": "Process UK immigration applications including Skilled Worker visas, Global Talent endorsements, and sponsor licence management. Advise employers on right to work compliance. OISC Level 3 or solicitor qualification. 3+ years UK immigration experience."
+    },
+    {
+      "id": "lg-16",
+      "category": "strong",
+      "expected_band": [
+        4.4,
+        6.4
+      ],
+      "title": "Regulatory Affairs Manager",
+      "company": "GSK",
+      "location": "London, UK",
+      "description": "Manage pharmaceutical regulatory submissions to MHRA and EMA. Coordinate marketing authorisation applications, variations, and renewals. Ensure post-market compliance and pharmacovigilance reporting. 5+ years pharma regulatory affairs experience. RAC certification preferred."
+    },
+    {
+      "id": "lg-17",
+      "category": "dream",
+      "expected_band": [
+        8.5,
+        10
+      ],
+      "title": "Construction Adjudicator",
+      "company": "Independent Practice",
+      "location": "London, UK",
+      "description": "Determine construction disputes under the Housing Grants Act referring party procedure. Analyse complex delay and disruption claims, review expert reports, and issue binding decisions within 28 days. RICS Fellow or FCIArb with 10+ years construction law experience."
+    },
+    {
+      "id": "lg-18",
+      "category": "mediocre",
+      "expected_band": [
+        2.2,
+        4.2
+      ],
+      "title": "Insolvency Practitioner",
+      "company": "FTI Consulting",
+      "location": "London, UK",
+      "description": "Administer corporate insolvency appointments including administrations, CVAs, and liquidations. Manage creditor communications, asset realisations, and statutory reporting. Licensed insolvency practitioner (IP) with ACA or ACCA qualification. 5+ years insolvency experience."
+    },
+    {
+      "id": "lg-19",
+      "category": "reject",
+      "expected_band": [
+        0.4,
+        2.4
+      ],
+      "title": "Pro Bono Coordinator",
+      "company": "Linklaters",
+      "location": "London, UK",
+      "description": "Manage the firm's pro bono programme connecting associates with access to justice projects. Develop partnerships with legal charities, law centres, and NGOs. Track pro bono hours and impact metrics. 3+ years experience in pro bono coordination or legal charity sector."
+    },
+    {
+      "id": "lg-20",
+      "category": "mediocre",
+      "expected_band": [
+        2.6,
+        4.6
+      ],
+      "title": "Shipping Solicitor",
+      "company": "Ince Gordon Dadds",
+      "location": "London, UK",
+      "description": "Advise on international shipping disputes, charterparty claims, and bills of lading issues. Handle London arbitration under LMAA terms and represent clients before the Admiralty Court. Knowledge of Hague-Visby Rules and BIMCO standard forms. 6+ years shipping practice."
+    }
+  ]
+}
