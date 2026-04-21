@@ -26,16 +26,10 @@ Most job-matching tools give you a single score. Kestrel gives you two, because 
 
 The real insight comes from looking at both together:
 
-```mermaid
-quadrantChart
-    title Fit vs Desire Decision Matrix
-    x-axis "Low Desire" --> "High Desire"
-    y-axis "Low Fit" --> "High Fit"
-    quadrant-1 "Dream Job: Go all in"
-    quadrant-2 "Safe Bet: You'd do well, but would you be happy?"
-    quadrant-3 "Skip: Move on, no hard feelings"
-    quadrant-4 "Reach: Exciting, but close gaps first"
-```
+| | **Low Desire** | **High Desire** |
+|---|---|---|
+| **High Fit** | Safe Bet — you'd do well, but would you be happy? | Dream Job — go all in |
+| **Low Fit** | Skip — move on, no hard feelings | Reach — exciting, but close gaps first |
 
 A "Safe Bet" isn't a bad outcome — sometimes stability is exactly what you need. And a "Reach" isn't hopeless — it tells you where to invest if you really want that role. The quadrant helps you make intentional decisions instead of applying to everything and hoping for the best.
 
@@ -60,7 +54,7 @@ Neither score is pulled from thin air. Each one is built from six sub-scores tha
 ```mermaid
 flowchart TD
     A[Job Posting] --> B[Red Flag Detection]
-    B -->|Ghost job / stale / vague| C[Flag warnings attached]
+    B -->|Flags found| C[Warnings attached]
     B -->|Clean| D[Dimension Scoring]
     C --> D
     D --> E[Technical Fit]
@@ -69,15 +63,17 @@ flowchart TD
     D --> H[Location Fit]
     D --> I[Career Trajectory]
     D --> J[Company Fit]
-    E & F & G & H & I & J --> K[Weight by Job Family]
+    E --> K[Weight by Job Family]
+    F --> K
+    G --> K
+    H --> K
+    I --> K
+    J --> K
     K --> L[Fit Score 0-10]
     K --> M[Desire Score 0-10]
-    L & M --> N[Quadrant Classification]
+    L --> N[Quadrant Classification]
+    M --> N
     N --> O[Dream / Safe Bet / Reach / Skip]
-
-    style A fill:#e8f4fd
-    style O fill:#d4edda
-    style C fill:#fff3cd
 ```
 
 ### Red Flags

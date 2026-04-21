@@ -27,21 +27,13 @@ Think of AI providers like electricity providers:
 Kestrel works the same way. Pick a provider, connect it, and every feature — scoring, coaching, interview prep — works identically regardless of which AI is behind it.
 
 ```mermaid
-graph LR
+flowchart LR
     K[Kestrel] --> F{Provider Factory}
-    F --> D[Demo Mode<br>Free, offline]
-    F --> OR[OpenRouter<br>300+ models]
-    F --> A[Anthropic<br>Best privacy]
-    F --> T[Together AI<br>Budget bulk]
-    F --> O[Ollama<br>100% local]
-
-    style K fill:#1e40af,color:#fff
-    style F fill:#374151,color:#fff
-    style D fill:#059669,color:#fff
-    style OR fill:#7c3aed,color:#fff
-    style A fill:#dc2626,color:#fff
-    style T fill:#d97706,color:#fff
-    style O fill:#059669,color:#fff
+    F --> D[Demo Mode - Free, offline]
+    F --> OR[OpenRouter - 300+ models]
+    F --> A[Anthropic - Best privacy]
+    F --> T[Together AI - Budget bulk]
+    F --> O[Ollama - 100% local]
 ```
 
 ---

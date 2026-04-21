@@ -20,38 +20,22 @@ You've probably installed software before — download, double-click, done. But 
 
 ```mermaid
 flowchart LR
-    DEV[Developer writes code] --> CP1
-
-    subgraph CP1 ["Checkpoint 1: Does It Work?"]
-        LINT[Lint & Format]
-        TESTS[Test Suite]
-        SEC[Security Scan]
-        PII[PII Leak Check]
-    end
-
-    CP1 -->|All pass| CP2
-
-    subgraph CP2 ["Checkpoint 2: Ready to Ship?"]
-        MERGE[Merge to main]
-        CONV[Conventional commits<br/>categorize changes]
-        DRAFT[Release draft<br/>auto-generated]
-    end
-
-    CP2 -->|Developer approves| CP3
-
-    subgraph CP3 ["Checkpoint 3: Can You Get It?"]
-        DOCKER[Docker Image<br/>Backend + Frontend]
-        PIP[Python Package<br/>PyPI]
-        NPM[npm Package<br/>Node.js wrapper]
-    end
-
-    CP3 --> USER[You run Kestrel]
-
-    style DEV fill:#e8f4fd
-    style USER fill:#d4edda
-    style CP1 fill:#fff3cd
-    style CP2 fill:#e8f4fd
-    style CP3 fill:#d4edda
+    DEV[Developer writes code] --> LINT[Lint]
+    DEV --> TESTS[Test Suite]
+    DEV --> SEC[Security Scan]
+    DEV --> PII[PII Check]
+    LINT --> PASS{All pass?}
+    TESTS --> PASS
+    SEC --> PASS
+    PII --> PASS
+    PASS -->|Yes| MERGE[Merge to main]
+    MERGE --> DRAFT[Release draft auto-generated]
+    DRAFT -->|Approved| DOCKER[Docker Image]
+    DRAFT -->|Approved| PIP[PyPI Package]
+    DRAFT -->|Approved| NPM[npm Package]
+    DOCKER --> USER[You run Kestrel]
+    PIP --> USER
+    NPM --> USER
 ```
 
 **Checkpoint 1: Does It Work?** When new code is submitted for review, automated checks run immediately. A linter checks coding standards (grammar rules for code). The full test suite runs in under 2 minutes. Security scanners check for known vulnerabilities in dependencies. A special scanner checks that no personal information, passwords, or API keys accidentally ended up in the code — like checking that a letter you're mailing doesn't have your credit card number on the envelope. If any check fails, the code can't move forward.
