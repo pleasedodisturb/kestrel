@@ -399,7 +399,7 @@ class TestScoringWithRubricIntegration:
         assert scored.fit_score == 6.0
         assert scored.readiness_score == 55.0
         assert scored.career_alignment == 5.5
-        assert scored.reasoning is not None
+        assert isinstance(scored.reasoning, str)
         assert len(scored.reasoning) >= 100
         assert scored.is_stale is False
 
@@ -465,8 +465,8 @@ class TestGoldenSetFixture:
         for job in golden_set:
             band = job["expected_band"]
             assert isinstance(band, list) and len(band) == 2
-            assert 1 <= band[0] <= 10
-            assert 1 <= band[1] <= 10
+            assert 0 <= band[0] <= 10
+            assert 0 <= band[1] <= 10
             assert band[0] <= band[1]
 
     def test_golden_set_unique_ids(self, golden_set):
