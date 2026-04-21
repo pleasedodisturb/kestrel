@@ -67,8 +67,12 @@ class ScoreRequest(BaseModel):
     job_title: str | None = Field(default=None, description="Job title")
     job_company: str | None = Field(default=None, description="Company name")
     job_description: str = Field(..., min_length=1, description="Job description text to score")
-    discovered_job_id: int | None = Field(default=None, ge=1, le=INT64_MAX, description="Link to discovered job record")
-    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX, description="Link to application record")
+    discovered_job_id: int | None = Field(
+        default=None, ge=1, le=INT64_MAX, description="Link to discovered job record"
+    )
+    application_id: int | None = Field(
+        default=None, ge=1, le=INT64_MAX, description="Link to application record"
+    )
 
 
 class RedFlag(BaseModel):
@@ -113,8 +117,12 @@ class ScoreContextResponse(BaseModel):
         le=100,
         description="Percentage of scored jobs this score is higher than",
     )
-    rank: int = Field(..., ge=1, le=INT64_MAX, description="Rank among all scored jobs (1 = highest)")
-    total_scored: int = Field(..., ge=1, le=INT64_MAX, description="Total number of non-stale scored jobs")
+    rank: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Rank among all scored jobs (1 = highest)"
+    )
+    total_scored: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Total number of non-stale scored jobs"
+    )
     avg_score: float = Field(
         ..., ge=0, le=10, description="Average fit_score across all scored jobs"
     )
@@ -500,9 +508,21 @@ class FeedbackResponse(BaseModel):
 class FeedbackStats(BaseModel):
     """Summary statistics for feedback submitted by a profile."""
 
-    total_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Total number of feedback records")
-    explicit_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Explicit corrections (too_high/too_low/correct)")
-    implicit_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Implicit signals (promoted/dismissed/interview)")
+    total_count: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Total number of feedback records"
+    )
+    explicit_count: int = Field(
+        ...,
+        ge=INT64_MIN,
+        le=INT64_MAX,
+        description="Explicit corrections (too_high/too_low/correct)",
+    )
+    implicit_count: int = Field(
+        ...,
+        ge=INT64_MIN,
+        le=INT64_MAX,
+        description="Implicit signals (promoted/dismissed/interview)",
+    )
     avg_deviation: float | None = Field(
         default=None,
         description="Average |user_score - original_fit_score| for records with user_score",
@@ -547,10 +567,16 @@ class SuggestionsResponse(BaseModel):
         description="Weight adjustment suggestions based on feedback patterns",
     )
     feedback_count: int = Field(
-        ..., ge=INT64_MIN, le=INT64_MAX, description="Total feedback records used to generate suggestions"
+        ...,
+        ge=INT64_MIN,
+        le=INT64_MAX,
+        description="Total feedback records used to generate suggestions",
     )
     min_feedback_required: int = Field(
-        ..., ge=INT64_MIN, le=INT64_MAX, description="Minimum feedback records needed before suggestions appear"
+        ...,
+        ge=INT64_MIN,
+        le=INT64_MAX,
+        description="Minimum feedback records needed before suggestions appear",
     )
     ready: bool = Field(..., description="True when enough feedback exists to generate suggestions")
 

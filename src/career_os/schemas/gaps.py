@@ -67,7 +67,9 @@ class JobRequirementCreate(BaseModel):
 class JobRequirementBulkCreate(BaseModel):
     """Request body for bulk-creating job requirements for an application."""
 
-    application_id: int = Field(..., ge=1, le=INT64_MAX, description="Application to add requirements to")
+    application_id: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Application to add requirements to"
+    )
     profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile ID")
     requirements: list[JobRequirementCreate] = Field(
         ..., min_length=1, description="List of job requirements"
@@ -105,7 +107,9 @@ class AggregateGapItem(BaseModel):
     """A skill gap aggregated across multiple applications."""
 
     skill_name: str
-    frequency: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number of applications with this gap")
+    frequency: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Number of applications with this gap"
+    )
     application_ids: list[Annotated[int, Field(ge=1, le=INT64_MAX)]]
     avg_severity: str
     avg_distance: float

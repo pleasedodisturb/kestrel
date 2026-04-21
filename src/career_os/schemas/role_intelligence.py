@@ -20,12 +20,16 @@ from career_os.schemas.constraints import INT64_MAX, INT64_MIN
 class InterviewRound(BaseModel):
     """A single interview round."""
 
-    round_number: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Round sequence number (1-based)")
+    round_number: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Round sequence number (1-based)"
+    )
     type: str = Field(
         ..., description="Round type (e.g., 'Phone Screen', 'Technical', 'Behavioral')"
     )
     description: str = Field(..., description="Description of what this round covers")
-    duration_minutes: int = Field(..., ge=0, le=INT64_MAX, description="Expected duration in minutes")
+    duration_minutes: int = Field(
+        ..., ge=0, le=INT64_MAX, description="Expected duration in minutes"
+    )
 
 
 class SourceWarning(BaseModel):

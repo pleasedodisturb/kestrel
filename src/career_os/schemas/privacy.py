@@ -23,7 +23,9 @@ class PrivacyTier(StrEnum):
 class DataRetention(BaseModel):
     """Data retention policy description."""
 
-    days: int | None = Field(None, ge=INT64_MIN, le=INT64_MAX, description="Retention in days, None=indefinite")
+    days: int | None = Field(
+        None, ge=INT64_MIN, le=INT64_MAX, description="Retention in days, None=indefinite"
+    )
     description: str = Field(..., description="Human-readable retention policy")
 
 

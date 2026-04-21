@@ -25,8 +25,12 @@ def _ensure_utc(v: Any) -> datetime | None:
 class FollowUpCreate(BaseModel):
     """Request body for POST /api/follow-ups."""
 
-    application_id: int = Field(..., ge=1, le=INT64_MAX, description="Application this follow-up belongs to")
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile this follow-up belongs to")
+    application_id: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Application this follow-up belongs to"
+    )
+    profile_id: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Profile this follow-up belongs to"
+    )
     due_date: datetime = Field(..., description="When the follow-up is due")
     follow_up_type: str = Field(
         ..., min_length=1, description="Type: email, phone, linkedin, other"

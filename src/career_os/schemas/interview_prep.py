@@ -103,7 +103,10 @@ class InterviewPrepResponse(BaseModel):
         description="Prep checklist with time estimates (VAL-PREP-003)",
     )
     total_prep_minutes: int = Field(
-        default=0, ge=INT64_MIN, le=INT64_MAX, description="Total estimated preparation time in minutes"
+        default=0,
+        ge=INT64_MIN,
+        le=INT64_MAX,
+        description="Total estimated preparation time in minutes",
     )
     total_prep_hours: float = Field(default=0.0, description="Total estimated preparation hours")
     progress_percentage: float = Field(
@@ -112,5 +115,9 @@ class InterviewPrepResponse(BaseModel):
         le=100.0,
         description="Percentage of checklist items completed (VAL-PREP-004)",
     )
-    completed_items: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX, description="Number of completed checklist items")
-    total_items: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX, description="Total number of checklist items")
+    completed_items: int = Field(
+        default=0, ge=INT64_MIN, le=INT64_MAX, description="Number of completed checklist items"
+    )
+    total_items: int = Field(
+        default=0, ge=INT64_MIN, le=INT64_MAX, description="Total number of checklist items"
+    )

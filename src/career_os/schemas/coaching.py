@@ -40,7 +40,9 @@ class CoachingSuggestionResponse(BaseModel):
     id: int = Field(..., ge=1, le=INT64_MAX)
     profile_id: int = Field(..., ge=1, le=INT64_MAX)
     action: str = Field(..., description="Actionable recommendation")
-    priority: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Priority rank (1 = highest)")
+    priority: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Priority rank (1 = highest)"
+    )
     effort_estimate: EffortEstimate = Field(
         ..., description="Effort estimate with hours, weeks, difficulty"
     )

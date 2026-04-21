@@ -117,7 +117,11 @@ class NotificationLogListResponse(BaseModel):
 class NotificationTriggerResponse(BaseModel):
     """Response from triggering notifications (e.g., follow-up check)."""
 
-    triggered: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number of notifications sent")
-    skipped: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number skipped (disabled, quiet hours, etc.)")
+    triggered: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Number of notifications sent"
+    )
+    skipped: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Number skipped (disabled, quiet hours, etc.)"
+    )
     failed: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number that failed to send")
     details: list[dict] = Field(default_factory=list)

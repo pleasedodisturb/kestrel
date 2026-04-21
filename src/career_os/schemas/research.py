@@ -26,7 +26,9 @@ class CompanyResearchRequest(BaseModel):
     """Request body for POST /api/research/company."""
 
     company_name: str = Field(..., min_length=1, description="Company name to research")
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile ID for values alignment scoring")
+    profile_id: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Profile ID for values alignment scoring"
+    )
     company_url: str | None = Field(
         default=None, description="Optional company website URL for enrichment"
     )
@@ -91,7 +93,10 @@ class HiringPatternsReport(BaseModel):
     """Hiring patterns (VAL-RESEARCH-007)."""
 
     active_postings: int | None = Field(
-        default=None, ge=INT64_MIN, le=INT64_MAX, description="Number of currently active job postings"
+        default=None,
+        ge=INT64_MIN,
+        le=INT64_MAX,
+        description="Number of currently active job postings",
     )
     posting_velocity: str | None = Field(
         default=None, description="Posting rate (e.g., '12/month')"

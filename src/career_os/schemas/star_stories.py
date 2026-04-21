@@ -87,7 +87,9 @@ class RecommendedStory(BaseModel):
     matching_skills: list[str] = Field(
         description="Skill tags that match the application requirements"
     )
-    match_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number of matching skill tags")
+    match_count: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Number of matching skill tags"
+    )
 
 
 class RecommendedStoriesResponse(BaseModel):
