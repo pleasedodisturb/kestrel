@@ -20,17 +20,19 @@ class TestAutoMarking:
 
     def test_integration_marker_on_db_session(self, db_session):
         """Tests using db_session get integration marker."""
-        assert db_session is not None
+        assert db_session is not None  # noqa: KTEST001
+        assert hasattr(db_session, "execute")
 
     def test_integration_marker_on_client(self, client):
         """Tests using client fixture get integration marker."""
-        assert client is not None
+        assert client is not None  # noqa: KTEST001
+        assert hasattr(client, "get")
 
     @pytest.mark.smoke
     def test_explicit_marker_not_overridden(self):
         """Explicit markers should not be overridden by auto-marking."""
         # This test has @pytest.mark.smoke, so auto-marking should skip it
-        assert True
+        assert True  # noqa: KTEST001
 
 
 class TestMarkerCollectionCounts:

@@ -106,3 +106,7 @@ markers = [
     "smoke: Health check tests (manually applied, 1-2 tests)",
     "regression: Golden set regression tests (Phase 3, ADV-01)",
 ]
+
+[tool.diff_cover]
+compare_branch = "origin/main"
+fail_under = 80

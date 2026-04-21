@@ -103,28 +103,30 @@ jobs:
           alembic downgrade base
           alembic upgrade head
 
-      - name: Cache testmon data
+      - name: Run tests (PR - with coverage for diff-cover)
         if: github.event_name == 'pull_request'
-        uses: actions/cache@v4
-        with:
-          path: .testmondata
-          key: testmon-py311-${{ hashFiles('pyproject.toml') }}
-
-      - name: Run tests (PR - selective via testmon)
-        if: github.event_name == 'pull_request'
-        run: pytest tests/ -v --tb=short --testmon --junitxml=test-results/backend-junit.xml
+        run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml --junitxml=test-results/backend-junit.xml
 
       - name: Run tests (main - full with coverage)
         if: github.event_name != 'pull_request'
         run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml --junitxml=test-results/backend-junit.xml
 
       - name: Upload coverage report
-        if: always() && github.event_name != 'pull_request'
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: coverage.xml
           retention-days: 1
+
+      - name: Check coverage on changed lines (PR only)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch origin "${BASE_REF}" --no-tags --deepen=50
+          pip install diff-cover>=10.2.0
+          diff-cover coverage.xml --compare-branch="origin/${BASE_REF}" --fail-under=80
 
       - name: Upload JUnit XML
         if: always()
