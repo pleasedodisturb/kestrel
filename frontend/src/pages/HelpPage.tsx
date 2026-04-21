@@ -8,8 +8,10 @@
  * to a friend who has never used a terminal before.
  */
 
-import { Terminal, HelpCircle, Wrench, Rocket, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Terminal, HelpCircle, Wrench, Rocket, ArrowLeft, RotateCcw } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { DEFAULT_PROFILE_ID, resetOnboarding } from "@/api/onboarding";
 
 function Section({
   icon: Icon,
@@ -178,6 +180,34 @@ export function HelpPage() {
           use.
         </p>
       </Section>
+
+      {/* Restart onboarding */}
+      <RestartOnboarding />
+    </div>
+  );
+}
+
+function RestartOnboarding() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  return (
+    <div className="mt-8 rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
+      <RotateCcw className="mx-auto h-6 w-6 text-gray-400" />
+      <p className="mt-2 text-sm text-gray-600">
+        Want to go through the setup again? Your profile data will be kept.
+      </p>
+      <button
+        onClick={async () => {
+          await resetOnboarding(DEFAULT_PROFILE_ID);
+          await queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
+          navigate("/welcome");
+        }}
+        className="mt-3 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+        data-testid="restart-onboarding-help"
+      >
+        Restart onboarding
+      </button>
     </div>
   );
 }

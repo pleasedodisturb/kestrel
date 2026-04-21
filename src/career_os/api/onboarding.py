@@ -9,7 +9,7 @@ from career_os.api.constants import PROFILE_NOT_FOUND, RESP_404
 from career_os.database import get_db
 from career_os.models.models import Profile
 from career_os.schemas.onboarding import OnboardingStatusResponse, OnboardingStepUpdate
-from career_os.services.onboarding import get_onboarding_status, mark_step_complete
+from career_os.services.onboarding import get_onboarding_status, mark_step_complete, reset_onboarding_flow
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
@@ -53,3 +53,20 @@ async def patch_onboarding_status_route(
         raise HTTPException(status_code=404, detail=PROFILE_NOT_FOUND)
 
     return mark_step_complete(payload.step, payload.via, profile_id, db)
+
+
+@router.post("/reset", responses=RESP_404)
+async def reset_onboarding_route(
+    profile_id: Annotated[int, Query(description="Profile ID to reset onboarding for")],
+    db: Annotated[Session, Depends(get_db)],
+) -> OnboardingStatusResponse:
+    """Reset the onboarding flow while keeping profile data.
+
+    Clears welcome, tour, feedback, and completed timestamps so the user
+    can re-experience the onboarding flow. Profile data is preserved.
+    """
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if profile is None:
+        raise HTTPException(status_code=404, detail=PROFILE_NOT_FOUND)
+
+    return reset_onboarding_flow(profile_id, db)

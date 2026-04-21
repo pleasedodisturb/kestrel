@@ -143,3 +143,27 @@ def mark_step_complete(
     db.commit()
     db.refresh(state)
     return _build_response(profile_id, state)
+
+
+def reset_onboarding_flow(
+    profile_id: int,
+    db: Session,
+) -> OnboardingStatusResponse:
+    """Reset the welcome/tour flow while keeping profile data intact.
+
+    Nulls out welcome_completed, tour_completed, feedback_prompted, and completed
+    timestamps so the user can re-experience the onboarding flow. Profile data
+    (profile_started, profile_completed, demo_seeded) is preserved.
+    """
+    state = db.query(OnboardingState).filter(OnboardingState.profile_id == profile_id).first()
+    if state is None:
+        return _build_response(profile_id, None)
+
+    for step in ("welcome_completed", "tour_completed", "feedback_prompted", "completed"):
+        setattr(state, f"{step}_at", None)
+        setattr(state, f"{step}_via", None)
+
+    state.current_step = "profile_completed"
+    db.commit()
+    db.refresh(state)
+    return _build_response(profile_id, state)

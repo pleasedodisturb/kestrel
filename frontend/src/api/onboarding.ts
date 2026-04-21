@@ -57,3 +57,16 @@ export async function patchOnboardingStep(
   }
   return res.json() as Promise<OnboardingStatus>;
 }
+
+/** Reset the onboarding flow (keeps profile data, restarts welcome/tour). */
+export async function resetOnboarding(
+  profileId: number,
+): Promise<OnboardingStatus> {
+  const res = await fetch(`${API_BASE}/reset?profile_id=${profileId}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to reset onboarding: ${res.status}`);
+  }
+  return res.json() as Promise<OnboardingStatus>;
+}

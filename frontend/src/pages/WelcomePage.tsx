@@ -15,7 +15,7 @@ import { Check, Circle } from "lucide-react";
 import { StepProgress } from "@/components/StepProgress";
 import { useOnboardingStatus } from "@/hooks/useOnboarding";
 import { useProfile } from "@/hooks/useProfiles";
-import { DEFAULT_PROFILE_ID, patchOnboardingStep } from "@/api/onboarding";
+import { DEFAULT_PROFILE_ID, patchOnboardingStep, resetOnboarding } from "@/api/onboarding";
 import { updateProfile } from "@/api/profiles";
 import { createSkill } from "@/api/skills";
 
@@ -408,6 +408,23 @@ export function WelcomePage() {
               Share your feedback
             </a>
           </p>
+
+          {/* Restart onboarding (keeps profile data) */}
+          <button
+            onClick={async () => {
+              await resetOnboarding(DEFAULT_PROFILE_ID);
+              await queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
+              setScreen("welcome");
+              setStepIndex(0);
+              setFieldValue("");
+              setCompletedSteps({});
+              setSkippedSteps(new Set());
+            }}
+            className="mt-2 text-sm text-[hsl(var(--muted-foreground))] underline hover:text-[hsl(var(--foreground))]"
+            data-testid="restart-onboarding"
+          >
+            Restart onboarding
+          </button>
         </div>
       </div>
     );
