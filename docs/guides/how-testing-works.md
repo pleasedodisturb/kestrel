@@ -161,6 +161,6 @@ We didn't pick this testing approach by gut feel. The strategy was designed afte
 
 Then we chose the sanest path. Not the most sophisticated (we don't run a Kubernetes cluster for integration tests), not the most minimal (we don't skip testing and hope for the best). The goal was the most sustainable approach for one person maintaining a project long-term.
 
-For the full technical analysis: [Testing Research](research/testing-research.md)
-For raw findings with sources: [Raw Research](research/testing-raw-research.md)
-For what was built, what was trimmed, and why: [Testing Strategy](testing-strategy.md)
+For the full technical analysis: [Testing Research](../research/testing-research.md)
+For raw findings with sources: [Raw Research](../research/testing-raw-research.md)
+For what was built, what was trimmed, and why: [Testing Strategy](../reference/testing-strategy.md)

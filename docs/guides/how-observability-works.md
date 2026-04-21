@@ -83,7 +83,7 @@ Observability is completely optional. Kestrel works exactly the same with or wit
 
 **To enable it:**
 
-1. Start the Langfuse stack (a one-time Docker setup — see `docs/observability.md`)
+1. Start the Langfuse stack (a one-time Docker setup — see [Observability Setup](../reference/observability.md))
 2. Set three environment variables in your `.env` file
 3. Install the Python SDK: `pip install kestrel-app[observability]`
 4. Restart Kestrel
