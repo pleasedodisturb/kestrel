@@ -29,6 +29,7 @@ from career_os.api.market import router as market_router
 from career_os.api.oauth import limiter as oauth_limiter
 from career_os.api.oauth import router as oauth_router
 from career_os.api.onboarding import router as onboarding_router
+from career_os.api.presets import router as presets_router
 from career_os.api.privacy import router as privacy_router
 from career_os.api.profiles import router as profiles_router
 from career_os.api.pushover import router as pushover_router
@@ -208,6 +209,7 @@ app.include_router(learning_router)
 app.include_router(market_router)
 app.include_router(oauth_router)
 app.include_router(onboarding_router)
+app.include_router(presets_router)
 app.include_router(privacy_router)
 app.include_router(profiles_router)
 app.include_router(pushover_router)
