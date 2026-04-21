@@ -190,7 +190,9 @@ describe("Discovery page", () => {
     it("renders source badges on cards", async () => {
       renderDiscovery();
       await waitFor(() => {
-        expect(screen.getAllByText("linkedin").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText("linkedin").length).toBeGreaterThanOrEqual(
+          1,
+        );
       });
       expect(screen.getAllByText("indeed").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("arbeitnow").length).toBeGreaterThanOrEqual(1);
@@ -253,7 +255,9 @@ describe("Discovery page", () => {
     it("renders sort dropdown with all 4 options", async () => {
       renderDiscovery();
       await waitFor(() => {
-        expect(screen.getByText("Senior TPM - AI Platform")).toBeInTheDocument();
+        expect(
+          screen.getByText("Senior TPM - AI Platform"),
+        ).toBeInTheDocument();
       });
 
       // Check sort options exist
@@ -272,7 +276,9 @@ describe("Discovery page", () => {
     it("changing sort field triggers new search", async () => {
       renderDiscovery();
       await waitFor(() => {
-        expect(screen.getByText("Senior TPM - AI Platform")).toBeInTheDocument();
+        expect(
+          screen.getByText("Senior TPM - AI Platform"),
+        ).toBeInTheDocument();
       });
 
       const sortSelect = screen.getByDisplayValue("Date");
@@ -288,7 +294,9 @@ describe("Discovery page", () => {
     it("sort order toggle button exists", async () => {
       renderDiscovery();
       await waitFor(() => {
-        expect(screen.getByText("Senior TPM - AI Platform")).toBeInTheDocument();
+        expect(
+          screen.getByText("Senior TPM - AI Platform"),
+        ).toBeInTheDocument();
       });
 
       const toggleButton = screen.getByTitle(/Sort/);
@@ -307,7 +315,9 @@ describe("Discovery page", () => {
     it("shows filter panel when toggled", async () => {
       renderDiscovery();
       await waitFor(() => {
-        expect(screen.getByText("Senior TPM - AI Platform")).toBeInTheDocument();
+        expect(
+          screen.getByText("Senior TPM - AI Platform"),
+        ).toBeInTheDocument();
       });
 
       // Click the Filters toggle button (in the search bar area)
@@ -315,7 +325,9 @@ describe("Discovery page", () => {
       fireEvent.click(filtersButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText("e.g. linkedin")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("e.g. linkedin"),
+        ).toBeInTheDocument();
         expect(screen.getByText("Score min")).toBeInTheDocument();
         expect(screen.getByText("Date from")).toBeInTheDocument();
       });
@@ -324,14 +336,18 @@ describe("Discovery page", () => {
     it("filter changes trigger new search", async () => {
       renderDiscovery();
       await waitFor(() => {
-        expect(screen.getByText("Senior TPM - AI Platform")).toBeInTheDocument();
+        expect(
+          screen.getByText("Senior TPM - AI Platform"),
+        ).toBeInTheDocument();
       });
 
       const filtersButtons = screen.getAllByText("Filters");
       fireEvent.click(filtersButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText("e.g. linkedin")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("e.g. linkedin"),
+        ).toBeInTheDocument();
       });
 
       fireEvent.change(screen.getByPlaceholderText("e.g. linkedin"), {
@@ -348,14 +364,18 @@ describe("Discovery page", () => {
     it("clear all button clears filters", async () => {
       renderDiscovery();
       await waitFor(() => {
-        expect(screen.getByText("Senior TPM - AI Platform")).toBeInTheDocument();
+        expect(
+          screen.getByText("Senior TPM - AI Platform"),
+        ).toBeInTheDocument();
       });
 
       const filtersButtons = screen.getAllByText("Filters");
       fireEvent.click(filtersButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText("e.g. linkedin")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("e.g. linkedin"),
+        ).toBeInTheDocument();
       });
 
       // Set a filter
@@ -403,7 +423,9 @@ describe("Discovery page", () => {
       // First render with data, then search returns nothing
       const { unmount } = renderDiscovery();
       await waitFor(() => {
-        expect(screen.getByText("Senior TPM - AI Platform")).toBeInTheDocument();
+        expect(
+          screen.getByText("Senior TPM - AI Platform"),
+        ).toBeInTheDocument();
       });
       unmount();
 
@@ -447,7 +469,9 @@ describe("Discovery page", () => {
     it("does not show pagination when total_pages = 1", async () => {
       renderDiscovery();
       await waitFor(() => {
-        expect(screen.getByText("Senior TPM - AI Platform")).toBeInTheDocument();
+        expect(
+          screen.getByText("Senior TPM - AI Platform"),
+        ).toBeInTheDocument();
       });
       expect(screen.queryByText("Page 1 of 1")).not.toBeInTheDocument();
     });
@@ -549,18 +573,17 @@ describe("Discovery page", () => {
         ).toBeInTheDocument();
       });
 
-      fireEvent.change(
-        screen.getByPlaceholderText("e.g. Remote AI jobs"),
-        { target: { value: "My Search" } },
-      );
+      fireEvent.change(screen.getByPlaceholderText("e.g. Remote AI jobs"), {
+        target: { value: "My Search" },
+      });
 
       // Find the Save button in the dialog (submit type)
       const saveButtons = screen.getAllByRole("button");
       const submitBtn = saveButtons.find(
-        (b) =>
-          b.textContent === "Save" && b.closest("form") !== null,
+        (b) => b.textContent === "Save" && b.closest("form") !== null,
       );
-      if (submitBtn) fireEvent.click(submitBtn);
+      expect(submitBtn).toBeDefined();
+      fireEvent.click(submitBtn!);
 
       await waitFor(() => {
         expect(mockCreateSavedSearch).toHaveBeenCalled();
