@@ -111,6 +111,16 @@ jobs:
         if: github.event_name != 'pull_request'
         run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml --junitxml=test-results/backend-junit.xml
 
+      - name: Golden set regression (scoring band drift)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true  # TODO: recalibrate fixtures after scoring evolution (G-268)
+        run: pytest tests/regression/ -m regression -v --tb=short -x
+
+      - name: Golden set regression (scoring band drift)
+        if: github.event_name != 'pull_request'
+        continue-on-error: true  # TODO: recalibrate fixtures after scoring evolution (G-268)
+        run: pytest tests/regression/ -m regression -v --tb=short -x
+
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v7

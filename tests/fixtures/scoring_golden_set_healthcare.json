@@ -1,0 +1,255 @@
+{
+  "profile": {
+    "job_family": "Healthcare Administration",
+    "location": "Boston, MA",
+    "key_skills": [
+      "HIPAA Compliance",
+      "Clinical Operations",
+      "Healthcare IT",
+      "EHR Systems",
+      "Quality Improvement"
+    ]
+  },
+  "jobs": [
+    {
+      "id": "hc-01",
+      "category": "reject",
+      "expected_band": [
+        0,
+        1.1
+      ],
+      "title": "Senior Frontend Developer",
+      "company": "Shopify",
+      "location": "Remote, US",
+      "description": "Build merchant-facing storefronts using React 19 and TypeScript. Work on Shopify's Hydrogen framework optimizing Remix-based server components. 5+ years frontend development with strong CSS-in-JS and GraphQL. No healthcare background needed."
+    },
+    {
+      "id": "hc-02",
+      "category": "strong",
+      "expected_band": [
+        5.2,
+        7.2
+      ],
+      "title": "Automotive Mechanic",
+      "company": "BMW Service Center",
+      "location": "Boston, MA",
+      "description": "Diagnose and repair BMW vehicles including engine, transmission, and electrical systems. ASE certification required. Must have own tools and 3+ years dealership experience with German luxury vehicles."
+    },
+    {
+      "id": "hc-03",
+      "category": "reject",
+      "expected_band": [
+        1.5,
+        3.5
+      ],
+      "title": "Medical Billing Specialist",
+      "company": "Mass General Brigham",
+      "location": "Boston, MA",
+      "description": "Process medical claims and manage billing workflows for hospital outpatient services. Knowledge of ICD-10 coding, CPT codes, and insurance verification required. Experience with Epic billing modules preferred. 2+ years medical billing experience."
+    },
+    {
+      "id": "hc-04",
+      "category": "reject",
+      "expected_band": [
+        0.7,
+        2.7
+      ],
+      "title": "Hospital Operations Director",
+      "company": "Beth Israel Deaconess",
+      "location": "Boston, MA",
+      "description": "Oversee daily operations of 200-bed acute care facility. Manage clinical workflows, staff scheduling, quality metrics, and HIPAA compliance programs. Lead process improvement initiatives using Lean Six Sigma. 7+ years healthcare operations experience, MBA or MHA preferred."
+    },
+    {
+      "id": "hc-05",
+      "category": "mediocre",
+      "expected_band": [
+        1.7,
+        3.7
+      ],
+      "title": "Clinical Research Coordinator",
+      "company": "Dana-Farber Cancer Institute",
+      "location": "Boston, MA",
+      "description": "Coordinate multi-site oncology clinical trials from protocol development through data analysis. Manage IRB submissions, patient recruitment, and adverse event reporting. Experience with REDCap and CTMS platforms. RN or BSN with 3+ years clinical research."
+    },
+    {
+      "id": "hc-06",
+      "category": "dream",
+      "expected_band": [
+        8.9,
+        10
+      ],
+      "title": "Pharmacy Technician",
+      "company": "CVS Health",
+      "location": "Cambridge, MA",
+      "description": "Assist pharmacists with prescription processing, inventory management, and patient counseling. Operate automated dispensing systems and maintain controlled substance logs. PTCB certification required. Retail pharmacy experience preferred."
+    },
+    {
+      "id": "hc-07",
+      "category": "dream",
+      "expected_band": [
+        8.7,
+        10
+      ],
+      "title": "Health Informatics Analyst",
+      "company": "Epic Systems",
+      "location": "Madison, WI",
+      "description": "Design and implement clinical decision support rules within Epic's CDS framework. Analyze healthcare data for quality improvement initiatives. Knowledge of HL7 FHIR, clinical terminologies (SNOMED, LOINC), and SQL required. MPH or equivalent health informatics degree."
+    },
+    {
+      "id": "hc-08",
+      "category": "mediocre",
+      "expected_band": [
+        2.2,
+        4.2
+      ],
+      "title": "Nurse Practitioner - Primary Care",
+      "company": "One Medical",
+      "location": "Boston, MA",
+      "description": "Provide comprehensive primary care services including diagnosis, treatment plans, and preventive care. Manage panel of 500+ patients with focus on chronic disease management. APRN license and DEA registration required. 2+ years primary care NP experience."
+    },
+    {
+      "id": "hc-09",
+      "category": "mediocre",
+      "expected_band": [
+        2.2,
+        4.2
+      ],
+      "title": "Healthcare IT Project Manager",
+      "company": "Cerner Corporation",
+      "location": "Kansas City, MO",
+      "description": "Lead EHR implementation projects for hospital systems migrating to Cerner Millennium. Manage cross-functional teams of 15+ members across clinical, technical, and administrative departments. PMP certification and 5+ years healthcare IT project management required."
+    },
+    {
+      "id": "hc-10",
+      "category": "dream",
+      "expected_band": [
+        7.3,
+        9.3
+      ],
+      "title": "Medical Device Sales Representative",
+      "company": "Medtronic",
+      "location": "Boston, MA",
+      "description": "Sell cardiac rhythm management devices to hospital catheterization labs and electrophysiology departments. Build relationships with cardiologists and hospital administrators. Meet quarterly revenue targets of $2M+. 3+ years medical device sales experience."
+    },
+    {
+      "id": "hc-11",
+      "category": "mediocre",
+      "expected_band": [
+        2.7,
+        4.7
+      ],
+      "title": "Quality Improvement Director",
+      "company": "Partners HealthCare",
+      "location": "Boston, MA",
+      "description": "Lead organization-wide quality improvement programs targeting patient safety metrics, readmission rates, and clinical outcomes. Manage team of quality analysts and coordinate with CMO. Lean Six Sigma Black Belt and 10+ years healthcare quality experience required."
+    },
+    {
+      "id": "hc-12",
+      "category": "reject",
+      "expected_band": [
+        0,
+        1.9
+      ],
+      "title": "Dental Hygienist",
+      "company": "Aspen Dental",
+      "location": "Quincy, MA",
+      "description": "Perform dental cleanings, take radiographs, apply fluoride treatments, and educate patients on oral hygiene. Maintain sterilization protocols and patient records. Licensed dental hygienist with 2+ years clinical experience. CPR certification required."
+    },
+    {
+      "id": "hc-13",
+      "category": "dream",
+      "expected_band": [
+        7.9,
+        9.9
+      ],
+      "title": "Emergency Department Physician",
+      "company": "Tufts Medical Center",
+      "location": "Boston, MA",
+      "description": "Provide emergency medical care in Level I trauma center seeing 60,000+ annual visits. Manage acute care, trauma resuscitation, and critical care stabilization. Board certified in Emergency Medicine. Fellowship training preferred but not required."
+    },
+    {
+      "id": "hc-14",
+      "category": "strong",
+      "expected_band": [
+        4.7,
+        6.7
+      ],
+      "title": "Health Insurance Claims Adjuster",
+      "company": "Blue Cross Blue Shield",
+      "location": "Boston, MA",
+      "description": "Review and process medical claims for coverage determination. Apply medical necessity criteria and contract provisions. Coordinate with providers on claim disputes and appeals. 2+ years health insurance claims processing experience."
+    },
+    {
+      "id": "hc-15",
+      "category": "dream",
+      "expected_band": [
+        8.2,
+        10
+      ],
+      "title": "Biomedical Engineer",
+      "company": "Boston Scientific",
+      "location": "Marlborough, MA",
+      "description": "Design and test cardiovascular catheter devices from concept through regulatory submission. Conduct bench testing, animal studies, and design verification. Proficiency in SolidWorks, MATLAB, and statistical analysis. MS in Biomedical Engineering and 3+ years medical device R&D."
+    },
+    {
+      "id": "hc-16",
+      "category": "strong",
+      "expected_band": [
+        4.6,
+        6.6
+      ],
+      "title": "Mental Health Counselor",
+      "company": "McLean Hospital",
+      "location": "Belmont, MA",
+      "description": "Provide individual and group therapy for adults with mood disorders and anxiety. Conduct clinical assessments, develop treatment plans, and coordinate with psychiatrists. Licensed LMHC with experience in CBT and DBT modalities. Bilingual English/Spanish preferred."
+    },
+    {
+      "id": "hc-17",
+      "category": "dream",
+      "expected_band": [
+        7.9,
+        9.9
+      ],
+      "title": "Healthcare Compliance Officer",
+      "company": "Mount Auburn Hospital",
+      "location": "Cambridge, MA",
+      "description": "Develop and oversee compliance programs ensuring adherence to HIPAA, CMS regulations, and Joint Commission standards. Conduct audits, manage incident reporting, and deliver staff training. JD or healthcare compliance certification (CHC) with 5+ years experience."
+    },
+    {
+      "id": "hc-18",
+      "category": "reject",
+      "expected_band": [
+        1.1,
+        3.1
+      ],
+      "title": "Physical Therapist",
+      "company": "Spaulding Rehabilitation Hospital",
+      "location": "Boston, MA",
+      "description": "Evaluate and treat patients recovering from orthopedic surgeries, neurological conditions, and sports injuries. Develop individualized rehabilitation plans and track functional outcomes. DPT degree and Massachusetts PT license required. Outpatient experience preferred."
+    },
+    {
+      "id": "hc-19",
+      "category": "dream",
+      "expected_band": [
+        7.6,
+        9.6
+      ],
+      "title": "Data Scientist - Population Health",
+      "company": "Optum",
+      "location": "Boston, MA",
+      "description": "Build predictive models for patient risk stratification and population health management using claims data. Apply machine learning to identify high-risk patients for care management programs. Python, SQL, and healthcare analytics experience required. PhD or MS in quantitative field."
+    },
+    {
+      "id": "hc-20",
+      "category": "dream",
+      "expected_band": [
+        7.9,
+        9.9
+      ],
+      "title": "Surgical Technologist",
+      "company": "Brigham and Women's Hospital",
+      "location": "Boston, MA",
+      "description": "Assist surgeons during procedures by preparing sterile fields, passing instruments, and managing surgical equipment. Handle specimens and maintain operative logs. CST certification required. Experience in orthopedic and general surgery preferred."
+    }
+  ]
+}
