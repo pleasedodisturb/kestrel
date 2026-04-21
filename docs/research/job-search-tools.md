@@ -1,6 +1,6 @@
 # Job Search Tools — Research Summary
 
-Condensed from Claude research (see [compass_artifact_wf-650799d3-fa9c-4c82-b9a9-252070be77df_text_markdown.md](../compass_artifact_wf-650799d3-fa9c-4c82-b9a9-252070be77df_text_markdown.md)). Focus: Germany/EU, MCP, free tools.
+Condensed from Claude research. Focus: Germany/EU, MCP, free tools.
 
 ---
 

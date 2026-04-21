@@ -2,6 +2,11 @@
 title: Scoring Evolution
 ---
 
+> **Archived:** This document has been superseded by [How Scoring Works](../guides/how-scoring-works.md).
+> Preserved for historical reference only.
+
+---
+
 # Session: Scoring Evolution — 11 Epics in 2 Days
 **Date:** 2026-04-14 to 2026-04-15
 **Branch:** main (all merged)

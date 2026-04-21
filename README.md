@@ -63,7 +63,7 @@ git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 bash setup.sh
 ```
 
-Requires [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows). Both are free. Don't know what Docker is? The [step-by-step guide](docs/QUICKSTART.md) explains everything.
+Requires [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows). Both are free. Don't know what Docker is? The [step-by-step guide](docs/guides/QUICKSTART.md) explains everything.
 
 ### Option 3: Try in your browser (zero install)
 
@@ -71,7 +71,7 @@ Requires [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Deskt
 
 Free with a GitHub account. Your own instance in 2 minutes. Nothing installed on your computer.
 
-**Lost?** [Step-by-step guide](docs/QUICKSTART.md) or [FAQ](docs/FAQ.md).
+**Lost?** [Step-by-step guide](docs/guides/QUICKSTART.md) or [FAQ](docs/guides/FAQ.md).
 
 ---
 
@@ -113,31 +113,31 @@ Everything runs on your machine. No account needed. No data leaves your computer
 
 | Guide | What you'll learn |
 |-------|-------------------|
-| [Quickstart](docs/QUICKSTART.md) | First-time setup, step by step — zero assumptions |
-| [FAQ](docs/FAQ.md) | "Can I...?" "What if...?" "Why does...?" — all answered |
-| [Help](docs/HELP.md) | Something broke? Start here. We'll fix it together. |
+| [Quickstart](docs/guides/QUICKSTART.md) | First-time setup, step by step — zero assumptions |
+| [FAQ](docs/guides/FAQ.md) | "Can I...?" "What if...?" "Why does...?" — all answered |
+| [Help](docs/guides/HELP.md) | Something broke? Start here. We'll fix it together. |
 
 **Understanding AI in Kestrel:**
 
 | Guide | What you'll learn |
 |-------|-------------------|
-| [How Kestrel Uses AI](docs/ai-providers-explained.md) | The electricity analogy — what AI providers are, what they cost, and which to pick |
-| [AI Provider Setup](docs/AI-PROVIDERS.md) | Technical details — API keys, privacy policies, provider comparison tables |
-| [LLM Landscape Research](docs/llms-tokens-privacy.md) | Deep dive — 2026 pricing, privacy audits, GDPR, EU sovereignty (for the curious) |
+| [How Kestrel Uses AI](docs/guides/ai-providers-guide.md) | The electricity analogy — what AI providers are, what they cost, and which to pick |
+| [AI Provider Setup](docs/reference/AI-PROVIDERS.md) | Technical details — API keys, privacy policies, provider comparison tables |
+| [LLM Landscape Research](docs/research/llms-tokens-privacy.md) | Deep dive — 2026 pricing, privacy audits, GDPR, EU sovereignty (for the curious) |
 
 **How it works under the hood:**
 
 | Guide | What you'll learn |
 |-------|-------------------|
-| [How Scoring Works](docs/how-scoring-works.md) | What "fit score" actually means, and how Kestrel decides which jobs match you |
-| [How Testing Works](docs/how-testing-works.md) | 2,800+ automated checks — the kitchen analogy for quality assurance |
+| [How Scoring Works](docs/guides/how-scoring-works.md) | What "fit score" actually means, and how Kestrel decides which jobs match you |
+| [How Testing Works](docs/guides/how-testing-works.md) | 2,800+ automated checks — the kitchen analogy for quality assurance |
 
 **Going deeper:**
 
 | Guide | What you'll learn |
 |-------|-------------------|
-| [Comparison](docs/COMPARISON.md) | How Kestrel stacks up against Huntr, Teal, Simplify, and others |
-| [Features & API Reference](docs/REFERENCE.md) | Full feature list, architecture, CLI, and API endpoints |
+| [Comparison](docs/guides/COMPARISON.md) | How Kestrel stacks up against Huntr, Teal, Simplify, and others |
+| [Features & API Reference](docs/reference/REFERENCE.md) | Full feature list, architecture, CLI, and API endpoints |
 | [Deployment](DEPLOY.md) | Host Kestrel on Railway, Fly.io, or your own VPS |
 | [Contributing](CONTRIBUTING.md) | Development setup and pull request guidelines |
 
@@ -185,7 +185,7 @@ AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get exp
 | **Batch scoring** | Scoring a big backlog overnight? Batch APIs give a flat 50% discount for non-urgent work. | [50% off everything](https://docs.anthropic.com/en/api/creating-message-batches) |
 | **Provider fallback** | If one provider's quota runs out, Kestrel automatically tries the next one. No failed scores, no wasted retries. | Resilience (not cost) |
 
-**Benchmarked on a real profile + real job posting:** Naive approach = ~$16/month. With all optimizations = **~$1-5/month** for the same results. [How it works →](docs/how-token-optimization-works.md)
+**Benchmarked on a real profile + real job posting:** Naive approach = ~$16/month. With all optimizations = **~$1-5/month** for the same results. [How it works →](docs/guides/how-token-optimization-works.md)
 
 <details>
 <summary>Benchmark: 50-job scoring batch, same user</summary>
@@ -214,7 +214,7 @@ The job description is ~60% of each call and can't be cached (it's different eve
 
 **Want the best of everything?** Kestrel can use multiple providers at once — route simple scoring to Together (cheap), complex analysis to Anthropic (quality), and never worry about which is which.
 
-**Want to understand more?** Read [How Kestrel Uses AI](docs/ai-providers-explained.md) — it explains everything in plain English, no jargon. For the full technical comparison with pricing tables and privacy audits, see the [AI Provider Setup](docs/AI-PROVIDERS.md) guide or the [LLM landscape research](docs/llms-tokens-privacy.md).
+**Want to understand more?** Read [How Kestrel Uses AI](docs/guides/ai-providers-guide.md) — it explains everything in plain English, no jargon. For the full technical comparison with pricing tables and privacy audits, see the [AI Provider Setup](docs/reference/AI-PROVIDERS.md) guide or the [LLM landscape research](docs/research/llms-tokens-privacy.md).
 
 ### Privacy and free/cheap models
 
@@ -248,11 +248,11 @@ Our proof is in the research artifacts. Before building anything, we run paralle
 
 | Topic | For users | For developers | Raw research |
 |-------|-----------|---------------|--------------|
-| **Scoring** | [How Scoring Works](docs/how-scoring-works.md) | [Scoring Strategy](docs/research/scoring-research.md) | [Raw Findings](docs/research/scoring-raw-research.md) |
-| **Testing** | [How Testing Works](docs/how-testing-works.md) | [Testing Strategy](docs/research/testing-research.md) | [Raw Findings](docs/research/testing-raw-research.md) |
-| **CI/CD** | [How CI/CD Works](docs/how-cicd-works.md) | [CI/CD Strategy](docs/research/cicd-research.md) | [Raw Findings](docs/research/cicd-raw-research.md) |
-| **Observability** | [How Observability Works](docs/how-observability-works.md) | [Observability Strategy](docs/research/observability-research.md) | [Setup Guide](docs/observability.md) |
-| **Token Optimization** | [How Token Optimization Works](docs/how-token-optimization-works.md) | [Strategy & Implementation](docs/research/token-optimization-research.md) | [Raw Findings](docs/research/token-optimization-raw-research.md) |
+| **Scoring** | [How Scoring Works](docs/guides/how-scoring-works.md) | [Scoring Strategy](docs/research/scoring-research.md) | [Raw Findings](docs/research/scoring-raw-research.md) |
+| **Testing** | [How Testing Works](docs/guides/how-testing-works.md) | [Testing Strategy](docs/research/testing-research.md) | [Raw Findings](docs/research/testing-raw-research.md) |
+| **CI/CD** | [How CI/CD Works](docs/guides/how-cicd-works.md) | [CI/CD Strategy](docs/research/cicd-research.md) | [Raw Findings](docs/research/cicd-raw-research.md) |
+| **Observability** | [How Observability Works](docs/guides/how-observability-works.md) | [Observability Strategy](docs/research/observability-research.md) | [Setup Guide](docs/reference/observability-setup.md) |
+| **Token Optimization** | [How Token Optimization Works](docs/guides/how-token-optimization-works.md) | [Strategy & Implementation](docs/research/token-optimization-research.md) | [Raw Findings](docs/research/token-optimization-raw-research.md) |
 | **[LLM Research Corpus](https://github.com/pleasedodisturb/awesome-llm-token-optimization)** | [Quick Wins](https://github.com/pleasedodisturb/awesome-llm-token-optimization#quick-wins) | [Tools & Strategies](https://github.com/pleasedodisturb/awesome-llm-token-optimization#contents) | [52 Papers + Sources](https://github.com/pleasedodisturb/awesome-llm-token-optimization/tree/main/research) |
 
 ## License

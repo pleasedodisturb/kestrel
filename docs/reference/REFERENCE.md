@@ -72,7 +72,7 @@ git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 
 That's it. Your job search dashboard is running.
 
-> **New to all this?** See the full [Quickstart Guide](docs/QUICKSTART.md) with detailed explanations at every step, or check the [FAQ](docs/FAQ.md) if you get stuck.
+> **New to all this?** See the full [Quickstart Guide](../guides/QUICKSTART.md) with detailed explanations at every step, or check the [FAQ](../guides/FAQ.md) if you get stuck.
 
 If `setup.sh` fails, it will tell you what went wrong and how to fix it. The most common issue is Docker not running — just open OrbStack or Docker Desktop and try again.
 
