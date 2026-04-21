@@ -84,8 +84,12 @@ Models (src/career_os/models/)      → SQLAlchemy ORM definitions
 Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 ```
 
-- **AI Provider Abstraction** (`src/career_os/ai/`): Factory pattern — `AI_PROVIDER` env var selects MockProvider (dev) or OpenRouterProvider (prod). Both implement `complete()` and `score()` async methods.
-- **Discovery Engine** (`src/career_os/discovery/`): Scrapes multiple job boards via python-jobspy. Adapters normalize results. Scheduler runs as asyncio background task during app lifespan.
+- **AI Provider Abstraction** (`src/career_os/ai/`): Factory pattern — `AI_PROVIDER` env var selects provider. 9 providers: Mock, OpenRouter, Anthropic, OpenAI, Together, Groq, xAI, Gemini, Ollama. All implement `complete()` and `score()` async methods. Fallback chain via `AI_PROVIDER_FALLBACK`.
+- **Cost Presets** (`src/career_os/services/presets.py`): One setting (Free/Budget/Quality/Private/Custom) configures provider, model, pre-filter aggressiveness, and batch size. Default: Budget (~$0.81/mo). API: `GET/PUT /api/presets/active`.
+- **Pre-filter** (`src/career_os/discovery/prefilter.py`): Eliminates ~60% of jobs before AI scoring. Configurable: `PREFILTER_STRATEGY=strict|moderate|off`.
+- **Batch Scoring** (`src/career_os/services/batch_scoring.py`): 10 jobs per prompt. `BATCH_SCORING_SIZE` env var. Fallback to individual on parse failure.
+- **Async Batch API** (`src/career_os/services/async_batch.py`): Anthropic + OpenAI Batch APIs for nightly scoring at 50% off. API: `POST /api/score/batch/submit`.
+- **Discovery Engine** (`src/career_os/discovery/`): Scrapes multiple job boards via python-jobspy. Adapters normalize results. Pre-filter runs before scoring. Scheduler runs as asyncio background task during app lifespan.
 - **Application State Machine**: Status transitions enforced in `src/career_os/schemas/applications.py` via `VALID_TRANSITIONS` dict (not in service layer).
 - **Schemas parallel API routes**: Each domain (applications, skills, contacts...) has matching files in `api/`, `services/`, `models/`, `schemas/`.
 - **CLI** (`src/career_os/cli/`): Typer-based, entry points `kestrel` and `career` in pyproject.toml. Subcommands: pipeline, skills, goals, interview-prep, contacts.
