@@ -21,34 +21,17 @@ Every time you open Kestrel, search for jobs, or check your pipeline, over 2,800
 Software testing follows a pyramid shape — many fast, cheap tests at the base, fewer expensive tests at the top. Here's what each layer does for Kestrel.
 
 ```mermaid
-graph TD
-    subgraph pyramid ["Test Pyramid"]
-        direction TB
-        E2E["Smoke & E2E Tests<br/><i>Start server, hit endpoints</i>"]
-        INT["Integration Tests<br/><i>Frontend ↔ Backend chains</i>"]
-        UNIT["Unit Tests (2,800+)<br/><i>Individual functions & components</i>"]
-    end
+flowchart TD
+    UNIT[Unit Tests - 2,800+] --> INT[Integration Tests]
+    INT --> E2E[Smoke and E2E Tests]
 
-    subgraph guards ["Quality Guards (every PR)"]
-        LINT["Lint & Format Check"]
-        PII["PII Leak Scan"]
-        DEP["Dependency Audit"]
-        MIG["Migration Up/Down Check"]
-    end
+    LINT[Lint and Format] -.-> UNIT
+    PII_G[PII Leak Scan] -.-> UNIT
+    DEP[Dependency Audit] -.-> UNIT
+    MIG[Migration Check] -.-> UNIT
 
-    subgraph ongoing ["Ongoing"]
-        GOLDEN["Golden Set Regression<br/><i>Hand-labeled jobs across domains</i>"]
-        SONAR["SonarCloud Static Analysis"]
-    end
-
-    UNIT --> INT --> E2E
-    guards -.->|run in parallel| pyramid
-    ongoing -.->|on merge to main| pyramid
-
-    style UNIT fill:#d4edda
-    style INT fill:#e8f4fd
-    style E2E fill:#fff3cd
-    style GOLDEN fill:#f8d7da
+    GOLDEN[Golden Set Regression] -.-> INT
+    SONAR[SonarCloud Analysis] -.-> INT
 ```
 
 **Unit tests** are like tasting while you cook. Does this function calculate the right score? Does that button render with the correct label? Over 2,800 of these run in about two minutes. They're fast, focused, and form the foundation of everything else.
@@ -91,17 +74,17 @@ flowchart LR
     CI --> PII_SCAN[PII Leak Scan]
     CI --> DEP_AUDIT[Dependency Audit]
 
-    LINT & TEST & MIG & SMOKE & PII_SCAN & DEP_AUDIT --> PASS{All Pass?}
+    LINT --> PASS{All Pass?}
+    TEST --> PASS
+    MIG --> PASS
+    SMOKE --> PASS
+    PII_SCAN --> PASS
+    DEP_AUDIT --> PASS
     PASS -->|Yes| MERGE[Merge to Main]
-    PASS -->|No| FIX[Fix & Retry]
+    PASS -->|No| FIX[Fix and Retry]
 
     MERGE --> SONAR_RUN[SonarCloud Deep Analysis]
     MERGE --> GOLDEN_RUN[Golden Set Re-check]
-
-    style PR fill:#e8f4fd
-    style PASS fill:#fff3cd
-    style MERGE fill:#d4edda
-    style FIX fill:#f8d7da
 ```
 
 **On every code change (~2 minutes):** Lint, 2,800+ tests, migration check, API smoke test, PII scan, and dependency audit — all running in parallel on GitHub Actions.

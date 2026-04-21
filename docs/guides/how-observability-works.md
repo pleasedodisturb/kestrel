@@ -33,25 +33,18 @@ But a generation doesn't happen in isolation. Before your prompt reaches the AI 
 
 ```mermaid
 flowchart TD
-    A["You click 'Score this job'"] --> B[Route Context]
-    B -->|"Adds: profile ID, session, feature type"| C[PII Masking]
-    C -->|"Strips emails, phones → records detection count"| D{Cache Check}
-    D -->|"HIT (free, instant)"| E[Return cached result]
-    D -->|"MISS"| F[AI Model generates response]
-    F -->|"Records: model, tokens, latency, I/O"| G[Result returned]
-
+    A[Score a job] --> B[Route Context]
+    B --> C[PII Masking]
+    C --> D{Cache Check}
+    D -->|HIT| E[Return cached result]
+    D -->|MISS| F[AI Model responds]
+    F --> G[Result returned]
     G --> H[Langfuse Dashboard]
     E --> H
-
-    H --> I["Filter by feature, provider, date"]
-    H --> J["Debug unexpected scores"]
-    H --> K["Compare provider performance"]
-    H --> L["Track cost per feature"]
-
-    style A fill:#e8f4fd
-    style E fill:#d4edda
-    style F fill:#fff3cd
-    style H fill:#e8f4fd
+    H --> I[Filter by feature]
+    H --> J[Debug scores]
+    H --> K[Compare providers]
+    H --> L[Track costs]
 ```
 
 **Route context** adds metadata about who asked and why — your profile ID, the scoring session, what kind of AI feature was used. This lets you filter traces later ("show me all scoring calls for engineering roles last week").
