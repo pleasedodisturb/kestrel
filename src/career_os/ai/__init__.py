@@ -4,6 +4,7 @@ from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
 from career_os.ai.cache import CachedProvider
 from career_os.ai.factory import UnsupportedProviderError, get_ai_provider
+from career_os.ai.gemini_provider import GeminiProvider
 from career_os.ai.groq_provider import GroqProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaConnectionError, OllamaProvider
@@ -17,6 +18,7 @@ __all__ = [
     "CachedProvider",
     "ComplexityTier",
     "CreditsExhaustedError",
+    "GeminiProvider",
     "GroqProvider",
     "MaskedProvider",
     "MaskMapping",

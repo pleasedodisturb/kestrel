@@ -8,6 +8,7 @@ from collections.abc import Callable
 
 from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider
+from career_os.ai.gemini_provider import GeminiProvider
 from career_os.ai.groq_provider import GroqProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
@@ -91,6 +92,10 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "groq": lambda: GroqProvider(
         api_key=_resolve_api_key("GROQ_API_KEY", "groq_api_key"),
         model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+    ),
+    "gemini": lambda: GeminiProvider(
+        api_key=_resolve_api_key("GEMINI_API_KEY", "gemini_api_key"),
+        model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
     ),
 }
 
