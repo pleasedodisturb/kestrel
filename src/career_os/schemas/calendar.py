@@ -1,11 +1,20 @@
 """Pydantic schemas for Calendar Integration API."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
+
+def _ensure_utc(v: Any) -> datetime | None:
+    if v is None:
+        return None
+    if isinstance(v, datetime) and v.tzinfo is None:
+        return v.replace(tzinfo=UTC)
+    return v
 
 
 class CalendarEventType(StrEnum):
@@ -97,6 +106,11 @@ class CalendarEventResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_validator("start_time", "end_time", "created_at", "updated_at", mode="before")
+    @classmethod
+    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
+        return _ensure_utc(v)
 
 
 class CalendarEventListResponse(BaseModel):
