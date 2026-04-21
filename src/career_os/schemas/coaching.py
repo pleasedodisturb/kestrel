@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -35,10 +37,12 @@ class EffortEstimate(BaseModel):
 class CoachingSuggestionResponse(BaseModel):
     """A single coaching suggestion."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     action: str = Field(..., description="Actionable recommendation")
-    priority: int = Field(..., description="Priority rank (1 = highest)")
+    priority: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Priority rank (1 = highest)"
+    )
     effort_estimate: EffortEstimate = Field(
         ..., description="Effort estimate with hours, weeks, difficulty"
     )
@@ -63,5 +67,5 @@ class CoachingSuggestionsResponse(BaseModel):
     """Response for GET /api/coaching/suggestions."""
 
     suggestions: list[CoachingSuggestionResponse]
-    total: int
+    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
     focus_area: str | None = Field(default=None, description="AI-recommended primary focus area")

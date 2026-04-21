@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator  # noqa: I001
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -49,7 +51,7 @@ def _ensure_utc(v: Any) -> datetime | None:
 class GoalCreate(BaseModel):
     """Request body for POST /api/goals."""
 
-    profile_id: int = Field(..., description="Profile this goal belongs to")
+    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile this goal belongs to")
     title: str = Field(..., min_length=1, description="Goal title")
     goal_type: GoalType = Field(..., description="realistic or aspirational")
     target_date: datetime | None = Field(
@@ -77,8 +79,8 @@ class GoalUpdate(BaseModel):
 class GoalResponse(BaseModel):
     """Response schema for a single goal."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     title: str
     goal_type: str
     target_date: datetime | None = None
@@ -99,7 +101,7 @@ class GoalListResponse(BaseModel):
     """Response schema for list of goals."""
 
     goals: list[GoalResponse]
-    total: int
+    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +122,7 @@ class RealityMapDimension(BaseModel):
 class RealityMapResponse(BaseModel):
     """Response for GET /api/goals/{id}/reality-map."""
 
-    goal_id: int
+    goal_id: int = Field(..., ge=1, le=INT64_MAX)
     title: str
     goal_type: str
     dimensions: list[RealityMapDimension]
@@ -143,7 +145,7 @@ class ProgressDimension(BaseModel):
 class ProgressResponse(BaseModel):
     """Response for GET /api/goals/{id}/progress."""
 
-    goal_id: int
+    goal_id: int = Field(..., ge=1, le=INT64_MAX)
     title: str
     dimensions: list[ProgressDimension]
     overall_progress: float = Field(ge=0, le=100)
@@ -157,7 +159,7 @@ class ProgressResponse(BaseModel):
 class RecalibrationResponse(BaseModel):
     """Response for PUT /api/goals/{id}/recalibrate."""
 
-    goal_id: int
+    goal_id: int = Field(..., ge=1, le=INT64_MAX)
     title: str
     recalibration_notes: str
     suggested_adjustments: list[dict]
@@ -184,6 +186,6 @@ class AlternativePath(BaseModel):
 class AlternativesResponse(BaseModel):
     """Response for GET /api/goals/{id}/alternatives."""
 
-    goal_id: int
+    goal_id: int = Field(..., ge=1, le=INT64_MAX)
     title: str
     paths: list[AlternativePath]
