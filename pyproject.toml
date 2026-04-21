@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kestrel-app"
-version = "0.5.2"
+version = "0.6.0"
 description = "AI-powered job search platform. Self-hosted, open-source, privacy-first."
 readme = "README.md"
 license = {text = "AGPL-3.0-or-later"}

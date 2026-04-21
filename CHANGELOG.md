@@ -1,5 +1,62 @@
 # Changelog
 
+## [0.6.0](https://github.com/pleasedodisturb/kestrel/compare/v0.5.2...v0.6.0) (2026-04-21)
+
+
+### Features
+
+* **G-291:** add post-scoring hard caps and keyword exemption system ([#231](https://github.com/pleasedodisturb/kestrel/issues/231)) ([454a187](https://github.com/pleasedodisturb/kestrel/commit/454a18737a2018f74230087a043a2fcd7dce3979))
+* **G-291:** port robust JSON scoring parser from CareerOS ([#230](https://github.com/pleasedodisturb/kestrel/issues/230)) ([c32c0eb](https://github.com/pleasedodisturb/kestrel/commit/c32c0ebc35e58ea4a22f26214d9bdcbd2643de85))
+* **G-293:** add daily scan watchdog and external trigger script ([#228](https://github.com/pleasedodisturb/kestrel/issues/228)) ([6329e67](https://github.com/pleasedodisturb/kestrel/commit/6329e6733ce80ebcb33247620eb2fececd479f97))
+* **G-305:** CI optimization — markers, path filtering, testmon, PR comments ([#234](https://github.com/pleasedodisturb/kestrel/issues/234)) ([30396e9](https://github.com/pleasedodisturb/kestrel/commit/30396e93febb3f86ae97557cb0b13e571f2b6182))
+* **G-345:** add scoring prompt calibration with distribution enforcement ([#223](https://github.com/pleasedodisturb/kestrel/issues/223)) ([5f13dd8](https://github.com/pleasedodisturb/kestrel/commit/5f13dd80ff41dc7d5012a18d3b1001686c9b7384))
+* **G-392:** Onboarding Epic — 6 phases, 361 tests ([4866cb4](https://github.com/pleasedodisturb/kestrel/commit/4866cb44c5ac4355a7a3089bf2b760ee413dfdb5))
+* **G-394, G-305:** rename CLI to kestrel + CI optimization phase 1 ([#233](https://github.com/pleasedodisturb/kestrel/issues/233)) ([e8be92b](https://github.com/pleasedodisturb/kestrel/commit/e8be92b414270a1a851d02f90db2ce247eec6cb5))
+* **G-394:** rename CLI entry point from career to kestrel ([#232](https://github.com/pleasedodisturb/kestrel/issues/232)) ([0deb120](https://github.com/pleasedodisturb/kestrel/commit/0deb120b5597a011e06d0b82335629acb96f6917))
+* **G-397:** AI cost visibility — token usage logging and OpenRouter attribution ([#244](https://github.com/pleasedodisturb/kestrel/issues/244)) ([b41ac3a](https://github.com/pleasedodisturb/kestrel/commit/b41ac3a70d71c2c0ad7958dabe871a798e5dc284))
+* **G-405:** provider fallback chain — automatic retry on quota/timeout ([#249](https://github.com/pleasedodisturb/kestrel/issues/249)) ([e6c3adb](https://github.com/pleasedodisturb/kestrel/commit/e6c3adba692cee581d4d8c3511fe8bd5f391f92f))
+* **G-408:** Langfuse observability blueprint ([#236](https://github.com/pleasedodisturb/kestrel/issues/236)) ([0d2d579](https://github.com/pleasedodisturb/kestrel/commit/0d2d57992c98959e67527288c55e74b681f4a313))
+* **G-427:** cache break detection — alert on prompt cache invalidation ([#246](https://github.com/pleasedodisturb/kestrel/issues/246)) ([382fcc8](https://github.com/pleasedodisturb/kestrel/commit/382fcc894a37a4f86e36221ce49559e76d431afe))
+* **G-430:** input validation hardening — INT64 bounds on all API integers ([#251](https://github.com/pleasedodisturb/kestrel/issues/251)) ([35a1907](https://github.com/pleasedodisturb/kestrel/commit/35a190720601b70924cce5ab8711448222fdcf4c))
+* **G-436:** recover Phase 2 agent-aware enforcement from orphaned G-394 ([#255](https://github.com/pleasedodisturb/kestrel/issues/255)) ([de25bb1](https://github.com/pleasedodisturb/kestrel/commit/de25bb1ba3f4bce21981fbc904cf37874c4e7178))
+* **G-436:** recover Phase 3 advanced testing from orphaned G-394 ([#256](https://github.com/pleasedodisturb/kestrel/issues/256)) ([224957b](https://github.com/pleasedodisturb/kestrel/commit/224957b872df80f522373aa7d0cc3b567a892d28))
+* **G-437:** spike — regex pre-filter vs AI scoring accuracy on 10K jobs ([#254](https://github.com/pleasedodisturb/kestrel/issues/254)) ([ff837b8](https://github.com/pleasedodisturb/kestrel/commit/ff837b8242efc2f1f7440d2b0bfb44c02e861756))
+* **G-439:** integrate pre-filter into discovery pipeline ([#272](https://github.com/pleasedodisturb/kestrel/issues/272)) ([9ec21de](https://github.com/pleasedodisturb/kestrel/commit/9ec21ded85f5a752d030f0c3ac7b7735a37fee05))
+* **G-441:** prompt caching for scoring calls — profile in system prefix ([#274](https://github.com/pleasedodisturb/kestrel/issues/274)) ([13abe3a](https://github.com/pleasedodisturb/kestrel/commit/13abe3af94f50f24f38c939b390e189c25b0ab91))
+* **G-446:** add OpenAI direct provider ([#261](https://github.com/pleasedodisturb/kestrel/issues/261)) ([81ef3a8](https://github.com/pleasedodisturb/kestrel/commit/81ef3a826b6f9a7d50a1b17507ff20071121e075))
+* **G-449:** add provider privacy disclosures to AI Providers integration panel ([#270](https://github.com/pleasedodisturb/kestrel/issues/270)) ([bf32fc8](https://github.com/pleasedodisturb/kestrel/commit/bf32fc8698e7c681c40ae1c5b79eabfc5fd0e2cb))
+* **G-450:** add Kestrel MCP server for Claude Code ([#262](https://github.com/pleasedodisturb/kestrel/issues/262)) ([7bb8b5a](https://github.com/pleasedodisturb/kestrel/commit/7bb8b5aa36db68a360e200e417106fcd99dc5acb))
+* **G-451:** OpenRouter OAuth PKCE onboarding flow ([#263](https://github.com/pleasedodisturb/kestrel/issues/263)) ([ac1a37c](https://github.com/pleasedodisturb/kestrel/commit/ac1a37ca22f88b38ec80a1c2cff5e00b1da458e0))
+
+
+### Bug Fixes
+
+* **03.3-01:** add _ensure_utc validators to 7 schema files for RFC 3339 compliance ([#258](https://github.com/pleasedodisturb/kestrel/issues/258)) ([a5c0607](https://github.com/pleasedodisturb/kestrel/commit/a5c0607584705ed508062025adf084fe178d2ad0))
+* **G-385:** add load_dotenv for reliable .env file reading ([#225](https://github.com/pleasedodisturb/kestrel/issues/225)) ([7be6be5](https://github.com/pleasedodisturb/kestrel/commit/7be6be52d53eed31c79e2e6e1b7eb29cb24b637f))
+* **G-412:** add test isolation guard — prevent tests from hitting real AI providers ([#237](https://github.com/pleasedodisturb/kestrel/issues/237)) ([374b937](https://github.com/pleasedodisturb/kestrel/commit/374b937292d022f533a629cd8c2dc310a1fbddea))
+* **G-457:** recalibrate golden set fixtures after scoring evolution ([#260](https://github.com/pleasedodisturb/kestrel/issues/260)) ([0b5cdd2](https://github.com/pleasedodisturb/kestrel/commit/0b5cdd2ce57cf883c33b68cd836dba53ecbe6794))
+* **G-464:** simplify Mermaid diagrams for GitHub rendering ([#267](https://github.com/pleasedodisturb/kestrel/issues/267)) ([324cb8a](https://github.com/pleasedodisturb/kestrel/commit/324cb8a1cfa4d57b6a6a06ea8f3834d5d973e1a3))
+
+
+### Performance
+
+* **G-261:** compress system prompts — 67% token reduction ([#243](https://github.com/pleasedodisturb/kestrel/issues/243)) ([115d576](https://github.com/pleasedodisturb/kestrel/commit/115d576543ba662491d037e78d4cef6ec98316dd))
+* **G-428:** use compact JSON serialization in AI provider score() calls ([#239](https://github.com/pleasedodisturb/kestrel/issues/239)) ([34b4995](https://github.com/pleasedodisturb/kestrel/commit/34b4995d13ce1e304f22d913fca881e644ccd973))
+* **G-429:** system prompt deduplication — profile in cached system block ([#242](https://github.com/pleasedodisturb/kestrel/issues/242)) ([b759290](https://github.com/pleasedodisturb/kestrel/commit/b759290c7b324a64857581be95e76e19b906b709))
+
+
+### Documentation
+
+* free tier pricing, real cost table, PII safety boundary ([#235](https://github.com/pleasedodisturb/kestrel/issues/235)) ([9eacff4](https://github.com/pleasedodisturb/kestrel/commit/9eacff49e945abea7ce52363220b9f18fb16024d))
+* **G-305:** testing strategy — what shipped, what was trimmed, and why ([#259](https://github.com/pleasedodisturb/kestrel/issues/259)) ([c463d54](https://github.com/pleasedodisturb/kestrel/commit/c463d54875a952fcc62133ef2423d682a1ca7ebc))
+* **G-348:** add 3-layer token optimization documentation ([#247](https://github.com/pleasedodisturb/kestrel/issues/247)) ([9b597e5](https://github.com/pleasedodisturb/kestrel/commit/9b597e57631448fcc49334707d28073a20e8dad7))
+* **G-348:** add benchmark results to token optimization docs and README ([#252](https://github.com/pleasedodisturb/kestrel/issues/252)) ([374ac11](https://github.com/pleasedodisturb/kestrel/commit/374ac114d975d8da895a030d1f778b31f8c7fdc3))
+* **G-437:** cost control research — 4 research documents ([#257](https://github.com/pleasedodisturb/kestrel/issues/257)) ([9a335f9](https://github.com/pleasedodisturb/kestrel/commit/9a335f91e98892577cd33859083abfb7c0d4e593))
+* **G-444:** add edutainment guide for AI costs, tiers, and privacy ([#268](https://github.com/pleasedodisturb/kestrel/issues/268)) ([2fbbd8c](https://github.com/pleasedodisturb/kestrel/commit/2fbbd8c1f1e95717e37a448e073ade005e18f36f))
+* **G-452:** add automation paths guide ([#269](https://github.com/pleasedodisturb/kestrel/issues/269)) ([df89353](https://github.com/pleasedodisturb/kestrel/commit/df8935307359f10e314d1963b20b3202579cdc4a))
+* **G-454:** research OpenRouter rate limit tiers at $0/$10/$50 balance ([#271](https://github.com/pleasedodisturb/kestrel/issues/271)) ([961af7b](https://github.com/pleasedodisturb/kestrel/commit/961af7b955c8715f2e297aad52527f1bf6ea8099))
+* **G-464:** documentation audit, reorg & rewrite ([#266](https://github.com/pleasedodisturb/kestrel/issues/266)) ([1b2c0b0](https://github.com/pleasedodisturb/kestrel/commit/1b2c0b044599238596035b6305bbf5407804846f))
+
 ## [0.5.2](https://github.com/pleasedodisturb/kestrel/compare/v0.5.1...v0.5.2) (2026-04-19)
 
 
