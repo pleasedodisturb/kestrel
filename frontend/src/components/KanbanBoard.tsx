@@ -34,6 +34,7 @@ import {
   NUDGE_DISMISSED_KEY,
 } from "@/components/DiscoveryNudge";
 import { useApplications, useUpdateApplication } from "@/hooks/useApplications";
+import { EmptyState } from "@/components/EmptyState";
 import { Briefcase, Plus } from "lucide-react";
 
 export function KanbanBoard() {
@@ -210,28 +211,15 @@ export function KanbanBoard() {
   // Empty board CTA
   if (totalCount === 0 && !filters.status && !filters.search && !filters.sort) {
     return (
-      <>
-        <div data-testid="kanban-empty" className="py-20 text-center">
-          <Briefcase className="mx-auto h-12 w-12 text-gray-300" />
-          <h2 className="mt-4 text-lg font-semibold text-gray-900">
-            No applications yet
-          </h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Start tracking your job search by adding your first application.
-          </p>
-          <button
-            data-testid="kanban-add-cta"
-            onClick={() => setShowCreateDialog(true)}
-            className="mt-6 inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
-          >
-            Add Application
-          </button>
-        </div>
-        <CreateApplicationDialog
-          open={showCreateDialog}
-          onClose={() => setShowCreateDialog(false)}
+      <div data-testid="kanban-empty">
+        <EmptyState
+          icon={Briefcase}
+          heading="No jobs in your pipeline yet"
+          description="Start by discovering jobs that match your profile. Kestrel will score each one automatically."
+          ctaLabel="Discover jobs"
+          ctaHref="/discovery"
         />
-      </>
+      </div>
     );
   }
 

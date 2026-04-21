@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { EmptyState } from "@/components/EmptyState";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchSkills,
@@ -586,53 +587,44 @@ export function Skills() {
     return (
       <section className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">Skills Inventory</h1>
-        <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center">
-          <Sparkles className="mx-auto h-12 w-12 text-gray-400" />
-          <h2 className="mt-4 text-lg font-semibold text-gray-900">
-            No skills yet
-          </h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Get started by importing skills from your existing documents.
-          </p>
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <button
-              onClick={() => ingestMutation.mutate(["cv"])}
-              disabled={ingestMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              <FileText className="h-4 w-4" />
-              Import from CV
-            </button>
-            <button
-              onClick={() => ingestMutation.mutate(["assessments"])}
-              disabled={ingestMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-md bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
-            >
-              <Brain className="h-4 w-4" />
-              Parse assessments
-            </button>
-            <button
-              onClick={() => setShowAddDialog(true)}
-              className="inline-flex items-center gap-2 rounded-md bg-gray-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Add manually
-            </button>
-          </div>
-          {ingestMutation.isPending && (
-            <p className="mt-4 text-sm text-gray-500">
-              <Loader2 className="mr-1 inline h-4 w-4 animate-spin" />
-              Parsing documents...
-            </p>
-          )}
-          {ingestMutation.isSuccess && (
-            <p className="mt-4 text-sm text-green-600">
-              <CheckCircle2 className="mr-1 inline h-4 w-4" />
-              Imported {ingestMutation.data.skills_created} skills from{" "}
-              {ingestMutation.data.sources_processed.join(", ")}
-            </p>
-          )}
+        <EmptyState
+          icon={Sparkles}
+          heading="No skills added yet"
+          description="Your skills power Kestrel's job scoring. Add skills from your experience to get better matches."
+          ctaLabel="Add a skill"
+          onCtaClick={() => setShowAddDialog(true)}
+        />
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <button
+            onClick={() => ingestMutation.mutate(["cv"])}
+            disabled={ingestMutation.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            <FileText className="h-4 w-4" />
+            Import from CV
+          </button>
+          <button
+            onClick={() => ingestMutation.mutate(["assessments"])}
+            disabled={ingestMutation.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+          >
+            <Brain className="h-4 w-4" />
+            Parse assessments
+          </button>
         </div>
+        {ingestMutation.isPending && (
+          <p className="mt-4 text-center text-sm text-gray-500">
+            <Loader2 className="mr-1 inline h-4 w-4 animate-spin" />
+            Parsing documents...
+          </p>
+        )}
+        {ingestMutation.isSuccess && (
+          <p className="mt-4 text-center text-sm text-green-600">
+            <CheckCircle2 className="mr-1 inline h-4 w-4" />
+            Imported {ingestMutation.data.skills_created} skills from{" "}
+            {ingestMutation.data.sources_processed.join(", ")}
+          </p>
+        )}
         {showAddDialog && (
           <AddSkillDialog
             onClose={() => setShowAddDialog(false)}
