@@ -11,6 +11,8 @@ Proves:
 from __future__ import annotations
 
 import pytest
+
+hypothesis = pytest.importorskip("hypothesis", reason="hypothesis not installed")
 from hypothesis import settings
 from hypothesis import strategies as st
 from hypothesis.stateful import RuleBasedStateMachine, initialize, rule

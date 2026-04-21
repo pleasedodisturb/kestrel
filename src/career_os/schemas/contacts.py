@@ -6,8 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -81,7 +79,7 @@ def _ensure_utc(v: Any) -> datetime | None:
 class ContactCreate(BaseModel):
     """Request body for POST /api/contacts."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile this contact belongs to")
+    profile_id: int = Field(..., description="Profile this contact belongs to")
     name: str = Field(..., min_length=1, max_length=255, description="Contact name")
     company: str | None = Field(default=None, max_length=255, description="Company")
     role: str | None = Field(default=None, max_length=255, description="Their role/title")
@@ -192,8 +190,8 @@ class ContactUpdate(BaseModel):
 class ContactResponse(BaseModel):
     """Response schema for a single contact."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
+    profile_id: int
     name: str
     company: str | None = None
     role: str | None = None
@@ -247,7 +245,7 @@ class ContactListResponse(BaseModel):
     """Response schema for list of contacts."""
 
     contacts: list[ContactResponse]
-    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total: int
 
 
 # ---------------------------------------------------------------------------
@@ -289,9 +287,9 @@ class InteractionCreate(BaseModel):
 class InteractionResponse(BaseModel):
     """Response schema for a single interaction."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    contact_id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
+    contact_id: int
+    profile_id: int
     interaction_type: str
     direction: str
     subject: str | None = None
@@ -311,7 +309,7 @@ class InteractionListResponse(BaseModel):
     """Response schema for list of interactions."""
 
     interactions: list[InteractionResponse]
-    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total: int
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +320,7 @@ class InteractionListResponse(BaseModel):
 class ContactApplicationCreate(BaseModel):
     """Request body for POST /api/contacts/{id}/applications."""
 
-    application_id: int = Field(..., ge=1, le=INT64_MAX, description="Application to link")
+    application_id: int = Field(..., description="Application to link")
     role: str = Field(..., description="Contact's role for this application")
     notes: str | None = Field(default=None, description="Notes about the link")
 
@@ -340,10 +338,10 @@ class ContactApplicationCreate(BaseModel):
 class ContactApplicationResponse(BaseModel):
     """Response schema for a contact-application link."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    contact_id: int = Field(..., ge=1, le=INT64_MAX)
-    application_id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
+    contact_id: int
+    application_id: int
+    profile_id: int
     role: str
     notes: str | None = None
     created_at: datetime

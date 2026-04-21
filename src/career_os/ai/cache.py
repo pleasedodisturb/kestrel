@@ -23,7 +23,6 @@ from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 
 from career_os.ai.base import AIProvider, ComplexityTier
-from career_os.ai.observability import log_usage, observe, update_current_span
 from career_os.schemas.ai import AIFeature, AIResponse
 
 logger = logging.getLogger(__name__)
@@ -125,7 +124,6 @@ class CachedProvider(AIProvider):
     def name(self) -> str:  # pragma: no cover – trivial delegation
         return self._inner.name
 
-    @observe(name="cache-lookup")
     async def complete(
         self,
         prompt: str,
@@ -140,24 +138,15 @@ class CachedProvider(AIProvider):
         if cached is not None:
             self._hits += 1
             cached.usage = None  # No tokens consumed on cache hit
-            update_current_span(metadata={"cache": "hit", "feature": feature.value})
             return cached
 
         self._misses += 1
-        update_current_span(metadata={"cache": "miss", "feature": feature.value})
         response = await self._inner.complete(
             prompt, feature=feature, context=context, tier=tier, **kwargs
         )
         await asyncio.to_thread(self._put, key, response, feature.value)
-        log_usage(
-            provider=response.provider,
-            model=response.model,
-            feature=feature,
-            usage=response.usage,
-        )
         return response
 
-    @observe(name="cache-lookup")
     async def score(
         self,
         job_description: str,
@@ -172,19 +161,11 @@ class CachedProvider(AIProvider):
         if cached is not None:
             self._hits += 1
             cached.usage = None  # No tokens consumed on cache hit
-            update_current_span(metadata={"cache": "hit", "feature": feature.value})
             return cached
 
         self._misses += 1
-        update_current_span(metadata={"cache": "miss", "feature": feature.value})
         response = await self._inner.score(job_description, profile_data, tier=tier, **kwargs)
         await asyncio.to_thread(self._put, key, response, feature.value)
-        log_usage(
-            provider=response.provider,
-            model=response.model,
-            feature=AIFeature.score,
-            usage=response.usage,
-        )
         return response
 
     # ------------------------------------------------------------------

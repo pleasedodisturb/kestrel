@@ -9,10 +9,9 @@
  * - Skill history panel
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { renderWithProviders } from "@/test-utils";
 import { Skills } from "@/pages/Skills";
 import type {
   SkillListResponse,
@@ -44,24 +43,8 @@ vi.mock("@/api/applications", () => ({
 
 // ---- helpers ----
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
-      mutations: { retry: false },
-    },
-  });
-}
-
 function renderSkills() {
-  const qc = createQueryClient();
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <Skills />
-      </MemoryRouter>
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<Skills />, { route: "/skills" });
 }
 
 const SAMPLE_SKILLS: Skill[] = [
@@ -199,7 +182,7 @@ describe("Skills page", () => {
       const sourceElements = screen.getAllByText(
         (_content, element) =>
           element?.tagName === "P" &&
-          element?.textContent?.includes("Source:") === true
+          element?.textContent?.includes("Source:") === true,
       );
       expect(sourceElements.length).toBeGreaterThanOrEqual(1);
     });
@@ -210,7 +193,7 @@ describe("Skills page", () => {
       renderSkills();
       await waitFor(() => {
         expect(
-          screen.getByPlaceholderText("Search skills...")
+          screen.getByPlaceholderText("Search skills..."),
         ).toBeInTheDocument();
       });
     });
@@ -229,6 +212,7 @@ describe("Skills page", () => {
         const lastCall =
           mockFetchSkills.mock.calls[mockFetchSkills.mock.calls.length - 1];
         expect(lastCall).toBeTruthy();
+        expect(lastCall[1]).toMatchObject({ q: "python" });
       });
     });
   });
@@ -265,9 +249,7 @@ describe("Skills page", () => {
       await waitFor(() => {
         expect(screen.getByText("Python")).toBeInTheDocument();
       });
-      expect(
-        screen.getByDisplayValue("All Proficiencies")
-      ).toBeInTheDocument();
+      expect(screen.getByDisplayValue("All Proficiencies")).toBeInTheDocument();
     });
   });
 
@@ -284,11 +266,11 @@ describe("Skills page", () => {
       });
       renderSkills();
       await waitFor(() => {
-        expect(screen.getByText("No skills yet")).toBeInTheDocument();
+        expect(screen.getByText("No skills added yet")).toBeInTheDocument();
       });
       expect(screen.getByText("Import from CV")).toBeInTheDocument();
       expect(screen.getByText("Parse assessments")).toBeInTheDocument();
-      expect(screen.getByText("Add manually")).toBeInTheDocument();
+      expect(screen.getByText("Add a skill")).toBeInTheDocument();
     });
 
     it('shows "No skills match" when filters return empty', async () => {
@@ -299,7 +281,7 @@ describe("Skills page", () => {
       renderSkills();
       await waitFor(() => {
         expect(
-          screen.getByText("No skills match your filters.")
+          screen.getByText("No skills match your filters."),
         ).toBeInTheDocument();
       });
     });
@@ -315,7 +297,9 @@ describe("Skills page", () => {
       fireEvent.click(screen.getByText("Add Skill"));
 
       await waitFor(() => {
-        expect(screen.getByText("Add Skill", { selector: "h2" })).toBeInTheDocument();
+        expect(
+          screen.getByText("Add Skill", { selector: "h2" }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -357,7 +341,9 @@ describe("Skills page", () => {
       fireEvent.click(screen.getByText("Add Skill"));
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText("e.g. Kubernetes")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("e.g. Kubernetes"),
+        ).toBeInTheDocument();
       });
 
       fireEvent.change(screen.getByPlaceholderText("e.g. Kubernetes"), {
@@ -367,9 +353,11 @@ describe("Skills page", () => {
       // Submit by clicking the submit button
       const submitButtons = screen.getAllByRole("button");
       const addButton = submitButtons.find(
-        (b) => b.textContent === "Add Skill" && b.getAttribute("type") === "submit"
+        (b) =>
+          b.textContent === "Add Skill" && b.getAttribute("type") === "submit",
       );
-      if (addButton) fireEvent.click(addButton);
+      expect(addButton).toBeDefined();
+      fireEvent.click(addButton!);
 
       await waitFor(() => {
         expect(mockCreateSkill).toHaveBeenCalled();
@@ -479,9 +467,7 @@ describe("Skills page", () => {
       fireEvent.click(historyButtons[0]);
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Python — History")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Python — History")).toBeInTheDocument();
       });
     });
 
@@ -497,15 +483,13 @@ describe("Skills page", () => {
       fireEvent.click(historyButtons[0]);
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Python — History")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Python — History")).toBeInTheDocument();
       });
 
       // Check for reason text
       await waitFor(() => {
         expect(
-          screen.getByText("Completed advanced course")
+          screen.getByText("Completed advanced course"),
         ).toBeInTheDocument();
       });
     });
@@ -522,17 +506,13 @@ describe("Skills page", () => {
       fireEvent.click(historyButtons[0]);
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Python — History")
-        ).toBeInTheDocument();
+        expect(screen.getByText("Python — History")).toBeInTheDocument();
       });
 
       fireEvent.click(screen.getByText("Close"));
 
       await waitFor(() => {
-        expect(
-          screen.queryByText("Python — History")
-        ).not.toBeInTheDocument();
+        expect(screen.queryByText("Python — History")).not.toBeInTheDocument();
       });
     });
   });

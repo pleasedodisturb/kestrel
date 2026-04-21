@@ -2,12 +2,11 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_ACTIVE_PROFILE_ID, RESP_404
 from career_os.database import get_db
-from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.goals import (
     AlternativePath,
     AlternativesResponse,
@@ -40,7 +39,7 @@ router = APIRouter(prefix="/api/goals", tags=["goals"])
 
 @router.get("")
 async def list_goals_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description="Profile to list goals for")],
+    profile_id: Annotated[int, Query(description="Profile to list goals for")],
     db: Annotated[Session, Depends(get_db)],
     status: Annotated[str | None, Query(description="Filter by status")] = None,
     goal_type: Annotated[str | None, Query(description="Filter by type")] = None,
@@ -55,8 +54,8 @@ async def list_goals_endpoint(
 
 @router.get("/{goal_id}", responses=RESP_404)
 async def get_goal_endpoint(
-    goal_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    goal_id: int,
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GoalResponse:
     """Get a single goal by ID."""
@@ -92,9 +91,9 @@ async def create_goal_endpoint(
 
 @router.put("/{goal_id}", responses=RESP_404)
 async def update_goal_endpoint(
-    goal_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    goal_id: int,
     payload: GoalUpdate,
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GoalResponse:
     """Update a goal's fields."""
@@ -113,8 +112,8 @@ async def update_goal_endpoint(
 
 @router.delete("/{goal_id}", status_code=204, responses=RESP_404)
 async def delete_goal_endpoint(
-    goal_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    goal_id: int,
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a goal."""
@@ -126,8 +125,8 @@ async def delete_goal_endpoint(
 
 @router.get("/{goal_id}/reality-map", responses=RESP_404)
 async def get_reality_map_endpoint(
-    goal_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    goal_id: int,
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RealityMapResponse:
     """Get goal-to-reality mapping.
@@ -151,8 +150,8 @@ async def get_reality_map_endpoint(
 
 @router.get("/{goal_id}/progress", responses=RESP_404)
 async def get_progress_endpoint(
-    goal_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    goal_id: int,
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ProgressResponse:
     """Get progress tracking across applications, learning, portfolio."""
@@ -171,8 +170,8 @@ async def get_progress_endpoint(
 
 @router.put("/{goal_id}/recalibrate", responses=RESP_404)
 async def recalibrate_goal_endpoint(
-    goal_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    goal_id: int,
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RecalibrationResponse:
     """AI-powered goal recalibration with market-data-backed suggestions."""
@@ -192,8 +191,8 @@ async def recalibrate_goal_endpoint(
 
 @router.get("/{goal_id}/alternatives", responses=RESP_404)
 async def get_alternatives_endpoint(
-    goal_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_ACTIVE_PROFILE_ID)],
+    goal_id: int,
+    profile_id: Annotated[int, Query(description=DESC_ACTIVE_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AlternativesResponse:
     """Get alternative path analysis (employment, freelance, consulting)."""

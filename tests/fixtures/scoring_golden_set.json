@@ -2,22 +2,13 @@
   "profile": {
     "job_family": "TPM",
     "location": "Berlin, Germany",
-    "key_skills": [
-      "Python",
-      "AI/ML",
-      "Program Management",
-      "Cross-functional Leadership",
-      "Cloud Infrastructure"
-    ]
+    "key_skills": ["Python", "AI/ML", "Program Management", "Cross-functional Leadership", "Cloud Infrastructure"]
   },
   "jobs": [
     {
       "id": "gs-01",
       "category": "reject",
-      "expected_band": [
-        3,
-        6
-      ],
+      "expected_band": [1, 3],
       "title": "Senior .NET Developer",
       "company": "SAP SE",
       "location": "Walldorf, Germany",
@@ -26,10 +17,7 @@
     {
       "id": "gs-02",
       "category": "reject",
-      "expected_band": [
-        7,
-        10
-      ],
+      "expected_band": [1, 3],
       "title": "Compensation & Benefits Analyst",
       "company": "Deel",
       "location": "Remote, EMEA",
@@ -38,10 +26,7 @@
     {
       "id": "gs-03",
       "category": "reject",
-      "expected_band": [
-        1,
-        4
-      ],
+      "expected_band": [1, 3],
       "title": "Senior iOS Developer (Swift)",
       "company": "N26",
       "location": "Berlin, Germany",
@@ -50,10 +35,7 @@
     {
       "id": "gs-04",
       "category": "reject",
-      "expected_band": [
-        8,
-        10
-      ],
+      "expected_band": [1, 3],
       "title": "Clinical Data Manager",
       "company": "BioNTech",
       "location": "Mainz, Germany",
@@ -62,10 +44,7 @@
     {
       "id": "gs-05",
       "category": "mediocre",
-      "expected_band": [
-        8,
-        10
-      ],
+      "expected_band": [4, 6],
       "title": "Product Manager, Growth",
       "company": "Personio",
       "location": "Remote, EU",
@@ -74,10 +53,7 @@
     {
       "id": "gs-06",
       "category": "mediocre",
-      "expected_band": [
-        3,
-        6
-      ],
+      "expected_band": [4, 6],
       "title": "Project Manager, Cloud Migration",
       "company": "T-Systems",
       "location": "Berlin, Germany",
@@ -86,10 +62,7 @@
     {
       "id": "gs-07",
       "category": "mediocre",
-      "expected_band": [
-        0,
-        2
-      ],
+      "expected_band": [4, 6],
       "title": "Developer Relations Engineer",
       "company": "Stripe",
       "location": "Remote, EU",
@@ -98,10 +71,7 @@
     {
       "id": "gs-08",
       "category": "mediocre",
-      "expected_band": [
-        0,
-        2
-      ],
+      "expected_band": [4, 6],
       "title": "Engineering Manager, Backend",
       "company": "SoundCloud",
       "location": "Berlin, Germany",
@@ -110,10 +80,7 @@
     {
       "id": "gs-09",
       "category": "mediocre",
-      "expected_band": [
-        8,
-        10
-      ],
+      "expected_band": [4, 6],
       "title": "Solutions Architect, AWS",
       "company": "Amazon Web Services",
       "location": "Munich, Germany",
@@ -122,10 +89,7 @@
     {
       "id": "gs-10",
       "category": "mediocre",
-      "expected_band": [
-        5,
-        8
-      ],
+      "expected_band": [4, 6],
       "title": "Data Engineering Lead",
       "company": "Zalando",
       "location": "Berlin, Germany",
@@ -134,10 +98,7 @@
     {
       "id": "gs-11",
       "category": "strong",
-      "expected_band": [
-        1,
-        4
-      ],
+      "expected_band": [7, 8],
       "title": "Technical Program Manager, Platform",
       "company": "Datadog",
       "location": "Remote, EU",
@@ -146,10 +107,7 @@
     {
       "id": "gs-12",
       "category": "strong",
-      "expected_band": [
-        7,
-        10
-      ],
+      "expected_band": [7, 8],
       "title": "Senior TPM, Developer Tools",
       "company": "GitLab",
       "location": "Remote",
@@ -158,10 +116,7 @@
     {
       "id": "gs-13",
       "category": "mediocre",
-      "expected_band": [
-        7,
-        10
-      ],
+      "expected_band": [4, 6],
       "title": "Product Engineer, AI Features",
       "company": "Notion",
       "location": "Remote, EU",
@@ -170,10 +125,7 @@
     {
       "id": "gs-14",
       "category": "dream",
-      "expected_band": [
-        2,
-        5
-      ],
+      "expected_band": [9, 10],
       "title": "Program Manager, ML Infrastructure",
       "company": "DeepMind",
       "location": "London, UK",
@@ -182,10 +134,7 @@
     {
       "id": "gs-15",
       "category": "dream",
-      "expected_band": [
-        7,
-        10
-      ],
+      "expected_band": [9, 10],
       "title": "Staff TPM, AI Platform",
       "company": "Anthropic",
       "location": "Remote",
@@ -194,10 +143,7 @@
     {
       "id": "gs-16",
       "category": "strong",
-      "expected_band": [
-        5,
-        8
-      ],
+      "expected_band": [7, 8],
       "title": "Technical Program Manager, Cloud AI",
       "company": "Mistral AI",
       "location": "Paris, France",
@@ -206,10 +152,7 @@
     {
       "id": "gs-17",
       "category": "dream",
-      "expected_band": [
-        0,
-        2
-      ],
+      "expected_band": [9, 10],
       "title": "Head of Technical Programs, AI",
       "company": "Anthropic",
       "location": "Remote, EU",
@@ -218,10 +161,7 @@
     {
       "id": "gs-18",
       "category": "dream",
-      "expected_band": [
-        1,
-        4
-      ],
+      "expected_band": [9, 10],
       "title": "Principal TPM, AI Developer Platform",
       "company": "Mistral AI",
       "location": "Remote, EU",
@@ -230,10 +170,7 @@
     {
       "id": "gs-19",
       "category": "mediocre",
-      "expected_band": [
-        0,
-        2
-      ],
+      "expected_band": [4, 6],
       "title": "VP of Engineering, AI Products",
       "company": "Linear",
       "location": "Remote",
@@ -242,10 +179,7 @@
     {
       "id": "gs-20",
       "category": "dream",
-      "expected_band": [
-        2,
-        5
-      ],
+      "expected_band": [9, 10],
       "title": "Founding AI Program Lead",
       "company": "Vercel",
       "location": "Remote, EU",
