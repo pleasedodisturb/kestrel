@@ -12,6 +12,7 @@ os.environ["AI_PROVIDER"] = "mock"
 os.environ["OPENROUTER_API_KEY"] = ""
 os.environ["ANTHROPIC_API_KEY"] = ""
 os.environ["TOGETHER_API_KEY"] = ""
+os.environ["OPENAI_API_KEY"] = ""
 
 # ---------------------------------------------------------------------------
 # Network guard: block outbound HTTP to AI provider domains.
