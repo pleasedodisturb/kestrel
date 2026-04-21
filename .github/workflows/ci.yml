@@ -124,7 +124,7 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin "${BASE_REF}" --depth=1
+          git fetch origin "${BASE_REF}" --no-tags --deepen=50
           pip install diff-cover>=10.2.0
           diff-cover coverage.xml --compare-branch="origin/${BASE_REF}" --fail-under=80
 
