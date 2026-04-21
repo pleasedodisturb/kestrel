@@ -10,6 +10,7 @@ from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
+from career_os.ai.openai_provider import OpenAIProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
 from career_os.ai.together_provider import TogetherProvider
 
@@ -86,6 +87,10 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "together": lambda: TogetherProvider(
         api_key=_resolve_api_key("TOGETHER_API_KEY", "together_api_key"),
         model=os.getenv("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo"),
+    ),
+    "openai": lambda: OpenAIProvider(
+        api_key=_resolve_api_key("OPENAI_API_KEY", "openai_api_key"),
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
     ),
 }
 
