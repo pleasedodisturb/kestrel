@@ -37,8 +37,8 @@ Root-level docs (`README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`) 
 
 [Detailed explanation in warm, teaching tone]
 
-```mermaid
-[At least one diagram per guide]
+```
+mermaid diagram here (at least one per guide)
 ```
 
 ## Examples

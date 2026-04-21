@@ -20,22 +20,13 @@ Every time Kestrel asks an AI to score a job, it sends text — your profile, th
 
 ```mermaid
 flowchart TD
-    A["Score 50 jobs<br/>Base cost: ~$0.03/job"] --> B["1. Prompt Caching<br/><i>90% off repeat prefixes</i>"]
-    B --> C["2. Compact Serialization<br/><i>30% off profile data</i>"]
-    C --> D["3. Compressed Prompts<br/><i>67% off system instructions</i>"]
-    D --> E["4. Smart Model Routing<br/><i>60-95% on simple tasks</i>"]
-    E --> F["5. Response Caching<br/><i>100% off duplicates</i>"]
-    F --> G["6. Batch Scoring<br/><i>50% off bulk overnight work</i>"]
-    G --> H["Result: ~$1-2/month"]
-
-    style A fill:#f8d7da
-    style H fill:#d4edda
-    style B fill:#e8f4fd
-    style C fill:#e8f4fd
-    style D fill:#e8f4fd
-    style E fill:#e8f4fd
-    style F fill:#e8f4fd
-    style G fill:#e8f4fd
+    A[Score 50 jobs] --> B[1. Prompt Caching - 90% off]
+    B --> C[2. Compact Serialization - 30% off]
+    C --> D[3. Compressed Prompts - 67% off]
+    D --> E[4. Smart Model Routing - 60-95% off]
+    E --> F[5. Response Caching - 100% off duplicates]
+    F --> G[6. Batch Scoring - 50% off bulk]
+    G --> H[Result: ~$1-2/month]
 ```
 
 **Strategy 1: Prompt Caching (90% off repeat prefixes).** When scoring multiple jobs for the same person, your profile doesn't change between calls. Anthropic's prompt caching "remembers" the system prompt and profile for 5 minutes. The first call pays full price; the other 49 get a 90% discount on those tokens. If your profile is 1,500 tokens and you score 50 jobs, you save ~67,500 tokens of processing.
