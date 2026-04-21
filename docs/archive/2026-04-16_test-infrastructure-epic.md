@@ -1,3 +1,8 @@
+> **Archived:** This document has been superseded by [How Testing Works](../guides/how-testing-works.md).
+> Preserved for historical reference only.
+
+---
+
 # Session: Test Infrastructure Epic & Research Documentation
 **Date:** 2026-04-16
 **Branch:** G-305/testing-research-docs, G-305/research-docs-integration

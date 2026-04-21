@@ -12,7 +12,7 @@ Kestrel uses AI for job scoring, skills analysis, interview prep, company resear
 
 ---
 
-> **New to AI providers?** Start with [How Kestrel Uses AI](ai-providers-explained.md) — it explains everything in plain English with zero jargon. This page is the technical reference.
+> **New to AI providers?** Start with [AI Providers Guide](../guides/ai-providers-guide.md) — it explains everything in plain English with zero jargon. This page is the technical reference.
 
 ## TL;DR
 

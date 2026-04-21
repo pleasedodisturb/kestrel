@@ -561,7 +561,7 @@ The preference learning service (`src/career_os/services/preference_learning.py`
 | G-297 | Raise vague_responsibilities threshold from 200 to 400 chars | Merged | 10 false positives in benchmark were vague_responsibilities on adequate descriptions |
 | G-298 | User-facing scoring explainer | Merged | Published `docs/how-scoring-works.md` |
 | G-299 | Benchmark artifact publication | Merged | Published PII-scrubbed benchmark results to `docs/research/` |
-| G-300 | CareerOS <-> Kestrel feature sync | Open | Systematic alignment between private CLI and public platform |
+| G-300 | Kestrel feature sync | Open | Systematic alignment between private CLI and public platform |
 
 **Source:** Linear project tracker (team G), benchmark analysis session 2026-04-15.
 

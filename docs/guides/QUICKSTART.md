@@ -266,7 +266,7 @@ Skip git entirely. Use the ZIP download method in Step 2, Option A. It does the 
 
 ### Scores all look the same (Demo Mode)
 
-In Demo Mode, scores are simulated and not based on your actual profile. They might look repetitive because they're pre-generated. This is normal. Connect a real AI provider to get personalized scores that actually vary based on the job description. See the [AI Provider Guide](AI-PROVIDERS.md).
+In Demo Mode, scores are simulated and not based on your actual profile. They might look repetitive because they're pre-generated. This is normal. Connect a real AI provider to get personalized scores that actually vary based on the job description. See the [AI Provider Guide](../reference/AI-PROVIDERS.md).
 
 ### Build fails with a wall of red/orange text
 
@@ -296,7 +296,7 @@ The number (0-10) is how well a job matches YOUR profile. Here's what it means:
 - **5-7:** Decent match. Review the details before deciding.
 - **Below 5:** Probably not worth your time. Move on.
 
-In Demo Mode, scores are simulated. They look real but aren't personalized to you. Connect an AI provider (see the [AI Provider Guide](AI-PROVIDERS.md)) for real personalized scoring.
+In Demo Mode, scores are simulated. They look real but aren't personalized to you. Connect an AI provider (see the [AI Provider Guide](../reference/AI-PROVIDERS.md)) for real personalized scoring.
 
 ### Everything feels overwhelming
 
