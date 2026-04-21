@@ -113,12 +113,10 @@ jobs:
 
       - name: Golden set regression (scoring band drift)
         if: github.event_name == 'pull_request'
-        continue-on-error: true  # TODO: recalibrate fixtures after scoring evolution (G-268)
         run: pytest tests/regression/ -m regression -v --tb=short -x
 
       - name: Golden set regression (scoring band drift)
         if: github.event_name != 'pull_request'
-        continue-on-error: true  # TODO: recalibrate fixtures after scoring evolution (G-268)
         run: pytest tests/regression/ -m regression -v --tb=short -x
 
       - name: Upload coverage report
