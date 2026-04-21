@@ -140,6 +140,46 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 - Backend: pytest in `tests/`, Frontend: Vitest in `frontend/src/__tests__/`, Mobile: Jest co-located as `*.test.tsx`
 - Run tests after writing them to confirm they pass.
 
+### Testing Rules (Agent-Enforceable)
+
+These rules are mechanically enforced by pre-commit hooks and Claude Code Stop hooks. Violations block commits.
+
+**Assertion Quality:**
+- **NEVER** use `assert True` or `assert False` in test code — these test nothing
+- **NEVER** use bare `assert x is not None` — always assert on the actual value (e.g., `assert x.status == "applied"`)
+- **ALWAYS** include at least 2 meaningful assertions per test function
+- **ALWAYS** assert on specific values, not just types or existence
+- Escape hatch for WIP stubs: `# noqa: KTEST001` (auditable, greppable)
+
+**Mocking:**
+- **NEVER** mock the database — use the `db_session` fixture (tests/conftest.py)
+- **NEVER** mock SQLAlchemy models — use real model instances
+- **ONLY** mock external services: HTTP calls, AI providers, file I/O
+- The `INTEGRATION_FIXTURES` frozenset in `tests/conftest.py` defines the "do not mock" boundary
+
+**Test Coverage:**
+- **ALWAYS** add or update tests when modifying source code in `src/`
+- **NEVER** submit a PR that drops coverage on modified lines below 80%
+- Run `pytest --cov=src/career_os --cov-report=term-missing` to check before pushing
+
+**Examples:**
+
+Bad (will be rejected):
+```python
+def test_create_application():
+    app = create_application(db, data)
+    assert app is not None  # BLOCKED: bare is-not-None
+```
+
+Good (will pass):
+```python
+def test_create_application():
+    app = create_application(db, {"title": "SWE", "company": "Acme"})
+    assert app.title == "SWE"
+    assert app.company == "Acme"
+    assert app.status == "discovered"
+```
+
 ### Code Style
 - **Python**: Ruff handles linting + formatting. `ruff check --fix` then `ruff format`.
 - **TypeScript**: ESLint with strict mode. `npx eslint --fix src/`.
