@@ -11,7 +11,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Circle } from "lucide-react";
+import { Check, Circle, Pencil } from "lucide-react";
 import { StepProgress } from "@/components/StepProgress";
 import { useOnboardingStatus } from "@/hooks/useOnboarding";
 import { useProfile } from "@/hooks/useProfiles";
@@ -95,6 +95,9 @@ export function WelcomePage() {
   );
   const [skippedSteps, setSkippedSteps] = useState<Set<string>>(new Set());
   const skipResumeRef = useRef(false);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   // Focus management (accessibility)
   const inputRef = useRef<HTMLInputElement>(null);
@@ -317,54 +320,103 @@ export function WelcomePage() {
           </p>
 
           <ul className="mt-6 space-y-3" data-testid="summary-checklist">
-            {WELCOME_STEPS.map((step) => (
-              <li key={step.key} className="flex items-start gap-3">
-                {skippedSteps.has(step.key) ? (
-                  <>
+            {WELCOME_STEPS.map((step) => {
+              const label = step.question
+                .replace("What's your ", "")
+                .replace("What are your ", "")
+                .replace("Where are you ", "")
+                .replace("?", "");
+              const value = completedSteps[step.key];
+              const isSkipped = skippedSteps.has(step.key) || !value;
+              const isEditing = editingKey === step.key;
+
+              if (isEditing) {
+                return (
+                  <li key={step.key} className="flex items-start gap-3">
+                    <Pencil className="mt-1.5 h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
+                    <div className="flex-1">
+                      <p className="mb-1 text-xs font-medium text-[hsl(var(--muted-foreground))]">{label}</p>
+                      {step.type === "radio" ? (
+                        <div className="flex flex-wrap gap-2">
+                          {EXPERIENCE_OPTIONS.map((opt) => (
+                            <button
+                              key={opt}
+                              onClick={() => setEditValue(opt)}
+                              className={`rounded-md border px-3 py-1.5 text-sm ${editValue === opt ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]" : "border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--secondary))]"}`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setEditingKey(null);
+                          }}
+                          className="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                        />
+                      )}
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          disabled={editSaving}
+                          onClick={async () => {
+                            const trimmed = editValue.trim();
+                            if (!trimmed) return;
+                            setEditSaving(true);
+                            try {
+                              if (step.key === "skills") {
+                                const names = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+                                for (const name of names) {
+                                  await createSkill({ profile_id: DEFAULT_PROFILE_ID, name, category: "technical", evidence_source: "onboarding" });
+                                }
+                              } else {
+                                await updateProfile(DEFAULT_PROFILE_ID, { [step.field]: trimmed });
+                              }
+                              setCompletedSteps((prev) => ({ ...prev, [step.key]: trimmed }));
+                              setSkippedSteps((prev) => { const next = new Set(prev); next.delete(step.key); return next; });
+                              setEditingKey(null);
+                            } finally {
+                              setEditSaving(false);
+                            }
+                          }}
+                          className="rounded-md bg-[hsl(var(--primary))] px-3 py-1 text-xs font-medium text-[hsl(var(--primary-foreground))] hover:opacity-90 disabled:opacity-50"
+                        >
+                          {editSaving ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          onClick={() => setEditingKey(null)}
+                          className="rounded-md border border-[hsl(var(--border))] px-3 py-1 text-xs font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              }
+
+              return (
+                <li
+                  key={step.key}
+                  className="group flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-[hsl(var(--secondary))]"
+                  onClick={() => { setEditingKey(step.key); setEditValue(value ?? ""); }}
+                >
+                  {isSkipped ? (
                     <Circle className="mt-0.5 h-5 w-5 shrink-0 text-[hsl(var(--muted-foreground))]" />
-                    <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                      {step.question
-                        .replace("What's your ", "")
-                        .replace("What are your ", "")
-                        .replace("Where are you ", "")
-                        .replace("?", "")}{" "}
-                      &mdash; skipped
-                    </span>
-                  </>
-                ) : completedSteps[step.key] ? (
-                  <>
+                  ) : (
                     <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-                    <span className="text-sm text-[hsl(var(--foreground))]">
-                      {step.question
-                        .replace("What's your ", "")
-                        .replace("What are your ", "")
-                        .replace("Where are you ", "")
-                        .replace("?", "")}
-                      : {completedSteps[step.key]}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Circle className="mt-0.5 h-5 w-5 shrink-0 text-[hsl(var(--muted-foreground))]" />
-                    <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                      {step.question
-                        .replace("What's your ", "")
-                        .replace("What are your ", "")
-                        .replace("Where are you ", "")
-                        .replace("?", "")}{" "}
-                      &mdash; skipped
-                    </span>
-                  </>
-                )}
-              </li>
-            ))}
+                  )}
+                  <span className={`flex-1 text-sm ${isSkipped ? "text-[hsl(var(--muted-foreground))]" : "text-[hsl(var(--foreground))]"}`}>
+                    {label}{value ? `: ${value}` : " — skipped"}
+                  </span>
+                  <Pencil className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--muted-foreground))] opacity-0 transition-opacity group-hover:opacity-100" />
+                </li>
+              );
+            })}
           </ul>
-          <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">
-            You can edit these anytime in{" "}
-            <a href="/settings" className="underline hover:text-[hsl(var(--foreground))]">
-              Settings &gt; Profile
-            </a>
-          </p>
 
           {/* AI Provider Nudge Card (D-07 -- summary screen only) */}
           <div
