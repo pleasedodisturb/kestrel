@@ -1,99 +1,85 @@
-# Requirements: Kestrel Onboarding Experience
+# Requirements: Kestrel Public Roadmap
 
-**Defined:** 2026-04-19
-**Core Value:** A user who has never seen Kestrel finishes onboarding understanding what it does, has their profile populated, has seen scored results, and knows where to go next — all in under 10 minutes.
+**Defined:** 2026-04-21
+**Core Value:** Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
 
 ## v1 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for this milestone. Each maps to roadmap phases.
 
-### CLI & Setup
+### Inventory
 
-- [ ] **CLI-01**: User sees next-steps message on first `kestrel` invocation after install
-- [ ] **CLI-02**: User can run `kestrel init` to start interactive profile wizard with questionary prompts
-- [ ] **CLI-03**: Wizard detects non-TTY environment and exits with clear message + `--non-interactive` flag guidance
-- [ ] **CLI-04**: User can skip entire wizard with `kestrel init --skip` (creates complete default profile)
-- [ ] **CLI-05**: Wizard shows progress indicator ("Step 2/5") at each stage
-- [ ] **CLI-06**: User can run `kestrel doctor` to verify setup is healthy (DB, config, sample data, Python version)
-- [ ] **CLI-07**: Every error during onboarding includes what happened, why, and what to do next (no stack traces unless --verbose)
-- [ ] **CLI-08**: After each CLI action, suggested next command is printed (e.g. "Try `kestrel pipeline` to see your scored jobs")
+- [ ] **INV-01**: All shipped backend features (27 routes, 36 services, 5+ AI providers, scoring engine, discovery engine, CLI) are catalogued into a coherent feature list
+- [ ] **INV-02**: All shipped infrastructure work (CI/CD, test infrastructure, token optimization, docs audit, privacy layer) is catalogued
+- [ ] **INV-03**: Working web frontend (React 19, 11 pages, Kanban board, analytics, discovery UI) is catalogued as shipped with current capabilities
+- [ ] **INV-04**: Parked mobile app (React Native/Expo scaffold) is catalogued with status and context for why it's paused
+- [ ] **INV-05**: Voice mode is catalogued honestly — code exists (api/voice.py, voice integration registered) but untested, status unknown, needs audit before roadmapping next steps
+- [ ] **INV-06**: Current deployment/packaging options (clone+uvicorn, Docker compose, pip install) are documented honestly with their UX gaps
+- [ ] **INV-07**: Shipped features are grouped into logical retrospective milestones with clear boundaries
+- [ ] **INV-08**: An evolution narrative tells the story of how Kestrel grew from initial tool to current state
 
-### Profile Data Loading
+### Master Roadmap
 
-- [ ] **PROF-01**: Wizard asks 5-7 guided questions (name, location, target roles, salary range, skills, experience level) — all skippable
-- [ ] **PROF-02**: Optional "paste your resume text" field with regex extraction for email, phone, URLs, skill keywords
-- [ ] **PROF-03**: Extracted data shown for confirmation before saving to profile
-- [x] **PROF-04**: Same question set available in web welcome flow
+- [ ] **ROAD-01**: ROADMAP.md exists at repo root and renders correctly on GitHub
+- [ ] **ROAD-02**: Every roadmap item has a status indicator (shipped/in-progress/planned/considering)
+- [ ] **ROAD-03**: Milestones are structured as Now/Next/Later horizons tied to version numbers (v0.6, v0.7, v1.0+)
+- [ ] **ROAD-04**: A forward-looking disclaimer states plans may change
+- [ ] **ROAD-05**: An open-source statement clarifies this repo is non-commercial; commercial SaaS forks off to separate repo
+- [ ] **ROAD-06**: A tech debt section publicly acknowledges known debt (scoring monolith, mock provider, no lockfile, sync clients, frontend type drift, SQLite-only)
+- [ ] **ROAD-07**: A Mermaid timeline diagram visualizes milestone structure (GitHub-compatible subset only: gantt or flowchart, no quadrantChart/HTML/color:#fff)
+- [ ] **ROAD-08**: Shipped roadmap items cross-reference CHANGELOG.md entries and release tags
+- [ ] **ROAD-09**: Deployment/packaging milestone charts the path from "3 techy install methods" to "usable entirely via interface"
+- [ ] **ROAD-10**: Browser extension (Chrome/Firefox) is documented as a planned milestone — one-click add any job to scoring DB
+- [ ] **ROAD-11**: Mobile app resumption is documented as a planned milestone with context on why it was paused
+- [ ] **ROAD-12**: Profile & Skills vision is documented as a major planned milestone — RPG-style character sheet (not gamified), Dalio baseball card concept, honest skill mapping with levels
+- [ ] **ROAD-13**: Gap analysis & coaching roadmap is documented as a planned milestone — select target role/path, continuous gap analysis, personal development stepping stones, progressive coaching depth (skill maps → MOOCs → AI-assisted learning)
+- [ ] **ROAD-14**: Voice mode vision is documented as a planned milestone — native superwhisper-to-claude style voice interaction, building on existing (untested) implementation
+- [ ] **ROAD-15**: Feature flag system is documented as a planned milestone — comprehensive flags covering all features and UI elements, enabling different app flavors/editions, hiding incomplete/broken features, adjusting capabilities per deployment
 
-### Demo Data
+### Milestone Deep Dives
 
-- [ ] **DEMO-01**: Pre-baked sample jobs (10) with pre-computed scores ship as fixture data in the package
-- [ ] **DEMO-02**: Demo jobs span 3+ job families (not just tech roles — include marketing, operations, finance)
-- [ ] **DEMO-03**: Demo data uses relative dates computed at display time (never looks stale)
-- [ ] **DEMO-04**: Demo records have `is_demo=True` flag and display "Sample Results" banner in UI
-- [ ] **DEMO-05**: Demo seeder is idempotent (safe to run multiple times without duplicating data)
+- [ ] **DEEP-01**: docs/roadmap/ directory exists with a consistent template for milestone documents
+- [ ] **DEEP-02**: Each shipped milestone has a deep dive document (goal, context, features, technical approach, status, related docs)
+- [ ] **DEEP-03**: Milestone documents link to relevant research and decision docs in docs/ and docs/research/
+- [ ] **DEEP-04**: Milestone documents show where BMAD PRDs plug in (integration pattern defined, even if PRDs incomplete)
 
-### Web UI
+### Contributor Experience
 
-- [ ] **WEB-01**: First-time visitors redirected to `/welcome` via OnboardingGuard route wrapper
-- [x] **WEB-02**: Welcome screen explains what Kestrel does and walks through setup steps
-- [ ] **WEB-03**: Pipeline, Discovery, Contacts, and Skills pages show empty state coaching when no data exists
-- [x] **WEB-04**: User can resume onboarding from last completed step after browser close
-- [ ] **WEB-05**: Shepherd.js interactive tour walks through Pipeline, Discovery, Scoring pages with tooltips
-- [ ] **WEB-06**: Tour is accessible (aria-live announcements, focus management, keyboard-navigable, skip button)
-- [x] **WEB-07**: End-of-onboarding summary shows what was configured, what was skipped (with navigation links)
-- [x] **WEB-08**: Skipped steps show "do it later" signposting with exact navigation path (e.g. "Settings > Profile")
-- [x] **WEB-09**: After onboarding completes, show "Unlock full scoring" card with AI provider options (OpenRouter one-click OAuth connect via G-224/G-255, Together.ai, Ollama) and link to provider settings
-
-### Feedback
-
-- [ ] **FB-01**: Persistent feedback button visible in web UI (bottom-right, all pages)
-- [ ] **FB-02**: Feedback button opens pre-filled GitHub issue URL with system info (OS, Python version, Kestrel version)
-- [ ] **FB-03**: End-of-onboarding prompts for feedback with link to GitHub issues + contact info
-
-### Infrastructure
-
-- [x] **INF-01**: Onboarding state persisted in backend DB (per-profile, timestamps not booleans), shared between CLI and web
-- [x] **INF-02**: `OnboardingError` exception hierarchy with `user_message` and `resolution` fields
-- [x] **INF-03**: `GET/PATCH /api/onboarding/status` endpoints for state tracking
-- [ ] **INF-04**: Non-developer terminal guidance docs page ("Getting Started for Non-Developers")
+- [ ] **CONT-01**: Each milestone section in ROADMAP.md has a "Want to help?" callout linking to contribution paths
+- [ ] **CONT-02**: A planning hierarchy document explains the full chain: ROADMAP.md → BMAD PRDs → milestones → epics → Linear tickets
+- [ ] **CONT-03**: A .devcontainer/ config enables one-click GitHub Codespaces dev environment (Python + Node + SQLite)
 
 ## v2 Requirements
 
-Deferred to future release. Tracked but not in current roadmap.
+Deferred to future milestone. Tracked but not in current roadmap.
 
-### Smart CV Import
+### Community Engagement
 
-- **CV-01**: User can upload PDF or DOCX resume file via CLI (`kestrel init --cv resume.pdf`)
-- **CV-02**: pdfplumber extracts text from PDF, python-docx extracts from DOCX
-- **CV-03**: Regex tier extracts contact info (email, phone, URLs) from document text
-- **CV-04**: spaCy NER tier extracts name, organizations, locations, dates (optional `[cv]` extra)
-- **CV-05**: rapidfuzz matches extracted skills against taxonomy
-- **CV-06**: Image-only PDFs detected and user routed to manual entry with clear message
-- **CV-07**: All CV parsing happens locally — no data leaves the machine
-- **CV-08**: Web-side file upload UI for CV documents (`POST /api/onboarding/cv`)
+- **COMM-01**: GitHub Discussions enabled for structured community feature requests and feedback
+- **COMM-02**: Monthly developer update posts (Supabase-style) summarizing progress
+- **COMM-03**: Contributor spotlight section recognizing external contributions
 
-### Enhanced Guidance
+### Advanced Visuals
 
-- **GUIDE-01**: `--explain` flag for verbose non-developer CLI step explanations
-- **GUIDE-02**: LinkedIn URL import (fetch public profile data)
-- **GUIDE-03**: Local LLM re-parse of pasted resume text via Ollama integration
+- **VIS-01**: Shields.io badges on ROADMAP.md (CI status, version, license, coverage)
+- **VIS-02**: Dependency graph between milestones as Mermaid diagram
+- **VIS-03**: Per-milestone progress indicators beyond binary status
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
-
 | Feature | Reason |
 |---------|--------|
-| AI provider setup during onboarding wizard | Blocks progress, adds friction. Post-onboarding nudge (WEB-09) handles this instead. |
-| OCR for scanned PDF resumes | Adds tesseract ~500MB dependency, unreliable results, rare use case |
-| Multi-language CV parsing | Huge complexity multiplier (different NER models per language). English-only for v1+v2. |
-| Onboarding analytics / telemetry | Privacy-first product. No phoning home. Local-only state tracking via DB. |
-| Animated carousel / slideshow | Mobile SaaS anti-pattern. Users already installed — they need setup, not selling. |
-| Mandatory wizard (no escape) | Every step must be skippable. Forced flows create resentment. |
-| Mobile app onboarding | Distant future. All React Native onboarding code parked. |
-| Account creation / signup flow | Self-hosted = no accounts. Auth is optional admin config, not user onboarding. |
-| Gamification (points, badges) | Inappropriate for professional job search tool. |
+| Specific dates/deadlines on roadmap items | Solo maintainer — dates create false accountability and make roadmap feel stale when missed |
+| GitHub Issues for tracking | Linear is the single source of truth for tasks; duplicating creates sync burden |
+| Community voting on features | Creates delivery expectations; maintainer curates, community informs |
+| Interactive roadmap tool (Plane, Notion, etc.) | External tools aren't git-versioned, fragment source of truth; markdown in repo is permanent |
+| Percentage-complete tracking | Misleading (% of tickets ≠ % of effort), requires constant updates, goes stale immediately |
+| Separate roadmap website | Scope creep — ROADMAP.md renders well on GitHub; upgrade only at 1000+ stars |
+| SaaS tier boundary matrix in this repo | This repo is non-commercial; tier boundaries belong in the future commercial fork |
+| Any code changes to Kestrel | This milestone is documentation and planning infrastructure only |
+| Building the browser extension | Documented as planned milestone in roadmap, not built this milestone |
+| Building profile/skills/coaching features | Documented as vision milestones in roadmap, not built this milestone |
+| Building the devcontainer beyond basic config | Simple working config only; no CI integration or advanced features |
 
 ## Traceability
 
@@ -101,45 +87,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-01 | Phase 2 | Pending |
-| CLI-02 | Phase 2 | Pending |
-| CLI-03 | Phase 2 | Pending |
-| CLI-04 | Phase 2 | Pending |
-| CLI-05 | Phase 2 | Pending |
-| CLI-06 | Phase 2 | Pending |
-| CLI-07 | Phase 2 | Pending |
-| CLI-08 | Phase 2 | Pending |
-| PROF-01 | Phase 2 | Pending |
-| PROF-02 | Phase 2 | Pending |
-| PROF-03 | Phase 2 | Pending |
-| PROF-04 | Phase 4 | Complete |
-| DEMO-01 | Phase 3 | Pending |
-| DEMO-02 | Phase 3 | Pending |
-| DEMO-03 | Phase 3 | Pending |
-| DEMO-04 | Phase 3 | Pending |
-| DEMO-05 | Phase 3 | Pending |
-| WEB-01 | Phase 4 | Pending |
-| WEB-02 | Phase 4 | Complete |
-| WEB-03 | Phase 5 | Pending |
-| WEB-04 | Phase 4 | Complete |
-| WEB-05 | Phase 5 | Pending |
-| WEB-06 | Phase 5 | Pending |
-| WEB-07 | Phase 4 | Complete |
-| WEB-08 | Phase 4 | Complete |
-| WEB-09 | Phase 4 | Complete |
-| FB-01 | Phase 5 | Pending |
-| FB-02 | Phase 5 | Pending |
-| FB-03 | Phase 5 | Pending |
-| INF-01 | Phase 1 | Complete |
-| INF-02 | Phase 1 | Complete |
-| INF-03 | Phase 1 | Complete |
-| INF-04 | Phase 5 | Pending |
+| INV-01 | — | Pending |
+| INV-02 | — | Pending |
+| INV-03 | — | Pending |
+| INV-04 | — | Pending |
+| INV-05 | — | Pending |
+| INV-06 | — | Pending |
+| INV-07 | — | Pending |
+| INV-08 | — | Pending |
+| ROAD-01 | — | Pending |
+| ROAD-02 | — | Pending |
+| ROAD-03 | — | Pending |
+| ROAD-04 | — | Pending |
+| ROAD-05 | — | Pending |
+| ROAD-06 | — | Pending |
+| ROAD-07 | — | Pending |
+| ROAD-08 | — | Pending |
+| ROAD-09 | — | Pending |
+| ROAD-10 | — | Pending |
+| ROAD-11 | — | Pending |
+| ROAD-12 | — | Pending |
+| ROAD-13 | — | Pending |
+| ROAD-14 | — | Pending |
+| ROAD-15 | — | Pending |
+| DEEP-01 | — | Pending |
+| DEEP-02 | — | Pending |
+| DEEP-03 | — | Pending |
+| DEEP-04 | — | Pending |
+| CONT-01 | — | Pending |
+| CONT-02 | — | Pending |
+| CONT-03 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 33 total
-- Mapped to phases: 33
-- Unmapped: 0
+- v1 requirements: 30 total
+- Mapped to phases: 0
+- Unmapped: 30 ⚠️
 
 ---
-*Requirements defined: 2026-04-19*
-*Last updated: 2026-04-19 after roadmap creation*
+*Requirements defined: 2026-04-21*
+*Last updated: 2026-04-21 after initial definition*
