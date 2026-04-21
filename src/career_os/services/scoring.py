@@ -2987,6 +2987,34 @@ def _gather_scoring_context(db: Session, profile: Profile, profile_id: int) -> d
     return profile_data
 
 
+def build_profile_data(db: Session, profile_id: int) -> dict:
+    """Public entry point to gather profile data for batch scoring.
+
+    Validates the profile exists and is complete enough for scoring,
+    then returns the full scoring context (profile + weights).
+
+    Args:
+        db: Database session.
+        profile_id: Profile ID to gather data for.
+
+    Returns:
+        Profile data dict suitable for AI provider scoring calls.
+
+    Raises:
+        ProfileNotFoundError: If the profile does not exist.
+        ProfileIncompleteError: If required profile fields are missing.
+    """
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+    if not profile:
+        raise ProfileNotFoundError(f"Profile {profile_id} not found")
+
+    # Basic completeness check — name is the minimum bar
+    if not profile.name:
+        raise ProfileIncompleteError("Profile is missing required fields for scoring (name).")
+
+    return _gather_scoring_context(db, profile, profile_id)
+
+
 def _gather_red_flag_metadata(
     db: Session,
     discovered_job_id: int | None,
