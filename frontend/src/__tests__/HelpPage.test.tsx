@@ -1,15 +1,39 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { describe, it, expect } from "vitest";
+import { screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderWithProviders } from "@/test-utils";
 import { HelpPage } from "@/pages/HelpPage";
 
+/* ---------- API-level mocks ---------- */
+
+const mockResetOnboarding = vi.fn();
+const mockFetchOnboardingStatus = vi.fn();
+
+vi.mock("@/api/onboarding", () => ({
+  fetchOnboardingStatus: (...args: unknown[]) =>
+    mockFetchOnboardingStatus(...(args as [])),
+  resetOnboarding: (...args: unknown[]) => mockResetOnboarding(...(args as [])),
+  patchOnboardingStep: vi.fn().mockResolvedValue({}),
+  DEFAULT_PROFILE_ID: 1,
+}));
+
+/* ---------- Setup ---------- */
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockResetOnboarding.mockResolvedValue({});
+  mockFetchOnboardingStatus.mockResolvedValue({
+    profile_id: 1,
+    is_complete: false,
+  });
+});
+
+/* ---------- Helpers ---------- */
+
 function renderHelpPage() {
-  return render(
-    <MemoryRouter initialEntries={["/help"]}>
-      <HelpPage />
-    </MemoryRouter>,
-  );
+  return renderWithProviders(<HelpPage />, { route: "/help" });
 }
+
+/* ---------- Tests ---------- */
 
 describe("HelpPage", () => {
   it("renders the page", () => {

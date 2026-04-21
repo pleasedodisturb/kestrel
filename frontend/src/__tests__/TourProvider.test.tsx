@@ -16,46 +16,51 @@
  * - Accessibility: tooltip has role=dialog and aria-label (D-05)
  * - Accessibility: Escape key skips tour
  * - TOUR_STEPS has expected structure
+ *
+ * Mock strategy (D-04): Mock only @/api/onboarding (external boundary).
+ * Real hooks (useOnboardingStatus, usePatchOnboardingStep) run via React Query.
+ * Minimal useNavigate spy for imperative navigation assertions only.
  */
 
-import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { MemoryRouter, useNavigate, useLocation } from "react-router-dom";
-import type { UseQueryResult, UseMutationResult } from "@tanstack/react-query";
-import type { OnboardingStatus } from "@/api/onboarding";
 import {
-  TourProvider,
-  useTour,
-  TOUR_STEPS,
-  type TourContextValue,
-} from "@/components/TourProvider";
+  render,
+  screen,
+  act,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { renderWithProviders } from "@/test-utils";
+import type { OnboardingStatus } from "@/api/onboarding";
+import { TourProvider, useTour, TOUR_STEPS } from "@/components/TourProvider";
 
-/* ---------- Mocks ---------- */
+/* ---------- API-level mocks (D-04: mock external boundary only) ---------- */
+
+const mockFetchOnboardingStatus = vi.fn();
+const mockPatchOnboardingStep = vi.fn();
+const mockResetOnboarding = vi.fn();
+
+vi.mock("@/api/onboarding", () => ({
+  fetchOnboardingStatus: (...args: unknown[]) =>
+    mockFetchOnboardingStatus(...(args as [])),
+  patchOnboardingStep: (...args: unknown[]) =>
+    mockPatchOnboardingStep(...(args as [])),
+  resetOnboarding: (...args: unknown[]) => mockResetOnboarding(...(args as [])),
+  DEFAULT_PROFILE_ID: 1,
+}));
+
+/* ---------- Minimal navigate spy (Open Question #1 fallback for imperative nav) ---------- */
 
 const mockNavigate = vi.fn();
-const mockMutate = vi.fn();
 
 vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom",
-  );
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
+  return { ...actual, useNavigate: () => mockNavigate };
 });
-
-const mockUseOnboardingStatus =
-  vi.fn<() => Partial<UseQueryResult<OnboardingStatus>>>();
-const mockUsePatchOnboardingStep =
-  vi.fn<() => Partial<UseMutationResult<OnboardingStatus, Error, { profileId: number; step: string }>>>();
-
-vi.mock("@/hooks/useOnboarding", () => ({
-  useOnboardingStatus: (...args: unknown[]) =>
-    mockUseOnboardingStatus(...(args as [])),
-  usePatchOnboardingStep: (...args: unknown[]) =>
-    mockUsePatchOnboardingStep(...(args as [])),
-}));
 
 /* ---------- Helpers ---------- */
 
@@ -143,16 +148,10 @@ function TourConsumer() {
   );
 }
 
-function renderWithProvider(
-  initialRoute = "/",
-  children?: React.ReactNode,
-) {
-  return render(
-    <MemoryRouter initialEntries={[initialRoute]}>
-      <TourProvider>
-        {children ?? <TourConsumer />}
-      </TourProvider>
-    </MemoryRouter>,
+function renderTour(initialRoute = "/", children?: React.ReactNode) {
+  return renderWithProviders(
+    <TourProvider>{children ?? <TourConsumer />}</TourProvider>,
+    { route: initialRoute },
   );
 }
 
@@ -161,17 +160,9 @@ function renderWithProvider(
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ shouldAdvanceTime: true });
-
-  mockUsePatchOnboardingStep.mockReturnValue({
-    mutate: mockMutate,
-  } as unknown as Partial<UseMutationResult<OnboardingStatus, Error, { profileId: number; step: string }>>);
-
-  // Default: no onboarding status (loading)
-  mockUseOnboardingStatus.mockReturnValue({
-    data: undefined,
-    isLoading: true,
-    isError: false,
-  });
+  mockFetchOnboardingStatus.mockResolvedValue(welcomeNotCompletedStatus());
+  mockPatchOnboardingStep.mockResolvedValue(welcomeCompletedStatus());
+  mockResetOnboarding.mockResolvedValue({});
 });
 
 afterEach(() => {
@@ -219,39 +210,43 @@ describe("useTour outside provider", () => {
 
 describe("TourProvider", () => {
   it("starts inactive when onboarding status is loading", () => {
-    renderWithProvider();
+    // Default mock returns a never-resolving promise to simulate loading
+    mockFetchOnboardingStatus.mockReturnValue(new Promise(() => {}));
+    renderTour();
     expect(screen.getByTestId("is-active")).toHaveTextContent("false");
   });
 
   it("auto-launches tour when welcome completed but tour not completed (D-01)", async () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
+
+    // Wait for React Query to resolve, then advance past AUTO_LAUNCH_DELAY
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("false");
     });
 
-    renderWithProvider();
-
-    // Tour auto-launches after AUTO_LAUNCH_DELAY (500ms)
     act(() => {
       vi.advanceTimersByTime(600);
     });
 
-    expect(screen.getByTestId("is-active")).toHaveTextContent("true");
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
+    });
     expect(screen.getByTestId("current-step")).toHaveTextContent("0");
     expect(screen.getByTestId("step-heading")).toHaveTextContent(
       TOUR_STEPS[0].heading,
     );
   });
 
-  it("does NOT auto-launch when tour already completed", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: tourCompletedStatus(),
-      isLoading: false,
-      isError: false,
+  it("does NOT auto-launch when tour already completed", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(tourCompletedStatus());
+    renderTour();
+
+    await waitFor(() => {
+      // Data loaded (not loading), but tour should stay inactive
+      expect(screen.getByTestId("is-active")).toHaveTextContent("false");
     });
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
     });
@@ -259,14 +254,14 @@ describe("TourProvider", () => {
     expect(screen.getByTestId("is-active")).toHaveTextContent("false");
   });
 
-  it("does NOT auto-launch when welcome not yet completed", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeNotCompletedStatus(),
-      isLoading: false,
-      isError: false,
+  it("does NOT auto-launch when welcome not yet completed", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeNotCompletedStatus());
+    renderTour();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("false");
     });
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
     });
@@ -274,16 +269,16 @@ describe("TourProvider", () => {
     expect(screen.getByTestId("is-active")).toHaveTextContent("false");
   });
 
-  it("advances step on next() and stays active mid-tour", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("advances step on next() and stays active mid-tour", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     expect(screen.getByTestId("current-step")).toHaveTextContent("0");
@@ -296,16 +291,16 @@ describe("TourProvider", () => {
     expect(screen.getByTestId("is-active")).toHaveTextContent("true");
   });
 
-  it("navigates to next step page when page differs (D-02)", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("navigates to next step page when page differs (D-02)", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     // Steps 0,1 are on "/", step 2 is on "/discovery"
@@ -320,16 +315,16 @@ describe("TourProvider", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/discovery");
   });
 
-  it("completes tour on next() past last step and persists (D-06)", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("completes tour on next() past last step and persists (D-06)", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     // Advance through all steps
@@ -340,47 +335,43 @@ describe("TourProvider", () => {
     }
 
     expect(screen.getByTestId("is-active")).toHaveTextContent("false");
-    expect(mockMutate).toHaveBeenCalledWith({
-      profileId: 1,
-      step: "tour_completed",
+    await waitFor(() => {
+      expect(mockPatchOnboardingStep).toHaveBeenCalledWith(1, "tour_completed");
     });
   });
 
-  it("skip() ends tour and persists completion (D-06)", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("skip() ends tour and persists completion (D-06)", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
     });
 
-    expect(screen.getByTestId("is-active")).toHaveTextContent("true");
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
+    });
 
     act(() => {
       fireEvent.click(screen.getByTestId("call-skip"));
     });
 
     expect(screen.getByTestId("is-active")).toHaveTextContent("false");
-    expect(mockMutate).toHaveBeenCalledWith({
-      profileId: 1,
-      step: "tour_completed",
+    await waitFor(() => {
+      expect(mockPatchOnboardingStep).toHaveBeenCalledWith(1, "tour_completed");
     });
   });
 
-  it("resets currentStep to 0 after completion", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("resets currentStep to 0 after completion", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     // Advance a couple steps then skip
@@ -398,16 +389,16 @@ describe("TourProvider", () => {
 });
 
 describe("TourOverlay", () => {
-  it("renders overlay element when tour is active", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("renders overlay element when tour is active", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour("/", <TourConsumer />);
 
-    renderWithProvider("/", <TourConsumer />);
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     // TourOverlay and TourTooltip render inside the provider
@@ -415,16 +406,16 @@ describe("TourOverlay", () => {
     expect(overlay).toBeInTheDocument();
   });
 
-  it("does NOT render overlay when tour is inactive", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: tourCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("does NOT render overlay when tour is inactive", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(tourCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("false");
     });
 
     const overlay = document.querySelector("[data-testid='tour-overlay']");
@@ -433,16 +424,16 @@ describe("TourOverlay", () => {
 });
 
 describe("TourTooltip", () => {
-  it("renders tooltip with step heading and body when active", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("renders tooltip with step heading and body when active", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     const tooltip = document.querySelector("[data-testid='tour-tooltip']");
@@ -451,16 +442,16 @@ describe("TourTooltip", () => {
     expect(tooltip).toHaveAttribute("aria-label", TOUR_STEPS[0].heading);
   });
 
-  it("has Skip tour and Next buttons", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("has Skip tour and Next buttons", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     const skipBtn = document.querySelector("[data-testid='tour-skip']");
@@ -470,16 +461,16 @@ describe("TourTooltip", () => {
     expect(nextBtn).toHaveTextContent("Next");
   });
 
-  it("shows Done on last step instead of Next", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("shows Done on last step instead of Next", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     // Navigate to last step
@@ -493,44 +484,41 @@ describe("TourTooltip", () => {
     expect(nextBtn).toHaveTextContent("Done");
   });
 
-  it("displays step counter (e.g. 1 of 5)", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("displays step counter (e.g. 1 of 5)", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
     });
 
     const tooltip = document.querySelector("[data-testid='tour-tooltip']");
     expect(tooltip?.textContent).toContain(`1 of ${TOUR_STEPS.length}`);
   });
 
-  it("Escape key skips the tour (D-05 accessibility)", () => {
-    mockUseOnboardingStatus.mockReturnValue({
-      data: welcomeCompletedStatus(),
-      isLoading: false,
-      isError: false,
-    });
+  it("Escape key skips the tour (D-05 accessibility)", async () => {
+    mockFetchOnboardingStatus.mockResolvedValue(welcomeCompletedStatus());
+    renderTour();
 
-    renderWithProvider();
     act(() => {
       vi.advanceTimersByTime(600);
     });
 
-    expect(screen.getByTestId("is-active")).toHaveTextContent("true");
+    await waitFor(() => {
+      expect(screen.getByTestId("is-active")).toHaveTextContent("true");
+    });
 
     act(() => {
       fireEvent.keyDown(document, { key: "Escape" });
     });
 
     expect(screen.getByTestId("is-active")).toHaveTextContent("false");
-    expect(mockMutate).toHaveBeenCalledWith({
-      profileId: 1,
-      step: "tour_completed",
+    await waitFor(() => {
+      expect(mockPatchOnboardingStep).toHaveBeenCalledWith(1, "tour_completed");
     });
   });
 });

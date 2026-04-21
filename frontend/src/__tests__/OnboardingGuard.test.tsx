@@ -31,8 +31,7 @@ vi.mock("@/api/onboarding", () => ({
     mockFetchOnboardingStatus(...(args as [])),
   patchOnboardingStep: (...args: unknown[]) =>
     mockPatchOnboardingStep(...(args as [])),
-  resetOnboarding: (...args: unknown[]) =>
-    mockResetOnboarding(...(args as [])),
+  resetOnboarding: (...args: unknown[]) => mockResetOnboarding(...(args as [])),
   DEFAULT_PROFILE_ID: 1,
 }));
 
@@ -74,10 +73,7 @@ const guardRoutes = (
       element={<div data-testid="welcome-redirect">Welcome</div>}
     />
     <Route element={<OnboardingGuard />}>
-      <Route
-        path="/"
-        element={<div data-testid="pipeline">Pipeline</div>}
-      />
+      <Route path="/" element={<div data-testid="pipeline">Pipeline</div>} />
     </Route>
   </Routes>
 );
@@ -146,22 +142,23 @@ describe("OnboardingGuard", () => {
 
     // Pre-seed the cache with an errored query for the onboarding status key
     // used by useOnboardingStatus (queryKey: ["onboarding-status", 1])
-    queryClient.getQueryCache().build(queryClient, {
-      queryKey: ["onboarding-status", 1],
-      retry: false,
-    }).setState({
-      status: "error",
-      error: new Error("API down"),
-      data: undefined,
-      dataUpdatedAt: 0,
-      fetchStatus: "idle",
-    });
+    queryClient
+      .getQueryCache()
+      .build(queryClient, {
+        queryKey: ["onboarding-status", 1],
+        retry: false,
+      })
+      .setState({
+        status: "error",
+        error: new Error("API down"),
+        data: undefined,
+        dataUpdatedAt: 0,
+        fetchStatus: "idle",
+      });
 
     render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={["/"]}>
-          {guardRoutes}
-        </MemoryRouter>
+        <MemoryRouter initialEntries={["/"]}>{guardRoutes}</MemoryRouter>
       </QueryClientProvider>,
     );
 

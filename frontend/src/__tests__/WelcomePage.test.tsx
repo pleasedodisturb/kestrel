@@ -96,7 +96,10 @@ function renderWelcomePage(statusOverrides: Partial<OnboardingStatus> = {}) {
   return renderWithProviders(
     <Routes>
       <Route path="/welcome" element={<WelcomePage />} />
-      <Route path="/" element={<div data-testid="pipeline-redirect">Pipeline</div>} />
+      <Route
+        path="/"
+        element={<div data-testid="pipeline-redirect">Pipeline</div>}
+      />
     </Routes>,
     { route: "/welcome" },
   );
