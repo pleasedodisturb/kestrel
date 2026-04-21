@@ -238,13 +238,22 @@ export function WelcomePage() {
 
   const handleBack = useCallback(() => {
     if (stepIndex > 0) {
+      const prevStep = WELCOME_STEPS[stepIndex - 1];
+      const saved = completedSteps[prevStep.key] ?? "";
+      if (prevStep.type === "salary" && saved.includes("-")) {
+        const [min, max] = saved.split("-");
+        setSalaryMin(min ?? "");
+        setSalaryMax(max ?? "");
+        setFieldValue("");
+      } else {
+        setFieldValue(saved);
+        setSalaryMin("");
+        setSalaryMax("");
+      }
       setStepIndex((prev) => prev - 1);
-      setFieldValue("");
-      setSalaryMin("");
-      setSalaryMax("");
       setError(null);
     }
-  }, [stepIndex]);
+  }, [stepIndex, completedSteps]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -516,20 +525,20 @@ export function WelcomePage() {
           <button
             onClick={handleBack}
             disabled={stepIndex === 0}
-            className="text-sm text-[hsl(var(--muted-foreground))] hover:underline disabled:opacity-50"
+            className="rounded-md border border-[hsl(var(--border))] px-5 py-2.5 text-sm font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--secondary))] disabled:opacity-40"
           >
             Back
           </button>
           <button
             onClick={() => void handleSkip()}
-            className="text-sm text-[hsl(var(--muted-foreground))] hover:underline"
+            className="rounded-md border border-[hsl(var(--border))] px-5 py-2.5 text-sm font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--secondary))]"
           >
             Skip
           </button>
           <button
             onClick={() => void handleNext()}
             disabled={saving}
-            className="rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] hover:opacity-90 disabled:opacity-50"
+            className="rounded-md bg-[hsl(var(--primary))] px-6 py-2.5 text-sm font-medium text-[hsl(var(--primary-foreground))] transition-colors hover:opacity-90 disabled:opacity-50"
           >
             {saving ? "Saving..." : "Next"}
           </button>

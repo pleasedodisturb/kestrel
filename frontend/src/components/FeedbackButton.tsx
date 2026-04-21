@@ -11,7 +11,7 @@ import { MessageCircle } from "lucide-react";
 import { useTour } from "@/components/TourProvider";
 
 /** GitHub repo for issue creation */
-const GITHUB_REPO = "pleasedodisturb/kestrel";
+const GITHUB_REPO = "pocketflow-ai/kestrel";
 
 /**
  * Build a pre-filled GitHub new issue URL with system info.
