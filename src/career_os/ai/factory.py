@@ -12,6 +12,7 @@ from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
 from career_os.ai.together_provider import TogetherProvider
+from career_os.ai.xai_provider import XAIProvider
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,10 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "together": lambda: TogetherProvider(
         api_key=_resolve_api_key("TOGETHER_API_KEY", "together_api_key"),
         model=os.getenv("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo"),
+    ),
+    "xai": lambda: XAIProvider(
+        api_key=_resolve_api_key("XAI_API_KEY", "xai_api_key"),
+        model=os.getenv("XAI_MODEL", "grok-3-mini"),
     ),
 }
 
