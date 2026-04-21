@@ -1,14 +1,18 @@
----
-layout: default
-title: AI Providers Explained
-permalink: /docs/ai-providers-explained
----
-
-# How Kestrel Uses AI (and Why You Don't Need a PhD to Set It Up)
+# AI Providers Guide
 
 You know how you use ChatGPT or Claude to ask questions? Kestrel does the same thing — but automatically, behind the scenes, to score jobs, prep you for interviews, and analyze your career gaps.
 
 The difference: ChatGPT is like a TV set — you watch what's on. Kestrel needs a **power source** — an AI service that it can call programmatically, hundreds of times, without you typing anything.
+
+---
+
+## The Short Version
+
+- **Demo Mode** — free, offline, works now. Explore everything with simulated data.
+- **OpenRouter** — one account, 300+ models, ~$3-10/month. Best starting point.
+- **Anthropic (Claude)** — best privacy (7-day retention) + prompt caching savings.
+- **Together AI** — budget-friendly bulk scoring, EU data center option.
+- **Ollama** — run AI on your own computer. Nothing leaves your machine. Free.
 
 ---
 
@@ -22,9 +26,27 @@ Think of AI providers like electricity providers:
 
 Kestrel works the same way. Pick a provider, connect it, and every feature — scoring, coaching, interview prep — works identically regardless of which AI is behind it.
 
+```mermaid
+graph LR
+    K[Kestrel] --> F{Provider Factory}
+    F --> D[Demo Mode<br>Free, offline]
+    F --> OR[OpenRouter<br>300+ models]
+    F --> A[Anthropic<br>Best privacy]
+    F --> T[Together AI<br>Budget bulk]
+    F --> O[Ollama<br>100% local]
+
+    style K fill:#1e40af,color:#fff
+    style F fill:#374151,color:#fff
+    style D fill:#059669,color:#fff
+    style OR fill:#7c3aed,color:#fff
+    style A fill:#dc2626,color:#fff
+    style T fill:#d97706,color:#fff
+    style O fill:#059669,color:#fff
+```
+
 ---
 
-## Your Options (from simplest to most private)
+## Your Options
 
 ### 1. Demo Mode — Free, Works Offline
 
@@ -52,7 +74,15 @@ Connect directly to Claude's API for the best privacy and lowest cost. Kestrel u
 
 *Best for:* Users who want the best privacy-cost balance.
 
-### 4. Ollama — Run AI on Your Own Computer
+### 4. Together AI — Budget-Friendly Bulk Scoring
+
+**Cost:** ~$1-5/month | **Privacy:** Good ([ZDR available](https://www.together.ai/blog/soc-2-compliance), SOC 2 Type 2 certified)
+
+Together AI runs open-source models (Llama 3.3, Mixtral) on their own GPUs — no middleman markup. If you're in Europe, their **Frankfurt data center** means lower latency too.
+
+*Best for:* Budget-conscious users, bulk scoring, EU users wanting data locality.
+
+### 5. Ollama — Run AI on Your Own Computer
 
 **Cost:** Free (after hardware) | **Privacy:** Perfect — nothing leaves your machine
 
@@ -64,35 +94,13 @@ Install [Ollama](https://ollama.com), download a model, and Kestrel talks to it 
 
 ---
 
-## What About My ChatGPT / Claude Subscription?
+## "I Already Pay for ChatGPT / Claude. Can I Use That?"
 
 Short answer: you can't use it directly.
 
 Your $20/month ChatGPT Plus or Claude Pro subscription gives you access through their chat interface — like a gym membership that only works at one location. The API is a separate service with separate billing, like getting a personal trainer.
 
 **The good news:** You don't need those subscriptions. OpenRouter gives you access to both Claude and GPT (plus dozens more) through a single account, often cheaper than a subscription.
-
----
-
-## Privacy: Where Does My Data Go?
-
-Kestrel sends job descriptions and your profile summary to whichever AI provider you choose. Here's what happens to that data:
-
-| Provider | Trains on your data? | How long kept? | Human review? |
-|----------|---------------------|----------------|---------------|
-| **Ollama (local)** | No — stays on your computer | Forever (your disk) | No |
-| **Anthropic (Claude)** | Never | 7 days | No |
-| **OpenRouter** | No (unless you enable logging) | Not stored | No |
-| **Gemini (paid)** | No | 55 days | No |
-| **Gemini (free)** | **Yes** | **Indefinite** | **Yes** |
-
-**The rule of thumb:** If you're on a paid tier, your data is not used for training. Free tiers are riskier — especially Google's, which explicitly uses free-tier data to improve their models.
-
-Kestrel shows a privacy indicator (green/yellow/red shield) next to each provider so you always know the trade-off.
-
-### PII Protection
-
-Kestrel can automatically strip personal information (phone numbers, email addresses, profile URLs) from prompts before sending them to any AI provider. The AI never sees your real contact details — it works with placeholders like `[EMAIL_1]` and `[PHONE_1]`, and Kestrel puts the real values back in the response.
 
 ---
 
@@ -114,15 +122,50 @@ With prompt caching enabled, discovery sweeps (scoring 50+ jobs at once) cost 88
 
 ---
 
+## Privacy: Where Does My Data Go?
+
+Kestrel sends job descriptions and your profile summary to whichever AI provider you choose. Here's what happens to that data:
+
+| Provider | Trains on your data? | How long kept? | Human review? |
+|----------|---------------------|----------------|---------------|
+| **Ollama (local)** | No — stays on your computer | Forever (your disk) | No |
+| **Anthropic (Claude)** | Never | 7 days | No |
+| **Together AI** | No (with ZDR) | Not stored | No |
+| **OpenRouter** | No (unless you enable logging) | Not stored | No |
+| **Gemini (paid)** | No | 55 days | No |
+| **Gemini (free)** | **Yes** | **Indefinite** | **Yes** |
+
+**The rule of thumb:** If you're on a paid tier, your data is not used for training. Free tiers are riskier — especially Google's, which explicitly uses free-tier data to improve their models.
+
+### PII Protection
+
+Kestrel can automatically strip personal information (phone numbers, email addresses, profile URLs) from prompts before sending them to any AI provider. The AI never sees your real contact details — it works with placeholders like `[EMAIL_1]` and `[PHONE_1]`, and Kestrel puts the real values back in the response.
+
+---
+
 ## EU Users: Special Considerations
 
 If you're in the EU, data privacy laws (GDPR) add extra considerations:
 
-- **Recommended:** Anthropic, Ollama (local), or Mistral (French company, EU data centers)
+- **Recommended:** Anthropic, Ollama (local), Together AI (Frankfurt DC), or Mistral (French company, EU data centers)
 - **Fine with caution:** OpenRouter, Gemini (paid tier only)
 - **Avoid:** Gemini free tier (banned in EU by Google's own terms), DeepSeek (data stored in China)
 
-Kestrel will eventually support [Mistral](https://mistral.ai) as a dedicated EU-sovereign provider — French-hosted, GDPR-native, with self-serve data processing agreements.
+---
+
+## FAQ
+
+**Can I use multiple providers at once?**
+Yes. Kestrel can route simple scoring to a cheap model (Together AI) and complex analysis to a premium model (Anthropic). You configure this per feature.
+
+**What happens if my provider goes down?**
+Kestrel has automatic provider fallback. If one provider's quota runs out or errors, it tries the next one. No failed scores, no wasted retries.
+
+**Can I switch providers later?**
+Absolutely. The light switch works the same no matter who provides the power. Switch any time in Settings.
+
+**Is Demo Mode actually useful?**
+Yes — it's fully functional for exploring the UI, understanding the pipeline, and deciding if Kestrel is right for you. The only limitation is that scores aren't personalized to your actual profile.
 
 ---
 
@@ -134,3 +177,11 @@ Kestrel will eventually support [Mistral](https://mistral.ai) as a dedicated EU-
 4. **Start discovering** — Kestrel handles the rest
 
 No PhD required.
+
+---
+
+## Further Reading
+
+- [AI Provider Setup Reference](../reference/AI-PROVIDERS.md) — full comparison tables, API key setup instructions, pricing details
+- [LLM Landscape Research](../research/llms-tokens-privacy.md) — deep dive into 2026 pricing, privacy audits, GDPR, EU sovereignty
+- [How Token Optimization Works](how-token-optimization-works.md) — how Kestrel keeps AI costs low with 8 stacked optimizations
