@@ -4,6 +4,8 @@
  */
 
 import { useEffect, useState } from "react";
+import { Users } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { useContacts, useCreateContact, useArchiveContact, useLogInteraction } from "@/hooks/useContacts";
 import type {
   Contact,
@@ -565,17 +567,14 @@ export default function ContactsPage() {
 
       {/* Grid */}
       {contacts.length === 0 ? (
-        <div className="py-16 text-center" data-testid="contacts-empty">
-          <p className="text-lg text-gray-500">No contacts yet</p>
-          <p className="mt-1 text-sm text-gray-400">
-            Start building your network by adding your first contact.
-          </p>
-          <button
-            onClick={() => setShowAddDialog(true)}
-            className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-          >
-            Add your first contact
-          </button>
+        <div data-testid="contacts-empty">
+          <EmptyState
+            icon={Users}
+            heading="No contacts yet"
+            description="Track the people in your job search -- recruiters, hiring managers, referrals. Contacts link to your applications."
+            ctaLabel="Add a contact"
+            onCtaClick={() => setShowAddDialog(true)}
+          />
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="contacts-grid">

@@ -208,6 +208,11 @@ def _create_discovered_job(db: Session, profile_id: int, merged: dict, key: tupl
             db.flush()
             dj.application_id = app.id
 
+            # D-13: Auto-clear demo data when first real job arrives
+            from career_os.services.applications import _auto_clear_demo_data
+
+            _auto_clear_demo_data(db, profile_id=profile_id)
+
         return dj, True
     except IntegrityError:
         logger.debug(

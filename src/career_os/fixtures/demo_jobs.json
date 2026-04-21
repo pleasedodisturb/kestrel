@@ -1,0 +1,112 @@
+[
+  {
+    "company": "Vantage Analytics GmbH",
+    "role": "Senior Data Engineer",
+    "job_family": "Tech",
+    "location": "Berlin, Remote",
+    "salary_range": "EUR 75,000-95,000",
+    "fit_score": 91.2,
+    "days_ago": 2,
+    "source_board": "LinkedIn",
+    "notes": "Series B data platform. Berlin, Remote. Via LinkedIn."
+  },
+  {
+    "company": "NovaPay Solutions",
+    "role": "Growth Marketing Lead",
+    "job_family": "Marketing",
+    "location": "Amsterdam, Hybrid",
+    "salary_range": "EUR 65,000-80,000",
+    "fit_score": 72.4,
+    "days_ago": 3,
+    "source_board": "Indeed",
+    "notes": "Series B fintech. Amsterdam, Hybrid. Via Indeed."
+  },
+  {
+    "company": "Meridian Legal Partners",
+    "role": "Corporate Counsel, Tech Transactions",
+    "job_family": "Legal",
+    "location": "Amsterdam, Hybrid",
+    "salary_range": "EUR 85,000-110,000",
+    "fit_score": 32.5,
+    "days_ago": 5,
+    "source_board": "Indeed",
+    "notes": "International law firm, GDPR specialization. Amsterdam, Hybrid. Via Indeed."
+  },
+  {
+    "company": "Apex Freight Logistics",
+    "role": "Operations Manager, EU Distribution",
+    "job_family": "Operations",
+    "location": "Rotterdam, On-site",
+    "salary_range": "EUR 60,000-75,000",
+    "fit_score": 55.8,
+    "days_ago": 1,
+    "source_board": "LinkedIn",
+    "notes": "Mid-market logistics. Rotterdam, On-site. Via LinkedIn."
+  },
+  {
+    "company": "Birchwood Capital",
+    "role": "Financial Analyst, Private Equity",
+    "job_family": "Finance",
+    "location": "London, Hybrid",
+    "salary_range": "GBP 55,000-70,000",
+    "fit_score": 63.1,
+    "days_ago": 4,
+    "source_board": "Glassdoor",
+    "notes": "PE fund, mid-market focus. London, Hybrid. Via Glassdoor."
+  },
+  {
+    "company": "Stellar Cloud Inc.",
+    "role": "Enterprise Account Executive",
+    "job_family": "Sales",
+    "location": "Dublin, Remote",
+    "salary_range": "EUR 70,000-90,000 + commission",
+    "fit_score": 48.7,
+    "days_ago": 6,
+    "source_board": "LinkedIn",
+    "notes": "B2B SaaS, EMEA territory. Dublin, Remote. Via LinkedIn."
+  },
+  {
+    "company": "TalentBridge Group",
+    "role": "Senior Technical Recruiter",
+    "job_family": "Recruiting/HR",
+    "location": "Munich, Hybrid",
+    "salary_range": "EUR 55,000-68,000",
+    "fit_score": 27.3,
+    "days_ago": 7,
+    "source_board": "Indeed",
+    "notes": "Recruitment agency, tech vertical. Munich, Hybrid. Via Indeed."
+  },
+  {
+    "company": "Quantum Robotics Ltd",
+    "role": "Senior Backend Engineer (Python)",
+    "job_family": "Tech",
+    "location": "London, Remote",
+    "salary_range": "GBP 80,000-100,000",
+    "fit_score": 88.6,
+    "days_ago": 1,
+    "source_board": "LinkedIn",
+    "notes": "Series C robotics startup. London, Remote. Via LinkedIn."
+  },
+  {
+    "company": "Greenfield Ventures",
+    "role": "Head of Content Marketing",
+    "job_family": "Marketing",
+    "location": "New York, Hybrid",
+    "salary_range": "USD 95,000-120,000",
+    "fit_score": 59.4,
+    "days_ago": 3,
+    "source_board": "Glassdoor",
+    "notes": "Climate-tech VC fund. New York, Hybrid. Via Glassdoor."
+  },
+  {
+    "company": "ClearPoint Advisory",
+    "role": "FP&A Manager",
+    "job_family": "Finance",
+    "location": "Frankfurt, On-site",
+    "salary_range": "EUR 70,000-85,000",
+    "fit_score": 41.2,
+    "days_ago": 5,
+    "source_board": "StepStone",
+    "notes": "Management consulting. Frankfurt, On-site. Via StepStone."
+  }
+]

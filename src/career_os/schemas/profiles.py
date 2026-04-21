@@ -1,20 +1,10 @@
 """Pydantic schemas for Profile API."""
 
 import json as json_mod
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
-
-def _ensure_utc(v: Any) -> datetime | None:
-    if v is None:
-        return None
-    if isinstance(v, datetime) and v.tzinfo is None:
-        return v.replace(tzinfo=UTC)
-    return v
 
 
 class ProfileCreate(BaseModel):
@@ -25,6 +15,8 @@ class ProfileCreate(BaseModel):
     location: str | None = Field(default=None, description="Location")
     job_family: str | None = Field(default=None, description="Target job family")
     dream_companies: list[str] | None = Field(default=None, description="List of dream companies")
+    salary_range: str | None = Field(default=None, description="Target salary range")
+    experience_level: str | None = Field(default=None, description="Experience level")
 
 
 class ProfileUpdate(BaseModel):
@@ -35,26 +27,25 @@ class ProfileUpdate(BaseModel):
     location: str | None = Field(default=None, description="Location")
     job_family: str | None = Field(default=None, description="Target job family")
     dream_companies: list[str] | None = Field(default=None, description="List of dream companies")
+    salary_range: str | None = Field(default=None, description="Target salary range")
+    experience_level: str | None = Field(default=None, description="Experience level")
 
 
 class ProfileResponse(BaseModel):
     """Response schema for a profile."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
     name: str
     email: str | None = None
     location: str | None = None
     job_family: str | None = None
     dream_companies: list[str] | None = None
+    salary_range: str | None = None
+    experience_level: str | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-    @field_validator("created_at", "updated_at", mode="before")
-    @classmethod
-    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
-        return _ensure_utc(v)
 
     @field_validator("dream_companies", mode="before")
     @classmethod
@@ -75,4 +66,4 @@ class ProfileListResponse(BaseModel):
     """Response schema for list of profiles."""
 
     profiles: list[ProfileResponse]
-    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    count: int

@@ -2,12 +2,11 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_PROFILE_ID, RESP_404
 from career_os.database import get_db
-from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.discovery import (
     DiscoveredJobResponse,
     DiscoverRequest,
@@ -108,7 +107,7 @@ async def create_search_profile_endpoint(
     "/api/search-profiles",
 )
 async def list_search_profiles_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     active_only: Annotated[bool, Query(description="Only active profiles")] = False,
 ) -> SearchProfileListResponse:
@@ -125,8 +124,8 @@ async def list_search_profiles_endpoint(
     responses=RESP_404,
 )
 async def get_search_profile_endpoint(
-    sp_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    sp_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SearchProfileResponse:
     """Get a single search profile."""
@@ -142,9 +141,9 @@ async def get_search_profile_endpoint(
     responses=RESP_404,
 )
 async def update_search_profile_endpoint(
-    sp_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    sp_id: int,
     payload: SearchProfileUpdate,
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SearchProfileResponse:
     """Update a search profile."""
@@ -166,8 +165,8 @@ async def update_search_profile_endpoint(
     responses=RESP_404,
 )
 async def delete_search_profile_endpoint(
-    sp_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    sp_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a search profile."""
@@ -186,7 +185,7 @@ async def delete_search_profile_endpoint(
     "/api/discovery-runs",
 )
 async def list_discovery_runs_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     limit: Annotated[int, Query(ge=1, le=100, description="Max results")] = 20,
 ) -> list[DiscoveryRunResponse]:
@@ -197,7 +196,7 @@ async def list_discovery_runs_endpoint(
 
 @router.get("/api/discovery-runs/latest")
 async def get_latest_discovery_run_endpoint(
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> DiscoveryRunResponse | None:
     """Get the most recent completed discovery run for a profile."""

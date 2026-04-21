@@ -1,6 +1,8 @@
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Kanban, BarChart3, Bell, Settings, Sparkles, BookOpen, Compass, Mic, Activity, Users } from "lucide-react";
+import { Kanban, BarChart3, Bell, Settings, Sparkles, BookOpen, Compass, Mic, Activity, Users, HelpCircle } from "lucide-react";
+import { FeedbackButton } from "@/components/FeedbackButton";
+import { TourProvider } from "@/components/TourProvider";
 
 const navItems = [
   { to: "/", label: "Pipeline", icon: Kanban },
@@ -13,6 +15,7 @@ const navItems = [
   { to: "/voice", label: "Voice", icon: Mic },
   { to: "/ai-health", label: "AI Health", icon: Activity },
   { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/help", label: "Help", icon: HelpCircle },
 ];
 
 export function Layout() {
@@ -54,9 +57,12 @@ export function Layout() {
           </div>
         </div>
       </nav>
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <Outlet />
-      </main>
+      <TourProvider>
+        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <Outlet />
+        </main>
+        <FeedbackButton />
+      </TourProvider>
     </div>
   );
 }

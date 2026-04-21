@@ -3,14 +3,13 @@
 import json
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import PROFILE_NOT_FOUND, RESP_404
 from career_os.database import get_db
 from career_os.models.models import Profile
-from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.profiles import (
     ProfileCreate,
     ProfileListResponse,
@@ -33,9 +32,7 @@ async def list_profiles(db: Annotated[Session, Depends(get_db)]) -> ProfileListR
 
 
 @router.get("/{profile_id}", responses=RESP_404)
-async def get_profile(
-    profile_id: Annotated[int, Path(ge=1, le=INT32_MAX)], db: Annotated[Session, Depends(get_db)]
-) -> ProfileResponse:
+async def get_profile(profile_id: int, db: Annotated[Session, Depends(get_db)]) -> ProfileResponse:
     """Get a specific profile by ID."""
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if profile is None:
@@ -67,7 +64,7 @@ async def create_profile(
 
 @router.patch("/{profile_id}", responses=RESP_404)
 async def update_profile(
-    profile_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: int,
     payload: ProfileUpdate,
     db: Annotated[Session, Depends(get_db)],
 ) -> ProfileResponse:
@@ -110,7 +107,7 @@ async def update_profile(
     responses={**RESP_404, 409: {"description": "Conflict"}},
 )
 async def delete_profile(
-    profile_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: int,
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a profile.

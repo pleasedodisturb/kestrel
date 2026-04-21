@@ -12,19 +12,14 @@ import logging
 import httpx
 
 from career_os.ai.base import AIProvider, ProviderQuotaError
-from career_os.ai.observability import observe, update_current_generation
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
-    _scoring_user_prompt,
     _system_prompt_for_feature,
     _try_parse_structured,
 )
 from career_os.schemas.ai import AIFeature, AIResponse
 
 logger = logging.getLogger(__name__)
-
-# Compact JSON separators — eliminates whitespace tokens (~30% reduction on profile data)
-_COMPACT = (",", ":")
 
 TOGETHER_API_URL = "https://api.together.xyz/v1/chat/completions"
 DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
@@ -54,7 +49,6 @@ class TogetherProvider(AIProvider):
         """Together.ai has ZDR/training opt-out enabled — green tier."""
         return "green"
 
-    @observe(name="together-complete", as_type="generation")
     async def complete(
         self,
         prompt: str,
@@ -65,10 +59,6 @@ class TogetherProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         """Send a completion request to the Together.ai API."""
-        update_current_generation(
-            model=self._model,
-            metadata={"feature": feature.value},
-        )
         expects_structured = feature in _SCHEMA_MAP
 
         for attempt in range(1, max_retries + 2):
@@ -113,13 +103,6 @@ class TogetherProvider(AIProvider):
             structured = _try_parse_structured(content, feature)
 
             if structured is not None or not expects_structured:
-                usage_data = data.get("usage", {})
-                update_current_generation(
-                    usage_details={
-                        "input": usage_data.get("prompt_tokens", 0),
-                        "output": usage_data.get("completion_tokens", 0),
-                    },
-                )
                 return AIResponse(
                     content=content,
                     provider="together",
@@ -152,8 +135,26 @@ class TogetherProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile via the Together.ai API."""
-        prompt = _scoring_user_prompt(
-            job_description, json.dumps(profile_data, separators=_COMPACT)
+        prompt = (
+            f"Score this job against the candidate profile. "
+            f"Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
+            f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
+            f"readiness_score (0-100), career_alignment (0-10), "
+            f"score_breakdown (array of >=3 objects, each with: factor (string), "
+            f"contribution (positive or negative float), description (string)), "
+            f"dimensional_scores (object with 6 floats 0-10: technical_fit, "
+            f"seniority_alignment, compensation_fit, location_fit, career_trajectory, "
+            f"company_fit), "
+            f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
+            f"category (one of technical/soft_skill/tool/certification/domain), "
+            f"matched (boolean -- true if the profile demonstrates this keyword)), "
+            f"desire_score (0-10, how much the candidate would WANT this job -- "
+            f"considering company reputation, growth potential, culture signals, "
+            f"role excitement, compensation attractiveness, work-life balance), "
+            f"desire_reasoning (string explaining what makes this job desirable "
+            f"or undesirable from the candidate's perspective).\n\n"
+            f"Job Description:\n{job_description}\n\n"
+            f"Profile:\n{json.dumps(profile_data, indent=2)}"
         )
         return await self.complete(prompt, feature=AIFeature.score)
 

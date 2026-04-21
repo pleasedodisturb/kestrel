@@ -8,10 +8,6 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
     globals: true,
-    reporters: ["default", ["junit", {
-      outputFile: "test-results/frontend-junit.xml",
-      suiteName: "Kestrel Frontend",
-    }]],
     coverage: {
       provider: "v8",
       reporter: ["lcov", "text"],
