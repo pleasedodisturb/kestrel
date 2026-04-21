@@ -9,10 +9,14 @@ The difference: ChatGPT is like a TV set — you watch what's on. Kestrel needs 
 ## The Short Version
 
 - **Demo Mode** — free, offline, works now. Explore everything with simulated data.
-- **OpenRouter** — one account, 300+ models, ~$3-10/month. Best starting point.
+- **OpenRouter** — one account, 400+ models, ~$3-10/month. Best starting point.
 - **Anthropic (Claude)** — best privacy (7-day retention) + prompt caching savings.
+- **OpenAI (GPT)** — GPT-4o-mini at $0.15/M input. $5 signup credits.
 - **Together AI** — budget-friendly bulk scoring, EU data center option.
+- **Groq** — blazing fast inference, green privacy tier. Free tier available.
 - **Ollama** — run AI on your own computer. Nothing leaves your machine. Free.
+- **xAI (Grok)** — available but **privacy warning**: irrevocable data sharing.
+- **Gemini** — Google's models. Paid tier only recommended (free tier trains on data).
 
 ---
 
@@ -30,10 +34,14 @@ Kestrel works the same way. Pick a provider, connect it, and every feature — s
 flowchart LR
     K[Kestrel] --> F{Provider Factory}
     F --> D[Demo Mode - Free, offline]
-    F --> OR[OpenRouter - 300+ models]
+    F --> OR[OpenRouter - 400+ models]
     F --> A[Anthropic - Best privacy]
+    F --> OA[OpenAI - GPT-4o-mini]
     F --> T[Together AI - Budget bulk]
+    F --> G[Groq - Fast inference]
     F --> O[Ollama - 100% local]
+    F --> X[xAI - Privacy warning]
+    F --> GM[Gemini - Paid tier only]
 ```
 
 ---
@@ -84,6 +92,56 @@ Install [Ollama](https://ollama.com), download a model, and Kestrel talks to it 
 
 *Best for:* Privacy maximalists, offline users, developers.
 
+### 6. OpenAI (GPT) — Direct Access
+
+**Cost:** ~$1-5/month | **Privacy:** Good (API data not used for training since March 2023)
+
+Connect directly to OpenAI's API. GPT-4o-mini at $0.15/M input tokens is near-free for scoring. New accounts get $5 in credits.
+
+*Best for:* Users already in the OpenAI ecosystem.
+
+### 7. Groq — Blazing Fast Inference
+
+**Cost:** Free tier available | **Privacy:** Excellent (does not train on API data)
+
+Groq runs open-source models on custom LPU hardware — inference is 10-50x faster than GPU-based providers. Great for real-time scoring when speed matters.
+
+*Best for:* Speed-sensitive workflows, free tier users.
+
+### 8. xAI (Grok) — Use With Caution
+
+**Cost:** Varies | **Privacy:** RED — Irrevocable data sharing program
+
+xAI/Grok is available but comes with a strong privacy warning. Their data sharing program is irrevocable — once opted in, there's no way to remove your data. Multiple active GDPR investigations are ongoing.
+
+Kestrel shows a warning every time this provider is initialized.
+
+*Best for:* Only if you specifically want Grok and accept the privacy trade-off.
+
+### 9. Gemini — Google's Models (Paid Tier Only)
+
+**Cost:** Free tier available but NOT recommended | **Privacy:** Yellow (paid: good, free: trains on data)
+
+Google Gemini offers competitive models, but the free tier explicitly uses your data for training and is banned in the EU by Google's own terms. Paid tier does not train on data.
+
+*Best for:* Users who want Google's models on the paid tier. Avoid the free tier.
+
+---
+
+## Cost Presets — One Setting, Everything Configured
+
+Instead of tweaking individual settings, pick a preset and Kestrel configures everything:
+
+| Preset | Provider | Monthly Cost | What it does |
+|--------|----------|-------------|--------------|
+| **Free** | Groq / Cerebras / SambaNova | $0 | Rate-limited, open-source models |
+| **Budget** | GPT-4o-mini via OpenRouter | ~$0.81 | Reliable JSON, good quality (DEFAULT) |
+| **Quality** | Sonnet scoring + Opus generation | $5-25 | Best reasoning for research/prep |
+| **Private** | Together.ai (ZDR) or Ollama | $0 + hardware | Zero data retention |
+| **Custom** | You configure everything | Varies | Full control over all knobs |
+
+Change presets in Settings or via `PUT /api/presets/active`. The Budget preset is the default — it covers 18,000 scores/month for under a dollar.
+
 ---
 
 ## "I Already Pay for ChatGPT / Claude. Can I Use That?"
@@ -118,14 +176,17 @@ With prompt caching enabled, discovery sweeps (scoring 50+ jobs at once) cost 88
 
 Kestrel sends job descriptions and your profile summary to whichever AI provider you choose. Here's what happens to that data:
 
-| Provider | Trains on your data? | How long kept? | Human review? |
-|----------|---------------------|----------------|---------------|
-| **Ollama (local)** | No — stays on your computer | Forever (your disk) | No |
-| **Anthropic (Claude)** | Never | 7 days | No |
-| **Together AI** | No (with ZDR) | Not stored | No |
-| **OpenRouter** | No (unless you enable logging) | Not stored | No |
-| **Gemini (paid)** | No | 55 days | No |
-| **Gemini (free)** | **Yes** | **Indefinite** | **Yes** |
+| Provider | Trains on your data? | How long kept? | Human review? | Tier |
+|----------|---------------------|----------------|---------------|------|
+| **Ollama (local)** | No — stays on your computer | Forever (your disk) | No | Green |
+| **Anthropic (Claude)** | Never | 7 days | No | Green |
+| **Together AI** | No (ZDR enabled) | Not stored | No | Green |
+| **Groq** | No | Not stored | No | Green |
+| **OpenAI (API)** | No (since March 2023) | 30 days | No | Yellow |
+| **OpenRouter** | No (unless you enable logging) | Not stored | No | Yellow |
+| **Gemini (paid)** | No | 55 days | No | Yellow |
+| **Gemini (free)** | **Yes** | **Indefinite** | **Yes** | Yellow |
+| **xAI (Grok)** | **Yes — irrevocable** | **Indefinite** | Unknown | **Red** |
 
 **The rule of thumb:** If you're on a paid tier, your data is not used for training. Free tiers are riskier — especially Google's, which explicitly uses free-tier data to improve their models.
 
@@ -174,6 +235,9 @@ No PhD required.
 
 ## Further Reading
 
+- [Cost Optimization Guide](cost-optimization.md) — tiers, privacy, monthly costs, optimization tips
+- [Automation Paths](automation-paths.md) — cron, GitHub Actions, MCP, n8n, scheduled agents
 - [AI Provider Setup Reference](../reference/AI-PROVIDERS.md) — full comparison tables, API key setup instructions, pricing details
-- [LLM Landscape Research](../research/llms-tokens-privacy.md) — deep dive into 2026 pricing, privacy audits, GDPR, EU sovereignty
+- [Provider Privacy Audit](../research/provider-privacy-audit.md) — detailed privacy findings per provider with source links
+- [OpenRouter Rate Limits](../research/openrouter-rate-limits.md) — rate limits at $0/$10/$50 balance tiers
 - [How Token Optimization Works](how-token-optimization-works.md) — how Kestrel keeps AI costs low with 8 stacked optimizations
