@@ -25,16 +25,9 @@ import type {
   IntegrationConfigUpdate,
 } from "@/api/integrations";
 import { IntegrationPanel } from "@/components/IntegrationPanel";
+import { OpenRouterConnect } from "@/components/OpenRouterConnect";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  User,
-  Plus,
-  Pencil,
-  Trash2,
-  Save,
-  X,
-  Plug,
-} from "lucide-react";
+import { User, Plus, Pencil, Trash2, Save, X, Plug } from "lucide-react";
 
 type SettingsTab = "profiles" | "integrations";
 
@@ -87,11 +80,7 @@ export function SettingsPage() {
 function IntegrationsSection() {
   const queryClient = useQueryClient();
 
-  const {
-    data,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["integrations"],
     queryFn: fetchIntegrations,
   });
@@ -124,9 +113,7 @@ function IntegrationsSection() {
   );
 
   const handleTest = useCallback(
-    async (
-      name: string,
-    ): Promise<{ success: boolean; message: string }> => {
+    async (name: string): Promise<{ success: boolean; message: string }> => {
       setTestingName(name);
       try {
         const result = await testIntegration(name);
@@ -157,10 +144,7 @@ function IntegrationsSection() {
 
   if (error) {
     return (
-      <div
-        data-testid="integrations-error"
-        className="py-20 text-center"
-      >
+      <div data-testid="integrations-error" className="py-20 text-center">
         <p className="text-lg font-medium text-red-700">
           {error instanceof Error ? error.message : String(error)}
         </p>
@@ -176,6 +160,10 @@ function IntegrationsSection() {
         Configure external integrations. Enable an integration, enter your
         credentials, and test the connection.
       </p>
+
+      {/* OpenRouter one-click setup — above manual credential panels */}
+      <OpenRouterConnect />
+
       {integrations.map((integration: IntegrationConfigResponse) => (
         <IntegrationPanel
           key={integration.name}
@@ -278,10 +266,7 @@ function ProfilesSection() {
 
   if (error) {
     return (
-      <div
-        data-testid="settings-error"
-        className="py-20 text-center"
-      >
+      <div data-testid="settings-error" className="py-20 text-center">
         <p className="text-lg font-medium text-red-700">
           {error instanceof Error ? error.message : String(error)}
         </p>
@@ -318,7 +303,10 @@ function ProfilesSection() {
           className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
         >
           {(() => {
-            const err = createMutation.error ?? updateMutation.error ?? deleteMutation.error;
+            const err =
+              createMutation.error ??
+              updateMutation.error ??
+              deleteMutation.error;
             return err instanceof Error ? err.message : "An error occurred";
           })()}
         </div>
@@ -464,7 +452,10 @@ function ProfileForm({
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor={`${testIdPrefix}-name-input`} className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor={`${testIdPrefix}-name-input`}
+            className="block text-sm font-medium text-gray-700"
+          >
             Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -478,7 +469,10 @@ function ProfileForm({
           />
         </div>
         <div>
-          <label htmlFor={`${testIdPrefix}-email-input`} className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor={`${testIdPrefix}-email-input`}
+            className="block text-sm font-medium text-gray-700"
+          >
             Email
           </label>
           <input
@@ -492,7 +486,10 @@ function ProfileForm({
           />
         </div>
         <div>
-          <label htmlFor={`${testIdPrefix}-location-input`} className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor={`${testIdPrefix}-location-input`}
+            className="block text-sm font-medium text-gray-700"
+          >
             Location
           </label>
           <input
@@ -506,7 +503,10 @@ function ProfileForm({
           />
         </div>
         <div>
-          <label htmlFor={`${testIdPrefix}-job-family-input`} className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor={`${testIdPrefix}-job-family-input`}
+            className="block text-sm font-medium text-gray-700"
+          >
             Job Family
           </label>
           <input
