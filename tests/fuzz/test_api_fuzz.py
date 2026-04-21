@@ -15,8 +15,12 @@ from __future__ import annotations
 import os
 
 import pytest
-import schemathesis
-from hypothesis import HealthCheck, settings
+
+schemathesis = pytest.importorskip(
+    "schemathesis", reason="schemathesis not installed — fuzz tests skipped"
+)
+pytest.importorskip("hypothesis", reason="hypothesis not installed — fuzz tests skipped")
+from hypothesis import HealthCheck, settings  # noqa: E402
 
 # Ensure auth is off at module level so the schema object (created at
 # import time) already sees AUTH_ENABLED=false.
