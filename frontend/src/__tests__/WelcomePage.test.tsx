@@ -8,22 +8,19 @@
  * - WEB-08: Skipped steps show Settings path
  * - WEB-09: AI provider nudge card on summary
  * - PROF-04: Same 6 questions as CLI wizard
+ *
+ * Mocking strategy: API-level mocks on @/api/* (D-04).
+ * No useNavigate mock — navigation tested via Routes rendering.
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { WelcomePage } from "@/pages/WelcomePage";
+import { renderWithProviders } from "@/test-utils";
 import type { OnboardingStatus } from "@/api/onboarding";
 
-// ---- mocks ----
-
-const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return { ...actual, useNavigate: () => mockNavigate };
-});
+// ---- API-level mocks (D-04) ----
 
 const mockFetchOnboardingStatus = vi.fn<() => Promise<OnboardingStatus>>();
 const mockPatchOnboardingStep = vi.fn<() => Promise<OnboardingStatus>>();
@@ -79,27 +76,6 @@ function makeStatus(
   };
 }
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
-    },
-  });
-}
-
-function renderWelcomePage(statusOverrides: Partial<OnboardingStatus> = {}) {
-  const qc = createQueryClient();
-  mockFetchOnboardingStatus.mockResolvedValue(makeStatus(statusOverrides));
-
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/welcome"]}>
-        <WelcomePage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-}
-
 function makeProfile(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
@@ -113,6 +89,17 @@ function makeProfile(overrides: Record<string, unknown> = {}) {
     updated_at: "2026-04-21T00:00:00Z",
     ...overrides,
   };
+}
+
+function renderWelcomePage(statusOverrides: Partial<OnboardingStatus> = {}) {
+  mockFetchOnboardingStatus.mockResolvedValue(makeStatus(statusOverrides));
+  return renderWithProviders(
+    <Routes>
+      <Route path="/welcome" element={<WelcomePage />} />
+      <Route path="/" element={<div data-testid="pipeline-redirect">Pipeline</div>} />
+    </Routes>,
+    { route: "/welcome" },
+  );
 }
 
 beforeEach(() => {
@@ -301,8 +288,9 @@ describe("WelcomePage", () => {
       }
 
       await waitFor(() => {
-        const settingsLinks = screen.getAllByText(/update anytime in Settings/);
-        expect(settingsLinks.length).toBeGreaterThan(0);
+        expect(
+          screen.getByText(/update anything later in Settings/),
+        ).toBeInTheDocument();
       });
     });
 
@@ -323,7 +311,12 @@ describe("WelcomePage", () => {
       });
 
       fireEvent.click(screen.getByTestId("see-results-cta"));
-      expect(mockNavigate).toHaveBeenCalledWith("/");
+
+      // Navigation verified via Routes — clicking CTA calls navigate("/")
+      // which renders the "/" route showing the pipeline-redirect element
+      expect(
+        await screen.findByTestId("pipeline-redirect"),
+      ).toBeInTheDocument();
     });
   });
 
