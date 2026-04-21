@@ -136,6 +136,80 @@ Common causes: a timestamp in the prompt, randomized field ordering, or a profil
 
 ---
 
+## Show Me the Numbers
+
+Theory is nice. Here's what actually happens when Kestrel scores a real job posting against a real profile.
+
+### The test case
+
+- **Profile:** Technical Product Manager, 8 years experience, 16 skills, certifications, languages — a typical mid-career professional. 775 characters as pretty JSON, 598 characters compact.
+- **Job:** "Senior TPM - AI Platform" posting with requirements, nice-to-haves, compensation — typical LinkedIn-length. 857 characters.
+
+### What one scoring call looks like
+
+Every scoring call has three parts — think of them like a sandwich:
+
+```
+┌─────────────────────────────────────────┐
+│  System prompt (the instructions)       │  ← This is the bread.
+│  "Career scoring AI. Valid JSON..."     │     Same every time.
+├─────────────────────────────────────────┤
+│  Your profile (who you are)             │  ← This is the filling.
+│  Skills, experience, preferences...     │     Same for all jobs in a batch.
+├─────────────────────────────────────────┤
+│  Job description (what to score)        │  ← This is the unique part.
+│  The actual posting text.               │     Different every call.
+└─────────────────────────────────────────┘
+```
+
+The insight: **only the bottom layer changes.** The bread and filling are identical across all 50 jobs in a batch. So why pay full price for them every time?
+
+### Single call: before vs after
+
+| Provider | Old | New | Saved |
+|----------|-----|-----|-------|
+| OpenRouter / Together / Ollama | ~877 tokens | ~775 tokens | **12%** |
+| Anthropic (first call) | ~877 tokens | ~772 tokens | **12%** |
+| Anthropic (repeat, cached) | ~877 tokens | ~512 tokens | **42%** |
+
+A single call saves 12%. Not life-changing. But watch what happens at scale.
+
+### Batch scoring: where the magic kicks in
+
+When scoring 50 jobs for the same user, the bread and filling get cached after the first call. The remaining 49 calls only pay 10% for those parts:
+
+| Component | Old (50 calls) | New Anthropic (50 calls) | Saved |
+|-----------|----------------|--------------------------|-------|
+| System prompt | Sent 50× at full price | 1× full + 49× at 90% off | **92%** |
+| Profile data | Sent 50× with whitespace | 1× compact + 49× cached | **92%** |
+| Job descriptions | 50× (varies each time) | 50× (can't cache these) | 0% |
+
+The job description is the stubborn part — it's unique per call, so no amount of caching helps. But everything else gets compressed and cached into near-nothing.
+
+### Monthly: the number that matters
+
+For a typical user scoring ~200 jobs/day (daily discovery scan + manual scoring):
+
+| | Monthly cost (Sonnet, input tokens) |
+|---|---|
+| **Before optimization** | ~$15.79 |
+| **After optimization** | ~$9.45 |
+| **Savings** | **$6.35/month (40%)** |
+
+And that's just input tokens on one model. Add the 70% output token reduction from token-efficient tool use, the 50% batch API discount for overnight scans, and the fact that response caching eliminates 100% of duplicate requests — **real-world all-in cost lands around $1-5/month.**
+
+### Why it's not "90% savings" on everything
+
+You might notice the 90% number from the strategies above, but only 40% overall savings. Here's why:
+
+The cacheable parts (system prompt + profile) make up about 40% of a typical scoring call. The job description — which is unique and can't be cached — makes up the other 60%. You can't optimize what's already unique.
+
+Think of it like commuting. If your drive is 40% highway and 60% city streets, even a 90% improvement on highway speed only cuts your total commute time by ~36%. The city streets are the bottleneck.
+
+The good news: as profiles get richer (more skills, more preferences, more context), the cacheable portion grows — and the savings compound further.
+
+---
+
 ## The Philosophy
 
 Token optimization isn't about being cheap — it's about making AI-powered tools sustainable for self-hosting. A tool that costs $60/month in API fees won't get used daily. One that costs $2/month becomes invisible infrastructure.
