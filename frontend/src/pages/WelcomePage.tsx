@@ -383,6 +383,22 @@ export function WelcomePage() {
           >
             See your scored results
           </button>
+
+          {/* End-of-onboarding feedback prompt (D-11) */}
+          <p
+            className="mt-4 text-center text-sm text-[hsl(var(--muted-foreground))]"
+            data-testid="onboarding-feedback-prompt"
+          >
+            How was setup?{" "}
+            <a
+              href="https://github.com/pocketflow-ai/kestrel/issues/new?title=%5BOnboarding+Feedback%5D&labels=feedback&body=%23%23+Onboarding+Feedback%0A%0AHow+was+the+setup+experience%3F+What+could+be+better%3F"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-[hsl(var(--foreground))]"
+            >
+              Share your feedback
+            </a>
+          </p>
         </div>
       </div>
     );

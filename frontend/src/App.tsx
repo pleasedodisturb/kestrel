@@ -14,6 +14,7 @@ import { Discovery } from "@/pages/Discovery";
 import { VoiceDiscussion } from "@/pages/VoiceDiscussion";
 import { AIHealthDashboard } from "@/pages/AIHealthDashboard";
 import ContactsPage from "@/pages/ContactsPage";
+import { HelpPage } from "@/pages/HelpPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,7 @@ function App() {
               <Route path="/voice" element={<VoiceDiscussion />} />
               <Route path="/ai-health" element={<AIHealthDashboard />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/help" element={<HelpPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
