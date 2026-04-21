@@ -13,6 +13,7 @@ from career_os import __version__
 from career_os.api.ai import router as ai_router
 from career_os.api.analytics import router as analytics_router
 from career_os.api.applications import router as applications_router
+from career_os.api.batch import router as batch_router
 from career_os.api.calendar import router as calendar_router
 from career_os.api.coaching import router as coaching_router
 from career_os.api.contacts import router as contacts_router
@@ -193,6 +194,7 @@ app.add_middleware(
 # Include routers
 app.include_router(ai_router)
 app.include_router(analytics_router)
+app.include_router(batch_router)
 app.include_router(calendar_router)
 app.include_router(applications_router)
 app.include_router(coaching_router)
