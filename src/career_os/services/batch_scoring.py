@@ -22,6 +22,26 @@ from career_os.schemas.ai import AIFeature, AIResponse, ScoreResult
 logger = logging.getLogger(__name__)
 
 DEFAULT_BATCH_SIZE = 10
+MAX_DESCRIPTION_LENGTH = 8000
+
+# Patterns that could be used for prompt injection in job descriptions
+_INJECTION_PATTERNS = re.compile(
+    r"(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|above|prior)\s+instructions",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_description(text: str) -> str:
+    """Sanitize a job description before interpolating into an LLM prompt.
+
+    Truncates to MAX_DESCRIPTION_LENGTH and strips known injection patterns.
+    Job descriptions come from scraped external boards (attacker-controlled).
+    """
+    if not text:
+        return "N/A"
+    text = text[:MAX_DESCRIPTION_LENGTH]
+    text = _INJECTION_PATTERNS.sub("[filtered]", text)
+    return text
 
 
 def get_batch_size() -> int:
@@ -73,7 +93,8 @@ def build_batch_prompt(
             block_parts.append(f"Company: {job['company']}")
         if job.get("url"):
             block_parts.append(f"URL: {job['url']}")
-        block_parts.append(f"Description:\n{job.get('description', 'N/A')}")
+        desc = _sanitize_description(job.get("description", "N/A"))
+        block_parts.append(f"Description:\n{desc}")
         job_blocks.append("\n".join(block_parts))
 
     jobs_section = "\n\n".join(job_blocks)
