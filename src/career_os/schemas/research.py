@@ -4,7 +4,7 @@ Covers:
 - VAL-RESEARCH-001: One-click company deep-dive with all report sections
 - VAL-RESEARCH-002: Tech stack categorized by frontend/backend/infra/analytics
 - VAL-RESEARCH-003: Funding data (stage, amount, investors)
-- VAL-RESEARCH-004: Glassdoor rating + culture signals (≥3 keywords)
+- VAL-RESEARCH-004: Glassdoor rating + culture signals (>=3 keywords)
 - VAL-RESEARCH-005: Values alignment score (1-10 with rationale)
 - VAL-RESEARCH-006: ATS platform detection
 - VAL-RESEARCH-007: Hiring patterns (velocity, departments)
@@ -15,6 +15,8 @@ Covers:
 
 from pydantic import BaseModel, Field
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 # ---------------------------------------------------------------------------
 # Request schemas
 # ---------------------------------------------------------------------------
@@ -24,7 +26,9 @@ class CompanyResearchRequest(BaseModel):
     """Request body for POST /api/research/company."""
 
     company_name: str = Field(..., min_length=1, description="Company name to research")
-    profile_id: int = Field(..., description="Profile ID for values alignment scoring")
+    profile_id: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Profile ID for values alignment scoring"
+    )
     company_url: str | None = Field(
         default=None, description="Optional company website URL for enrichment"
     )
@@ -68,7 +72,7 @@ class GlassdoorReport(BaseModel):
     )
     culture_keywords: list[str] = Field(
         default_factory=list,
-        description="Culture signal keywords from review sentiment (≥3)",
+        description="Culture signal keywords from review sentiment (>=3)",
     )
     work_life_balance: float | None = Field(
         default=None, ge=0, le=5, description="Work-life balance rating (0-5)"
@@ -89,7 +93,10 @@ class HiringPatternsReport(BaseModel):
     """Hiring patterns (VAL-RESEARCH-007)."""
 
     active_postings: int | None = Field(
-        default=None, description="Number of currently active job postings"
+        default=None,
+        ge=INT64_MIN,
+        le=INT64_MAX,
+        description="Number of currently active job postings",
     )
     posting_velocity: str | None = Field(
         default=None, description="Posting rate (e.g., '12/month')"

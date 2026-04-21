@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 
 def _ensure_utc(v: Any) -> datetime | None:
     """Ensure a datetime value has UTC timezone info."""
@@ -23,8 +25,12 @@ def _ensure_utc(v: Any) -> datetime | None:
 class FollowUpCreate(BaseModel):
     """Request body for POST /api/follow-ups."""
 
-    application_id: int = Field(..., description="Application this follow-up belongs to")
-    profile_id: int = Field(..., description="Profile this follow-up belongs to")
+    application_id: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Application this follow-up belongs to"
+    )
+    profile_id: int = Field(
+        ..., ge=1, le=INT64_MAX, description="Profile this follow-up belongs to"
+    )
     due_date: datetime = Field(..., description="When the follow-up is due")
     follow_up_type: str = Field(
         ..., min_length=1, description="Type: email, phone, linkedin, other"
@@ -46,9 +52,9 @@ class FollowUpComplete(BaseModel):
 class FollowUpResponse(BaseModel):
     """Response schema for a single follow-up."""
 
-    id: int
-    application_id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    application_id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     due_date: datetime
     follow_up_type: str
     notes: str | None = None
@@ -70,10 +76,10 @@ class FollowUpListResponse(BaseModel):
     """Response schema for list of follow-ups."""
 
     follow_ups: list[FollowUpResponse]
-    total: int
+    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
 
 
 class OverdueCountResponse(BaseModel):
     """Response schema for overdue follow-ups count."""
 
-    count: int
+    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
