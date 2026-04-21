@@ -8,6 +8,7 @@ from collections.abc import Callable
 
 from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider
+from career_os.ai.gemini_provider import GeminiProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
@@ -86,6 +87,10 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "together": lambda: TogetherProvider(
         api_key=_resolve_api_key("TOGETHER_API_KEY", "together_api_key"),
         model=os.getenv("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo"),
+    ),
+    "gemini": lambda: GeminiProvider(
+        api_key=_resolve_api_key("GEMINI_API_KEY", "gemini_api_key"),
+        model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
     ),
 }
 
