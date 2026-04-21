@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.10.0](https://github.com/pleasedodisturb/kestrel/compare/v0.9.0...v0.10.0) (2026-04-21)
+
+
+### Features
+
+* **G-430:** input validation hardening — INT64 bounds on all API integers ([#251](https://github.com/pleasedodisturb/kestrel/issues/251)) ([35a1907](https://github.com/pleasedodisturb/kestrel/commit/35a190720601b70924cce5ab8711448222fdcf4c))
+* **G-436:** recover Phase 2 agent-aware enforcement from orphaned G-394 ([#255](https://github.com/pleasedodisturb/kestrel/issues/255)) ([de25bb1](https://github.com/pleasedodisturb/kestrel/commit/de25bb1ba3f4bce21981fbc904cf37874c4e7178))
+* **G-436:** recover Phase 3 advanced testing from orphaned G-394 ([#256](https://github.com/pleasedodisturb/kestrel/issues/256)) ([224957b](https://github.com/pleasedodisturb/kestrel/commit/224957b872df80f522373aa7d0cc3b567a892d28))
+* **G-437:** spike — regex pre-filter vs AI scoring accuracy on 10K jobs ([#254](https://github.com/pleasedodisturb/kestrel/issues/254)) ([ff837b8](https://github.com/pleasedodisturb/kestrel/commit/ff837b8242efc2f1f7440d2b0bfb44c02e861756))
+
+
+### Bug Fixes
+
+* **03.3-01:** add _ensure_utc validators to 7 schema files for RFC 3339 compliance ([#258](https://github.com/pleasedodisturb/kestrel/issues/258)) ([a5c0607](https://github.com/pleasedodisturb/kestrel/commit/a5c0607584705ed508062025adf084fe178d2ad0))
+* **G-457:** recalibrate golden set fixtures after scoring evolution ([#260](https://github.com/pleasedodisturb/kestrel/issues/260)) ([0b5cdd2](https://github.com/pleasedodisturb/kestrel/commit/0b5cdd2ce57cf883c33b68cd836dba53ecbe6794))
+
+
+### Documentation
+
+* **G-305:** testing strategy — what shipped, what was trimmed, and why ([#259](https://github.com/pleasedodisturb/kestrel/issues/259)) ([c463d54](https://github.com/pleasedodisturb/kestrel/commit/c463d54875a952fcc62133ef2423d682a1ca7ebc))
+* **G-348:** add benchmark results to token optimization docs and README ([#252](https://github.com/pleasedodisturb/kestrel/issues/252)) ([374ac11](https://github.com/pleasedodisturb/kestrel/commit/374ac114d975d8da895a030d1f778b31f8c7fdc3))
+* **G-437:** cost control research — 4 research documents ([#257](https://github.com/pleasedodisturb/kestrel/issues/257)) ([9a335f9](https://github.com/pleasedodisturb/kestrel/commit/9a335f91e98892577cd33859083abfb7c0d4e593))
+
 ## [0.9.0](https://github.com/pleasedodisturb/kestrel/compare/v0.8.0...v0.9.0) (2026-04-20)
 
 
