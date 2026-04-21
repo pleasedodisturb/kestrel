@@ -34,3 +34,13 @@ repos:
     rev: v8.21.2
     hooks:
       - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: no-trivial-assertions
+        name: Block trivial assertions in tests
+        entry: python3 .claude/hooks/check-trivial-assertions.py
+        language: system
+        types: [python]
+        files: ^tests/
+        pass_filenames: true
