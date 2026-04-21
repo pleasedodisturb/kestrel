@@ -10,11 +10,21 @@ Covers:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
+
+def _ensure_utc(v: Any) -> datetime | None:
+    if v is None:
+        return None
+    if isinstance(v, datetime) and v.tzinfo is None:
+        return v.replace(tzinfo=UTC)
+    return v
+
 
 # ---------------------------------------------------------------------------
 # Topic schema
@@ -62,6 +72,11 @@ class PrepChecklistItem(BaseModel):
     priority: str = Field(..., description="Priority: high, medium, low")
     completed: bool = Field(default=False, description="Completion state")
     completed_at: datetime | None = Field(default=None, description="When the item was completed")
+
+    @field_validator("completed_at", mode="before")
+    @classmethod
+    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
+        return _ensure_utc(v)
 
 
 class PrepItemUpdate(BaseModel):
