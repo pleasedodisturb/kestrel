@@ -172,17 +172,37 @@ Kestrel works out of the box in Demo Mode — free, offline, no account needed. 
 
 ### How Kestrel keeps costs low
 
-AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get expensive — unless you're smart about it. Kestrel stacks several tricks that compound:
+AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get expensive — unless you're smart about it. Kestrel stacks eight optimizations that compound:
 
 | What Kestrel does | How it helps | Savings |
 |-------------------|-------------|---------|
-| **Prompt caching** | Your profile is sent once, then "remembered" by the API. Scoring 50 jobs doesn't resend your CV 50 times. | [90% off input tokens](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) |
-| **Response caching** | Asked the same question twice? Kestrel serves it from local cache. Zero API calls, encrypted at rest. | 100% (free) |
+| **Prompt caching** | Your profile is sent once, then "remembered" by the API. Scoring 50 jobs doesn't resend your CV 50 times. | [92% on repeat calls](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) |
+| **Compressed prompts** | Scoring instructions use telegraphic notation — same info, fewer words. The AI reads shorthand just fine. | 29% on system prompts |
+| **Compact serialization** | Your profile is sent without pretty-printing whitespace. `{"name":"Jane"}` instead of `{ "name": "Jane" }`. | 23% on profile data |
+| **Response caching** | Asked the same question twice? Kestrel serves it from local encrypted cache. Zero API calls. | 100% (free) |
 | **Token-efficient tool use** | When Kestrel calls AI tools, it uses a compact format that cuts output size. | [70% off output tokens](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/token-efficient-tool-use) |
-| **Smart model selection** | Not every task needs the biggest brain. Simple yes/no classification uses a smaller, cheaper model. Complex analysis uses the full thing. | [60-95% on simple tasks](https://github.com/lm-sys/RouteLLM) |
+| **Smart model selection** | Not every task needs the biggest brain. Simple classification uses a smaller model. Deep analysis uses the full thing. | [60-95% on simple tasks](https://github.com/lm-sys/RouteLLM) |
 | **Batch scoring** | Scoring a big backlog overnight? Batch APIs give a flat 50% discount for non-urgent work. | [50% off everything](https://docs.anthropic.com/en/api/creating-message-batches) |
+| **Provider fallback** | If one provider's quota runs out, Kestrel automatically tries the next one. No failed scores, no wasted retries. | Resilience (not cost) |
 
-**The math:** Naive approach = $15-30/month. With all optimizations = **$1-5/month** for the same results. [Deep dive on token economics →](docs/llms-tokens-privacy.md)
+**Benchmarked on a real profile + real job posting:** Naive approach = ~$16/month. With all optimizations = **~$1-5/month** for the same results. [How it works →](docs/how-token-optimization-works.md)
+
+<details>
+<summary>Benchmark: 50-job scoring batch, same user</summary>
+
+```
+System prompt:  sent 50× full price  →  1× full + 49× cached (92% saved)
+Profile data:   sent 50× with indent →  1× compact + 49× cached (92% saved)
+Job description: 50× unique (no savings — this is the irreducible cost)
+
+Single call:  877 tokens (old) → 512 tokens (new, Anthropic cached) = 42% reduction
+50-job batch: 43,862 tokens (old) → 25,846 tokens (new) = 41% reduction
+Monthly (200 jobs/day): $15.79 → $9.45 input tokens only
+```
+
+The job description is ~60% of each call and can't be cached (it's different every time). The 92% savings apply to the other 40% — like speeding up the highway portion of your commute.
+
+</details>
 
 ### Choosing a provider
 
