@@ -21,7 +21,10 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useOnboardingStatus, usePatchOnboardingStep } from "@/hooks/useOnboarding";
+import {
+  useOnboardingStatus,
+  usePatchOnboardingStep,
+} from "@/hooks/useOnboarding";
 import { DEFAULT_PROFILE_ID } from "@/api/onboarding";
 import { TourOverlay } from "@/components/TourOverlay";
 import { TourTooltip } from "@/components/TourTooltip";
@@ -47,6 +50,7 @@ export interface TourContextValue {
 
 /* ---------- Tour Steps (from 05-UI-SPEC.md) ---------- */
 
+// eslint-disable-next-line react-refresh/only-export-components -- co-located constant used by tests and TourTooltip
 export const TOUR_STEPS: TourStep[] = [
   {
     page: "/",
@@ -88,6 +92,7 @@ const TourContext = createContext<TourContextValue | null>(null);
  * Hook to consume tour context. Returns a default inactive state when used
  * outside of TourProvider, so consumers do not need null checks.
  */
+// eslint-disable-next-line react-refresh/only-export-components -- co-located hook consumed by TourTooltip
 export function useTour(): TourContextValue {
   const ctx = useContext(TourContext);
   if (!ctx) {
@@ -182,7 +187,7 @@ export function TourProvider({ children }: TourProviderProps) {
 
   useEffect(() => {
     if (!isActive) {
-      setTargetRect(null);
+      setTargetRect(null); // eslint-disable-line react-hooks/set-state-in-effect -- guard reset, not cascading
       return;
     }
 
@@ -252,7 +257,7 @@ export function TourProvider({ children }: TourProviderProps) {
 
   /* ---------- Context value ---------- */
 
-  const currentStepData = isActive ? TOUR_STEPS[currentStep] ?? null : null;
+  const currentStepData = isActive ? (TOUR_STEPS[currentStep] ?? null) : null;
 
   const contextValue: TourContextValue = {
     isActive,

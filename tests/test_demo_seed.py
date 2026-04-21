@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import pytest
 from datetime import UTC, datetime
+
+import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from career_os.database import Base
-from career_os.models.models import Application, Profile
 from career_os.migration.demo_seed import seed_demo_data
+from career_os.models.models import Application, Profile
 
 
 def _set_sqlite_pragmas(dbapi_conn, connection_record) -> None:  # noqa: ANN001
@@ -62,7 +63,11 @@ class TestSeedDemoData:
         seed_demo_data(db_session, profile_id=1)
         apps = db_session.query(Application).filter(Application.is_demo.is_(True)).all()
         for app in apps:
-            created = app.created_at.replace(tzinfo=UTC) if app.created_at.tzinfo is None else app.created_at
+            created = (
+                app.created_at.replace(tzinfo=UTC)
+                if app.created_at.tzinfo is None
+                else app.created_at
+            )
             age = now - created
             assert age.days <= 8, f"{app.company} created_at too old: {age.days} days"
             assert age.total_seconds() >= 0, f"{app.company} created_at in the future"

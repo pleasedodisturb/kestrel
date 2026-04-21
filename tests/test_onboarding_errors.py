@@ -3,8 +3,6 @@
 TDD RED phase — written before implementation.
 """
 
-import pytest
-
 
 def test_onboarding_error_base_fields():
     """OnboardingError has user_message, resolution, status_code=400 (D-08)."""

@@ -9,7 +9,11 @@ from career_os.api.constants import PROFILE_NOT_FOUND, RESP_404
 from career_os.database import get_db
 from career_os.models.models import Profile
 from career_os.schemas.onboarding import OnboardingStatusResponse, OnboardingStepUpdate
-from career_os.services.onboarding import get_onboarding_status, mark_step_complete, reset_onboarding_flow
+from career_os.services.onboarding import (
+    get_onboarding_status,
+    mark_step_complete,
+    reset_onboarding_flow,
+)
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 

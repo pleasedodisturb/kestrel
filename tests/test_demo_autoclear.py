@@ -7,8 +7,8 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from career_os.database import Base
-from career_os.models.models import Application, Profile
 from career_os.migration.demo_seed import seed_demo_data
+from career_os.models.models import Application, Profile
 from career_os.services.applications import _auto_clear_demo_data
 
 
@@ -95,8 +95,10 @@ class TestAutoClearDemoData:
 
         _auto_clear_demo_data(db_session, profile_id=1)
 
-        remaining = db_session.query(Application).filter(
-            Application.profile_id == 1, Application.is_demo.is_(False)
-        ).all()
+        remaining = (
+            db_session.query(Application)
+            .filter(Application.profile_id == 1, Application.is_demo.is_(False))
+            .all()
+        )
         assert len(remaining) == 1
         assert remaining[0].source == "seed"

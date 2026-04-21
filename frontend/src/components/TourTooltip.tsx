@@ -33,7 +33,10 @@ export function TourTooltip() {
 
   const tooltipRef = useRef<HTMLDivElement>(null);
   const skipBtnRef = useRef<HTMLButtonElement>(null);
-  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [position, setPosition] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
   const [opacity, setOpacity] = useState(0);
 
   /** Track step for aria-live: only announce after the first render. */
@@ -44,7 +47,7 @@ export function TourTooltip() {
 
   useEffect(() => {
     if (!targetRect || !tooltipRef.current) {
-      setOpacity(0);
+      setOpacity(0); // eslint-disable-line react-hooks/set-state-in-effect -- guard reset, not cascading
       return;
     }
 
@@ -61,7 +64,10 @@ export function TourTooltip() {
 
     // Horizontally center on target, clamped to viewport
     let left = targetRect.left + targetRect.width / 2 - TOOLTIP_WIDTH / 2;
-    left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - TOOLTIP_WIDTH - VIEWPORT_MARGIN));
+    left = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(left, window.innerWidth - TOOLTIP_WIDTH - VIEWPORT_MARGIN),
+    );
 
     setPosition({ top, left });
     // Fade in after positioning
@@ -90,7 +96,8 @@ export function TourTooltip() {
 
       if (e.key === "Tab") {
         e.preventDefault();
-        const focusables = tooltipRef.current?.querySelectorAll<HTMLButtonElement>("button");
+        const focusables =
+          tooltipRef.current?.querySelectorAll<HTMLButtonElement>("button");
         if (!focusables?.length) return;
 
         const currentIdx = Array.from(focusables).indexOf(
@@ -111,7 +118,7 @@ export function TourTooltip() {
 
   useEffect(() => {
     if (!isActive || !currentStepData) {
-      setAnnouncement("");
+      setAnnouncement(""); // eslint-disable-line react-hooks/set-state-in-effect -- guard reset, not cascading
       return;
     }
 

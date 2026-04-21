@@ -17,8 +17,8 @@ from career_os.cli.extract import (
     read_multiline_paste,
 )
 from career_os.database import SessionLocal
-from career_os.migration.demo_seed import seed_demo_data
 from career_os.errors.onboarding import OnboardingError
+from career_os.migration.demo_seed import seed_demo_data
 from career_os.models.models import Profile
 from career_os.models.skills import Skill
 from career_os.services.onboarding import get_onboarding_status, mark_step_complete

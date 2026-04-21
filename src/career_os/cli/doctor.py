@@ -72,8 +72,8 @@ def _check_profile_exists() -> tuple[bool, str, str]:
 def _check_demo_data() -> tuple[bool, str, str]:
     """Check if demo data is present. Auto-seeds if missing (D-03)."""
     try:
-        from career_os.models.models import Application, Profile
         from career_os.migration.demo_seed import seed_demo_data
+        from career_os.models.models import Application, Profile
 
         db = _get_session()
         demo_count = db.query(Application).filter(Application.is_demo.is_(True)).count()
