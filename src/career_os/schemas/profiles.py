@@ -1,12 +1,20 @@
 """Pydantic schemas for Profile API."""
 
 import json as json_mod
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
+
+def _ensure_utc(v: Any) -> datetime | None:
+    if v is None:
+        return None
+    if isinstance(v, datetime) and v.tzinfo is None:
+        return v.replace(tzinfo=UTC)
+    return v
 
 
 class ProfileCreate(BaseModel):
@@ -42,6 +50,11 @@ class ProfileResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
+        return _ensure_utc(v)
 
     @field_validator("dream_companies", mode="before")
     @classmethod
