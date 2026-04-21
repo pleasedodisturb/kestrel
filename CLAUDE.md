@@ -4,17 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Kestrel** is an AI-powered, self-hosted job search platform with three frontends sharing one REST API:
+**Kestrel** is an AI-powered, self-hosted job search platform with a REST API and web frontend:
 
 | Component | Location | Stack | Dev Port |
 |-----------|----------|-------|----------|
 | Backend API | `src/career_os/` | Python 3.11+, FastAPI, SQLAlchemy, SQLite | 8100 |
 | Web Frontend | `frontend/` | React 19, Vite, TypeScript, Tailwind CSS | 8101 |
-| Mobile App | `mobile/` | React Native 0.81, Expo 54, Tamagui 2.0 RC | Expo DevTools |
 
-The Python package is internally named `career_os` (historical). PyPI name is `kestrel-app`.
-
-**Current focus:** The mobile app (React Native/Expo) — building out the primary mobile experience. Backend changes are not expected for mobile v1.
+The Python package is internally named `career_os` (historical). PyPI name is `kestrel-app`. The `mobile/` directory is preserved for a future release — do not develop against it.
 
 ## Development Commands
 
@@ -53,19 +50,7 @@ npx eslint src/                           # lint
 npx eslint --fix src/                     # auto-fix
 ```
 
-### Mobile App
-```bash
-cd mobile
-npm install
-npm start                                 # Expo dev server
-npm run ios                               # iOS simulator
-npm run android                           # Android emulator
-npm run test                              # Jest (all tests)
-npx jest src/path/to/File.test.tsx        # single test file
-npm run generate:types                    # regenerate API types from OpenAPI (requires backend running)
-```
-
-### Docker (full stack, no mobile)
+### Docker
 ```bash
 docker compose up                         # dev: backend + frontend
 docker compose -f docker-compose.prod.yml up  # production: single container
@@ -101,19 +86,8 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 - **Path alias**: `@/*` maps to `frontend/src/` in both TypeScript and Vite
 - **Dev proxy**: Vite proxies `/api/*`, `/health`, `/docs`, `/openapi.json` to backend on port 8100
 
-### Mobile App
-- **Routing**: Expo Router (file-based) in `mobile/app/`
-  - `app/(tabs)/` — 5 main tabs: home, pipeline, discover, contacts, more
-  - `app/detail/` — detail screens
-  - `app/onboarding/` — connection setup flow
-- **UI Framework**: Tamagui 2.0 RC (cross-platform component library)
-- **API Client**: Custom fetch wrapper in `mobile/src/api/client.ts` (`apiGet`, `apiPost`, `apiPatch`)
-- **Secure Storage**: `expo-secure-store` for API URL and auth token (set during onboarding)
-- **Type Generation**: `npm run generate:types` pulls OpenAPI schema from running backend → `src/api/types.generated.ts`
-- **Path alias**: `@/*` maps to `mobile/src/`
-
 ### Cross-Cutting
-- All three frontends consume the same REST API (documented at `/docs` Swagger, `/redoc`)
+- Both frontends consume the same REST API (documented at `/docs` Swagger, `/redoc`)
 - Profile ID scopes all data (multi-user isolation in single instance)
 - Optional API key auth (`AUTH_ENABLED=true`, `AUTH_API_KEY=...`)
 
@@ -121,8 +95,6 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 
 - `pyproject.toml` — Python deps, Ruff config (line-length=100, select E/F/I/UP/B/SIM), pytest config
 - `frontend/vite.config.ts` — Vite bundler, dev proxy, React plugin
-- `mobile/app.json` — Expo config (scheme: "kestrel", New Architecture enabled)
-- `mobile/tamagui.config.ts` — Tamagui theme and animation config
 - `.env` / `.env.example` — Backend environment variables
 - `.github/workflows/ci.yml` — CI: Python lint+test, frontend lint+test, CodeQL, PII scan
 
@@ -136,7 +108,7 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 
 ### Testing
 - Every piece of code must have tests. Write tests alongside the code, not after.
-- Backend: pytest in `tests/`, Frontend: Vitest in `frontend/src/__tests__/`, Mobile: Jest co-located as `*.test.tsx`
+- Backend: pytest in `tests/`, Frontend: Vitest in `frontend/src/__tests__/`
 - Run tests after writing them to confirm they pass.
 - **Full testing standards:** `docs/reference/TESTING.md` (backend rules, mocking decision tree, marker usage)
 - **Testing strategy & history:** `docs/reference/testing-strategy.md` (what shipped, what was trimmed, rationale)
