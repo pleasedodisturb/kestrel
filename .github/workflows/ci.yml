@@ -190,6 +190,24 @@ jobs:
       - name: Verify npm package signatures
         run: npm audit signatures
 
+  ci-complete:
+    name: CI Complete
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [backend, frontend, actionlint]
+    steps:
+      - name: Check required jobs
+        run: |
+          # Fail if any required job failed (skip means OK — e.g. path filtering)
+          results="${{ needs.backend.result }} ${{ needs.frontend.result }} ${{ needs.actionlint.result }}"
+          for r in $results; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+              echo "::error::Required job failed or was cancelled: $r"
+              exit 1
+            fi
+          done
+          echo "All required jobs passed or were skipped."
+
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
