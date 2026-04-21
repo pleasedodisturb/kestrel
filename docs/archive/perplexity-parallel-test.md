@@ -1,3 +1,8 @@
+> **Archived:** This document has been superseded by [Testing Strategy](../reference/testing-strategy.md).
+> Preserved for historical reference only.
+
+---
+
 # Perplexity Pro + Comet vs Kestrel — Parallel Test Log
 
 Structured template for running an empirical side-by-side between Kestrel and Perplexity Pro ($20/mo) + Comet browser. Fill this in while running the tests; publish the completed result as a blog post or gist and link it from `docs/COMPARISON.md` as empirical backing for the Perplexity Computer row.

@@ -4,7 +4,7 @@ title: Phase 2 Architecture
 permalink: /docs/architecture
 ---
 
-# Career OS — Phase 2 Architecture & Milestone Specs (M6–M9)
+# Kestrel — Phase 2 Architecture & Milestone Specs (M6–M9)
 
 > Phase 1 (M1–M5): Core platform, discovery, scoring, skills, integrations, voice.
 > Phase 2 (M6–M9): Networking CRM, CV pipeline, ATS scanning, auto-apply.
@@ -61,13 +61,13 @@ class ActivityLog(Base):
 #### 1.2.2 Debug CLI
 
 ```bash
-career-os debug log                        # last 20 activity log entries
-career-os debug log --entity contact       # filter by entity type
-career-os debug log --action auto_apply*   # filter by action pattern
-career-os debug log --errors               # only failed operations
-career-os debug log --since 2h             # last 2 hours
-career-os debug status                     # system health: DB size, record counts, integration status
-career-os debug inspect <entity> <id>      # full dump of an entity + related records
+kestrel debug log                        # last 20 activity log entries
+kestrel debug log --entity contact       # filter by entity type
+kestrel debug log --action auto_apply*   # filter by action pattern
+kestrel debug log --errors               # only failed operations
+kestrel debug log --since 2h             # last 2 hours
+kestrel debug status                     # system health: DB size, record counts, integration status
+kestrel debug inspect <entity> <id>      # full dump of an entity + related records
 ```
 
 #### 1.2.3 Debug API
@@ -259,29 +259,29 @@ GET    /api/contacts/by-company/{company}            → all contacts at a compa
 
 ```bash
 # CRUD
-career-os contacts add --name "Jane Doe" --company "Mistral" --type referral --warmth hot
-career-os contacts list
-career-os contacts list --company Mistral
-career-os contacts list --type referral
-career-os contacts list --needs-follow-up
-career-os contacts show <id>
-career-os contacts update <id> --referral-status cv_sent
-career-os contacts archive <id>
+kestrel contacts add --name "Jane Doe" --company "Mistral" --type referral --warmth hot
+kestrel contacts list
+kestrel contacts list --company Mistral
+kestrel contacts list --type referral
+kestrel contacts list --needs-follow-up
+kestrel contacts show <id>
+kestrel contacts update <id> --referral-status cv_sent
+kestrel contacts archive <id>
 
 # Interactions
-career-os contacts log <id> --type email --direction outbound --notes "Sent CV for TPM role"
-career-os contacts log <id> --type intro --direction inbound --notes "Intro'd by mutual friend"
-career-os contacts history <id>
+kestrel contacts log <id> --type email --direction outbound --notes "Sent CV for TPM role"
+kestrel contacts log <id> --type intro --direction inbound --notes "Intro'd by mutual friend"
+kestrel contacts history <id>
 
 # Linking
-career-os contacts link <contact_id> <application_id> --role referrer
-career-os contacts unlink <contact_id> <application_id>
+kestrel contacts link <contact_id> <application_id> --role referrer
+kestrel contacts unlink <contact_id> <application_id>
 
 # Company view
-career-os contacts at <company>         # "who do I know at Mistral?"
+kestrel contacts at <company>         # "who do I know at Mistral?"
 
 # Follow-up reminders
-career-os contacts follow-ups           # all overdue contact follow-ups
+kestrel contacts follow-ups           # all overdue contact follow-ups
 ```
 
 ### 3.5 Web UI
@@ -465,13 +465,13 @@ POST   /api/cv/render-batch                         → render CVs for multiple 
 ### 4.4 CLI Commands
 
 ```bash
-career-os cv render <application_id>                # render best-fit CV variant
-career-os cv render <application_id> --variant tpm  # render specific variant
-career-os cv render --all                           # render for all applied/interested apps
-career-os cv variants                               # list available variants
-career-os cv cover-letter <application_id>          # render cover letter from voice brainstorm or notes
-career-os cv cover-letter <application_id> --from-file draft.md  # from markdown file
-career-os cv packages <application_id>              # list generated packages
+kestrel cv render <application_id>                # render best-fit CV variant
+kestrel cv render <application_id> --variant tpm  # render specific variant
+kestrel cv render --all                           # render for all applied/interested apps
+kestrel cv variants                               # list available variants
+kestrel cv cover-letter <application_id>          # render cover letter from voice brainstorm or notes
+kestrel cv cover-letter <application_id> --from-file draft.md  # from markdown file
+kestrel cv packages <application_id>              # list generated packages
 ```
 
 ### 4.5 Service Layer
@@ -562,11 +562,11 @@ GET    /api/applications/{id}/ats-scan/history       → all scan results for th
 ### 5.4 CLI Commands
 
 ```bash
-career-os ats scan <application_id>                  # scan CV against JD
-career-os ats scan <application_id> --jd "paste..."  # scan against custom JD text
-career-os ats scan <application_id> --variant tpm    # scan a specific CV variant
-career-os ats report <application_id>                # detailed report with suggestions
-career-os ats batch                                  # scan all applied apps without recent scan
+kestrel ats scan <application_id>                  # scan CV against JD
+kestrel ats scan <application_id> --jd "paste..."  # scan against custom JD text
+kestrel ats scan <application_id> --variant tpm    # scan a specific CV variant
+kestrel ats report <application_id>                # detailed report with suggestions
+kestrel ats batch                                  # scan all applied apps without recent scan
 ```
 
 ### 5.5 AI Provider Extension
@@ -663,13 +663,13 @@ POST   /api/submissions/batch                       → queue multiple submissio
 ### 6.4 CLI Commands
 
 ```bash
-career-os apply <application_id>                     # dry-run (default)
-career-os apply <application_id> --confirm           # actually submit
-career-os apply <application_id> --platform lever    # force specific platform
-career-os apply --batch --dry-run                    # dry-run all queued apps
-career-os apply --batch --confirm                    # submit all queued (with per-app confirmation)
-career-os apply list                                 # list submission history
-career-os apply show <submission_id>                 # show submission detail
+kestrel apply <application_id>                     # dry-run (default)
+kestrel apply <application_id> --confirm           # actually submit
+kestrel apply <application_id> --platform lever    # force specific platform
+kestrel apply --batch --dry-run                    # dry-run all queued apps
+kestrel apply --batch --confirm                    # submit all queued (with per-app confirmation)
+kestrel apply list                                 # list submission history
+kestrel apply show <submission_id>                 # show submission detail
 ```
 
 ### 6.5 Safety Rules (from .claude/rules/auto-apply.md)

@@ -1,13 +1,13 @@
 ---
-title: "CareerOS ↔ Kestrel Feature Sync Matrix"
+title: "Kestrel Feature Sync Matrix"
 date: 2026-04-16
 version: "1.0"
 ---
 
-# CareerOS ↔ Kestrel Feature Sync Matrix
+# Kestrel Feature Sync Matrix
 
 This document catalogs every feature in Kestrel, organized by domain, for the purpose of
-identifying what to port to CareerOS and in what order. Each feature includes its location
+identifying what to port from the original codebase and in what order. Each feature includes its location
 in the codebase, a brief description, a sync priority rating, and notes on CLI adaptation.
 
 **Sync Priority Legend:**
@@ -171,7 +171,7 @@ in the codebase, a brief description, a sync priority rating, and notes on CLI a
 | Contacts CLI | `cli/contacts.py` | Full contact management (add, list, show, update, archive, log, link) | medium | Networking from terminal |
 | WARN data CLI | `cli/warn.py` → `update()`, `list_states()` | Update/query WARN Act layoff data | high | Data maintenance command |
 | Server start | `cli/main.py` → `start()` | Launch uvicorn dev server with browser auto-open | skip | Kestrel-specific |
-| Rich terminal output | All CLI modules | Rich library tables, colors, progress bars throughout | high | Reference implementation for CareerOS CLI |
+| Rich terminal output | All CLI modules | Rich library tables, colors, progress bars throughout | high | Reference implementation for Kestrel CLI |
 
 ## 12. Infrastructure
 
@@ -209,6 +209,6 @@ in the codebase, a brief description, a sync priority rating, and notes on CLI a
 
 ## Next Steps
 
-1. **Phase 2**: Audit CareerOS features and map them into this matrix (reverse direction)
+1. **Phase 2**: Audit features from the original codebase and map them into this matrix (reverse direction)
 2. **Phase 3**: Identify gaps and overlaps, create porting tickets
 3. **Phase 4**: Begin porting high-priority features, starting with scoring engine and discovery
