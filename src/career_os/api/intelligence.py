@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_PROFILE_ID, RESP_404_500
 from career_os.database import get_db
-from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.role_intelligence import (
     InterviewFormatResponse,
     InterviewPatternsResponse,
@@ -43,7 +42,7 @@ router = APIRouter(prefix="/api/intelligence", tags=["role-intelligence"])
 )
 async def interview_format_endpoint(
     company: Annotated[str, Query(min_length=1, description="Company name")],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     role: Annotated[
         str | None, Query(description="Optional role context for more specific results")
@@ -82,7 +81,7 @@ async def interview_format_endpoint(
 )
 async def salary_benchmark_endpoint(
     role: Annotated[str, Query(min_length=1, description="Role type to benchmark")],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     location: Annotated[str | None, Query(description="Optional location filter")] = None,
     company_stage: Annotated[
@@ -124,7 +123,7 @@ async def salary_benchmark_endpoint(
 )
 async def interview_patterns_endpoint(
     role: Annotated[str, Query(min_length=1, description="Role type")],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InterviewPatternsResponse:
     """Get common interview patterns for a role type.

@@ -5,8 +5,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -29,7 +27,7 @@ def _ensure_utc(v: Any) -> datetime | None:
 class DiscoverRequest(BaseModel):
     """Request body for POST /api/discover — triggers a discovery sweep."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile to discover jobs for")
+    profile_id: int = Field(..., description="Profile to discover jobs for")
     keywords: list[str] = Field(default_factory=list, description="Search keywords")
     locations: list[str] = Field(default_factory=list, description="Locations to search")
     remote_only: bool = Field(default=False, description="Only remote jobs")
@@ -39,8 +37,6 @@ class DiscoverRequest(BaseModel):
     )
     search_profile_id: int | None = Field(
         default=None,
-        ge=1,
-        le=INT64_MAX,
         description="Use saved search profile parameters instead of inline ones",
     )
     limit_per_source: int = Field(default=25, ge=1, le=100, description="Max per source")
@@ -49,8 +45,8 @@ class DiscoverRequest(BaseModel):
 class DiscoveredJobResponse(BaseModel):
     """Response schema for a single discovered job."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
+    profile_id: int
     title: str
     company: str
     location: str
@@ -62,7 +58,7 @@ class DiscoveredJobResponse(BaseModel):
     sources: list[str] = []
     source_urls: list[str] = []
     fit_score: float | None = None
-    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
+    application_id: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -99,10 +95,10 @@ class DiscoveryWarning(BaseModel):
 class DiscoverResponse(BaseModel):
     """Response for POST /api/discover — sweep results."""
 
-    run_id: int = Field(..., ge=1, le=INT64_MAX)
-    total_found: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    new_jobs: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    duplicates: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    run_id: int
+    total_found: int
+    new_jobs: int
+    duplicates: int
     jobs: list[DiscoveredJobResponse]
     warnings: list[DiscoveryWarning] = []
     sources_queried: list[str] = []
@@ -116,7 +112,7 @@ class DiscoverResponse(BaseModel):
 class SearchProfileCreate(BaseModel):
     """Request body for POST /api/search-profiles."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile this search belongs to")
+    profile_id: int = Field(..., description="Profile this search belongs to")
     name: str = Field(..., min_length=1, description="Search profile name")
     keywords: list[str] = Field(default_factory=list, description="Keywords")
     locations: list[str] = Field(default_factory=list, description="Locations")
@@ -140,8 +136,8 @@ class SearchProfileUpdate(BaseModel):
 class SearchProfileResponse(BaseModel):
     """Response schema for a saved search profile."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
+    profile_id: int
     name: str
     keywords: list[str] = []
     locations: list[str] = []
@@ -200,7 +196,7 @@ class SearchProfileListResponse(BaseModel):
     """Response for listing search profiles."""
 
     profiles: list[SearchProfileResponse]
-    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total: int
 
 
 # ---------------------------------------------------------------------------
@@ -211,15 +207,15 @@ class SearchProfileListResponse(BaseModel):
 class DiscoveryRunResponse(BaseModel):
     """Response schema for a discovery run log entry."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
-    search_profile_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
+    id: int
+    profile_id: int
+    search_profile_id: int | None = None
     trigger: str
     status: str
-    total_found: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    new_jobs: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    duplicates: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    errors: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total_found: int
+    new_jobs: int
+    duplicates: int
+    errors: int
     warnings: list[DiscoveryWarning] = []
     started_at: datetime
     completed_at: datetime | None = None

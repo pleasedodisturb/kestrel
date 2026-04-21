@@ -2,17 +2,8 @@
 
 from pathlib import Path
 
-from dotenv import load_dotenv
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
-
-# Ensure .env vars are in os.environ before pydantic-settings reads them.
-# pydantic-settings 2.13.1 silently fails to load some variables from .env;
-# explicit load_dotenv fixes this.
-# CRITICAL: override=False so that env vars set BEFORE import (e.g. by
-# tests/conftest.py setting AI_PROVIDER=mock) are NOT clobbered by .env
-# values.  override=True caused tests to hit real AI providers ($20 burn).
-load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
