@@ -163,3 +163,4 @@ Then we chose the sanest path. Not the most sophisticated (we don't run a Kubern
 
 For the full technical analysis: [Testing Research](research/testing-research.md)
 For raw findings with sources: [Raw Research](research/testing-raw-research.md)
+For what was built, what was trimmed, and why: [Testing Strategy](testing-strategy.md)
