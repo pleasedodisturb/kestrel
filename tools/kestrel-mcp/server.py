@@ -183,9 +183,11 @@ def list_pipeline(
         data = _get("/api/applications", params=params)
         return _format_pipeline(data)
     except httpx.HTTPStatusError as e:
-        return f"Error: {e.response.status_code} — {e.response.text}"
+        return f"Error: {e.response.status_code} — {e.response.text[:200]}"
     except httpx.ConnectError:
         return f"Error: Cannot connect to Kestrel at {KESTREL_URL}. Is the server running?"
+    except Exception as e:
+        return f"Error: {type(e).__name__}: {str(e)[:200]}"
 
 
 @mcp.tool()
@@ -195,9 +197,11 @@ def pipeline_stats() -> str:
         data = _get("/api/applications/stats", params={"profile_id": PROFILE_ID})
         return _format_stats(data)
     except httpx.HTTPStatusError as e:
-        return f"Error: {e.response.status_code} — {e.response.text}"
+        return f"Error: {e.response.status_code} — {e.response.text[:200]}"
     except httpx.ConnectError:
         return f"Error: Cannot connect to Kestrel at {KESTREL_URL}. Is the server running?"
+    except Exception as e:
+        return f"Error: {type(e).__name__}: {str(e)[:200]}"
 
 
 @mcp.tool()
@@ -232,9 +236,11 @@ def score_job(
         data = _post("/api/score", payload)
         return _format_score(data)
     except httpx.HTTPStatusError as e:
-        return f"Error: {e.response.status_code} — {e.response.text}"
+        return f"Error: {e.response.status_code} — {e.response.text[:200]}"
     except httpx.ConnectError:
         return f"Error: Cannot connect to Kestrel at {KESTREL_URL}. Is the server running?"
+    except Exception as e:
+        return f"Error: {type(e).__name__}: {str(e)[:200]}"
 
 
 @mcp.tool()
@@ -270,9 +276,11 @@ def discover_jobs(
         data = _post("/api/discover", payload)
         return _format_discovery(data)
     except httpx.HTTPStatusError as e:
-        return f"Error: {e.response.status_code} — {e.response.text}"
+        return f"Error: {e.response.status_code} — {e.response.text[:200]}"
     except httpx.ConnectError:
         return f"Error: Cannot connect to Kestrel at {KESTREL_URL}. Is the server running?"
+    except Exception as e:
+        return f"Error: {type(e).__name__}: {str(e)[:200]}"
 
 
 if __name__ == "__main__":
