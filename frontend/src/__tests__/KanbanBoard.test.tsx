@@ -14,10 +14,9 @@
  * - Dropping card on itself is a no-op
  */
 
-import { render, screen, within, act, waitFor } from "@testing-library/react";
+import { screen, within, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { renderWithProviders } from "@/test-utils";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import type {
   Application,
@@ -85,24 +84,8 @@ vi.mock("@/api/followUps", () => ({
 
 // ---- helpers ----
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
-      mutations: { retry: false },
-    },
-  });
-}
-
 function renderBoard() {
-  const qc = createQueryClient();
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <KanbanBoard />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<KanbanBoard />, { route: "/" });
 }
 
 function makeApp(
@@ -175,14 +158,14 @@ describe("KanbanBoard", () => {
     it("shows friendly message", async () => {
       renderBoard();
       expect(
-        await screen.findByText("No applications yet"),
+        await screen.findByText("No jobs in your pipeline yet"),
       ).toBeInTheDocument();
     });
 
-    it("shows Add Application button", async () => {
+    it("shows Discover jobs CTA", async () => {
       renderBoard();
-      expect(await screen.findByTestId("kanban-add-cta")).toBeInTheDocument();
-      expect(screen.getByText("Add Application")).toBeInTheDocument();
+      expect(await screen.findByTestId("empty-state-cta")).toBeInTheDocument();
+      expect(screen.getByText("Discover jobs")).toBeInTheDocument();
     });
   });
 

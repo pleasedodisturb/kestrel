@@ -9,10 +9,9 @@
  * - VAL-SEARCH-005: Empty search returns all jobs paginated
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { renderWithProviders } from "@/test-utils";
 import { Discovery } from "@/pages/Discovery";
 import type {
   JobSearchResponse,
@@ -47,24 +46,8 @@ vi.mock("@/api/applications", () => ({
 
 // ---- helpers ----
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
-      mutations: { retry: false },
-    },
-  });
-}
-
 function renderDiscovery() {
-  const qc = createQueryClient();
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <Discovery />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<Discovery />, { route: "/discovery" });
 }
 
 const SAMPLE_JOBS: DiscoveredJob[] = [
@@ -411,12 +394,12 @@ describe("Discovery page", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("No discovered jobs yet"),
+          screen.getByText("Ready to find your next role"),
         ).toBeInTheDocument();
       });
     });
 
-    it("shows no-match message when search has no results", async () => {
+    it("shows empty state CTA when search has no results", async () => {
       // First render with data, then search returns nothing
       const { unmount } = renderDiscovery();
       await waitFor(() => {
@@ -433,23 +416,11 @@ describe("Discovery page", () => {
         total_pages: 1,
       });
 
-      const qc = new QueryClient({
-        defaultOptions: {
-          queries: { retry: false, gcTime: 0 },
-          mutations: { retry: false },
-        },
-      });
-      render(
-        <QueryClientProvider client={qc}>
-          <MemoryRouter>
-            <Discovery />
-          </MemoryRouter>
-        </QueryClientProvider>,
-      );
+      renderDiscovery();
 
       await waitFor(() => {
         expect(
-          screen.getByText("No discovered jobs yet"),
+          screen.getByText("Ready to find your next role"),
         ).toBeInTheDocument();
       });
     });

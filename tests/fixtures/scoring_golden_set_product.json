@@ -1,0 +1,255 @@
+{
+  "profile": {
+    "job_family": "Product Management",
+    "location": "San Francisco, CA",
+    "key_skills": [
+      "Product Strategy",
+      "User Research",
+      "Agile",
+      "Data Analysis",
+      "Roadmap Planning"
+    ]
+  },
+  "jobs": [
+    {
+      "id": "pm-01",
+      "category": "dream",
+      "expected_band": [
+        8,
+        10
+      ],
+      "title": "Senior Product Manager",
+      "company": "Stripe",
+      "location": "San Francisco, CA",
+      "description": "Lead product strategy for payments infrastructure serving millions of businesses. Define roadmap for checkout optimization, reducing payment failures by 30%. Collaborate with engineering, design, and data science teams of 20+. 7+ years product management in fintech or payments."
+    },
+    {
+      "id": "pm-02",
+      "category": "mediocre",
+      "expected_band": [
+        3,
+        6
+      ],
+      "title": "Product Analyst",
+      "company": "Notion",
+      "location": "San Francisco, CA",
+      "description": "Analyze user behavior patterns to inform product decisions using SQL, Python, and Amplitude. Build dashboards tracking key product metrics (DAU, retention, feature adoption). Present insights to product and leadership teams. 3+ years product analytics experience. Strong SQL and data visualization skills."
+    },
+    {
+      "id": "pm-03",
+      "category": "mediocre",
+      "expected_band": [
+        3,
+        6
+      ],
+      "title": "Growth PM",
+      "company": "Figma",
+      "location": "San Francisco, CA",
+      "description": "Own the user acquisition and activation funnel for Figma's collaboration platform. Design and run A/B tests to optimize onboarding flow. Partner with marketing on PLG growth loops. 5+ years product management with demonstrated growth metrics improvement."
+    },
+    {
+      "id": "pm-04",
+      "category": "mediocre",
+      "expected_band": [
+        2,
+        5
+      ],
+      "title": "UX Researcher",
+      "company": "Airbnb",
+      "location": "San Francisco, CA",
+      "description": "Conduct mixed-methods research including usability studies, surveys, and ethnographic field research for guest and host experiences. Synthesize insights into actionable recommendations for product teams. 4+ years UX research experience. Masters in HCI, Psychology, or related field."
+    },
+    {
+      "id": "pm-05",
+      "category": "reject",
+      "expected_band": [
+        0,
+        2
+      ],
+      "title": "Technical Product Manager - ML Platform",
+      "company": "OpenAI",
+      "location": "San Francisco, CA",
+      "description": "Build internal ML infrastructure tools for training and deploying large language models. Define requirements for compute orchestration, model serving, and experiment tracking. Deep technical understanding of ML systems, distributed computing, and GPU clusters. 5+ years TPM experience in ML/AI."
+    },
+    {
+      "id": "pm-06",
+      "category": "mediocre",
+      "expected_band": [
+        3,
+        6
+      ],
+      "title": "Product Designer",
+      "company": "Linear",
+      "location": "San Francisco, CA",
+      "description": "Design end-to-end product experiences for developer tools and project management workflows. Create high-fidelity prototypes using Figma. Define interaction patterns and design systems. 5+ years product design with portfolio showing B2B SaaS or developer tools."
+    },
+    {
+      "id": "pm-07",
+      "category": "strong",
+      "expected_band": [
+        5,
+        8
+      ],
+      "title": "Director of Product - Platform",
+      "company": "Shopify",
+      "location": "San Francisco, CA",
+      "description": "Set strategic direction for Shopify's developer platform serving 2M+ merchants. Manage team of 8 PMs across APIs, app store, and partner ecosystem. Drive platform revenue growth and developer adoption metrics. 10+ years product management with 4+ years leading PM teams."
+    },
+    {
+      "id": "pm-08",
+      "category": "mediocre",
+      "expected_band": [
+        3,
+        6
+      ],
+      "title": "Product Marketing Manager",
+      "company": "Slack",
+      "location": "San Francisco, CA",
+      "description": "Develop go-to-market strategy and positioning for enterprise collaboration features. Create sales enablement materials, competitive battle cards, and launch playbooks. Coordinate with PR, demand gen, and product teams. 5+ years B2B SaaS product marketing experience."
+    },
+    {
+      "id": "pm-09",
+      "category": "mediocre",
+      "expected_band": [
+        3,
+        6
+      ],
+      "title": "Data Product Manager",
+      "company": "Snowflake",
+      "location": "San Francisco, CA",
+      "description": "Define product vision for data sharing and marketplace features. Work with data engineering to build self-service analytics capabilities. Translate complex data infrastructure concepts into business value propositions. 5+ years PM experience with data platforms or analytics tools."
+    },
+    {
+      "id": "pm-10",
+      "category": "reject",
+      "expected_band": [
+        1,
+        4
+      ],
+      "title": "Mobile Product Manager",
+      "company": "DoorDash",
+      "location": "San Francisco, CA",
+      "description": "Own the dasher (delivery driver) mobile experience including navigation, earnings, and scheduling features. Analyze operational metrics to improve delivery efficiency. 4+ years mobile product management in marketplace or logistics. Strong quantitative skills."
+    },
+    {
+      "id": "pm-11",
+      "category": "mediocre",
+      "expected_band": [
+        1,
+        4
+      ],
+      "title": "AI Product Manager",
+      "company": "Anthropic",
+      "location": "San Francisco, CA",
+      "description": "Shape product strategy for AI safety and alignment tools. Define evaluation frameworks for model behavior and safety properties. Bridge research breakthroughs with production deployment requirements. 5+ years PM experience with 2+ years in AI/ML products. Strong technical depth required."
+    },
+    {
+      "id": "pm-12",
+      "category": "reject",
+      "expected_band": [
+        0,
+        2
+      ],
+      "title": "Revenue Product Manager",
+      "company": "Twilio",
+      "location": "San Francisco, CA",
+      "description": "Optimize pricing and packaging for communications API platform. Analyze usage patterns to design tier structures maximizing expansion revenue. Build self-service upgrade flows and usage-based billing features. 5+ years product management in API-first businesses."
+    },
+    {
+      "id": "pm-13",
+      "category": "reject",
+      "expected_band": [
+        1,
+        4
+      ],
+      "title": "Hardware Product Manager",
+      "company": "Apple",
+      "location": "Cupertino, CA",
+      "description": "Define product requirements for next-generation wearable devices. Coordinate with industrial design, mechanical engineering, and supply chain teams. Manage product lifecycle from concept through mass production. 7+ years hardware product management experience."
+    },
+    {
+      "id": "pm-14",
+      "category": "reject",
+      "expected_band": [
+        1,
+        4
+      ],
+      "title": "Blockchain Product Lead",
+      "company": "Coinbase",
+      "location": "San Francisco, CA",
+      "description": "Lead product development for decentralized wallet and staking features. Navigate complex regulatory landscape while shipping innovative crypto products. 5+ years product management with deep understanding of blockchain protocols, DeFi, and custody solutions."
+    },
+    {
+      "id": "pm-15",
+      "category": "strong",
+      "expected_band": [
+        4,
+        7
+      ],
+      "title": "Enterprise PM - Security",
+      "company": "CrowdStrike",
+      "location": "San Francisco, CA",
+      "description": "Build endpoint detection and response features for Fortune 500 customers. Define requirements for threat intelligence, automated remediation, and compliance reporting. 6+ years enterprise security product management. CISSP or equivalent security certification."
+    },
+    {
+      "id": "pm-16",
+      "category": "mediocre",
+      "expected_band": [
+        3,
+        6
+      ],
+      "title": "Platform PM - Developer Experience",
+      "company": "Vercel",
+      "location": "San Francisco, CA",
+      "description": "Improve developer experience for Next.js deployment and preview workflows. Design CLI tools, dashboard features, and integration APIs. Deep understanding of modern web development, CI/CD pipelines, and serverless architectures. 4+ years PM in developer tools."
+    },
+    {
+      "id": "pm-17",
+      "category": "dream",
+      "expected_band": [
+        7,
+        10
+      ],
+      "title": "Healthcare Product Manager",
+      "company": "Oscar Health",
+      "location": "San Francisco, CA",
+      "description": "Build digital health experiences for insurance members including virtual care, claims tracking, and provider search. Navigate HIPAA compliance and CMS regulatory requirements. 5+ years healthcare product management. Understanding of health insurance operations."
+    },
+    {
+      "id": "pm-18",
+      "category": "mediocre",
+      "expected_band": [
+        1,
+        3
+      ],
+      "title": "Automotive Software PM",
+      "company": "Tesla",
+      "location": "Palo Alto, CA",
+      "description": "Define product requirements for vehicle infotainment system and over-the-air update platform. Coordinate with firmware, UI, and QA teams for fleet-wide software releases. Experience with embedded systems and automotive software development lifecycle. 5+ years automotive or embedded systems PM."
+    },
+    {
+      "id": "pm-19",
+      "category": "strong",
+      "expected_band": [
+        5,
+        8
+      ],
+      "title": "Education Product Manager",
+      "company": "Duolingo",
+      "location": "Pittsburgh, PA",
+      "description": "Design gamification and learning progression systems for language education app. Apply learning science research to product decisions. Analyze learner engagement metrics and optimize retention through spaced repetition algorithms. 4+ years edtech product management."
+    },
+    {
+      "id": "pm-20",
+      "category": "reject",
+      "expected_band": [
+        1,
+        4
+      ],
+      "title": "Supply Chain Product Lead",
+      "company": "Amazon",
+      "location": "Seattle, WA",
+      "description": "Build inventory management and demand forecasting tools for Amazon's fulfillment network. Define ML-powered optimization features for warehouse operations. 6+ years product management in supply chain, logistics, or operations. Strong analytical and quantitative skills."
+    }
+  ]
+}
