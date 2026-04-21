@@ -20,11 +20,17 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { ProviderPrivacyInfo } from "@/components/ProviderPrivacyInfo";
 
 interface IntegrationPanelProps {
   readonly integration: IntegrationConfigResponse;
-  readonly onUpdate: (name: string, data: IntegrationConfigUpdate) => Promise<void>;
-  readonly onTest: (name: string) => Promise<{ success: boolean; message: string }>;
+  readonly onUpdate: (
+    name: string,
+    data: IntegrationConfigUpdate,
+  ) => Promise<void>;
+  readonly onTest: (
+    name: string,
+  ) => Promise<{ success: boolean; message: string }>;
   readonly isSaving: boolean;
   readonly isTesting: boolean;
 }
@@ -105,12 +111,9 @@ export function IntegrationPanel({
     await onUpdate(integration.name, { enabled: !integration.enabled });
   }, [integration.name, integration.enabled, onUpdate]);
 
-  const handleCredentialChange = useCallback(
-    (key: string, value: string) => {
-      setCredentialValues((prev) => ({ ...prev, [key]: value }));
-    },
-    [],
-  );
+  const handleCredentialChange = useCallback((key: string, value: string) => {
+    setCredentialValues((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   const handleSave = useCallback(async () => {
     // Only send credentials that have been modified
@@ -216,11 +219,12 @@ export function IntegrationPanel({
           <div className="space-y-3">
             {integration.credential_fields.map((field) => (
               <div key={field.key}>
-                <label htmlFor={`credential-${integration.name}-${field.key}`} className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor={`credential-${integration.name}-${field.key}`}
+                  className="block text-sm font-medium text-gray-700"
+                >
                   {field.label}
-                  {field.required && (
-                    <span className="text-red-500"> *</span>
-                  )}
+                  {field.required && <span className="text-red-500"> *</span>}
                   {integration.credentials_set[field.key] && (
                     <span className="ml-2 text-xs text-green-600">
                       (configured)
@@ -267,12 +271,16 @@ export function IntegrationPanel({
             ))}
           </div>
 
+          {/* Provider privacy disclosures (ai_providers only) */}
+          {integration.name === "ai_providers" && <ProviderPrivacyInfo />}
+
           {/* Error/status message */}
-          {integration.status_message != null && integration.status === "error" && (
-            <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              {integration.status_message}
-            </div>
-          )}
+          {integration.status_message != null &&
+            integration.status === "error" && (
+              <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                {integration.status_message}
+              </div>
+            )}
 
           {/* Test result */}
           {testResult && (
@@ -296,9 +304,7 @@ export function IntegrationPanel({
               disabled={isSaving || !hasUnsavedChanges}
               className="inline-flex items-center gap-1 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800 disabled:opacity-50"
             >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : null}
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Save Credentials
             </button>
             <button
