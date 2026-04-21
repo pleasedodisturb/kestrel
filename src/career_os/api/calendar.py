@@ -9,7 +9,7 @@ Covers:
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -25,7 +25,6 @@ from career_os.schemas.calendar import (
     FantasticalUrlResponse,
     GoogleCalendarUrlResponse,
 )
-from career_os.schemas.constraints import INT32_MAX
 from career_os.services.calendar import (
     ApplicationNotFoundError,
     CalendarEventNotFoundError,
@@ -66,12 +65,10 @@ async def create_event(
 
 @router.get("/events")
 async def list_events(
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     event_type: Annotated[str | None, Query(description="Filter by event type")] = None,
-    application_id: Annotated[
-        int | None, Query(ge=1, le=INT32_MAX, description="Filter by application")
-    ] = None,
+    application_id: Annotated[int | None, Query(description="Filter by application")] = None,
 ) -> CalendarEventListResponse:
     """List calendar events for a profile with optional filters."""
     events, total = list_calendar_events(
@@ -88,8 +85,8 @@ async def list_events(
 
 @router.get("/events/{event_id}", responses=RESP_404)
 async def get_event(
-    event_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    event_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> CalendarEventResponse:
     """Get a single calendar event by ID."""
@@ -102,9 +99,9 @@ async def get_event(
 
 @router.patch("/events/{event_id}", responses=RESP_404)
 async def update_event(
-    event_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    event_id: int,
     payload: CalendarEventUpdate,
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> CalendarEventResponse:
     """Update a calendar event.
@@ -124,8 +121,8 @@ async def update_event(
     responses=RESP_404,
 )
 async def delete_event(
-    event_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    event_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a calendar event."""
@@ -146,8 +143,8 @@ async def delete_event(
     responses=RESP_404,
 )
 async def create_from_follow_up(
-    follow_up_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    follow_up_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> CalendarEventResponse:
     """Create a calendar event from a follow-up."""
@@ -172,8 +169,8 @@ async def create_from_follow_up(
 
 @router.get("/events/{event_id}/ical", responses=RESP_404)
 async def export_ical(
-    event_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    event_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> Response:
     """Export a single calendar event as .ics file.
@@ -194,12 +191,10 @@ async def export_ical(
 
 @router.get("/export/ical")
 async def export_all_ical(
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     event_type: Annotated[str | None, Query(description="Filter by event type")] = None,
-    application_id: Annotated[
-        int | None, Query(ge=1, le=INT32_MAX, description="Filter by application")
-    ] = None,
+    application_id: Annotated[int | None, Query(description="Filter by application")] = None,
 ) -> Response:
     """Export calendar events as .ics file.
 
@@ -225,8 +220,8 @@ async def export_all_ical(
 
 @router.get("/events/{event_id}/google", responses=RESP_404)
 async def google_calendar_url(
-    event_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    event_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> GoogleCalendarUrlResponse:
     """Get a Google Calendar 'Add Event' URL for an event."""
@@ -244,8 +239,8 @@ async def google_calendar_url(
 
 @router.get("/events/{event_id}/fantastical", responses=RESP_404)
 async def fantastical_url(
-    event_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    event_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> FantasticalUrlResponse:
     """Get a Fantastical URL scheme for adding an event."""
@@ -263,8 +258,8 @@ async def fantastical_url(
 
 @router.get("/events/{event_id}/providers", responses=RESP_404)
 async def event_providers(
-    event_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    event_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> CalendarProviderConfigResponse:
     """Get export URLs/data for all supported calendar providers."""

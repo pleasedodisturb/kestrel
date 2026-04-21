@@ -6,8 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
 
 class ProfileCreate(BaseModel):
     """Request body for POST /api/profiles."""
@@ -17,6 +15,8 @@ class ProfileCreate(BaseModel):
     location: str | None = Field(default=None, description="Location")
     job_family: str | None = Field(default=None, description="Target job family")
     dream_companies: list[str] | None = Field(default=None, description="List of dream companies")
+    salary_range: str | None = Field(default=None, description="Target salary range")
+    experience_level: str | None = Field(default=None, description="Experience level")
 
 
 class ProfileUpdate(BaseModel):
@@ -27,17 +27,21 @@ class ProfileUpdate(BaseModel):
     location: str | None = Field(default=None, description="Location")
     job_family: str | None = Field(default=None, description="Target job family")
     dream_companies: list[str] | None = Field(default=None, description="List of dream companies")
+    salary_range: str | None = Field(default=None, description="Target salary range")
+    experience_level: str | None = Field(default=None, description="Experience level")
 
 
 class ProfileResponse(BaseModel):
     """Response schema for a profile."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
     name: str
     email: str | None = None
     location: str | None = None
     job_family: str | None = None
     dream_companies: list[str] | None = None
+    salary_range: str | None = None
+    experience_level: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -62,4 +66,4 @@ class ProfileListResponse(BaseModel):
     """Response schema for list of profiles."""
 
     profiles: list[ProfileResponse]
-    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    count: int

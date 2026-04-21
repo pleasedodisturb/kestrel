@@ -11,12 +11,11 @@ Covers:
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_PROFILE_ID, RESP_404_500
 from career_os.database import get_db
-from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.interview_prep import (
     InterviewPrepResponse,
     PrepChecklistItem,
@@ -45,8 +44,8 @@ router = APIRouter(prefix="/api/applications", tags=["interview-prep"])
     responses=RESP_404_500,
 )
 async def get_interview_prep_endpoint(
-    application_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    application_id: int,
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InterviewPrepResponse:
     """Get or generate interview preparation for an application.
@@ -85,9 +84,9 @@ async def get_interview_prep_endpoint(
     responses=RESP_404_500,
 )
 async def update_prep_item_endpoint(
-    item_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    item_id: int,
     body: PrepItemUpdate,
-    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> PrepChecklistItem:
     """Update a prep checklist item's completion state.

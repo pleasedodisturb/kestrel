@@ -3,12 +3,14 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +37,8 @@ class Profile(Base):
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     job_family: Mapped[str | None] = mapped_column(String(255), nullable=True)
     dream_companies: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
+    salary_range: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    experience_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     last_market_refreshed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -75,6 +79,11 @@ class Profile(Base):
         cascade=CASCADE_ALL_DELETE_ORPHAN
     )
 
+    # Onboarding state (one-to-one, optional — may not exist for pre-onboarding profiles)
+    onboarding_state: Mapped["OnboardingState | None"] = relationship(  # noqa: F821
+        "OnboardingState", back_populates="profile", uselist=False
+    )
+
     def __repr__(self) -> str:
         return f"<Profile(id={self.id}, name='{self.name}')>"
 
@@ -106,6 +115,9 @@ class Application(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("0"), nullable=False
+    )
 
     # Relationships
     profile: Mapped["Profile"] = relationship(back_populates="applications")

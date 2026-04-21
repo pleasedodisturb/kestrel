@@ -28,6 +28,7 @@ from career_os.api.learning import router as learning_router
 from career_os.api.market import router as market_router
 from career_os.api.oauth import limiter as oauth_limiter
 from career_os.api.oauth import router as oauth_router
+from career_os.api.onboarding import router as onboarding_router
 from career_os.api.privacy import router as privacy_router
 from career_os.api.profiles import router as profiles_router
 from career_os.api.pushover import router as pushover_router
@@ -125,10 +126,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown: flush observability, stop schedulers
-    from career_os.ai.observability import flush as flush_observability
-
-    flush_observability()
+    # Shutdown: stop schedulers
     stop_ticktick_scheduler()
     stop_scheduler()
 
@@ -150,6 +148,18 @@ from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
 app.state.limiter = oauth_limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+# Onboarding structured error handler — returns {error, resolution} JSON (D-10)
+from career_os.errors.onboarding import OnboardingError  # noqa: E402
+
+
+@app.exception_handler(OnboardingError)
+async def onboarding_error_handler(request: Request, exc: OnboardingError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.user_message, "resolution": exc.resolution},
+    )
+
 
 # API key auth middleware (disabled by default for local use)
 from career_os.middleware import APIKeyAuthMiddleware  # noqa: E402
@@ -197,6 +207,7 @@ app.include_router(jobs_router)
 app.include_router(learning_router)
 app.include_router(market_router)
 app.include_router(oauth_router)
+app.include_router(onboarding_router)
 app.include_router(privacy_router)
 app.include_router(profiles_router)
 app.include_router(pushover_router)

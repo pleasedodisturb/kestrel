@@ -4,15 +4,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
 
 class TickTickSyncTaskResponse(BaseModel):
     """Response schema for a single sync task mapping."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
     entity_type: str
-    entity_id: int = Field(..., ge=1, le=INT64_MAX)
+    entity_id: int
     ticktick_task_id: str
     title: str
     status: str
@@ -25,10 +23,10 @@ class TickTickSyncTaskResponse(BaseModel):
 class TickTickSyncStatusResponse(BaseModel):
     """Response schema for overall TickTick sync status."""
 
-    total_tasks: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    synced: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    completed: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    errors: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total_tasks: int
+    synced: int
+    completed: int
+    errors: int
     last_sync_at: str | None = None
     tasks: list[TickTickSyncTaskResponse]
 
@@ -37,8 +35,8 @@ class TickTickPushRequest(BaseModel):
     """Request to push a specific entity to TickTick."""
 
     entity_type: str = Field(..., description="Type: follow_up | learning_goal | pipeline_action")
-    entity_id: int = Field(..., ge=1, le=INT64_MAX, description="ID of the entity to sync")
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile ID")
+    entity_id: int = Field(..., description="ID of the entity to sync")
+    profile_id: int = Field(..., description="Profile ID")
 
 
 class TickTickPushResponse(BaseModel):
@@ -54,9 +52,9 @@ class TickTickPullResponse(BaseModel):
 
     success: bool
     message: str
-    synced: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX)
-    errors: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX)
-    skipped: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX)
+    synced: int = 0
+    errors: int = 0
+    skipped: int = 0
 
 
 class TickTickConnectionTestResponse(BaseModel):

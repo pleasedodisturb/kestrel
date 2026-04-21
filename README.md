@@ -150,59 +150,26 @@ Kestrel works out of the box in Demo Mode — free, offline, no account needed. 
 | Option | Cost | Privacy | Speed | Best for |
 |--------|------|---------|-------|----------|
 | **Demo Mode** | Free | Perfect | Instant | Exploring before committing |
-| **OpenRouter (free tier)** | **$0/mo** | Good | Varies | Start here — Llama 3.3 70B scores jobs for free |
-| **OpenRouter (paid models)** | $1-30+/mo | Good | Varies | Premium models (Claude, GPT). Cost depends on model and volume — see note below |
-| **Anthropic (Claude)** | $1-10/mo | Excellent | ~200ms | Best quality + prompt caching savings. Can spike if scoring high volumes without caching |
+| **OpenRouter** | ~$3-10/mo | Good | Varies | Most users — one key, 300+ models |
+| **Anthropic (Claude)** | ~$3-10/mo | Excellent | ~200ms | Best quality + prompt caching savings |
 | **Together AI** | ~$1-5/mo | Good ([ZDR available](https://www.together.ai/blog/soc-2-compliance)) | ~213ms | Budget-friendly bulk scoring |
 | **Ollama** | Free | Perfect | Depends on hardware | Nothing leaves your machine, ever |
 
-> **Cost depends on model and volume.** A typical daily scan scrapes 1,000-1,500 jobs from multiple boards. That's a lot of AI calls. Here's what it actually costs:
->
-> | Model | Cost per job | 1,500 jobs/day | Monthly (30 days) |
-> |---|---|---|---|
-> | Llama 3.3 70B (OpenRouter free) | $0 | $0 | **$0** |
-> | Llama 3.1 8B (Together AI) | $0.0002 | $0.30 | **$9** |
-> | GPT-4o-mini (OpenRouter) | $0.0006 | $0.90 | **$27** |
-> | Llama 3.3 70B (Together AI) | $0.002 | $3.00 | **$90** |
-> | Claude Sonnet (OpenRouter) | $0.02 | $30.00 | **$900** |
->
-> Kestrel defaults to free-tier models for bulk scanning. Premium models like Claude Sonnet are best reserved for deep analysis of shortlisted roles, not bulk filtering. The optimizations below help keep costs in check regardless of which model you use.
-
-**Quickest path:** Go to Settings → click "Connect to OpenRouter" → log in → done. No API keys to copy. Free-tier models like Llama 3.3 70B handle job scoring at zero cost — add $10 of credits to unlock 1,000 requests/day.
+**Quickest path:** Go to Settings → click "Connect to OpenRouter" → log in → done. No API keys to copy.
 
 ### How Kestrel keeps costs low
 
-AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get expensive — unless you're smart about it. Kestrel stacks eight optimizations that compound:
+AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get expensive — unless you're smart about it. Kestrel stacks several tricks that compound:
 
 | What Kestrel does | How it helps | Savings |
 |-------------------|-------------|---------|
-| **Prompt caching** | Your profile is sent once, then "remembered" by the API. Scoring 50 jobs doesn't resend your CV 50 times. | [92% on repeat calls](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) |
-| **Compressed prompts** | Scoring instructions use telegraphic notation — same info, fewer words. The AI reads shorthand just fine. | 29% on system prompts |
-| **Compact serialization** | Your profile is sent without pretty-printing whitespace. `{"name":"Jane"}` instead of `{ "name": "Jane" }`. | 23% on profile data |
-| **Response caching** | Asked the same question twice? Kestrel serves it from local encrypted cache. Zero API calls. | 100% (free) |
+| **Prompt caching** | Your profile is sent once, then "remembered" by the API. Scoring 50 jobs doesn't resend your CV 50 times. | [90% off input tokens](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) |
+| **Response caching** | Asked the same question twice? Kestrel serves it from local cache. Zero API calls, encrypted at rest. | 100% (free) |
 | **Token-efficient tool use** | When Kestrel calls AI tools, it uses a compact format that cuts output size. | [70% off output tokens](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/token-efficient-tool-use) |
-| **Smart model selection** | Not every task needs the biggest brain. Simple classification uses a smaller model. Deep analysis uses the full thing. | [60-95% on simple tasks](https://github.com/lm-sys/RouteLLM) |
+| **Smart model selection** | Not every task needs the biggest brain. Simple yes/no classification uses a smaller, cheaper model. Complex analysis uses the full thing. | [60-95% on simple tasks](https://github.com/lm-sys/RouteLLM) |
 | **Batch scoring** | Scoring a big backlog overnight? Batch APIs give a flat 50% discount for non-urgent work. | [50% off everything](https://docs.anthropic.com/en/api/creating-message-batches) |
-| **Provider fallback** | If one provider's quota runs out, Kestrel automatically tries the next one. No failed scores, no wasted retries. | Resilience (not cost) |
 
-**Benchmarked on a real profile + real job posting:** Naive approach = ~$16/month. With all optimizations = **~$1-5/month** for the same results. [How it works →](docs/how-token-optimization-works.md)
-
-<details>
-<summary>Benchmark: 50-job scoring batch, same user</summary>
-
-```
-System prompt:  sent 50× full price  →  1× full + 49× cached (92% saved)
-Profile data:   sent 50× with indent →  1× compact + 49× cached (92% saved)
-Job description: 50× unique (no savings — this is the irreducible cost)
-
-Single call:  877 tokens (old) → 512 tokens (new, Anthropic cached) = 42% reduction
-50-job batch: 43,862 tokens (old) → 25,846 tokens (new) = 41% reduction
-Monthly (200 jobs/day): $15.79 → $9.45 input tokens only
-```
-
-The job description is ~60% of each call and can't be cached (it's different every time). The 92% savings apply to the other 40% — like speeding up the highway portion of your commute.
-
-</details>
+**The math:** Naive approach = $15-30/month. With all optimizations = **$1-5/month** for the same results. [Deep dive on token economics →](docs/llms-tokens-privacy.md)
 
 ### Choosing a provider
 
@@ -215,28 +182,6 @@ The job description is ~60% of each call and can't be cached (it's different eve
 **Want the best of everything?** Kestrel can use multiple providers at once — route simple scoring to Together (cheap), complex analysis to Anthropic (quality), and never worry about which is which.
 
 **Want to understand more?** Read [How Kestrel Uses AI](docs/ai-providers-explained.md) — it explains everything in plain English, no jargon. For the full technical comparison with pricing tables and privacy audits, see the [AI Provider Setup](docs/AI-PROVIDERS.md) guide or the [LLM landscape research](docs/llms-tokens-privacy.md).
-
-### Privacy and free/cheap models
-
-Free and cheap AI models often train on your data or have weaker privacy guarantees. That's fine for some tasks and dangerous for others. Kestrel distinguishes between the two:
-
-**Safe to send without ZDR** (generic, non-identifying):
-- Job descriptions (public postings)
-- Career preferences (target roles, salary range, location)
-- Scoring criteria and rubrics
-
-**Never sent without ZDR** (personally identifying):
-- Your name, email, phone number, or address
-- CV/resume content and work history
-- Cover letters and application materials
-- Interview preparation with personal STAR stories
-- Contact details and networking notes
-
-**Currently:** Kestrel does not enforce this boundary automatically - it's your responsibility to choose an appropriate provider for sensitive features. If you disable ZDR for cheap scoring, be mindful of which features you use with that provider.
-
-**Planned:** Automatic routing that blocks personal data from reaching non-ZDR providers, so you can use free models for scoring without worrying about accidentally leaking personal data through other features.
-
-**Rule of thumb:** If it's about the job market, cheap models are fine. If it's about *you*, use Ollama (local), Anthropic (strong privacy), or a provider with ZDR enabled.
 
 ---
 
@@ -251,9 +196,7 @@ Our proof is in the research artifacts. Before building anything, we run paralle
 | **Scoring** | [How Scoring Works](docs/how-scoring-works.md) | [Scoring Strategy](docs/research/scoring-research.md) | [Raw Findings](docs/research/scoring-raw-research.md) |
 | **Testing** | [How Testing Works](docs/how-testing-works.md) | [Testing Strategy](docs/research/testing-research.md) | [Raw Findings](docs/research/testing-raw-research.md) |
 | **CI/CD** | [How CI/CD Works](docs/how-cicd-works.md) | [CI/CD Strategy](docs/research/cicd-research.md) | [Raw Findings](docs/research/cicd-raw-research.md) |
-| **Observability** | [How Observability Works](docs/how-observability-works.md) | [Observability Strategy](docs/research/observability-research.md) | [Setup Guide](docs/observability.md) |
-| **Token Optimization** | [How Token Optimization Works](docs/how-token-optimization-works.md) | [Strategy & Implementation](docs/research/token-optimization-research.md) | [Raw Findings](docs/research/token-optimization-raw-research.md) |
-| **[LLM Research Corpus](https://github.com/pleasedodisturb/awesome-llm-token-optimization)** | [Quick Wins](https://github.com/pleasedodisturb/awesome-llm-token-optimization#quick-wins) | [Tools & Strategies](https://github.com/pleasedodisturb/awesome-llm-token-optimization#contents) | [52 Papers + Sources](https://github.com/pleasedodisturb/awesome-llm-token-optimization/tree/main/research) |
+| **[LLM Token Costs](https://github.com/pleasedodisturb/awesome-llm-token-optimization)** | [Quick Wins](https://github.com/pleasedodisturb/awesome-llm-token-optimization#quick-wins) | [Tools & Strategies](https://github.com/pleasedodisturb/awesome-llm-token-optimization#contents) | [52 Papers + Sources](https://github.com/pleasedodisturb/awesome-llm-token-optimization/tree/main/research) |
 
 ## License
 

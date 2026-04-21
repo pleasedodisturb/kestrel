@@ -5,8 +5,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
 
 def _ensure_utc(v: Any) -> datetime | None:
     if v is None:
@@ -24,15 +22,13 @@ def _ensure_utc(v: Any) -> datetime | None:
 class VoiceSessionCreate(BaseModel):
     """Create a new voice discussion session."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Active profile ID")
+    profile_id: int = Field(..., description="Active profile ID")
     mode: str = Field(
         ...,
         description="Session mode: cover_letter, coaching, or job_evaluation",
     )
     application_id: int | None = Field(
         default=None,
-        ge=1,
-        le=INT64_MAX,
         description="Application ID (required for cover_letter and job_evaluation)",
     )
     title: str | None = Field(default=None, description="Optional session title")
@@ -41,7 +37,7 @@ class VoiceSessionCreate(BaseModel):
 class VoiceMessageCreate(BaseModel):
     """Send a message in a voice discussion session."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Active profile ID")
+    profile_id: int = Field(..., description="Active profile ID")
     content: str = Field(..., min_length=1, description="User message text (from STT or typed)")
 
 
@@ -53,8 +49,8 @@ class VoiceMessageCreate(BaseModel):
 class VoiceMessageResponse(BaseModel):
     """A single message in a voice session."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    session_id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
+    session_id: int
     role: str = Field(..., description="Message sender: user or assistant")
     content: str
     created_at: datetime
@@ -70,9 +66,9 @@ class VoiceMessageResponse(BaseModel):
 class VoiceSessionResponse(BaseModel):
     """Voice discussion session summary."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
-    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
+    id: int
+    profile_id: int
+    application_id: int | None = None
     mode: str
     title: str | None = None
     status: str
@@ -92,7 +88,7 @@ class VoiceSessionListResponse(BaseModel):
     """List of voice sessions."""
 
     sessions: list[VoiceSessionResponse]
-    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total: int
 
 
 class VoiceSendResponse(BaseModel):

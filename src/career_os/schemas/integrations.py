@@ -4,8 +4,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
 # ---- Integration definitions ----
 
 
@@ -71,7 +69,7 @@ class IntegrationListResponse(BaseModel):
     """Response schema for listing all integrations."""
 
     integrations: list[IntegrationConfigResponse]
-    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    count: int
 
 
 class IntegrationTestResponse(BaseModel):
