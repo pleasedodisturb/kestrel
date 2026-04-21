@@ -9,10 +9,9 @@
  * - Skill history panel
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { renderWithProviders } from "@/test-utils";
 import { Skills } from "@/pages/Skills";
 import type {
   SkillListResponse,
@@ -44,24 +43,8 @@ vi.mock("@/api/applications", () => ({
 
 // ---- helpers ----
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
-      mutations: { retry: false },
-    },
-  });
-}
-
 function renderSkills() {
-  const qc = createQueryClient();
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <Skills />
-      </MemoryRouter>
-    </QueryClientProvider>
-  );
+  return renderWithProviders(<Skills />, { route: "/skills" });
 }
 
 const SAMPLE_SKILLS: Skill[] = [
@@ -284,11 +267,11 @@ describe("Skills page", () => {
       });
       renderSkills();
       await waitFor(() => {
-        expect(screen.getByText("No skills yet")).toBeInTheDocument();
+        expect(screen.getByText("No skills added yet")).toBeInTheDocument();
       });
       expect(screen.getByText("Import from CV")).toBeInTheDocument();
       expect(screen.getByText("Parse assessments")).toBeInTheDocument();
-      expect(screen.getByText("Add manually")).toBeInTheDocument();
+      expect(screen.getByText("Add a skill")).toBeInTheDocument();
     });
 
     it('shows "No skills match" when filters return empty', async () => {
