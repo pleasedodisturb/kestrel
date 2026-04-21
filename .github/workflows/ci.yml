@@ -121,9 +121,12 @@ jobs:
 
       - name: Check coverage on changed lines (PR only)
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
+          git fetch origin "${BASE_REF}" --depth=1
           pip install diff-cover>=10.2.0
-          diff-cover coverage.xml --compare-branch=origin/${{ github.base_ref }} --fail-under=80
+          diff-cover coverage.xml --compare-branch="origin/${BASE_REF}" --fail-under=80
 
       - name: Upload JUnit XML
         if: always()
