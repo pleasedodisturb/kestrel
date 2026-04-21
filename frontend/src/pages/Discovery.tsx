@@ -20,6 +20,7 @@ import type {
 import { GradeBadge } from "@/components/GradeBadge";
 import { RedFlagBadge } from "@/components/RedFlagBadge";
 import { CreditsExhaustedBanner } from "@/components/CreditsExhaustedBanner";
+import { EmptyState } from "@/components/EmptyState";
 import {
   Search,
   Loader2,
@@ -840,25 +841,33 @@ export function Discovery() {
       {!isLoading && !error && (
         <>
           {jobs.length === 0 ? (
-            <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center">
-              <Search className="mx-auto h-12 w-12 text-gray-400" />
-              <h2 className="mt-4 text-lg font-semibold text-gray-900">
-                {debouncedQuery ||
-                Object.values(filters).some(
-                  (v) => v !== undefined && v !== null && v !== "",
-                )
-                  ? "No jobs match your search"
-                  : "No discovered jobs yet"}
-              </h2>
-              <p className="mt-2 text-sm text-gray-500">
-                {debouncedQuery ||
-                Object.values(filters).some(
-                  (v) => v !== undefined && v !== null && v !== "",
-                )
-                  ? "Try adjusting your search query or filters."
-                  : "Run a discovery sweep to find jobs."}
-              </p>
-            </div>
+            debouncedQuery ||
+            Object.values(filters).some(
+              (v) => v !== undefined && v !== null && v !== "",
+            ) ? (
+              <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center">
+                <Search className="mx-auto h-12 w-12 text-gray-400" />
+                <h2 className="mt-4 text-lg font-semibold text-gray-900">
+                  No jobs match your search
+                </h2>
+                <p className="mt-2 text-sm text-gray-500">
+                  Try adjusting your search query or filters.
+                </p>
+              </div>
+            ) : (
+              <EmptyState
+                icon={Search}
+                heading="Ready to find your next role"
+                description="Search for jobs by title, company, or location. Every result gets scored against your profile."
+                ctaLabel="Search jobs"
+                onCtaClick={() => {
+                  const input = document.querySelector<HTMLInputElement>(
+                    'input[placeholder*="Search"]',
+                  );
+                  input?.focus();
+                }}
+              />
+            )
           ) : (
             <div className="space-y-3">
               {jobs.map((job) => (
