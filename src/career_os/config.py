@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     # users with too many prompts.
     active_query_enabled: bool = False
 
+    # Regex pre-filter (G-439) — lightweight keyword/title/industry filter
+    # that runs BEFORE AI scoring to eliminate ~60% of irrelevant jobs.
+    # Strategy: "strict" (title OR skills, NOT blacklisted industry),
+    # "moderate" (title OR skills), "off" (disabled).
+    prefilter_strategy: str = "strict"
+
     # Embedding pre-filter (Epic 4 / G-272) — compute embedding cosine
     # similarity before sending jobs through the full LLM scoring pipeline.
     # Shadow mode (default): similarities are computed and logged but jobs are
