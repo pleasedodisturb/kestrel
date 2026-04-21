@@ -7,6 +7,7 @@ description: Design system, interaction patterns, and UX decisions from the Kest
 
 **Source:** `feat/lovable-app-version` branch (React Native/Expo mobile app, parked 2026-04-12)
 **Status:** Extracted for web v1 responsive design. Branch preserved for future mobile work.
+**Note:** The mobile app is planned for a future release. This document preserves UX findings that inform both web responsive design and the eventual mobile app.
 
 ## Why This Matters for Web
 

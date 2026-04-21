@@ -109,7 +109,7 @@ That's two commands. The database migrates automatically — new tables get crea
 
 ### What About the Mobile App?
 
-The mobile app (coming soon) works differently. It connects to your self-hosted Kestrel server — think of it as a remote control for your instance. The app itself gets updates through the app store (Apple/Google), and some updates can even be pushed instantly without waiting for app store review.
+A mobile app is planned for a future release. It will connect to your self-hosted Kestrel server — think of it as a remote control for your instance. The app would get updates through the app store (Apple/Google), and some updates could be pushed instantly without waiting for app store review. Stay tuned for updates on the [roadmap](https://github.com/pleasedodisturb/kestrel/wiki/Roadmap).
 
 ---
 

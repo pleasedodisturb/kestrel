@@ -204,7 +204,7 @@ Being honest about the gaps:
 
 **Setup is harder than SaaS.** Huntr and Teal take 2 minutes to start using. Kestrel requires Docker, environment configuration, and comfort with a terminal. Non-technical users will struggle.
 
-**No mobile app.** Huntr has native mobile apps. Kestrel is web-only and not optimized for mobile use.
+**No mobile app yet.** Huntr has native mobile apps. Kestrel is currently web-only. A mobile app is planned for a future release.
 
 **Auto-apply is experimental.** Kestrel's Playwright-based auto-apply exists but is fragile - CAPTCHAs, dynamic forms, and ATS variations make this unreliable compared to Huntr/Simplify's mature Chrome extensions that work within the browser context.
 
