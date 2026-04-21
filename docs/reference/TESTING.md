@@ -97,6 +97,24 @@ Auto-marking: Tests using fixtures in `INTEGRATION_FIXTURES` (conftest.py) are a
 4. Is it file system I/O? -> MOCK IT (use tmp_path fixture)
 5. Is it internal business logic? -> DO NOT MOCK (call the real function)
 
+## Frontend Testing Rules (Vitest + React Testing Library)
+
+### Test Infrastructure
+- **Setup file:** `frontend/src/test-setup.ts` — localStorage/sessionStorage polyfill for Node.js 25 (built-in localStorage has undefined methods that conflict with jsdom 29)
+- **Shared wrapper:** `frontend/src/test-utils.tsx` — `renderWithProviders(ui, options?)` bundles QueryClientProvider (retry: false, gcTime: 0) + MemoryRouter. All test files must use this instead of bare `render()`.
+
+### Frontend Mocking Rules
+- RULE-F01: Mock at the **API boundary** (`vi.mock("@/api/onboarding")`) — never mock hooks (`@/hooks/useOnboarding`) or router (`react-router-dom`)
+- RULE-F02: When mocking a module that exports constants alongside functions, use `importOriginal` to preserve non-function exports (e.g., `DEFAULT_PROFILE_ID`)
+- RULE-F03: Use `renderWithProviders` from `@/test-utils` for every component test — bare `render()` will crash components that use React Query hooks
+- RULE-F04: Set `retry: false` and `gcTime: 0` on test QueryClients to prevent flaky async retries and stale cache between tests
+
+### Frontend Mocking Decision Tree
+1. Is it a React Query hook? -> DO NOT MOCK (mock the API function it calls instead)
+2. Is it react-router-dom? -> DO NOT MOCK (use MemoryRouter via renderWithProviders)
+3. Is it an API fetch function (`@/api/*`)? -> MOCK IT (use vi.mock with importOriginal)
+4. Is it a browser API (localStorage, window.location)? -> Handled by test-setup.ts polyfill
+
 ## Enforcement Layers
 
 | Layer | What It Checks | When It Runs |

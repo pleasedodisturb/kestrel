@@ -134,6 +134,9 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 - Every piece of code must have tests. Write tests alongside the code, not after.
 - Backend: pytest in `tests/`, Frontend: Vitest in `frontend/src/__tests__/`, Mobile: Jest co-located as `*.test.tsx`
 - Run tests after writing them to confirm they pass.
+- **Full testing standards:** `docs/reference/TESTING.md` (backend rules, mocking decision tree, marker usage)
+- **Testing strategy & history:** `docs/reference/testing-strategy.md` (what shipped, what was trimmed, rationale)
+- **Frontend testing rules:** Mock at API boundary (`@/api/*`), never mock hooks or react-router-dom. Use `renderWithProviders` from `@/test-utils` (provides QueryClient + MemoryRouter). Use `importOriginal` when mocking modules that export constants alongside functions.
 
 ### Code Style
 - **Python**: Ruff handles linting + formatting. `ruff check --fix` then `ruff format`.
