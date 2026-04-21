@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Check, Circle } from "lucide-react";
 import { StepProgress } from "@/components/StepProgress";
 import { useOnboardingStatus } from "@/hooks/useOnboarding";
+import { useProfile } from "@/hooks/useProfiles";
 import { DEFAULT_PROFILE_ID, patchOnboardingStep } from "@/api/onboarding";
 import { updateProfile } from "@/api/profiles";
 import { createSkill } from "@/api/skills";
@@ -79,6 +80,7 @@ export function WelcomePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: status } = useOnboardingStatus();
+  const { data: profile } = useProfile(DEFAULT_PROFILE_ID);
 
   // Core state
   const [screen, setScreen] = useState<Screen>("welcome");
@@ -109,11 +111,21 @@ export function WelcomePage() {
     if (status.welcome_completed_at) {
       setScreen("summary");
     } else if (status.profile_started_at) {
-      // Resume at steps -- start from step 0, backend data is already saved
+      // Resume at the first step whose profile field is empty (D-05).
+      // If a user skipped a field, they'll see it again (one-click re-skip).
+      if (profile) {
+        const profileData: Record<string, unknown> = profile;
+        const resumeIndex = WELCOME_STEPS.findIndex((step) => {
+          const val = profileData[step.field];
+          return val === null || val === undefined || val === "";
+        });
+        // If all fields are filled, go to last step (it will finish onboarding)
+        setStepIndex(resumeIndex >= 0 ? resumeIndex : WELCOME_STEPS.length - 1);
+      }
       setScreen("step");
     }
     // Otherwise stay on welcome screen
-  }, [status]);
+  }, [status, profile]);
 
   // ---------------------------------------------------------------------------
   // Handlers

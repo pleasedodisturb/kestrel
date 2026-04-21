@@ -37,8 +37,10 @@ vi.mock("@/api/onboarding", () => ({
 }));
 
 const mockUpdateProfile = vi.fn<() => Promise<unknown>>();
+const mockFetchProfile = vi.fn<() => Promise<unknown>>();
 vi.mock("@/api/profiles", () => ({
   updateProfile: (...args: unknown[]) => mockUpdateProfile(...(args as [])),
+  fetchProfile: (...args: unknown[]) => mockFetchProfile(...(args as [])),
 }));
 
 const mockCreateSkill = vi.fn<() => Promise<unknown>>();
@@ -98,9 +100,25 @@ function renderWelcomePage(statusOverrides: Partial<OnboardingStatus> = {}) {
   );
 }
 
+function makeProfile(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    name: "Default",
+    email: null,
+    location: null,
+    job_family: null,
+    salary_range: null,
+    experience_level: null,
+    created_at: "2026-04-21T00:00:00Z",
+    updated_at: "2026-04-21T00:00:00Z",
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockUpdateProfile.mockResolvedValue({});
+  mockFetchProfile.mockResolvedValue(makeProfile());
   mockCreateSkill.mockResolvedValue({ id: 1 });
   mockPatchOnboardingStep.mockResolvedValue(makeStatus());
 });
@@ -311,6 +329,11 @@ describe("WelcomePage", () => {
 
   describe("Resume logic (WEB-04)", () => {
     it("shows step screen when profile_started_at is set", async () => {
+      // All profile fields empty — resume at step 1
+      mockFetchProfile.mockResolvedValue(
+        makeProfile({ name: "", location: null }),
+      );
+
       renderWelcomePage({
         profile_started_at: "2026-04-21T00:00:00Z",
       });
@@ -318,6 +341,25 @@ describe("WelcomePage", () => {
       await waitFor(() => {
         expect(screen.getByText("What's your name?")).toBeInTheDocument();
       });
+    });
+
+    it("resumes at first empty profile field, not step 1", async () => {
+      // User filled name and location, then closed browser
+      mockFetchProfile.mockResolvedValue(
+        makeProfile({ name: "Alice", location: "Berlin", job_family: null }),
+      );
+
+      renderWelcomePage({
+        profile_started_at: "2026-04-21T00:00:00Z",
+      });
+
+      // Should resume at step 3 (job_family), skipping filled name & location
+      await waitFor(() => {
+        expect(
+          screen.getByText("What roles are you targeting?"),
+        ).toBeInTheDocument();
+      });
+      expect(screen.getByText("Step 3 of 6")).toBeInTheDocument();
     });
 
     it("shows summary screen when welcome_completed_at is set", async () => {
