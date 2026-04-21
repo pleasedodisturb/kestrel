@@ -8,6 +8,7 @@
  */
 
 import { MessageCircle } from "lucide-react";
+import { useTour } from "@/components/TourProvider";
 
 /** GitHub repo for issue creation */
 const GITHUB_REPO = "pleasedodisturb/kestrel";
@@ -47,6 +48,11 @@ function buildFeedbackUrl(): string {
 }
 
 export function FeedbackButton() {
+  const { isActive } = useTour();
+
+  // Hide feedback button during active tour to avoid z-index conflicts (Pitfall 4)
+  if (isActive) return null;
+
   return (
     <a
       href={buildFeedbackUrl()}
