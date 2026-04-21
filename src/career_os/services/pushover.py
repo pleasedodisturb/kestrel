@@ -12,10 +12,11 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from career_os.models.integrations import IntegrationConfig
-from career_os.models.models import Application, FollowUp
+from career_os.models.models import Application, FollowUp, Profile
 
 if TYPE_CHECKING:
     from career_os.models.calendar import CalendarEvent
@@ -40,6 +41,10 @@ _URL_TITLE_VIEW_APPLICATION = "View Application"
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+class ProfileNotFoundError(Exception):
+    """Raised when the requested profile does not exist."""
 
 
 class PushoverNotConfiguredError(Exception):
@@ -73,6 +78,12 @@ def _get_pushover_client(db: Session) -> PushoverClient:
     return PushoverClient(user_key=user_key, app_token=app_token)
 
 
+def _validate_profile(db: Session, profile_id: int) -> None:
+    """Raise ProfileNotFoundError if the profile does not exist."""
+    if db.query(Profile).filter(Profile.id == profile_id).first() is None:
+        raise ProfileNotFoundError(f"Profile {profile_id} not found")
+
+
 def _get_or_create_preferences(db: Session, profile_id: int) -> NotificationPreference:
     """Get or create notification preferences for a profile."""
     pref = (
@@ -81,9 +92,14 @@ def _get_or_create_preferences(db: Session, profile_id: int) -> NotificationPref
         .first()
     )
     if pref is None:
+        _validate_profile(db, profile_id)
         pref = NotificationPreference(profile_id=profile_id)
         db.add(pref)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError as exc:
+            db.rollback()
+            raise ProfileNotFoundError(f"Profile {profile_id} not found") from exc
         db.refresh(pref)
     return pref
 
@@ -874,6 +890,7 @@ def send_test_notification(
 
     VAL-PUSH-005: Auth failure logged and surfaced in UI, no crash.
     """
+    _validate_profile(db, profile_id)
     try:
         client = _get_pushover_client(db)
     except PushoverNotConfiguredError as exc:

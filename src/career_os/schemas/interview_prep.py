@@ -2,7 +2,7 @@
 
 Covers:
 - VAL-PREP-001: Personalized topic list per application
-- VAL-PREP-002: Practice question generation (≥5 tailored)
+- VAL-PREP-002: Practice question generation (>=5 tailored)
 - VAL-PREP-003: Prep checklist with time estimates and total
 - VAL-PREP-004: Prep progress tracking (persists on revisit)
 - VAL-PREP-005: No-research prompt for un-researched companies
@@ -13,6 +13,8 @@ from __future__ import annotations
 from datetime import datetime
 
 from pydantic import BaseModel, Field
+
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
 
 # ---------------------------------------------------------------------------
 # Topic schema
@@ -54,9 +56,9 @@ class PrepQuestion(BaseModel):
 class PrepChecklistItem(BaseModel):
     """A checklist item with time estimate and progress tracking (VAL-PREP-003/004)."""
 
-    id: int = Field(..., description="Item ID for progress updates")
+    id: int = Field(..., ge=1, le=INT64_MAX, description="Item ID for progress updates")
     item: str = Field(..., description="Checklist item description")
-    time_minutes: int = Field(..., ge=0, description="Estimated time in minutes")
+    time_minutes: int = Field(..., ge=0, le=INT64_MAX, description="Estimated time in minutes")
     priority: str = Field(..., description="Priority: high, medium, low")
     completed: bool = Field(default=False, description="Completion state")
     completed_at: datetime | None = Field(default=None, description="When the item was completed")
@@ -80,7 +82,7 @@ class InterviewPrepResponse(BaseModel):
     persisted progress state.
     """
 
-    application_id: int = Field(..., description="Application this prep is for")
+    application_id: int = Field(..., ge=1, le=INT64_MAX, description="Application this prep is for")
     company: str = Field(..., description="Company name")
     role: str = Field(..., description="Role title")
     company_researched: bool = Field(..., description="Whether the company has been researched")
@@ -94,14 +96,17 @@ class InterviewPrepResponse(BaseModel):
     )
     questions: list[PrepQuestion] = Field(
         default_factory=list,
-        description="Practice questions (≥5 tailored) (VAL-PREP-002)",
+        description="Practice questions (>=5 tailored) (VAL-PREP-002)",
     )
     checklist: list[PrepChecklistItem] = Field(
         default_factory=list,
         description="Prep checklist with time estimates (VAL-PREP-003)",
     )
     total_prep_minutes: int = Field(
-        default=0, description="Total estimated preparation time in minutes"
+        default=0,
+        ge=INT64_MIN,
+        le=INT64_MAX,
+        description="Total estimated preparation time in minutes",
     )
     total_prep_hours: float = Field(default=0.0, description="Total estimated preparation hours")
     progress_percentage: float = Field(
@@ -110,5 +115,9 @@ class InterviewPrepResponse(BaseModel):
         le=100.0,
         description="Percentage of checklist items completed (VAL-PREP-004)",
     )
-    completed_items: int = Field(default=0, description="Number of completed checklist items")
-    total_items: int = Field(default=0, description="Total number of checklist items")
+    completed_items: int = Field(
+        default=0, ge=INT64_MIN, le=INT64_MAX, description="Number of completed checklist items"
+    )
+    total_items: int = Field(
+        default=0, ge=INT64_MIN, le=INT64_MAX, description="Total number of checklist items"
+    )

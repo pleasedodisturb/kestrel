@@ -5,6 +5,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -48,15 +50,15 @@ class NotificationPreferenceUpdate(BaseModel):
 class NotificationPreferenceResponse(BaseModel):
     """Response schema for notification preferences."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     follow_up_reminders: bool
     ghost_alerts: bool
     discovery_alerts: bool
     interview_reminders: bool
-    quiet_hours_start: int | None = None
-    quiet_hours_end: int | None = None
-    interview_lead_time_minutes: int
+    quiet_hours_start: int | None = Field(default=None, ge=INT64_MIN, le=INT64_MAX)
+    quiet_hours_end: int | None = Field(default=None, ge=INT64_MIN, le=INT64_MAX)
+    interview_lead_time_minutes: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
     discovery_score_threshold: float
     created_at: datetime
     updated_at: datetime
@@ -72,11 +74,11 @@ class NotificationPreferenceResponse(BaseModel):
 class SendNotificationRequest(BaseModel):
     """Request body for manually sending a test notification."""
 
-    profile_id: int
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     category: NotificationCategory
     title: str = Field(..., min_length=1, max_length=250)
     message: str = Field(..., min_length=1, max_length=1024)
-    application_id: int | None = None
+    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
 
 
 # ---------------------------------------------------------------------------
@@ -87,12 +89,12 @@ class SendNotificationRequest(BaseModel):
 class NotificationLogResponse(BaseModel):
     """Response schema for a single notification log entry."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     category: str
     title: str
     message: str
-    application_id: int | None = None
+    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
     status: str
     error_message: str | None = None
     sent_at: datetime
@@ -104,7 +106,7 @@ class NotificationLogListResponse(BaseModel):
     """Response schema for listing notification logs."""
 
     notifications: list[NotificationLogResponse]
-    total: int
+    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +117,11 @@ class NotificationLogListResponse(BaseModel):
 class NotificationTriggerResponse(BaseModel):
     """Response from triggering notifications (e.g., follow-up check)."""
 
-    triggered: int = Field(description="Number of notifications sent")
-    skipped: int = Field(description="Number skipped (disabled, quiet hours, etc.)")
-    failed: int = Field(description="Number that failed to send")
+    triggered: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Number of notifications sent"
+    )
+    skipped: int = Field(
+        ..., ge=INT64_MIN, le=INT64_MAX, description="Number skipped (disabled, quiet hours, etc.)"
+    )
+    failed: int = Field(..., ge=INT64_MIN, le=INT64_MAX, description="Number that failed to send")
     details: list[dict] = Field(default_factory=list)

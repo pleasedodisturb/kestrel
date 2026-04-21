@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 
 class ProfileCreate(BaseModel):
     """Request body for POST /api/profiles."""
@@ -30,7 +32,7 @@ class ProfileUpdate(BaseModel):
 class ProfileResponse(BaseModel):
     """Response schema for a profile."""
 
-    id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
     name: str
     email: str | None = None
     location: str | None = None
@@ -60,4 +62,4 @@ class ProfileListResponse(BaseModel):
     """Response schema for list of profiles."""
 
     profiles: list[ProfileResponse]
-    count: int
+    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)

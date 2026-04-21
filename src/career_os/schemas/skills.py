@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -51,7 +53,7 @@ def _ensure_utc(v: Any) -> datetime | None:
 class SkillCreate(BaseModel):
     """Request body for POST /api/skills."""
 
-    profile_id: int = Field(..., description="Profile this skill belongs to")
+    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile this skill belongs to")
     name: str = Field(..., min_length=1, description="Skill name")
     category: SkillCategory = Field(..., description="Skill category")
     proficiency: SkillProficiency = Field(
@@ -77,7 +79,7 @@ class SkillUpdate(BaseModel):
 class IngestRequest(BaseModel):
     """Request body for POST /api/skills/ingest."""
 
-    profile_id: int = Field(..., description="Profile to ingest skills for")
+    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile to ingest skills for")
     sources: list[str] = Field(
         default_factory=lambda: ["cv", "assessments", "profile"],
         description="Sources to ingest: cv, assessments, profile",
@@ -92,8 +94,8 @@ class IngestRequest(BaseModel):
 class SkillResponse(BaseModel):
     """Response schema for a single skill."""
 
-    id: int
-    profile_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    profile_id: int = Field(..., ge=1, le=INT64_MAX)
     name: str
     category: str
     proficiency: str
@@ -113,8 +115,8 @@ class SkillResponse(BaseModel):
 class SkillHistoryResponse(BaseModel):
     """Response schema for a skill history entry."""
 
-    id: int
-    skill_id: int
+    id: int = Field(..., ge=1, le=INT64_MAX)
+    skill_id: int = Field(..., ge=1, le=INT64_MAX)
     previous_proficiency: str | None = None
     new_proficiency: str
     reason: str | None = None
@@ -132,14 +134,14 @@ class SkillListResponse(BaseModel):
     """Response schema for list of skills."""
 
     skills: list[SkillResponse]
-    total: int
+    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
 
 
 class IngestResponse(BaseModel):
     """Response schema for ingestion results."""
 
-    skills_created: int
-    skills_updated: int
+    skills_created: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    skills_updated: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
     sources_processed: list[str]
     errors: list[str] = []
 
@@ -148,7 +150,7 @@ class SkillsEmptyStateResponse(BaseModel):
     """Response when no skills exist — includes CTAs."""
 
     skills: list[SkillResponse] = []
-    total: int = 0
+    total: int = Field(default=0, ge=INT64_MIN, le=INT64_MAX)
     ctas: list[dict] = Field(
         default_factory=lambda: [
             {"label": "Import from CV", "action": "ingest_cv"},

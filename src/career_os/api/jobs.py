@@ -2,11 +2,12 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import DESC_PROFILE_ID, RESP_404
 from career_os.database import get_db
+from career_os.schemas.constraints import INT32_MAX
 from career_os.schemas.jobs import (
     JobSearchResponse,
     JobSearchResult,
@@ -36,13 +37,17 @@ router = APIRouter(tags=["jobs"])
 
 @router.get("/api/jobs", responses=RESP_404)
 async def search_jobs_endpoint(
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
     q: Annotated[str | None, Query(description="Full-text search query")] = None,
     source: Annotated[str | None, Query(description="Filter by source name")] = None,
     remote: Annotated[bool | None, Query(description="Filter by remote status")] = None,
-    salary_min: Annotated[int | None, Query(description="Min salary (numeric)")] = None,
-    salary_max: Annotated[int | None, Query(description="Max salary (numeric)")] = None,
+    salary_min: Annotated[
+        int | None, Query(ge=0, le=INT32_MAX, description="Min salary (numeric)")
+    ] = None,
+    salary_max: Annotated[
+        int | None, Query(ge=0, le=INT32_MAX, description="Max salary (numeric)")
+    ] = None,
     score_min: Annotated[float | None, Query(description="Min fit score")] = None,
     score_max: Annotated[float | None, Query(description="Max fit score")] = None,
     date_from: Annotated[str | None, Query(description="Date from (ISO 8601)")] = None,
@@ -53,7 +58,7 @@ async def search_jobs_endpoint(
         str | None, Query(description="Sort by: score, date, salary, readiness")
     ] = None,
     order: Annotated[str | None, Query(description="Sort order: asc, desc")] = None,
-    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
+    page: Annotated[int, Query(ge=1, le=INT32_MAX, description="Page number")] = 1,
     page_size: Annotated[int, Query(ge=1, le=100, description="Page size")] = 20,
 ) -> JobSearchResponse:
     """Search, filter, sort, and paginate discovered jobs.
@@ -139,7 +144,7 @@ async def create_saved_search_endpoint(
     "/api/saved-searches",
 )
 async def list_saved_searches_endpoint(
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SavedSearchListResponse:
     """List all saved searches for a profile."""
@@ -155,8 +160,8 @@ async def list_saved_searches_endpoint(
     responses=RESP_404,
 )
 async def get_saved_search_endpoint(
-    search_id: int,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    search_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SavedSearchResponse:
     """Get a single saved search."""
@@ -172,9 +177,9 @@ async def get_saved_search_endpoint(
     responses=RESP_404,
 )
 async def update_saved_search_endpoint(
-    search_id: int,
+    search_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
     payload: SavedSearchUpdate,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> SavedSearchResponse:
     """Update a saved search."""
@@ -198,8 +203,8 @@ async def update_saved_search_endpoint(
     responses=RESP_404,
 )
 async def delete_saved_search_endpoint(
-    search_id: int,
-    profile_id: Annotated[int, Query(description=DESC_PROFILE_ID)],
+    search_id: Annotated[int, Path(ge=1, le=INT32_MAX)],
+    profile_id: Annotated[int, Query(ge=1, le=INT32_MAX, description=DESC_PROFILE_ID)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     """Delete a saved search."""
