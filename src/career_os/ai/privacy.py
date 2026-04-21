@@ -117,6 +117,23 @@ _HARDCODED_REGISTRY: dict[str, ProviderPrivacyInfo] = {
         recommendation="Fast inference, no data retention",
         last_verified="2026-04-13",
     ),
+    "xai": ProviderPrivacyInfo(
+        provider="xai",
+        tier=PrivacyTier.red,
+        trains_on_data=True,
+        human_review=True,
+        retention=DataRetention(days=None, description="Irrevocable data sharing — indefinite"),
+        dpa_available=False,
+        gdpr_compliant=False,
+        eu_banned=False,
+        warnings=[
+            "Irrevocable data sharing program — prompts may be used for training",
+            "Multiple active GDPR investigations by EU data protection authorities",
+            "No opt-out mechanism for data sharing once submitted",
+        ],
+        recommendation="Avoid for sensitive or personal data. Red privacy tier.",
+        last_verified="2026-04-21",
+    ),
 }
 
 # ---------------------------------------------------------------------------

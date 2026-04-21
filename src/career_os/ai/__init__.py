@@ -10,6 +10,7 @@ from career_os.ai.ollama_provider import OllamaConnectionError, OllamaProvider
 from career_os.ai.openrouter_provider import CreditsExhaustedError, OpenRouterProvider
 from career_os.ai.pii_masking import MaskedProvider, MaskMapping, PIIMasker
 from career_os.ai.together_provider import TogetherProvider
+from career_os.ai.xai_provider import XAIProvider
 
 __all__ = [
     "AIProvider",
@@ -28,5 +29,6 @@ __all__ = [
     "ProviderQuotaError",
     "TogetherProvider",
     "UnsupportedProviderError",
+    "XAIProvider",
     "get_ai_provider",
 ]
