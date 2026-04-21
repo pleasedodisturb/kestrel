@@ -1,20 +1,8 @@
 """Pydantic schemas for Integration Configuration API."""
 
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
-
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
-
-def _ensure_utc(v: Any) -> datetime | None:
-    if v is None:
-        return None
-    if isinstance(v, datetime) and v.tzinfo is None:
-        return v.replace(tzinfo=UTC)
-    return v
-
+from pydantic import BaseModel, Field
 
 # ---- Integration definitions ----
 
@@ -57,11 +45,6 @@ class IntegrationConnectionTestResult(BaseModel):
     message: str
     tested_at: datetime | None = None
 
-    @field_validator("tested_at", mode="before")
-    @classmethod
-    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
-        return _ensure_utc(v)
-
 
 class IntegrationConfigResponse(BaseModel):
     """Response schema for a single integration config."""
@@ -81,17 +64,12 @@ class IntegrationConfigResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
-    @field_validator("last_tested_at", "created_at", "updated_at", mode="before")
-    @classmethod
-    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
-        return _ensure_utc(v)
-
 
 class IntegrationListResponse(BaseModel):
     """Response schema for listing all integrations."""
 
     integrations: list[IntegrationConfigResponse]
-    count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    count: int
 
 
 class IntegrationTestResponse(BaseModel):
@@ -101,11 +79,6 @@ class IntegrationTestResponse(BaseModel):
     success: bool
     message: str
     tested_at: datetime
-
-    @field_validator("tested_at", mode="before")
-    @classmethod
-    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
-        return _ensure_utc(v)
 
 
 # ---- Registry of known integrations ----

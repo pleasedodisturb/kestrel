@@ -44,14 +44,14 @@ def db_session(monkeypatch, tmp_path):
 
 
 def test_career_help() -> None:
-    """kestrel --help exits 0 and shows help text."""
+    """career --help exits 0 and shows help text."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "Kestrel" in result.output
+    assert "Career OS" in result.output
 
 
 def test_pipeline_subcommand_present() -> None:
-    """kestrel --help lists pipeline as a subcommand."""
+    """career --help lists pipeline as a subcommand."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "pipeline" in result.output

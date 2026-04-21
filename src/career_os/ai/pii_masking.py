@@ -20,7 +20,6 @@ import re
 from dataclasses import dataclass, field
 
 from career_os.ai.base import AIProvider, ComplexityTier
-from career_os.ai.observability import observe, update_current_span
 from career_os.schemas.ai import AIFeature, AIResponse
 
 # ---------------------------------------------------------------------------
@@ -147,7 +146,6 @@ class MaskedProvider(AIProvider):
     def name(self) -> str:  # pragma: no cover – trivial delegation
         return self._inner.name
 
-    @observe(name="pii-masking")
     async def complete(
         self,
         prompt: str,
@@ -158,15 +156,11 @@ class MaskedProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         masked_prompt, mapping = self._masker.mask(prompt)
-        update_current_span(
-            metadata={"pii_detections": len(mapping.placeholder_to_original)},
-        )
         response = await self._inner.complete(
             masked_prompt, feature=feature, context=context, tier=tier, **kwargs
         )
         return self._unmask_response(response, mapping)
 
-    @observe(name="pii-masking")
     async def score(
         self,
         job_description: str,
@@ -185,9 +179,6 @@ class MaskedProvider(AIProvider):
         combined = MaskMapping()
         combined.placeholder_to_original.update(jd_mapping.placeholder_to_original)
         combined.placeholder_to_original.update(profile_mapping.placeholder_to_original)
-        update_current_span(
-            metadata={"pii_detections": len(combined.placeholder_to_original)},
-        )
 
         response = await self._inner.score(masked_jd, masked_profile, tier=tier, **kwargs)
         return self._unmask_response(response, combined)

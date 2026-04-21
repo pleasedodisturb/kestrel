@@ -1,46 +1,5 @@
 """Shared test fixtures."""
 
-# ---------------------------------------------------------------------------
-# SAFETY: Force mock provider for ALL test runs.  This MUST run before any
-# application code imports (config.py reads env at import time).
-# Without this, load_dotenv can load .env with AI_PROVIDER=openrouter
-# and tests will hit real APIs, burning real money.
-# ---------------------------------------------------------------------------
-import os
-
-os.environ["AI_PROVIDER"] = "mock"
-os.environ["OPENROUTER_API_KEY"] = ""
-os.environ["ANTHROPIC_API_KEY"] = ""
-os.environ["TOGETHER_API_KEY"] = ""
-os.environ["OPENAI_API_KEY"] = ""
-
-# ---------------------------------------------------------------------------
-# Network guard: block outbound HTTP to AI provider domains.
-# This is a second safety net — even if env vars are somehow wrong, no
-# real HTTP request can escape to a paid API during tests.
-# ---------------------------------------------------------------------------
-import httpx
-
-_BLOCKED_AI_HOSTS = frozenset(
-    {"openrouter.ai", "api.anthropic.com", "api.together.xyz", "api.openai.com"}
-)
-_original_async_send = httpx.AsyncClient.send
-
-
-async def _guarded_async_send(self, request, **kwargs):
-    if request.url.host in _BLOCKED_AI_HOSTS:
-        raise RuntimeError(
-            f"TEST ISOLATION VIOLATION: HTTP request to {request.url.host} blocked. "
-            f"Tests must use AI_PROVIDER=mock. Check conftest.py."
-        )
-    return await _original_async_send(self, request, **kwargs)
-
-
-httpx.AsyncClient.send = _guarded_async_send  # type: ignore[assignment]
-
-# ---------------------------------------------------------------------------
-# Standard imports (AFTER safety guards are in place)
-# ---------------------------------------------------------------------------
 import sys
 from pathlib import Path
 
@@ -52,52 +11,13 @@ from sqlalchemy.orm import Session, sessionmaker
 from career_os.database import Base, get_db
 from career_os.main import app
 from career_os.models.models import Application, Profile
-from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
 
 # Ensure tools/ is importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 
 
-# ---------------------------------------------------------------------------
-# Automatic test marker classification (D-01, D-02)
-# ---------------------------------------------------------------------------
-
-INTEGRATION_FIXTURES = frozenset(
-    {
-        "db_session",
-        "client",
-        "authenticated_client",
-        "db_engine",
-    }
-)
-
-
-def pytest_collection_modifyitems(items):
-    """Auto-mark tests as unit or integration based on fixture usage.
-
-    Tests using database/client fixtures are integration tests.
-    Everything else is a unit test. Explicit markers take precedence.
-    """
-    for item in items:
-        # Skip items that already have explicit markers
-        if any(item.get_closest_marker(m) for m in ("unit", "integration", "smoke")):
-            continue
-        fixture_names = set(getattr(item, "fixturenames", []))
-        if fixture_names & INTEGRATION_FIXTURES:
-            item.add_marker(pytest.mark.integration)
-        else:
-            item.add_marker(pytest.mark.unit)
-
-
-def pytest_runtest_makereport(item, call):
-    """Mark tests exceeding 5s as slow (informational, post-execution only).
-
-    Note: This marker is applied AFTER execution. It cannot be used for
-    pre-selection with pytest -m slow. It is for reporting visibility only.
-    """
-    if call.when == "call" and call.duration > 5.0:
-        item.add_marker(pytest.mark.slow)
+from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
 
 
 @pytest.fixture

@@ -2,11 +2,9 @@
 
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Annotated, Any
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -67,10 +65,8 @@ class JobRequirementCreate(BaseModel):
 class JobRequirementBulkCreate(BaseModel):
     """Request body for bulk-creating job requirements for an application."""
 
-    application_id: int = Field(
-        ..., ge=1, le=INT64_MAX, description="Application to add requirements to"
-    )
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile ID")
+    application_id: int = Field(..., description="Application to add requirements to")
+    profile_id: int = Field(..., description="Profile ID")
     requirements: list[JobRequirementCreate] = Field(
         ..., min_length=1, description="List of job requirements"
     )
@@ -94,23 +90,21 @@ class GapItem(BaseModel):
 class GapAnalysisResponse(BaseModel):
     """Response for GET /api/applications/{id}/gaps."""
 
-    application_id: int = Field(..., ge=1, le=INT64_MAX)
+    application_id: int
     company: str
     role: str
     gaps: list[GapItem]
     readiness_score: float = Field(ge=0, le=100, description="Weighted readiness 0-100")
-    total_requirements: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    gaps_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total_requirements: int
+    gaps_count: int
 
 
 class AggregateGapItem(BaseModel):
     """A skill gap aggregated across multiple applications."""
 
     skill_name: str
-    frequency: int = Field(
-        ..., ge=INT64_MIN, le=INT64_MAX, description="Number of applications with this gap"
-    )
-    application_ids: list[Annotated[int, Field(ge=1, le=INT64_MAX)]]
+    frequency: int = Field(description="Number of applications with this gap")
+    application_ids: list[int]
     avg_severity: str
     avg_distance: float
 
@@ -119,15 +113,15 @@ class AggregateGapResponse(BaseModel):
     """Response for GET /api/gaps/aggregate."""
 
     gaps: list[AggregateGapItem]
-    total_applications_analyzed: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total_applications_analyzed: int
 
 
 class JobRequirementResponse(BaseModel):
     """Response schema for a job requirement."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    application_id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
+    application_id: int
+    profile_id: int
     skill_name: str
     required_level: str
     severity: str

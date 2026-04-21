@@ -10,7 +10,6 @@ from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
-from career_os.ai.openai_provider import OpenAIProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
 from career_os.ai.together_provider import TogetherProvider
 
@@ -88,10 +87,6 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
         api_key=_resolve_api_key("TOGETHER_API_KEY", "together_api_key"),
         model=os.getenv("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo"),
     ),
-    "openai": lambda: OpenAIProvider(
-        api_key=_resolve_api_key("OPENAI_API_KEY", "openai_api_key"),
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-    ),
 }
 
 _SUPPORTED_PROVIDERS = set(_PROVIDER_REGISTRY.keys())
@@ -111,40 +106,6 @@ class UnsupportedProviderError(Exception):
         )
 
 
-def _build_fallback_chain() -> list[AIProvider] | None:
-    """Build a fallback chain from AI_PROVIDER_FALLBACK env var.
-
-    Expected format: comma-separated provider names, e.g.
-    "openrouter,together,ollama". Providers that can't be instantiated
-    (missing API key) are silently skipped.
-
-    Returns None if no fallback is configured or only one provider resolves.
-    """
-    fallback_str = os.getenv("AI_PROVIDER_FALLBACK", "").strip()
-    if not fallback_str:
-        return None
-
-    names = [n.strip().lower() for n in fallback_str.split(",") if n.strip()]
-    if len(names) < 2:
-        return None
-
-    chain: list[AIProvider] = []
-    for name in names:
-        factory_fn = _PROVIDER_REGISTRY.get(name)
-        if factory_fn is None:
-            logger.warning("Fallback chain: skipping unknown provider '%s'", name)
-            continue
-        try:
-            chain.append(factory_fn())
-        except (ValueError, KeyError) as exc:
-            # Missing API key or config — skip this provider
-            logger.info("Fallback chain: skipping %s (%s)", name, exc)
-
-    if len(chain) < 2:
-        return None
-    return chain
-
-
 def get_ai_provider(provider_name: str | None = None) -> AIProvider:
     """Create and return the configured AI provider.
 
@@ -152,9 +113,6 @@ def get_ai_provider(provider_name: str | None = None) -> AIProvider:
     1. Explicit `provider_name` argument
     2. AI_PROVIDER env var
     3. Default: "mock"
-
-    If AI_PROVIDER_FALLBACK is set (comma-separated list of provider names),
-    wraps the result in a FallbackProvider for automatic retry on quota/timeout.
 
     Both "mock" and "demo" resolve to MockProvider — "demo" is a friendlier
     user-facing alias so non-technical users don't think "mock" means broken.
@@ -167,12 +125,4 @@ def get_ai_provider(provider_name: str | None = None) -> AIProvider:
     factory_fn = _PROVIDER_REGISTRY.get(name)
     if factory_fn is None:
         raise UnsupportedProviderError(name)
-
-    # Check for fallback chain
-    fallback_chain = _build_fallback_chain()
-    if fallback_chain:
-        from career_os.ai.fallback import FallbackProvider
-
-        return FallbackProvider(fallback_chain)
-
     return factory_fn()

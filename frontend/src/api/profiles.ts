@@ -8,6 +8,8 @@ export interface ProfileResponse {
   email: string | null;
   location: string | null;
   job_family: string | null;
+  salary_range: string | null;
+  experience_level: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +31,8 @@ export interface ProfileUpdate {
   email?: string;
   location?: string;
   job_family?: string;
+  salary_range?: string;
+  experience_level?: string;
 }
 
 const API_BASE = "/api/profiles";

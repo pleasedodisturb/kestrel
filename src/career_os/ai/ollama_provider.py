@@ -11,18 +11,10 @@ from urllib.parse import urlparse
 import httpx
 
 from career_os.ai.base import AIProvider, ComplexityTier
-from career_os.ai.observability import observe, update_current_generation
-from career_os.ai.openrouter_provider import (
-    _scoring_user_prompt,
-    _system_prompt_for_feature,
-    _try_parse_structured,
-)
+from career_os.ai.openrouter_provider import _system_prompt_for_feature, _try_parse_structured
 from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
 logger = logging.getLogger(__name__)
-
-# Compact JSON separators — eliminates whitespace tokens (~30% reduction on profile data)
-_COMPACT = (",", ":")
 
 DEFAULT_BASE_URL = "http://localhost:11434"
 DEFAULT_MODEL = "llama3.3"
@@ -75,7 +67,6 @@ class OllamaProvider(AIProvider):
     def name(self) -> str:
         return "ollama"
 
-    @observe(name="ollama-complete", as_type="generation")
     async def complete(
         self,
         prompt: str,
@@ -90,10 +81,6 @@ class OllamaProvider(AIProvider):
         The tier parameter is accepted for interface compatibility but ignored
         — Ollama uses a single local model for all tiers.
         """
-        update_current_generation(
-            model=self._model,
-            metadata={"feature": feature.value},
-        )
         messages = [{"role": "user", "content": prompt}]
 
         system_msg = _system_prompt_for_feature(feature)
@@ -144,13 +131,6 @@ class OllamaProvider(AIProvider):
         # JSON retry: if structured feature but parsing failed, retry once
         if feature != AIFeature.complete and structured is None:
             structured = await self._retry_json(messages, payload, url, feature)
-
-        update_current_generation(
-            usage_details={
-                "input": usage.input_tokens,
-                "output": usage.output_tokens,
-            },
-        )
 
         return AIResponse(
             content=content,
@@ -237,7 +217,20 @@ class OllamaProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile via Ollama."""
-        prompt = _scoring_user_prompt(
-            job_description, json.dumps(profile_data, separators=_COMPACT)
+        prompt = (
+            f"Score this job against the candidate profile. "
+            f"Return a JSON object with: fit_score (0-10), reasoning (detailed, ≥100 chars), "
+            f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
+            f"readiness_score (0-100), career_alignment (0-10), "
+            f"score_breakdown (array of ≥3 objects, each with: factor (string), "
+            f"contribution (positive or negative float), description (string)), "
+            f"dimensional_scores (object with 6 floats 0-10: technical_fit, "
+            f"seniority_alignment, compensation_fit, location_fit, career_trajectory, "
+            f"company_fit), "
+            f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
+            f"category (one of technical/soft_skill/tool/certification/domain), "
+            f"matched (boolean — true if the profile demonstrates this keyword)).\n\n"
+            f"Job Description:\n{job_description}\n\n"
+            f"Profile:\n{json.dumps(profile_data, indent=2)}"
         )
         return await self.complete(prompt, feature=AIFeature.score)
