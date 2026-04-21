@@ -14,6 +14,11 @@ from career_os.discovery.adapters import (
     ScrapeParams,
     get_available_adapters,
 )
+from career_os.discovery.prefilter import (
+    PrefilterConfig,
+    PrefilterStrategy,
+    run_prefilter,
+)
 from career_os.models.discovery import DiscoveredJob, DiscoveryRun, SearchProfile
 from career_os.models.models import Application, Profile
 from career_os.services.salary import parse_salary_range
@@ -98,6 +103,61 @@ def _passes_sp_filters(merged: dict, sp_filters: dict) -> bool:
 
     source_filter = sp_filters.get("source")
     return not (source_filter and source_filter not in (merged.get("sources") or []))
+
+
+# ---------------------------------------------------------------------------
+# Pre-filter configuration
+# ---------------------------------------------------------------------------
+
+
+def _build_prefilter_config(
+    search_profile: SearchProfile | None = None,
+) -> PrefilterConfig:
+    """Build a PrefilterConfig from application settings.
+
+    The strategy is read from ``settings.prefilter_strategy``.  Title keywords,
+    skill keywords, and blacklist industries can be supplied via the search
+    profile's filters JSON (keys: ``prefilter_title_keywords``,
+    ``prefilter_skill_keywords``, ``prefilter_blacklist_industries``).
+    When not provided, sensible defaults are used.
+    """
+    from career_os.config import settings
+
+    strategy = PrefilterStrategy(settings.prefilter_strategy)
+
+    # Defaults — broad enough to work for most tech job seekers
+    title_keywords: list[str] = []
+    skill_keywords: list[str] = []
+    blacklist_industries: list[str] = [
+        "healthcare",
+        "dental",
+        "veterinary",
+        "agriculture",
+        "mining",
+        "trucking",
+        "plumbing",
+        "hvac",
+        "roofing",
+        "landscaping",
+        "janitorial",
+    ]
+
+    # Allow search profile to override prefilter keywords
+    if search_profile:
+        sp_filters = json.loads(search_profile.filters) if search_profile.filters else {}
+        if sp_filters.get("prefilter_title_keywords"):
+            title_keywords = sp_filters["prefilter_title_keywords"]
+        if sp_filters.get("prefilter_skill_keywords"):
+            skill_keywords = sp_filters["prefilter_skill_keywords"]
+        if sp_filters.get("prefilter_blacklist_industries"):
+            blacklist_industries = sp_filters["prefilter_blacklist_industries"]
+
+    return PrefilterConfig(
+        strategy=strategy,
+        title_keywords=title_keywords,
+        skill_keywords=skill_keywords,
+        blacklist_industries=blacklist_industries,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -377,6 +437,43 @@ async def run_discovery(
 
     all_raw_jobs, warnings, sources_queried = await _scrape_all_adapters(adapters, params)
     dedup_groups = _dedup_and_filter(all_raw_jobs, sp_filters)
+
+    # Pre-filter: eliminate obviously irrelevant jobs before DB upsert + scoring
+    sp_obj = None
+    if search_profile_id:
+        sp_obj = (
+            db.query(SearchProfile)
+            .filter(
+                SearchProfile.id == search_profile_id,
+                SearchProfile.profile_id == profile_id,
+            )
+            .first()
+        )
+    prefilter_config = _build_prefilter_config(sp_obj)
+
+    if prefilter_config.strategy != PrefilterStrategy.OFF:
+        # Build merged dicts with their dedup keys for filtering
+        keyed_merges = [(key, _merge_raw_jobs(group)) for key, group in dedup_groups.items()]
+        merged_dicts = [m for _, m in keyed_merges]
+        passed_dicts, prefilter_metrics = run_prefilter(merged_dicts, prefilter_config)
+
+        # Rebuild dedup_groups with only passed jobs (match by title+company+location)
+        passed_keys = {
+            (_normalize(d["title"]), _normalize(d["company"]), _normalize(d["location"]))
+            for d in passed_dicts
+        }
+        dedup_groups = {k: g for k, g in dedup_groups.items() if k in passed_keys}
+
+        warnings.append(
+            {
+                "source": "prefilter",
+                "strategy": prefilter_metrics.strategy,
+                "total": prefilter_metrics.total,
+                "passed": prefilter_metrics.passed,
+                "filtered": prefilter_metrics.filtered,
+                "filter_rate": f"{prefilter_metrics.filter_rate:.1f}%",
+            }
+        )
 
     # Upsert deduplicated results into DB
     new_jobs_list: list[DiscoveredJob] = []
