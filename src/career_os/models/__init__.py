@@ -1,6 +1,5 @@
 """SQLAlchemy models package."""
 
-from career_os.models.ai_usage import AIUsageLog
 from career_os.models.calendar import CalendarEvent
 from career_os.models.company_research import CompanyResearchReportModel
 from career_os.models.contacts import Contact, ContactApplication, ContactInteraction
@@ -23,6 +22,7 @@ from career_os.models.models import (
     FollowUp,
     Profile,
 )
+from career_os.models.onboarding import OnboardingState
 from career_os.models.pushover import NotificationLog, NotificationPreference
 from career_os.models.scoring import (
     ScoredJob,
@@ -41,7 +41,6 @@ from career_os.models.ticktick_sync import TickTickSyncTask
 from career_os.models.voice import VoiceMessage, VoiceSession
 
 __all__ = [
-    "AIUsageLog",
     "ActivityLog",
     "Application",
     "CalendarEvent",
@@ -65,6 +64,7 @@ __all__ = [
     "LearningResource",
     "NotificationLog",
     "NotificationPreference",
+    "OnboardingState",
     "Profile",
     "ScoredJob",
     "ScoringWeights",

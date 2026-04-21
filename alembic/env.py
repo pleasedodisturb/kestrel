@@ -4,17 +4,17 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from sqlalchemy import engine_from_config, pool
-
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # Ensure src/ is on sys.path so career_os is importable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from career_os.database import Base  # noqa: E402
-from career_os.models import models as _models  # noqa: E402, F401
-from career_os.models import skills as _skills  # noqa: E402, F401
 from career_os.models import discovery as _discovery  # noqa: E402, F401
+from career_os.models import models as _models  # noqa: E402, F401
+from career_os.models import onboarding as _onboarding  # noqa: E402, F401
+from career_os.models import skills as _skills  # noqa: E402, F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

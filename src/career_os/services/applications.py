@@ -1,5 +1,6 @@
 """Application service layer — business logic for pipeline CRUD."""
 
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy import asc, desc
@@ -12,6 +13,8 @@ from career_os.schemas.applications import (
     is_valid_transition,
 )
 from career_os.services.activity import log_activity
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationNotFoundError(Exception):
@@ -76,6 +79,27 @@ def _log_activity(
 
 
 # ---------------------------------------------------------------------------
+# Demo data lifecycle (D-13)
+# ---------------------------------------------------------------------------
+
+
+def _auto_clear_demo_data(db: Session, profile_id: int) -> int:
+    """Remove demo records when a real job exists (D-13). Returns count deleted."""
+    count = (
+        db.query(Application)
+        .filter(
+            Application.is_demo.is_(True),
+            Application.profile_id == profile_id,
+        )
+        .delete()
+    )
+    if count > 0:
+        db.commit()
+        logger.info("Auto-cleared %d demo records for profile %d", count, profile_id)
+    return count
+
+
+# ---------------------------------------------------------------------------
 # CRUD operations
 # ---------------------------------------------------------------------------
 
@@ -115,6 +139,9 @@ def create_application(db: Session, payload: ApplicationCreate) -> Application:
     )
     db.commit()
     db.refresh(app_obj)
+
+    # D-13: Auto-clear demo data when first real job arrives
+    _auto_clear_demo_data(db, profile_id=payload.profile_id)
 
     # Auto-push to TickTick (no-op if not configured)
     from career_os.services.ticktick_sync import try_auto_push_pipeline_action

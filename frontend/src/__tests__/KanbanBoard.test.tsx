@@ -14,12 +14,15 @@
  * - Dropping card on itself is a no-op
  */
 
-import { render, screen, within, act, waitFor } from "@testing-library/react";
+import { screen, within, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { renderWithProviders } from "@/test-utils";
 import { KanbanBoard } from "@/components/KanbanBoard";
-import type { Application, ApplicationListResponse, ApplicationStatus } from "@/api/types";
+import type {
+  Application,
+  ApplicationListResponse,
+  ApplicationStatus,
+} from "@/api/types";
 
 // ---- capture DndContext callbacks ----
 
@@ -30,17 +33,30 @@ let capturedOnDragOver: ((...args: unknown[]) => void) | undefined;
 let capturedOnDragEnd: ((...args: unknown[]) => void) | undefined;
 
 vi.mock("@dnd-kit/core", async () => {
-  const actual = await vi.importActual<typeof import("@dnd-kit/core")>("@dnd-kit/core");
+  const actual =
+    await vi.importActual<typeof import("@dnd-kit/core")>("@dnd-kit/core");
   return {
     ...actual,
-    DndContext: ({ children, onDragStart, onDragOver, onDragEnd, ...rest }: Record<string, unknown>) => {
+    DndContext: ({
+      children,
+      onDragStart,
+      onDragOver,
+      onDragEnd,
+      ...rest
+    }: Record<string, unknown>) => {
       capturedOnDragStart = onDragStart as typeof capturedOnDragStart;
       capturedOnDragOver = onDragOver as typeof capturedOnDragOver;
       capturedOnDragEnd = onDragEnd as typeof capturedOnDragEnd;
       // Render a wrapper that still renders children (columns / cards)
-      return <div data-testid="dnd-context-mock" {...rest}>{children as React.ReactNode}</div>;
+      return (
+        <div data-testid="dnd-context-mock" {...rest}>
+          {children as React.ReactNode}
+        </div>
+      );
     },
-    DragOverlay: ({ children }: Record<string, unknown>) => <div>{children as React.ReactNode}</div>,
+    DragOverlay: ({ children }: Record<string, unknown>) => (
+      <div>{children as React.ReactNode}</div>
+    ),
   };
 });
 
@@ -50,8 +66,10 @@ const mockFetchApplications = vi.fn<() => Promise<ApplicationListResponse>>();
 const mockUpdateApplication = vi.fn();
 
 vi.mock("@/api/applications", () => ({
-  fetchApplications: (...args: unknown[]) => mockFetchApplications(...(args as [])),
-  updateApplication: (...args: unknown[]) => mockUpdateApplication(...(args as [])),
+  fetchApplications: (...args: unknown[]) =>
+    mockFetchApplications(...(args as [])),
+  updateApplication: (...args: unknown[]) =>
+    mockUpdateApplication(...(args as [])),
   createApplication: vi.fn(),
   archiveApplication: vi.fn(),
   fetchApplicationDetail: vi.fn(),
@@ -66,24 +84,8 @@ vi.mock("@/api/followUps", () => ({
 
 // ---- helpers ----
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
-      mutations: { retry: false },
-    },
-  });
-}
-
 function renderBoard() {
-  const qc = createQueryClient();
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <KanbanBoard />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<KanbanBoard />, { route: "/" });
 }
 
 function makeApp(
@@ -124,9 +126,6 @@ describe("KanbanBoard", () => {
     vi.resetAllMocks();
     localStorage.clear();
     sessionStorage.clear();
-    // Onboarding wizard auto-appears on empty boards; pre-dismiss it for
-    // tests that aren't about the wizard so existing assertions stay clean.
-    localStorage.setItem("kestrel.wizard_dismissed", "true");
   });
 
   it("shows loading state while fetching", () => {
@@ -159,28 +158,54 @@ describe("KanbanBoard", () => {
     it("shows friendly message", async () => {
       renderBoard();
       expect(
-        await screen.findByText("No applications yet"),
+        await screen.findByText("No jobs in your pipeline yet"),
       ).toBeInTheDocument();
     });
 
-    it("shows Add Application button", async () => {
+    it("shows Discover jobs CTA", async () => {
       renderBoard();
-      expect(
-        await screen.findByTestId("kanban-add-cta"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText("Add Application"),
-      ).toBeInTheDocument();
+      expect(await screen.findByTestId("empty-state-cta")).toBeInTheDocument();
+      expect(screen.getByText("Discover jobs")).toBeInTheDocument();
     });
   });
 
   describe("board with applications", () => {
     const apps = [
-      makeApp({ id: 1, company: "Mistral AI", role: "TPM DACH", status: "applied", fit_score: 8.5 }),
-      makeApp({ id: 2, company: "Plain", role: "Product Engineer", status: "applied", fit_score: 9.5 }),
-      makeApp({ id: 3, company: "Shopware", role: "TPM", status: "interested", fit_score: 8.5 }),
-      makeApp({ id: 4, company: "DataDog", role: "SRE", status: "discovered", fit_score: 7.0 }),
-      makeApp({ id: 5, company: "Ghost Inc", role: "DevRel", status: "ghosted", fit_score: null }),
+      makeApp({
+        id: 1,
+        company: "Mistral AI",
+        role: "TPM DACH",
+        status: "applied",
+        fit_score: 8.5,
+      }),
+      makeApp({
+        id: 2,
+        company: "Plain",
+        role: "Product Engineer",
+        status: "applied",
+        fit_score: 9.5,
+      }),
+      makeApp({
+        id: 3,
+        company: "Shopware",
+        role: "TPM",
+        status: "interested",
+        fit_score: 8.5,
+      }),
+      makeApp({
+        id: 4,
+        company: "DataDog",
+        role: "SRE",
+        status: "discovered",
+        fit_score: 7.0,
+      }),
+      makeApp({
+        id: 5,
+        company: "Ghost Inc",
+        role: "DevRel",
+        status: "ghosted",
+        fit_score: null,
+      }),
     ];
 
     beforeEach(() => {
@@ -228,15 +253,9 @@ describe("KanbanBoard", () => {
       expect(
         screen.getByTestId("column-empty-interviewing"),
       ).toBeInTheDocument();
-      expect(
-        screen.getByTestId("column-empty-offer"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByTestId("column-empty-accepted"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByTestId("column-empty-rejected"),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("column-empty-offer")).toBeInTheDocument();
+      expect(screen.getByTestId("column-empty-accepted")).toBeInTheDocument();
+      expect(screen.getByTestId("column-empty-rejected")).toBeInTheDocument();
     });
 
     it("cards appear in correct columns matching status", async () => {
@@ -295,13 +314,23 @@ describe("KanbanBoard", () => {
     it("column counts are correct", async () => {
       renderBoard();
       await screen.findByTestId("kanban-board");
-      expect(screen.getByTestId("column-count-discovered")).toHaveTextContent("1");
-      expect(screen.getByTestId("column-count-interested")).toHaveTextContent("1");
+      expect(screen.getByTestId("column-count-discovered")).toHaveTextContent(
+        "1",
+      );
+      expect(screen.getByTestId("column-count-interested")).toHaveTextContent(
+        "1",
+      );
       expect(screen.getByTestId("column-count-applied")).toHaveTextContent("2");
-      expect(screen.getByTestId("column-count-interviewing")).toHaveTextContent("0");
+      expect(screen.getByTestId("column-count-interviewing")).toHaveTextContent(
+        "0",
+      );
       expect(screen.getByTestId("column-count-offer")).toHaveTextContent("0");
-      expect(screen.getByTestId("column-count-accepted")).toHaveTextContent("0");
-      expect(screen.getByTestId("column-count-rejected")).toHaveTextContent("0");
+      expect(screen.getByTestId("column-count-accepted")).toHaveTextContent(
+        "0",
+      );
+      expect(screen.getByTestId("column-count-rejected")).toHaveTextContent(
+        "0",
+      );
       expect(screen.getByTestId("column-count-ghosted")).toHaveTextContent("1");
     });
   });
@@ -369,8 +398,18 @@ describe("KanbanBoard", () => {
 
   describe("drag-and-drop status transitions (VAL-PIPE-004)", () => {
     const dndApps = [
-      makeApp({ id: 10, company: "SourceCo", role: "SWE", status: "discovered" }),
-      makeApp({ id: 20, company: "TargetCo", role: "PM", status: "interested" }),
+      makeApp({
+        id: 10,
+        company: "SourceCo",
+        role: "SWE",
+        status: "discovered",
+      }),
+      makeApp({
+        id: 20,
+        company: "TargetCo",
+        role: "PM",
+        status: "interested",
+      }),
     ];
 
     beforeEach(() => {
@@ -390,17 +429,22 @@ describe("KanbanBoard", () => {
         capturedOnDragStart?.({ active: { id: 10 } } as never);
       });
       act(() => {
-        capturedOnDragOver?.({ active: { id: 10 }, over: { id: "interested" } } as never);
+        capturedOnDragOver?.({
+          active: { id: 10 },
+          over: { id: "interested" },
+        } as never);
       });
       act(() => {
-        capturedOnDragEnd?.({ active: { id: 10 }, over: { id: "interested" } } as never);
+        capturedOnDragEnd?.({
+          active: { id: 10 },
+          over: { id: "interested" },
+        } as never);
       });
 
       await waitFor(() => {
-        expect(mockUpdateApplication).toHaveBeenCalledWith(
-          10,
-          { status: "interested" },
-        );
+        expect(mockUpdateApplication).toHaveBeenCalledWith(10, {
+          status: "interested",
+        });
       });
     });
 
@@ -422,10 +466,9 @@ describe("KanbanBoard", () => {
       });
 
       await waitFor(() => {
-        expect(mockUpdateApplication).toHaveBeenCalledWith(
-          10,
-          { status: "interested" },
-        );
+        expect(mockUpdateApplication).toHaveBeenCalledWith(10, {
+          status: "interested",
+        });
       });
     });
 
@@ -438,10 +481,16 @@ describe("KanbanBoard", () => {
         capturedOnDragStart?.({ active: { id: 10 } } as never);
       });
       act(() => {
-        capturedOnDragOver?.({ active: { id: 10 }, over: { id: "discovered" } } as never);
+        capturedOnDragOver?.({
+          active: { id: 10 },
+          over: { id: "discovered" },
+        } as never);
       });
       act(() => {
-        capturedOnDragEnd?.({ active: { id: 10 }, over: { id: "discovered" } } as never);
+        capturedOnDragEnd?.({
+          active: { id: 10 },
+          over: { id: "discovered" },
+        } as never);
       });
 
       expect(mockUpdateApplication).not.toHaveBeenCalled();
@@ -473,48 +522,6 @@ describe("KanbanBoard", () => {
       });
 
       expect(mockUpdateApplication).not.toHaveBeenCalled();
-    });
-  });
-
-  // ---- Onboarding wizard (#20) ----
-  describe("onboarding wizard", () => {
-    beforeEach(() => {
-      mockFetchApplications.mockResolvedValue({
-        applications: [],
-        total: 0,
-      });
-      // Undo the global pre-dismiss so wizard can appear.
-      localStorage.removeItem("kestrel.wizard_dismissed");
-    });
-
-    it("shows wizard on first visit with empty board", async () => {
-      renderBoard();
-      expect(
-        await screen.findByTestId("onboarding-wizard"),
-      ).toBeInTheDocument();
-    });
-
-    it("does not show wizard when dismiss flag is set in localStorage", async () => {
-      localStorage.setItem("kestrel.wizard_dismissed", "true");
-      renderBoard();
-      await screen.findByTestId("kanban-empty");
-      expect(
-        screen.queryByTestId("onboarding-wizard"),
-      ).not.toBeInTheDocument();
-    });
-
-    it("dismiss button persists flag and hides wizard", async () => {
-      const { getByTestId, queryByTestId } = renderBoard();
-      const dismiss = await screen.findByTestId("onboarding-dismiss");
-      act(() => {
-        dismiss.click();
-      });
-      await waitFor(() => {
-        expect(queryByTestId("onboarding-wizard")).not.toBeInTheDocument();
-      });
-      expect(localStorage.getItem("kestrel.wizard_dismissed")).toBe("true");
-      // Empty-state CTA is still present
-      expect(getByTestId("kanban-empty")).toBeInTheDocument();
     });
   });
 
@@ -571,13 +578,11 @@ describe("KanbanBoard", () => {
         dismiss.click();
       });
       await waitFor(() => {
-        expect(
-          screen.queryByTestId("discovery-nudge"),
-        ).not.toBeInTheDocument();
+        expect(screen.queryByTestId("discovery-nudge")).not.toBeInTheDocument();
       });
-      expect(
-        localStorage.getItem("kestrel.discovery_nudge_dismissed"),
-      ).toBe("true");
+      expect(localStorage.getItem("kestrel.discovery_nudge_dismissed")).toBe(
+        "true",
+      );
     });
   });
 });

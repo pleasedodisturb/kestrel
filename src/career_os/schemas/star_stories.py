@@ -8,21 +8,9 @@ Covers:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
-
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
-
-def _ensure_utc(v: Any) -> datetime | None:
-    if v is None:
-        return None
-    if isinstance(v, datetime) and v.tzinfo is None:
-        return v.replace(tzinfo=UTC)
-    return v
-
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Request schemas
@@ -66,8 +54,8 @@ class StarStoryUpdate(BaseModel):
 class StarStoryResponse(BaseModel):
     """A STAR story response."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
+    id: int
+    profile_id: int
     title: str
     situation: str
     task: str
@@ -77,19 +65,12 @@ class StarStoryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
-
-    @field_validator("created_at", "updated_at", mode="before")
-    @classmethod
-    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
-        return _ensure_utc(v)
-
 
 class StarStoryListResponse(BaseModel):
     """List of STAR stories."""
 
     stories: list[StarStoryResponse]
-    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total: int
 
 
 # ---------------------------------------------------------------------------
@@ -104,19 +85,17 @@ class RecommendedStory(BaseModel):
     matching_skills: list[str] = Field(
         description="Skill tags that match the application requirements"
     )
-    match_count: int = Field(
-        ..., ge=INT64_MIN, le=INT64_MAX, description="Number of matching skill tags"
-    )
+    match_count: int = Field(description="Number of matching skill tags")
 
 
 class RecommendedStoriesResponse(BaseModel):
     """Recommended stories for an application."""
 
-    application_id: int = Field(..., ge=1, le=INT64_MAX)
+    application_id: int
     company: str
     role: str
     recommended_stories: list[RecommendedStory]
-    total_requirements: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total_requirements: int
     covered_skills: list[str] = Field(description="Skills covered by at least one story")
 
 
@@ -140,10 +119,10 @@ class StoryGap(BaseModel):
 class StoryGapsResponse(BaseModel):
     """Story gaps for an application."""
 
-    application_id: int = Field(..., ge=1, le=INT64_MAX)
+    application_id: int
     company: str
     role: str
     story_gaps: list[StoryGap]
-    total_requirements: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    covered_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
-    gap_count: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total_requirements: int
+    covered_count: int
+    gap_count: int

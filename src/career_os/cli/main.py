@@ -1,4 +1,4 @@
-"""Kestrel CLI — main entry point."""
+"""Career OS CLI — main entry point."""
 
 from __future__ import annotations
 
@@ -28,10 +28,41 @@ console = Console()
 _HELP_OUTPUT_FORMAT = "Output format: table or json"
 
 app = typer.Typer(
-    name="kestrel",
-    help="Kestrel — AI-Powered Job Search & Career Strategy Platform",
+    name="career",
+    help="Career OS — AI-Powered Job Search & Career Strategy Platform",
     no_args_is_help=True,
 )
+
+
+@app.callback(invoke_without_command=True)
+def main_callback(ctx: typer.Context) -> None:
+    """Check onboarding status and show first-run hint if needed."""
+    if ctx.invoked_subcommand in ("init", "doctor"):
+        return
+    if ctx.resilient_parsing:
+        return
+    if ctx.invoked_subcommand is None:
+        # no_args_is_help handles this
+        return
+    try:
+        db = _get_session()
+        try:
+            from career_os.services.onboarding import get_onboarding_status
+
+            status = get_onboarding_status(profile_id=1, db=db)
+            if not status.is_complete:
+                console.print(
+                    Panel(
+                        "[bold]Welcome to Kestrel![/bold]\n"
+                        "Run [bold cyan]kestrel init[/bold cyan] to set up your profile.",
+                        border_style="blue",
+                    )
+                )
+        finally:
+            db.close()
+    except Exception:
+        pass  # T-02-05: Never block normal commands — silently skip hint
+
 
 # Pipeline subcommand group
 pipeline_app = typer.Typer(
@@ -58,7 +89,7 @@ goals_app = typer.Typer(
 app.add_typer(goals_app, name="goals")
 
 # Interview-prep subcommand group (uses Click Group to handle both
-# `kestrel interview-prep <id>` and `kestrel interview-prep stories <subcmd>`)
+# `career interview-prep <id>` and `career interview-prep stories <subcmd>`)
 
 
 class InterviewPrepGroup(typer_core.TyperGroup):
@@ -118,7 +149,7 @@ def _get_default_profile(db: Session) -> Profile:
 
 
 # ---------------------------------------------------------------------------
-# kestrel pipeline list
+# career pipeline list
 # ---------------------------------------------------------------------------
 
 
@@ -141,6 +172,19 @@ def pipeline_list(
         # Newest first
         query = query.order_by(Application.created_at.desc())
         applications = query.all()
+
+        # D-14: "Sample Results" banner when demo records present
+        has_demo = any(getattr(app, "is_demo", False) for app in applications)
+        if has_demo:
+            console.print(
+                Panel(
+                    "These are sample results to show how scoring works. "
+                    "They'll disappear once you add real jobs.",
+                    title="Sample Results",
+                    border_style="yellow",
+                )
+            )
+            console.print()  # spacing before table
 
         if not applications:
             if status:
@@ -179,7 +223,7 @@ def pipeline_list(
 
 
 # ---------------------------------------------------------------------------
-# kestrel pipeline add
+# career pipeline add
 # ---------------------------------------------------------------------------
 
 
@@ -227,7 +271,7 @@ def pipeline_add(
 
 
 # ---------------------------------------------------------------------------
-# kestrel pipeline update
+# career pipeline update
 # ---------------------------------------------------------------------------
 
 
@@ -329,7 +373,7 @@ def pipeline_update(
 
 
 # ---------------------------------------------------------------------------
-# kestrel pipeline stats
+# career pipeline stats
 # ---------------------------------------------------------------------------
 
 
@@ -420,7 +464,7 @@ def pipeline_stats() -> None:
 
 
 # ---------------------------------------------------------------------------
-# kestrel pipeline follow-ups
+# career pipeline follow-ups
 # ---------------------------------------------------------------------------
 
 
@@ -486,7 +530,7 @@ def pipeline_follow_ups() -> None:
 
 
 # ---------------------------------------------------------------------------
-# kestrel skills list
+# career skills list
 # ---------------------------------------------------------------------------
 
 
@@ -552,7 +596,7 @@ def skills_list(
 
 
 # ---------------------------------------------------------------------------
-# kestrel skills gaps
+# career skills gaps
 # ---------------------------------------------------------------------------
 
 
@@ -736,7 +780,7 @@ def _show_aggregate_gaps(db: Session, profile_id: int, aggregate_fn) -> None:
 
 
 # ---------------------------------------------------------------------------
-# kestrel goals (list + show)
+# career goals (list + show)
 # ---------------------------------------------------------------------------
 
 
@@ -868,7 +912,7 @@ def goals_show(
 
 
 # ---------------------------------------------------------------------------
-# kestrel coach
+# career coach
 # ---------------------------------------------------------------------------
 
 
@@ -998,7 +1042,7 @@ def _is_valid_url(url: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# kestrel discover
+# career discover
 # ---------------------------------------------------------------------------
 
 
@@ -1033,25 +1077,10 @@ def discover(
     try:
         profile = _get_default_profile(db)
 
-        # Parse keywords — if none supplied, auto-select from profile's job family
+        # Parse keywords
         kw_list: list[str] | None = None
         if keywords:
             kw_list = [k.strip() for k in keywords.split(",") if k.strip()]
-        else:
-            # Auto-select keywords based on the profile's job_family
-            from tools.scraper import get_keywords_for_profile
-
-            job_family = getattr(profile, "job_family", None)
-            auto_keywords = get_keywords_for_profile(job_family=job_family)
-            # Only use auto keywords if they differ from the hardcoded defaults
-            from tools.scraper import DEFAULT_KEYWORDS
-
-            if auto_keywords != DEFAULT_KEYWORDS:
-                kw_list = auto_keywords
-                console.print(
-                    f"[dim]Using keywords for job family '{job_family}': "
-                    f"{', '.join(kw_list[:3])}{'...' if len(kw_list) > 3 else ''}[/dim]"
-                )
 
         loc_list: list[str] | None = None
         if location:
@@ -1237,7 +1266,7 @@ def _handle_schedule(
 
 
 # ---------------------------------------------------------------------------
-# kestrel score <url>
+# career score <url>
 # ---------------------------------------------------------------------------
 
 
@@ -1451,7 +1480,7 @@ def _score_output_json(scored) -> None:
 
 
 # ---------------------------------------------------------------------------
-# kestrel market
+# career market
 # ---------------------------------------------------------------------------
 
 
@@ -1492,7 +1521,7 @@ def market(
         if not has_data:
             console.print(
                 "[yellow]No market data available. "
-                "Run `kestrel discover` first to populate market intelligence.[/yellow]"
+                "Run `career discover` first to populate market intelligence.[/yellow]"
             )
             return
 
@@ -1690,7 +1719,7 @@ def _run_interview_prep_async(
 
 
 # ---------------------------------------------------------------------------
-# kestrel research <company>
+# career research <company>
 # ---------------------------------------------------------------------------
 
 
@@ -1840,7 +1869,7 @@ def _render_research_report(report) -> None:
 
 
 # ---------------------------------------------------------------------------
-# kestrel interview-prep <application_id> (default command)
+# career interview-prep <application_id> (default command)
 # ---------------------------------------------------------------------------
 
 
@@ -1989,7 +2018,7 @@ def _render_interview_prep(prep) -> None:
 
 
 # ---------------------------------------------------------------------------
-# kestrel interview-prep stories (list / add / view / edit)
+# career interview-prep stories (list / add / view / edit)
 # ---------------------------------------------------------------------------
 
 
@@ -2025,7 +2054,7 @@ def stories_list_default(ctx: typer.Context) -> None:
         if not stories:
             console.print(
                 "[yellow]No STAR stories yet. "
-                "Add one with: kestrel interview-prep stories add[/yellow]"
+                "Add one with: career interview-prep stories add[/yellow]"
             )
             return
 
@@ -2282,6 +2311,16 @@ def start(
         log_level="info",
     )
 
+
+# Health check command (Phase 2 / G-392)
+from career_os.cli.doctor import doctor  # noqa: E402
+
+app.command("doctor")(doctor)
+
+# Init wizard command (Phase 2 / G-392)
+from career_os.cli.init import init  # noqa: E402
+
+app.command("init")(init)
 
 if __name__ == "__main__":
     app()

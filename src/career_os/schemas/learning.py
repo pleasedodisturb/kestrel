@@ -6,8 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from career_os.schemas.constraints import INT64_MAX
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -60,7 +58,7 @@ def _ensure_utc(v: Any) -> datetime | None:
 class LearningResourceCreate(BaseModel):
     """Request body for creating a learning resource."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile ID")
+    profile_id: int = Field(..., description="Profile ID")
     title: str = Field(..., min_length=1, description="Resource title")
     url: str | None = Field(default=None, description="Resource URL")
     resource_type: ResourceType = Field(
@@ -76,7 +74,7 @@ class LearningResourceCreate(BaseModel):
 class LearningStatusUpdate(BaseModel):
     """Request body for updating learning resource status."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX, description="Profile ID")
+    profile_id: int = Field(..., description="Profile ID")
     status: LearningStatus = Field(..., description="New status")
 
 
@@ -88,10 +86,10 @@ class LearningStatusUpdate(BaseModel):
 class LearningResourceResponse(BaseModel):
     """Response schema for a learning resource."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
-    gap_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
-    skill_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
+    id: int
+    profile_id: int
+    gap_id: int | None = None
+    skill_id: int | None = None
     title: str
     url: str | None = None
     provider: str | None = None
@@ -133,7 +131,7 @@ class RecommendationsCTA(BaseModel):
 class GapRecommendationsResponse(BaseModel):
     """Response for GET /api/gaps/{id}/recommendations."""
 
-    gap_id: int = Field(..., ge=1, le=INT64_MAX)
+    gap_id: int
     skill_name: str
     recommendations: list[LearningResourceResponse]
     template_recommendations: list[TemplateRecommendation] = Field(default_factory=list)

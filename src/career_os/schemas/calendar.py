@@ -1,20 +1,9 @@
 """Pydantic schemas for Calendar Integration API."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
-from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
-
-from career_os.schemas.constraints import INT64_MAX, INT64_MIN
-
-
-def _ensure_utc(v: Any) -> datetime | None:
-    if v is None:
-        return None
-    if isinstance(v, datetime) and v.tzinfo is None:
-        return v.replace(tzinfo=UTC)
-    return v
+from pydantic import BaseModel, Field
 
 
 class CalendarEventType(StrEnum):
@@ -36,9 +25,9 @@ class CalendarProvider(StrEnum):
 class CalendarEventCreate(BaseModel):
     """Request body for creating a calendar event."""
 
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
-    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
-    follow_up_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
+    profile_id: int
+    application_id: int | None = None
+    follow_up_id: int | None = None
 
     event_type: CalendarEventType
     title: str = Field(..., min_length=1, max_length=500)
@@ -80,11 +69,11 @@ class CalendarEventUpdate(BaseModel):
 class CalendarEventResponse(BaseModel):
     """Response schema for a calendar event."""
 
-    id: int = Field(..., ge=1, le=INT64_MAX)
-    profile_id: int = Field(..., ge=1, le=INT64_MAX)
-    application_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
-    follow_up_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
-    parent_event_id: int | None = Field(default=None, ge=1, le=INT64_MAX)
+    id: int
+    profile_id: int
+    application_id: int | None = None
+    follow_up_id: int | None = None
+    parent_event_id: int | None = None
 
     event_type: str
     title: str
@@ -99,7 +88,7 @@ class CalendarEventResponse(BaseModel):
     meeting_link: str | None = None
     prep_notes: str | None = None
 
-    reminder_minutes_before: int | None = Field(default=None, ge=INT64_MIN, le=INT64_MAX)
+    reminder_minutes_before: int | None = None
     uid: str | None = None
 
     created_at: datetime
@@ -107,17 +96,12 @@ class CalendarEventResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
-    @field_validator("start_time", "end_time", "created_at", "updated_at", mode="before")
-    @classmethod
-    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
-        return _ensure_utc(v)
-
 
 class CalendarEventListResponse(BaseModel):
     """Response for listing calendar events."""
 
     events: list[CalendarEventResponse]
-    total: int = Field(..., ge=INT64_MIN, le=INT64_MAX)
+    total: int
 
 
 class CalendarExportResponse(BaseModel):
@@ -132,18 +116,18 @@ class GoogleCalendarUrlResponse(BaseModel):
     """Response with a Google Calendar URL to add event."""
 
     url: str
-    event_id: int = Field(..., ge=1, le=INT64_MAX)
+    event_id: int
 
 
 class FantasticalUrlResponse(BaseModel):
     """Response with a Fantastical URL scheme to add event."""
 
     url: str
-    event_id: int = Field(..., ge=1, le=INT64_MAX)
+    event_id: int
 
 
 class CalendarProviderConfigResponse(BaseModel):
     """Response with provider-specific export data for an event."""
 
-    event_id: int = Field(..., ge=1, le=INT64_MAX)
+    event_id: int
     providers: dict[str, str]  # provider_name -> url_or_data
