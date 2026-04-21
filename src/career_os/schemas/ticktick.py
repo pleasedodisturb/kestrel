@@ -1,10 +1,19 @@
 """Pydantic schemas for TickTick Sync API."""
 
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from career_os.schemas.constraints import INT64_MAX, INT64_MIN
+
+
+def _ensure_utc(v: Any) -> datetime | None:
+    if v is None:
+        return None
+    if isinstance(v, datetime) and v.tzinfo is None:
+        return v.replace(tzinfo=UTC)
+    return v
 
 
 class TickTickSyncTaskResponse(BaseModel):
@@ -20,6 +29,11 @@ class TickTickSyncTaskResponse(BaseModel):
     error_message: str | None = None
 
     model_config = {"from_attributes": True}
+
+    @field_validator("last_synced_at", mode="before")
+    @classmethod
+    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
+        return _ensure_utc(v)
 
 
 class TickTickSyncStatusResponse(BaseModel):
@@ -65,3 +79,8 @@ class TickTickConnectionTestResponse(BaseModel):
     success: bool
     message: str
     tested_at: datetime
+
+    @field_validator("tested_at", mode="before")
+    @classmethod
+    def _ensure_timestamps_utc(cls, v: Any) -> datetime | None:
+        return _ensure_utc(v)
