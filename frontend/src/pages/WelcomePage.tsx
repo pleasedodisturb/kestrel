@@ -94,6 +94,7 @@ export function WelcomePage() {
     {},
   );
   const [skippedSteps, setSkippedSteps] = useState<Set<string>>(new Set());
+  const skipResumeRef = useRef(false);
 
   // Focus management (accessibility)
   const inputRef = useRef<HTMLInputElement>(null);
@@ -107,6 +108,7 @@ export function WelcomePage() {
 
   useEffect(() => {
     if (!status) return;
+    if (skipResumeRef.current) return;
 
     if (status.welcome_completed_at) {
       setScreen("summary");
@@ -326,10 +328,7 @@ export function WelcomePage() {
                         .replace("What are your ", "")
                         .replace("Where are you ", "")
                         .replace("?", "")}{" "}
-                      &mdash;{" "}
-                      <a href="/settings" className="underline">
-                        update anytime in Settings &gt; Profile
-                      </a>
+                      &mdash; skipped
                     </span>
                   </>
                 ) : completedSteps[step.key] ? (
@@ -353,16 +352,19 @@ export function WelcomePage() {
                         .replace("What are your ", "")
                         .replace("Where are you ", "")
                         .replace("?", "")}{" "}
-                      &mdash;{" "}
-                      <a href="/settings" className="underline">
-                        update anytime in Settings &gt; Profile
-                      </a>
+                      &mdash; skipped
                     </span>
                   </>
                 )}
               </li>
             ))}
           </ul>
+          <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">
+            You can edit these anytime in{" "}
+            <a href="/settings" className="underline hover:text-[hsl(var(--foreground))]">
+              Settings &gt; Profile
+            </a>
+          </p>
 
           {/* AI Provider Nudge Card (D-07 -- summary screen only) */}
           <div
@@ -412,6 +414,7 @@ export function WelcomePage() {
           {/* Restart onboarding (keeps profile data) */}
           <button
             onClick={async () => {
+              skipResumeRef.current = true;
               await resetOnboarding(DEFAULT_PROFILE_ID);
               await queryClient.invalidateQueries({ queryKey: ["onboarding-status"] });
               setScreen("welcome");
