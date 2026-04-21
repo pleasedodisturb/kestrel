@@ -1,17 +1,18 @@
 /**
  * API client for OpenRouter OAuth onboarding.
+ *
+ * Uses the existing /api/auth/openrouter/* endpoints which implement
+ * PKCE with server-side state management and rate limiting.
  */
 
 export interface OAuthStartResponse {
   auth_url: string;
-  code_verifier: string;
+  state: string;
 }
 
-export interface OAuthCallbackResponse {
-  success: boolean;
-  message: string;
-  has_credits: boolean;
-  balance: number;
+export interface OAuthStatusResponse {
+  connected: boolean;
+  provider: string;
 }
 
 export interface CreditsResponse {
@@ -21,15 +22,9 @@ export interface CreditsResponse {
   needs_deposit: boolean;
 }
 
-/** Start the OAuth PKCE flow — returns auth URL and code verifier. */
-export async function startOAuth(
-  callbackUrl: string,
-): Promise<OAuthStartResponse> {
-  const res = await fetch("/api/openrouter/oauth/start", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ callback_url: callbackUrl }),
-  });
+/** Start the OAuth PKCE flow — returns auth URL and state token. */
+export async function startOAuth(): Promise<OAuthStartResponse> {
+  const res = await fetch("/api/auth/openrouter/start");
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(
@@ -40,29 +35,18 @@ export async function startOAuth(
   return res.json() as Promise<OAuthStartResponse>;
 }
 
-/** Exchange auth code for API key — stores key in backend. */
-export async function completeOAuth(
-  code: string,
-  codeVerifier: string,
-): Promise<OAuthCallbackResponse> {
-  const res = await fetch("/api/openrouter/oauth/callback", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, code_verifier: codeVerifier }),
-  });
+/** Check OpenRouter connection status. */
+export async function fetchStatus(): Promise<OAuthStatusResponse> {
+  const res = await fetch("/api/auth/openrouter/status");
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as { detail?: string }).detail ??
-        `OAuth callback failed: ${res.status}`,
-    );
+    return { connected: false, provider: "openrouter" };
   }
-  return res.json() as Promise<OAuthCallbackResponse>;
+  return res.json() as Promise<OAuthStatusResponse>;
 }
 
 /** Check OpenRouter credit balance. */
 export async function fetchCredits(): Promise<CreditsResponse> {
-  const res = await fetch("/api/openrouter/credits");
+  const res = await fetch("/api/auth/openrouter/credits");
   if (!res.ok) {
     if (res.status === 404)
       return {

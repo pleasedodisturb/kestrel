@@ -6,7 +6,7 @@
  * - Shows balance when credits are available
  * - Shows low balance warning when needs_deposit is true
  * - Connect button calls startOAuth and redirects
- * - Handles OAuth callback from URL params
+ * - Shows connected state with refresh button
  * - Shows error state on failure
  */
 
@@ -24,11 +24,11 @@ import { OpenRouterConnect } from "@/components/OpenRouterConnect";
 // Mock the API module
 vi.mock("@/api/openrouter", () => ({
   startOAuth: vi.fn(),
-  completeOAuth: vi.fn(),
+  fetchStatus: vi.fn(),
   fetchCredits: vi.fn(),
 }));
 
-import { startOAuth, fetchCredits } from "@/api/openrouter";
+import { startOAuth, fetchStatus, fetchCredits } from "@/api/openrouter";
 
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -44,8 +44,11 @@ function renderWithQuery(ui: React.ReactElement) {
 describe("OpenRouterConnect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionStorage.clear();
-    // Default: no credits (not connected)
+    // Default: not connected
+    vi.mocked(fetchStatus).mockResolvedValue({
+      connected: false,
+      provider: "openrouter",
+    });
     vi.mocked(fetchCredits).mockResolvedValue({
       total_credits: 0,
       total_usage: 0,
@@ -65,6 +68,10 @@ describe("OpenRouterConnect", () => {
   });
 
   it("shows balance when credits are available", async () => {
+    vi.mocked(fetchStatus).mockResolvedValue({
+      connected: true,
+      provider: "openrouter",
+    });
     vi.mocked(fetchCredits).mockResolvedValue({
       total_credits: 10,
       total_usage: 2.5,
@@ -79,6 +86,10 @@ describe("OpenRouterConnect", () => {
   });
 
   it("shows low balance warning when needs_deposit is true", async () => {
+    vi.mocked(fetchStatus).mockResolvedValue({
+      connected: true,
+      provider: "openrouter",
+    });
     vi.mocked(fetchCredits).mockResolvedValue({
       total_credits: 1,
       total_usage: 0.8,
@@ -93,8 +104,7 @@ describe("OpenRouterConnect", () => {
     });
   });
 
-  it("calls startOAuth and sets sessionStorage on connect click", async () => {
-    // Mock window.location.href assignment
+  it("calls startOAuth and redirects on connect click", async () => {
     const originalLocation = window.location;
     const mockLocation = { ...originalLocation, href: "" };
     Object.defineProperty(window, "location", {
@@ -103,9 +113,8 @@ describe("OpenRouterConnect", () => {
     });
 
     vi.mocked(startOAuth).mockResolvedValue({
-      auth_url:
-        "https://openrouter.ai/auth?callback_url=test&code_challenge=abc",
-      code_verifier: "test-verifier-123",
+      auth_url: "https://openrouter.ai/auth?state=abc123",
+      state: "abc123",
     });
 
     renderWithQuery(<OpenRouterConnect />);
@@ -120,20 +129,37 @@ describe("OpenRouterConnect", () => {
     });
 
     await waitFor(() => {
-      expect(startOAuth).toHaveBeenCalledWith(
-        expect.stringContaining("/settings?openrouter_callback=1"),
-      );
-      expect(sessionStorage.getItem("openrouter_code_verifier")).toBe(
-        "test-verifier-123",
-      );
+      expect(startOAuth).toHaveBeenCalled();
       expect(mockLocation.href).toContain("openrouter.ai/auth");
     });
 
-    // Restore
     Object.defineProperty(window, "location", {
       writable: true,
       value: originalLocation,
     });
+  });
+
+  it("shows connected state with refresh button", async () => {
+    vi.mocked(fetchStatus).mockResolvedValue({
+      connected: true,
+      provider: "openrouter",
+    });
+    vi.mocked(fetchCredits).mockResolvedValue({
+      total_credits: 10,
+      total_usage: 1,
+      balance: 9,
+      needs_deposit: false,
+    });
+
+    renderWithQuery(<OpenRouterConnect />);
+    await waitFor(() => {
+      expect(screen.getByText("OpenRouter connected.")).toBeInTheDocument();
+      expect(screen.getByTestId("openrouter-refresh")).toBeInTheDocument();
+    });
+    // Connect button should NOT be shown
+    expect(
+      screen.queryByTestId("openrouter-connect-button"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows description text about the flow", async () => {
