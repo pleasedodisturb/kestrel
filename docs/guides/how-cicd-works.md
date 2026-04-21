@@ -5,43 +5,58 @@ description: "What happens between writing code and running your own Kestrel ins
 
 # How CI/CD Works
 
-## The Journey of Code
+You've probably installed software before — download, double-click, done. But what happens between someone writing code and you running it? Think of it like a restaurant's back-of-house operation. A chef creates a recipe, but before it reaches your table, the recipe gets reviewed, ingredients get quality-checked, the dish gets plated, and a server brings it to you. If any step fails — bad ingredient, wrong temperature, dropped plate — you never see the mistake. That invisible kitchen is CI/CD: Continuous Integration (checking the code) and Continuous Delivery (getting it to you).
 
-You've probably installed software before. Download, double-click, done. But have you ever wondered what happens between someone writing code and you running it?
+## The Short Version
 
-Think of it like a restaurant kitchen. A chef (the developer) creates a recipe (writes code). But before it reaches your table, it goes through a process: the recipe gets reviewed, the ingredients get checked for quality, the dish gets plated, and a server brings it to you. If any step fails — bad ingredient, wrong temperature, dropped plate — you never see the mistake.
+- Every code change passes through **three checkpoints** (works? ready? deliverable?) before reaching you
+- **12 automated workflows** check each change — tests, security scans, PII leak detection, dependency audits
+- Releases are packaged automatically as **Docker images**, **Python packages (pip)**, and **npm packages**
+- Self-hosted means we can't hotfix after shipping — the kitchen has to be really good because we can't fix a bad dish once it's on your table
 
-That's what CI/CD does for software. CI stands for *Continuous Integration* (checking the code) and CD stands for *Continuous Delivery* (getting it to you). It's the invisible kitchen that turns raw code into the app you use.
+## How It Actually Works
 
-For Kestrel specifically, this matters because Kestrel is *self-hosted* — you run it on your own machine or server. So the "kitchen" needs to be really good, because we can't fix a bad dish after it's on your table. You'd have to wait for us to cook a new one and update manually.
+### The Three Checkpoints
 
----
+```mermaid
+flowchart LR
+    DEV[Developer writes code] --> CP1
 
-## The Three Checkpoints
+    subgraph CP1 ["Checkpoint 1: Does It Work?"]
+        LINT[Lint & Format]
+        TESTS[Test Suite]
+        SEC[Security Scan]
+        PII[PII Leak Check]
+    end
 
-Every piece of code that goes into Kestrel passes through three checkpoints before it can become part of a release:
+    CP1 -->|All pass| CP2
 
-### Checkpoint 1: Does It Work?
+    subgraph CP2 ["Checkpoint 2: Ready to Ship?"]
+        MERGE[Merge to main]
+        CONV[Conventional commits<br/>categorize changes]
+        DRAFT[Release draft<br/>auto-generated]
+    end
 
-When a developer (or an AI assistant — Kestrel is built with AI help) writes new code and submits it for review, automated checks run immediately:
+    CP2 -->|Developer approves| CP3
 
-- **Does it follow the rules?** Every project has coding standards — like grammar rules for code. A tool called a *linter* checks that the code is formatted consistently and doesn't contain common mistakes.
+    subgraph CP3 ["Checkpoint 3: Can You Get It?"]
+        DOCKER[Docker Image<br/>Backend + Frontend]
+        PIP[Python Package<br/>PyPI]
+        NPM[npm Package<br/>Node.js wrapper]
+    end
 
-- **Do the tests pass?** Kestrel has hundreds of automated tests. Each one asks a specific question: "If I create a job application with these details, does the scoring engine produce the right result?" "If I send this API request, does the server respond correctly?" These tests run in under 2 minutes.
+    CP3 --> USER[You run Kestrel]
 
-- **Is it secure?** Automated scanners check for known vulnerabilities in the code and its dependencies. Think of it as checking that all your kitchen ingredients haven't been recalled.
+    style DEV fill:#e8f4fd
+    style USER fill:#d4edda
+    style CP1 fill:#fff3cd
+    style CP2 fill:#e8f4fd
+    style CP3 fill:#d4edda
+```
 
-- **Did anything leak?** A special scanner checks that no personal information, passwords, or API keys accidentally ended up in the code. This is like checking that a letter you're mailing doesn't have your credit card number written on the envelope.
+**Checkpoint 1: Does It Work?** When new code is submitted for review, automated checks run immediately. A linter checks coding standards (grammar rules for code). The full test suite runs in under 2 minutes. Security scanners check for known vulnerabilities in dependencies. A special scanner checks that no personal information, passwords, or API keys accidentally ended up in the code — like checking that a letter you're mailing doesn't have your credit card number on the envelope. If any check fails, the code can't move forward.
 
-If any of these fail, the code can't move forward. The developer fixes the issue and tries again.
-
-### Checkpoint 2: Is It Ready to Ship?
-
-Once the code passes all checks, it gets merged into the main codebase. But that doesn't make it a release yet. Changes accumulate — bug fixes, new features, improvements — until there's enough to justify a new version.
-
-Kestrel uses something called *conventional commits*: every code change has a label that says what kind of change it is. `feat:` means a new feature. `fix:` means a bug fix. `docs:` means documentation was updated.
-
-A bot reads these labels and automatically prepares a release draft:
+**Checkpoint 2: Is It Ready to Ship?** Once code passes all checks, it gets merged into the main codebase, but that doesn't make it a release. Changes accumulate until there's enough to justify a new version. Kestrel uses conventional commits — every change is labeled (`feat:` for features, `fix:` for bug fixes, `docs:` for documentation). A bot reads these labels and auto-generates a release draft:
 
 ```
 Version 0.4.0
@@ -55,98 +70,73 @@ Bug Fixes:
 - Corrected golden set test categorizations
 ```
 
-The developer reviews this draft and decides when to publish it. This is a deliberate choice — we don't auto-release because self-hosted users need time to plan their upgrades.
+The developer reviews and decides when to publish. We don't auto-release because self-hosted users need time to plan upgrades.
 
-### Checkpoint 3: Can You Get It?
+**Checkpoint 3: Can You Get It?** When a release is published, the code gets packaged automatically in three formats:
+- **Docker image** — the most common way to run Kestrel. The entire app (backend + frontend) in a single container, like a meal kit with everything pre-measured and pre-prepped.
+- **Python package (pip)** — for users who want to install Kestrel as a Python tool, published to PyPI.
+- **npm package** — a convenience wrapper that installs the Python package using Node.js tooling.
 
-When a release is published, the code needs to be packaged in ways you can actually use:
+All three are published automatically when a release is tagged.
 
-- **Docker image** — The most common way to run Kestrel. The entire app (backend + frontend) gets built into a single container image. It's like a meal kit — everything pre-measured, pre-prepped, ready to cook in one pot.
+### How Self-Hosting Works
 
-- **Python package (pip)** — For users who want to install Kestrel as a Python tool. Published to PyPI, the Python Package Index.
-
-- **npm package** — A convenience wrapper that installs the Python package using Node.js tooling.
-
-All three are published automatically when a release is tagged. You don't need to build anything yourself.
-
----
-
-## How Self-Hosting Works
-
-When you self-host Kestrel, you're running it on a server you control. Here's what a typical setup looks like:
+When you self-host Kestrel, you're running it on a server you control:
 
 ```
 Your Server
-┌─────────────────────────────────────┐
-│                                     │
-│  Kestrel (the app)                  │
-│  ├── Backend: finds and scores jobs │
-│  ├── Frontend: the web UI you see   │
-│  └── Database: your job data        │
-│                                     │
-│  + Backup system (automatic)        │
-│  + Health monitor (checks it's up)  │
-│                                     │
-└─────────────────────────────────────┘
++-------------------------------------+
+|  Kestrel (the app)                  |
+|  |-- Backend: finds and scores jobs |
+|  |-- Frontend: the web UI you see   |
+|  +-- Database: your job data        |
+|                                     |
+|  + Backup system (automatic)        |
+|  + Health monitor (checks it's up)  |
++-------------------------------------+
 ```
 
-### Your Data Stays Yours
+**Your data stays yours.** That's the whole point. Your job applications, scores, contacts, and career goals live on your server, not ours. The database is a single SQLite file — you could copy it to a USB drive. A backup system called Litestream continuously copies database changes to cloud storage, like your phone automatically backing up photos.
 
-This is the whole point of self-hosting. Your job applications, scores, contacts, and career goals live on *your* server, not ours. The database is a single file (SQLite) — you could copy it to a USB drive if you wanted to.
-
-A backup system called Litestream continuously copies your database changes to cloud storage, so if your server has a bad day, your data is safe. Think of it like your phone automatically backing up photos — you don't think about it, but it's always happening.
-
-### Updating Kestrel
-
-When a new version comes out, updating is:
-
+**Updating is two commands:**
 ```bash
 docker compose pull        # Download the new version
 docker compose up -d       # Restart with the new version
 ```
 
-That's two commands. The database migrates automatically — new tables get created, old data gets preserved. If something goes wrong, you can roll back to the previous version just as easily.
+The database migrates automatically — new tables get created, old data gets preserved. Roll back just as easily if needed.
 
-### What About the Mobile App?
+**The mobile app** works differently — it connects to your self-hosted server like a remote control. App updates come through the app store, and some can be pushed instantly without app store review (OTA updates).
 
-The mobile app (coming soon) works differently. It connects to your self-hosted Kestrel server — think of it as a remote control for your instance. The app itself gets updates through the app store (Apple/Google), and some updates can even be pushed instantly without waiting for app store review.
+## Examples
 
----
+**A typical release cycle:** Three bug fixes and one new feature are merged over a week. Each passed all 12 automated checks independently. The conventional commit bot drafts a changelog. The developer reviews it Friday afternoon, approves the release, and Docker/pip/npm packages are published automatically within minutes. Users update at their convenience.
 
-## Why This Matters to You
+**A caught mistake:** A developer accidentally includes a test API key in a code comment. The PII leak scanner flags the pattern before the PR can merge. The developer removes it, resubmits, and the key never enters the codebase.
 
-You might be thinking: "I just want to search for jobs. Why should I care about CI/CD?"
+**A conflict between PRs:** Two pull requests individually pass all tests, but when merged together they conflict. The merge-to-main pipeline catches this because it runs the full test suite again after merge — the same safety net that prevents "it worked on my machine" issues.
 
-Fair question. Here's why it matters:
+## FAQ
 
-**Reliability.** Every feature you use was tested hundreds of times before it reached you. The scoring engine that tells you a job is a "dream job"? That's been validated against real job data, checked for bias across industries, and tested with edge cases. The CI pipeline catches mistakes that humans miss.
+**Q: Why should I care about CI/CD?**
+Because it directly affects the reliability and security of the app managing your career data. Every feature was tested hundreds of times before reaching you. Automated security scanning ensures no version ships with known vulnerabilities. And because Kestrel is open source, every check is visible in the GitHub repository.
 
-**Security.** Your career data is sensitive — where you're applying, your salary expectations, your skills gaps. The automated security scanning ensures no version of Kestrel ships with known vulnerabilities or accidental data leaks.
+**Q: What if an update breaks something?**
+Roll back to the previous version with the same two Docker commands. Database migrations are tested both up and down to ensure they're reversible.
 
-**Transparency.** Kestrel is open source. Every automated check, every test, every security scan is visible in the GitHub repository. You can see exactly what standards the code is held to. The CI configuration files are just text files you can read.
+**Q: How fast do releases ship?**
+Zero manual steps between "release approved" and "packages published." The bottleneck is the developer deciding the changelog is ready, not the pipeline.
 
-**Predictability.** When you update Kestrel, you can read the changelog and know exactly what changed. No surprises, no mystery features, no "we updated and now it's different." The conventional commit system ensures every change is categorized and documented.
+**Q: What does "conventional commits" mean?**
+Every code change gets a label: `feat:` (new feature), `fix:` (bug fix), `docs:` (documentation), etc. This makes changelogs automatic and predictable — you know exactly what changed in each release.
 
----
+## Further Reading
 
-## The Numbers
+- [CI/CD Strategy](../research/cicd-research.md) — the research behind pipeline design
+- [Raw Findings](../research/cicd-raw-research.md) — source data and methodology
+- [Dev Review](../research/cicd-dev-review.md) — technical implementation review
 
-Some concrete facts about Kestrel's quality pipeline:
-
-- **12 automated workflows** check every code change
-- **100+ backend tests** validate the API, scoring, and data layer
-- **20+ frontend tests** validate the web interface
-- **6 security scanners** check for vulnerabilities, secrets, and supply chain risks
-- **Every release** is built for both Intel and ARM processors (runs on regular servers and Apple Silicon)
-- **Zero manual steps** between "release approved" and "packages published"
-
-All of this runs automatically. The developer's job is to write good code and decide when to ship. The pipeline handles the rest.
-
----
-
-## Glossary
-
-Some terms you might encounter:
+### Glossary
 
 | Term | What It Means |
 |------|---------------|
@@ -156,9 +146,14 @@ Some terms you might encounter:
 | **Pipeline** | The sequence of automated checks that code goes through |
 | **Linting** | Checking code for style and formatting consistency |
 | **SAST** | Static Application Security Testing — scanning code for security issues without running it |
-| **SemVer** | Semantic Versioning — version numbers like 1.2.3 where each number means something (major.minor.patch) |
+| **SemVer** | Semantic Versioning — version numbers like 1.2.3 (major.minor.patch) |
 | **OTA** | Over-The-Air — updating a mobile app without going through the app store |
 
----
+### The Numbers
 
-*Want to see the pipeline in action? Check the [Actions tab](https://github.com/pleasedodisturb/kestrel/actions) in the GitHub repository — every run is public.*
+- **12 automated workflows** check every code change
+- **100+ backend tests** validate the API, scoring, and data layer
+- **20+ frontend tests** validate the web interface
+- **6 security scanners** check for vulnerabilities, secrets, and supply chain risks
+- **Every release** built for both Intel and ARM processors
+- **Zero manual steps** between "release approved" and "packages published"
