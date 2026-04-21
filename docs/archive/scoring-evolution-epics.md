@@ -3,6 +3,11 @@ title: "Scoring Evolution — Epic Breakdown"
 description: "The full spec for all 11 scoring evolution epics (G-269 through G-279)"
 ---
 
+> **Archived:** This document has been superseded by [How Scoring Works](../guides/how-scoring-works.md).
+> Preserved for historical reference only.
+
+---
+
 # Kestrel Scoring Evolution — Epic Breakdown
 
 > Created: 2026-04-14

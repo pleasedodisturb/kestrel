@@ -4,6 +4,11 @@ title: AI Providers Explained
 permalink: /docs/ai-providers-explained
 ---
 
+> **Archived:** This document has been superseded by [AI Providers Guide](../guides/ai-providers-guide.md).
+> Preserved for historical reference only.
+
+---
+
 # How Kestrel Uses AI (and Why You Don't Need a PhD to Set It Up)
 
 You know how you use ChatGPT or Claude to ask questions? Kestrel does the same thing — but automatically, behind the scenes, to score jobs, prep you for interviews, and analyze your career gaps.

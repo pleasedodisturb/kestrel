@@ -2,6 +2,11 @@
 title: Desire Score A/B Recommendation
 ---
 
+> **Archived:** This document has been superseded by [How Scoring Works](../guides/how-scoring-works.md).
+> Preserved for historical reference only.
+
+---
+
 # Desire Score A/B Recommendation
 
 ## Context
