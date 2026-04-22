@@ -15,8 +15,8 @@
       "id": "hc-01",
       "category": "reject",
       "expected_band": [
-        0,
-        2
+        0.0,
+        1.6
       ],
       "title": "Senior Frontend Developer",
       "company": "Shopify",
@@ -27,8 +27,8 @@
       "id": "hc-02",
       "category": "strong",
       "expected_band": [
-        4,
-        7
+        4.8,
+        7.8
       ],
       "title": "Automotive Mechanic",
       "company": "BMW Service Center",
@@ -39,8 +39,8 @@
       "id": "hc-03",
       "category": "reject",
       "expected_band": [
-        1,
-        3
+        1.0,
+        4.0
       ],
       "title": "Medical Billing Specialist",
       "company": "Mass General Brigham",
@@ -51,8 +51,8 @@
       "id": "hc-04",
       "category": "reject",
       "expected_band": [
-        1,
-        4
+        0.2,
+        3.2
       ],
       "title": "Hospital Operations Director",
       "company": "Beth Israel Deaconess",
@@ -63,8 +63,8 @@
       "id": "hc-05",
       "category": "mediocre",
       "expected_band": [
-        1,
-        3
+        1.2,
+        4.2
       ],
       "title": "Clinical Research Coordinator",
       "company": "Dana-Farber Cancer Institute",
@@ -75,8 +75,8 @@
       "id": "hc-06",
       "category": "dream",
       "expected_band": [
-        7,
-        10
+        8.4,
+        10.0
       ],
       "title": "Pharmacy Technician",
       "company": "CVS Health",
@@ -87,8 +87,8 @@
       "id": "hc-07",
       "category": "dream",
       "expected_band": [
-        8,
-        10
+        8.2,
+        10.0
       ],
       "title": "Health Informatics Analyst",
       "company": "Epic Systems",
@@ -99,8 +99,8 @@
       "id": "hc-08",
       "category": "mediocre",
       "expected_band": [
-        2,
-        5
+        1.7,
+        4.7
       ],
       "title": "Nurse Practitioner - Primary Care",
       "company": "One Medical",
@@ -111,8 +111,8 @@
       "id": "hc-09",
       "category": "mediocre",
       "expected_band": [
-        3,
-        6
+        1.7,
+        4.7
       ],
       "title": "Healthcare IT Project Manager",
       "company": "Cerner Corporation",
@@ -123,8 +123,8 @@
       "id": "hc-10",
       "category": "dream",
       "expected_band": [
-        7,
-        10
+        6.8,
+        9.8
       ],
       "title": "Medical Device Sales Representative",
       "company": "Medtronic",
@@ -135,8 +135,8 @@
       "id": "hc-11",
       "category": "mediocre",
       "expected_band": [
-        2,
-        5
+        2.2,
+        5.2
       ],
       "title": "Quality Improvement Director",
       "company": "Partners HealthCare",
@@ -147,8 +147,8 @@
       "id": "hc-12",
       "category": "reject",
       "expected_band": [
-        0,
-        2
+        0.0,
+        2.5
       ],
       "title": "Dental Hygienist",
       "company": "Aspen Dental",
@@ -159,8 +159,8 @@
       "id": "hc-13",
       "category": "dream",
       "expected_band": [
-        7,
-        10
+        7.4,
+        10.0
       ],
       "title": "Emergency Department Physician",
       "company": "Tufts Medical Center",
@@ -171,8 +171,8 @@
       "id": "hc-14",
       "category": "strong",
       "expected_band": [
-        3,
-        6
+        4.2,
+        7.2
       ],
       "title": "Health Insurance Claims Adjuster",
       "company": "Blue Cross Blue Shield",
@@ -183,8 +183,8 @@
       "id": "hc-15",
       "category": "dream",
       "expected_band": [
-        8,
-        10
+        7.7,
+        10.0
       ],
       "title": "Biomedical Engineer",
       "company": "Boston Scientific",
@@ -195,8 +195,8 @@
       "id": "hc-16",
       "category": "strong",
       "expected_band": [
-        3,
-        6
+        4.1,
+        7.1
       ],
       "title": "Mental Health Counselor",
       "company": "McLean Hospital",
@@ -207,8 +207,8 @@
       "id": "hc-17",
       "category": "dream",
       "expected_band": [
-        7,
-        10
+        7.4,
+        10.0
       ],
       "title": "Healthcare Compliance Officer",
       "company": "Mount Auburn Hospital",
@@ -219,8 +219,8 @@
       "id": "hc-18",
       "category": "reject",
       "expected_band": [
-        1,
-        4
+        0.6,
+        3.6
       ],
       "title": "Physical Therapist",
       "company": "Spaulding Rehabilitation Hospital",
@@ -231,8 +231,8 @@
       "id": "hc-19",
       "category": "dream",
       "expected_band": [
-        7,
-        10
+        7.1,
+        10.0
       ],
       "title": "Data Scientist - Population Health",
       "company": "Optum",
@@ -243,8 +243,8 @@
       "id": "hc-20",
       "category": "dream",
       "expected_band": [
-        7,
-        10
+        7.4,
+        10.0
       ],
       "title": "Surgical Technologist",
       "company": "Brigham and Women's Hospital",
