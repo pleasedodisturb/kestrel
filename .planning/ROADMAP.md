@@ -30,7 +30,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The web frontend is documented as a shipped, working interface with specific page-level capabilities — not just "React app exists"
   4. Deployment options are documented honestly, including the UX gaps that make each option developer-only (the G-488 Docker failure is acknowledged, not hidden)
   5. Shipped features are grouped into retrospective milestones with a narrative that explains how Kestrel grew from initial tool to current state
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 01-01-PLAN.md — Write docs/roadmap/inventory.md: full feature inventory with 8 domain sections, Parked Work, evolution narrative, and summary table
 
 ### Phase 2: Roadmap Foundation
 **Goal**: ROADMAP.md exists at repo root as a well-structured, GitHub-rendered document with shipped content, status system, timeline visualization, and all structural scaffolding
@@ -82,7 +84,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Feature Inventory | 0/0 | Not started | - |
+| 1. Feature Inventory | 0/1 | Not started | - |
 | 2. Roadmap Foundation | 0/0 | Not started | - |
 | 3. Forward Vision | 0/0 | Not started | - |
 | 4. Milestone Deep Dives | 0/0 | Not started | - |
