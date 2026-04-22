@@ -80,21 +80,24 @@ jobs:
             gh issue create \
               --title "RELEASE BROKEN: $TAG failed verification" \
               --label "bug,release-broken,priority:urgent" \
-              --body "## Release $TAG failed automated verification
+              --body "$(cat <<BODY
+          ## Release $TAG failed automated verification
 
-The daily release verification workflow detected that the latest release ($TAG) is broken.
+          The daily release verification workflow detected that the latest release ($TAG) is broken.
 
-**Failed run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Failed run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-### Required actions
-1. Investigate the failure logs above
-2. Either fix forward or yank the release
-3. Close this issue when resolved
+          ### Required actions
+          1. Investigate the failure logs above
+          2. Either fix forward or yank the release
+          3. Close this issue when resolved
 
-### Auto-generated
-This issue was created automatically by the release verification workflow."
+          This issue was created automatically by the release verification workflow.
+          BODY
+          )"
           else
-            gh issue comment "$existing" --body "Release verification still failing as of $(date -u +%Y-%m-%dT%H:%M:%SZ). Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            gh issue comment "$existing" \
+              --body "Release verification still failing as of $(date -u +%Y-%m-%dT%H:%M:%SZ). Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
