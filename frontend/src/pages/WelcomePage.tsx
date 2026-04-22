@@ -119,7 +119,7 @@ export function WelcomePage() {
       // Resume at the first step whose profile field is empty (D-05).
       // If a user skipped a field, they'll see it again (one-click re-skip).
       if (profile) {
-        const profileData: Record<string, unknown> = profile;
+        const profileData = profile as Record<string, unknown>;
         const resumeIndex = WELCOME_STEPS.findIndex((step) => {
           const val = profileData[step.field];
           return val === null || val === undefined || val === "";

@@ -48,6 +48,7 @@ services:
       - frontend-node-modules:/app/node_modules
     environment:
       - NODE_ENV=development
+      - VITE_API_URL=http://backend:8100
     command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0"
     depends_on:
       backend:
