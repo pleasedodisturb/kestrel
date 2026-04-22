@@ -10,10 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/kestrel-app/"><img src="https://img.shields.io/pypi/v/kestrel-app?style=flat-square&label=pip%20install&color=22c55e" alt="PyPI"></a>
-  <img src="https://img.shields.io/badge/AI-built--in_(free)-blue?style=flat-square" alt="AI included">
+  <a href="https://github.com/pleasedodisturb/kestrel/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pleasedodisturb/kestrel/ci.yml?branch=main&style=flat-square&label=build" alt="CI"></a>
+  <a href="https://github.com/pleasedodisturb/kestrel/actions/workflows/smoke.yml"><img src="https://img.shields.io/github/actions/workflow/status/pleasedodisturb/kestrel/smoke.yml?branch=main&style=flat-square&label=smoke%20tests" alt="Smoke Tests"></a>
+  <a href="https://github.com/pleasedodisturb/kestrel/actions/workflows/nightly.yml"><img src="https://img.shields.io/github/actions/workflow/status/pleasedodisturb/kestrel/nightly.yml?branch=main&style=flat-square&label=nightly" alt="Nightly"></a>
+  <a href="https://github.com/pleasedodisturb/kestrel/releases/latest"><img src="https://img.shields.io/github/v/release/pleasedodisturb/kestrel?style=flat-square&label=release&color=22c55e" alt="Latest Release"></a>
+  <a href="https://pypi.org/project/kestrel-app/"><img src="https://img.shields.io/pypi/v/kestrel-app?style=flat-square&label=pypi&color=22c55e" alt="PyPI"></a>
+  <a href="https://github.com/pleasedodisturb/kestrel/issues?q=is%3Aissue+is%3Aopen+label%3Abug"><img src="https://img.shields.io/github/issues-raw/pleasedodisturb/kestrel/bug?style=flat-square&label=open%20bugs&color=e11d48" alt="Open Bugs"></a>
   <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0 License">
-  <img src="https://img.shields.io/badge/No_coding_required-gray?style=flat-square" alt="No coding required">
 </p>
 
 <p align="center">

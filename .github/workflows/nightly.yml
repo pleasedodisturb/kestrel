@@ -1,0 +1,24 @@
+name: Nightly Status
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2am UTC daily
+  workflow_dispatch:  # manual trigger
+
+jobs:
+  call-smoke:
+    uses: ./.github/workflows/smoke.yml
+
+  nightly-status:
+    name: Nightly health check
+    runs-on: ubuntu-latest
+    needs: [call-smoke]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.call-smoke.result }}" = "failure" ]; then
+            echo "::warning::Nightly smoke tests failed"
+            exit 1
+          fi
+          echo "Nightly status: healthy"

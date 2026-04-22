@@ -119,9 +119,8 @@ export function WelcomePage() {
       // Resume at the first step whose profile field is empty (D-05).
       // If a user skipped a field, they'll see it again (one-click re-skip).
       if (profile) {
-        const profileData: Record<string, unknown> = profile;
         const resumeIndex = WELCOME_STEPS.findIndex((step) => {
-          const val = profileData[step.field];
+          const val = profile[step.field as keyof typeof profile];
           return val === null || val === undefined || val === "";
         });
         // If all fields are filled, go to last step (it will finish onboarding)
