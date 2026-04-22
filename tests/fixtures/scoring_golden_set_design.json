@@ -2,13 +2,23 @@
   "profile": {
     "job_family": "UX Designer",
     "location": "Berlin, Germany",
-    "key_skills": ["Figma", "User Research", "Prototyping", "Design Systems", "Interaction Design", "Usability Testing"]
+    "key_skills": [
+      "Figma",
+      "User Research",
+      "Prototyping",
+      "Design Systems",
+      "Interaction Design",
+      "Usability Testing"
+    ]
   },
   "jobs": [
     {
       "id": "ds-01",
       "category": "reject",
-      "expected_band": [1, 3],
+      "expected_band": [
+        4.5,
+        7.5
+      ],
       "title": "Backend Engineer, Rust",
       "company": "Cloudflare",
       "location": "Remote, EU",
@@ -17,7 +27,10 @@
     {
       "id": "ds-02",
       "category": "reject",
-      "expected_band": [1, 3],
+      "expected_band": [
+        0.2,
+        3.2
+      ],
       "title": "Actuarial Analyst",
       "company": "Munich Re",
       "location": "Munich, Germany",
@@ -26,7 +39,10 @@
     {
       "id": "ds-03",
       "category": "reject",
-      "expected_band": [1, 3],
+      "expected_band": [
+        4.9,
+        7.9
+      ],
       "title": "Supply Chain Manager",
       "company": "BMW",
       "location": "Munich, Germany",
@@ -35,7 +51,10 @@
     {
       "id": "ds-04",
       "category": "reject",
-      "expected_band": [1, 3],
+      "expected_band": [
+        7.4,
+        10.0
+      ],
       "title": "DevOps Engineer",
       "company": "Datadog",
       "location": "Paris, France",
@@ -44,7 +63,10 @@
     {
       "id": "ds-05",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        4.3,
+        7.3
+      ],
       "title": "Graphic Designer",
       "company": "Zalando",
       "location": "Berlin, Germany",
@@ -53,7 +75,10 @@
     {
       "id": "ds-06",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        0.0,
+        2.5
+      ],
       "title": "Frontend Developer",
       "company": "N26",
       "location": "Berlin, Germany",
@@ -62,7 +87,10 @@
     {
       "id": "ds-07",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        0.0,
+        2.2
+      ],
       "title": "Marketing Designer",
       "company": "Personio",
       "location": "Berlin, Germany",
@@ -71,7 +99,10 @@
     {
       "id": "ds-08",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        0.9,
+        3.9
+      ],
       "title": "Technical Writer",
       "company": "JetBrains",
       "location": "Berlin, Germany",
@@ -80,7 +111,10 @@
     {
       "id": "ds-09",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        5.2,
+        8.2
+      ],
       "title": "Product Manager",
       "company": "SoundCloud",
       "location": "Berlin, Germany",
@@ -89,7 +123,10 @@
     {
       "id": "ds-10",
       "category": "mediocre",
-      "expected_band": [4, 6],
+      "expected_band": [
+        4.5,
+        7.5
+      ],
       "title": "UI Developer",
       "company": "SAP",
       "location": "Berlin, Germany",
@@ -98,7 +135,10 @@
     {
       "id": "ds-11",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        0.0,
+        3.0
+      ],
       "title": "Product Designer",
       "company": "Figma",
       "location": "Remote, EU",
@@ -107,7 +147,10 @@
     {
       "id": "ds-12",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        1.4,
+        4.4
+      ],
       "title": "UX Researcher",
       "company": "Spotify",
       "location": "Berlin, Germany",
@@ -116,7 +159,10 @@
     {
       "id": "ds-13",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        3.8,
+        6.8
+      ],
       "title": "Interaction Designer",
       "company": "Google",
       "location": "Munich, Germany",
@@ -125,7 +171,10 @@
     {
       "id": "ds-14",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        1.6,
+        4.6
+      ],
       "title": "Design System Lead",
       "company": "Zalando",
       "location": "Berlin, Germany",
@@ -134,7 +183,10 @@
     {
       "id": "ds-15",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        8.2,
+        10.0
+      ],
       "title": "UX Designer",
       "company": "Siemens Healthineers",
       "location": "Berlin, Germany",
@@ -143,7 +195,10 @@
     {
       "id": "ds-16",
       "category": "strong",
-      "expected_band": [7, 8],
+      "expected_band": [
+        1.8,
+        4.8
+      ],
       "title": "Senior Product Designer",
       "company": "Miro",
       "location": "Berlin, Germany",
@@ -152,7 +207,10 @@
     {
       "id": "ds-17",
       "category": "dream",
-      "expected_band": [9, 10],
+      "expected_band": [
+        3.7,
+        6.7
+      ],
       "title": "Head of UX Design",
       "company": "Linear",
       "location": "Remote, EU",
@@ -161,7 +219,10 @@
     {
       "id": "ds-18",
       "category": "dream",
-      "expected_band": [9, 10],
+      "expected_band": [
+        8.2,
+        10.0
+      ],
       "title": "Principal Designer, Design Systems",
       "company": "Airbnb",
       "location": "Remote, EU",
@@ -170,7 +231,10 @@
     {
       "id": "ds-19",
       "category": "dream",
-      "expected_band": [9, 10],
+      "expected_band": [
+        0.0,
+        1.9
+      ],
       "title": "VP of Design",
       "company": "Pitch",
       "location": "Berlin, Germany",
@@ -179,7 +243,10 @@
     {
       "id": "ds-20",
       "category": "dream",
-      "expected_band": [9, 10],
+      "expected_band": [
+        0.3,
+        3.3
+      ],
       "title": "Staff UX Designer, AI Interfaces",
       "company": "DeepMind",
       "location": "London, UK",
