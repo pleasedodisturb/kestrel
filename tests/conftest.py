@@ -1,8 +1,10 @@
 """Shared test fixtures."""
 
+import os
 import sys
 from pathlib import Path
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
@@ -15,6 +17,56 @@ from career_os.models.models import Application, Profile
 # Ensure tools/ is importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
+
+# ---------------------------------------------------------------------------
+# Test isolation: force mock AI provider and blank all real API keys
+# ---------------------------------------------------------------------------
+
+# Set before any career_os imports that read settings so the pydantic-settings
+# singleton picks up mock values when first constructed.
+os.environ.setdefault("AI_PROVIDER", "mock")
+os.environ.setdefault("OPENROUTER_API_KEY", "")
+os.environ.setdefault("ANTHROPIC_API_KEY", "")
+os.environ.setdefault("TOGETHER_API_KEY", "")
+os.environ.setdefault("OPENAI_API_KEY", "")
+os.environ.setdefault("GROQ_API_KEY", "")
+os.environ.setdefault("XAI_API_KEY", "")
+os.environ.setdefault("GOOGLE_API_KEY", "")
+
+# Real AI provider domains — any HTTP request to these during tests is a bug.
+_BLOCKED_AI_DOMAINS = [
+    "openrouter.ai",
+    "api.anthropic.com",
+    "api.together.xyz",
+    "api.openai.com",
+    "api.groq.com",
+    "api.x.ai",
+    "generativelanguage.googleapis.com",
+]
+
+
+@pytest.fixture(autouse=True)
+def block_real_ai_calls(monkeypatch):
+    """Fail fast if any test tries to hit a real AI provider.
+
+    Intercepts all httpx.AsyncClient.send calls and raises immediately if the
+    target host matches a known AI provider domain. This prevents accidental
+    API charges when tests are run with real credentials in the environment.
+    """
+    original_send = httpx.AsyncClient.send
+
+    async def guarded_send(self, request, **kwargs):
+        host = request.url.host
+        for domain in _BLOCKED_AI_DOMAINS:
+            if domain in host:
+                raise RuntimeError(
+                    f"TEST ISOLATION VIOLATION: attempted real HTTP call to {host}. "
+                    f"Tests must use AI_PROVIDER=mock. "
+                    f"Check conftest.py and .env — a real API key may be leaking in."
+                )
+        return await original_send(self, request, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", guarded_send)
 
 
 from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
