@@ -96,3 +96,10 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 30
+
+[tool.coverage.run]
+# relative_files = true makes pytest-cov emit project-relative source paths in
+# coverage.xml instead of absolute runner paths (e.g. /home/runner/work/...).
+# SonarCloud matches coverage data against its source index using relative paths,
+# so without this setting it cannot associate any coverage and reports 0%.
+relative_files = true
