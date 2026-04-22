@@ -1,0 +1,190 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'frontend/**'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'setup.sh'
+      - 'pyproject.toml'
+      - '.github/workflows/smoke.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'frontend/**'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'setup.sh'
+      - 'pyproject.toml'
+      - '.github/workflows/smoke.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  docker-prod:
+    name: Docker prod build + health
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build production image
+        run: docker compose -f docker-compose.prod.yml build
+
+      - name: Start production container
+        run: docker compose -f docker-compose.prod.yml up -d
+
+      - name: Wait for backend health (max 60s)
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -sf http://localhost:8100/health > /dev/null; then
+              echo "Health check passed."
+              break
+            fi
+            sleep 1
+          done
+          # Final check — fail clearly if never healthy
+          curl -sf http://localhost:8100/health > /dev/null || {
+            echo "::error::Production container did not become healthy within 60s"
+            docker compose -f docker-compose.prod.yml logs
+            exit 1
+          }
+
+      - name: Verify API responds with JSON
+        run: |
+          response=$(curl -sf http://localhost:8100/api/profiles)
+          echo "API response: $response"
+          # Expect valid JSON (jq exits non-zero on invalid JSON)
+          echo "$response" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+            echo "::error::GET /api/profiles did not return valid JSON"
+            exit 1
+          }
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.prod.yml down -v
+
+  docker-dev:
+    name: Docker dev compose + proxy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build and start dev containers
+        run: docker compose up -d --build
+
+      - name: Wait for backend health (max 60s)
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -sf http://localhost:8100/health > /dev/null; then
+              echo "Backend health check passed."
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://localhost:8100/health > /dev/null || {
+            echo "::error::Dev backend did not become healthy within 60s"
+            docker compose logs backend
+            exit 1
+          }
+
+      - name: Wait for frontend (max 90s — npm install takes time)
+        run: |
+          for _ in $(seq 1 90); do
+            if curl -sf http://localhost:8101 > /dev/null; then
+              echo "Frontend is up."
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://localhost:8101 > /dev/null || {
+            echo "::error::Dev frontend did not become available within 90s"
+            docker compose logs frontend
+            exit 1
+          }
+
+      - name: Verify cross-container proxy (frontend → backend)
+        run: |
+          # The Vite dev proxy rewrites /api/* to backend:8100 — this proves
+          # cross-container networking and the proxy config are both working.
+          response=$(curl -sf http://localhost:8101/api/profiles)
+          echo "Proxy response: $response"
+          echo "$response" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+            echo "::error::Vite proxy to /api/profiles did not return valid JSON"
+            exit 1
+          }
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
+
+  pypi-wheel:
+    name: Wheel build + server start
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Build wheel
+        run: |
+          pip install build
+          python -m build --wheel
+
+      - name: Install wheel in clean venv
+        run: |
+          python -m venv /tmp/kestrel-venv
+          /tmp/kestrel-venv/bin/pip install dist/*.whl
+
+      - name: Setup config for server start
+        run: |
+          mkdir -p config data
+          cp config/personal.yaml.example config/personal.yaml
+
+      - name: Start server from wheel install
+        run: |
+          /tmp/kestrel-venv/bin/python -m uvicorn career_os.main:app \
+            --host 127.0.0.1 --port 8100 \
+            > /tmp/kestrel-wheel.log 2>&1 &
+          WHEEL_PID=$!
+          echo "WHEEL_PID=$WHEEL_PID" >> "$GITHUB_ENV"
+          trap 'kill "$WHEEL_PID" 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8100/health > /dev/null; then
+              echo "Wheel server health check passed."
+              exit 0
+            fi
+            if ! kill -0 "$WHEEL_PID" 2>/dev/null; then
+              echo "::error::Wheel server exited before becoming healthy"
+              cat /tmp/kestrel-wheel.log
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "::error::Wheel server did not become healthy within 30s"
+          cat /tmp/kestrel-wheel.log
+          exit 1
+
+      - name: Kill server
+        if: always()
+        run: kill "$WHEEL_PID" 2>/dev/null || true
+
+  setup-script:
+    name: setup.sh --dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Dry-run setup script
+        run: bash setup.sh --dry-run
