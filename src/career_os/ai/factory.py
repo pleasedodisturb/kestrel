@@ -121,13 +121,41 @@ class UnsupportedProviderError(Exception):
         )
 
 
+def _build_fallback_chain() -> list[AIProvider] | None:
+    """Build a fallback chain from AI_PROVIDER_FALLBACK env var.
+
+    Returns a list of provider instances for each valid provider name in the
+    comma-separated env var, or None if the env var is unset or only contains
+    a single provider (no chain needed).
+
+    Unknown provider names are silently skipped.
+    """
+    raw = os.getenv("AI_PROVIDER_FALLBACK", "").strip()
+    if not raw:
+        return None
+
+    names = [n.strip().lower() for n in raw.split(",") if n.strip()]
+    providers: list[AIProvider] = []
+    for name in names:
+        factory_fn = _PROVIDER_REGISTRY.get(name)
+        if factory_fn is not None:
+            providers.append(factory_fn())
+        else:
+            logger.warning("Fallback chain: skipping unknown provider '%s'", name)
+
+    if len(providers) < 2:
+        return None
+    return providers
+
+
 def get_ai_provider(provider_name: str | None = None) -> AIProvider:
     """Create and return the configured AI provider.
 
     Resolution order:
     1. Explicit `provider_name` argument
-    2. AI_PROVIDER env var
-    3. Default: "mock"
+    2. AI_PROVIDER_FALLBACK env var (builds a FallbackProvider chain)
+    3. AI_PROVIDER env var
+    4. Default: "mock"
 
     Both "mock" and "demo" resolve to MockProvider — "demo" is a friendlier
     user-facing alias so non-technical users don't think "mock" means broken.
@@ -135,6 +163,14 @@ def get_ai_provider(provider_name: str | None = None) -> AIProvider:
     Raises:
         UnsupportedProviderError: If the provider name is not recognized.
     """
+    # When no explicit name given, check for a fallback chain first
+    if provider_name is None:
+        chain = _build_fallback_chain()
+        if chain is not None:
+            from career_os.ai.fallback import FallbackProvider
+
+            return FallbackProvider(chain)
+
     name = (provider_name or os.getenv("AI_PROVIDER", "mock")).strip().lower()
 
     factory_fn = _PROVIDER_REGISTRY.get(name)
