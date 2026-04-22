@@ -158,10 +158,3 @@ TestAPIWorkflow.settings = settings(
 # Propagate fuzz marker to the generated TestCase so default pytest run
 # (addopts = -m 'not fuzz') excludes it.
 TestAPIWorkflow = pytest.mark.fuzz(TestAPIWorkflow)
-# Pre-existing schema issue: datetime fields (updated_at, created_at)
-# lack timezone suffixes but OpenAPI schema specifies format: date-time
-# (RFC 3339 requires timezone).  Tracked as deferred item for endpoint fix.
-TestAPIWorkflow = pytest.mark.xfail(
-    reason="Pre-existing: datetime fields missing timezone suffix vs RFC 3339",
-    strict=False,
-)(TestAPIWorkflow)

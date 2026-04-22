@@ -86,49 +86,15 @@ class ContactCreate(BaseModel):
     email: str | None = Field(default=None, max_length=255, description="Email address")
     linkedin_url: str | None = Field(default=None, max_length=500, description="LinkedIn URL")
     phone: str | None = Field(default=None, max_length=50, description="Phone number")
-    relationship_type: str = Field(default="other", description="Relationship type")
-    referral_status: str | None = Field(default=None, description="Referral status")
-    warmth: str = Field(default="cold", description="Connection strength")
+    relationship_type: RelationshipType = Field(
+        default=RelationshipType.other, description="Relationship type"
+    )
+    referral_status: ReferralStatus | None = Field(default=None, description="Referral status")
+    warmth: Warmth = Field(default=Warmth.cold, description="Connection strength")
     notes: str | None = Field(default=None, description="Free-text notes")
     tags: list[str] | None = Field(default=None, description="Tags as list")
     source: str | None = Field(default=None, max_length=100, description="How you met")
     next_follow_up: datetime | None = Field(default=None, description="Next follow-up date (UTC)")
-
-    @field_validator("relationship_type", mode="before")
-    @classmethod
-    def _validate_relationship_type(cls, v: Any) -> str:
-        if v is not None:
-            v = str(v).strip().lower()
-            if v not in RelationshipType.__members__:
-                raise ValueError(
-                    f"Invalid relationship_type '{v}'. "
-                    f"Must be one of: {', '.join(RelationshipType.__members__)}"
-                )
-        return v
-
-    @field_validator("referral_status", mode="before")
-    @classmethod
-    def _validate_referral_status(cls, v: Any) -> str | None:
-        if v is None:
-            return v
-        v = str(v).strip().lower()
-        if v not in ReferralStatus.__members__:
-            raise ValueError(
-                f"Invalid referral_status '{v}'. "
-                f"Must be one of: {', '.join(ReferralStatus.__members__)}"
-            )
-        return v
-
-    @field_validator("warmth", mode="before")
-    @classmethod
-    def _validate_warmth(cls, v: Any) -> str:
-        if v is not None:
-            v = str(v).strip().lower()
-            if v not in Warmth.__members__:
-                raise ValueError(
-                    f"Invalid warmth '{v}'. Must be one of: {', '.join(Warmth.__members__)}"
-                )
-        return v
 
 
 class ContactUpdate(BaseModel):
@@ -140,51 +106,13 @@ class ContactUpdate(BaseModel):
     email: str | None = Field(default=None, max_length=255)
     linkedin_url: str | None = Field(default=None, max_length=500)
     phone: str | None = Field(default=None, max_length=50)
-    relationship_type: str | None = Field(default=None)
-    referral_status: str | None = Field(default=None)
-    warmth: str | None = Field(default=None)
+    relationship_type: RelationshipType | None = Field(default=None)
+    referral_status: ReferralStatus | None = Field(default=None)
+    warmth: Warmth | None = Field(default=None)
     notes: str | None = Field(default=None)
     tags: list[str] | None = Field(default=None)
     source: str | None = Field(default=None, max_length=100)
     next_follow_up: datetime | None = Field(default=None)
-
-    @field_validator("relationship_type", mode="before")
-    @classmethod
-    def _validate_relationship_type(cls, v: Any) -> str | None:
-        if v is None:
-            return v
-        v = str(v).strip().lower()
-        if v not in RelationshipType.__members__:
-            raise ValueError(
-                f"Invalid relationship_type '{v}'. "
-                f"Must be one of: {', '.join(RelationshipType.__members__)}"
-            )
-        return v
-
-    @field_validator("referral_status", mode="before")
-    @classmethod
-    def _validate_referral_status(cls, v: Any) -> str | None:
-        if v is None:
-            return v
-        v = str(v).strip().lower()
-        if v not in ReferralStatus.__members__:
-            raise ValueError(
-                f"Invalid referral_status '{v}'. "
-                f"Must be one of: {', '.join(ReferralStatus.__members__)}"
-            )
-        return v
-
-    @field_validator("warmth", mode="before")
-    @classmethod
-    def _validate_warmth(cls, v: Any) -> str | None:
-        if v is None:
-            return v
-        v = str(v).strip().lower()
-        if v not in Warmth.__members__:
-            raise ValueError(
-                f"Invalid warmth '{v}'. Must be one of: {', '.join(Warmth.__members__)}"
-            )
-        return v
 
 
 class ContactResponse(BaseModel):
@@ -256,32 +184,11 @@ class ContactListResponse(BaseModel):
 class InteractionCreate(BaseModel):
     """Request body for POST /api/contacts/{id}/interactions."""
 
-    interaction_type: str = Field(..., description="Type of interaction")
-    direction: str = Field(..., description="inbound or outbound")
+    interaction_type: InteractionType = Field(..., description="Type of interaction")
+    direction: Direction = Field(..., description="inbound or outbound")
     subject: str | None = Field(default=None, max_length=500, description="Subject line")
     notes: str | None = Field(default=None, description="Interaction notes")
     occurred_at: datetime | None = Field(default=None, description="When it happened (UTC)")
-
-    @field_validator("interaction_type", mode="before")
-    @classmethod
-    def _validate_interaction_type(cls, v: Any) -> str:
-        v = str(v).strip().lower()
-        if v not in InteractionType.__members__:
-            raise ValueError(
-                f"Invalid interaction_type '{v}'. "
-                f"Must be one of: {', '.join(InteractionType.__members__)}"
-            )
-        return v
-
-    @field_validator("direction", mode="before")
-    @classmethod
-    def _validate_direction(cls, v: Any) -> str:
-        v = str(v).strip().lower()
-        if v not in Direction.__members__:
-            raise ValueError(
-                f"Invalid direction '{v}'. Must be one of: {', '.join(Direction.__members__)}"
-            )
-        return v
 
 
 class InteractionResponse(BaseModel):
@@ -321,18 +228,8 @@ class ContactApplicationCreate(BaseModel):
     """Request body for POST /api/contacts/{id}/applications."""
 
     application_id: int = Field(..., description="Application to link")
-    role: str = Field(..., description="Contact's role for this application")
+    role: ContactRole = Field(..., description="Contact's role for this application")
     notes: str | None = Field(default=None, description="Notes about the link")
-
-    @field_validator("role", mode="before")
-    @classmethod
-    def _validate_role(cls, v: Any) -> str:
-        v = str(v).strip().lower()
-        if v not in ContactRole.__members__:
-            raise ValueError(
-                f"Invalid role '{v}'. Must be one of: {', '.join(ContactRole.__members__)}"
-            )
-        return v
 
 
 class ContactApplicationResponse(BaseModel):
