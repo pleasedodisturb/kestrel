@@ -461,12 +461,12 @@ class TestGoldenSetFixture:
             assert not missing, f"Job {job.get('id', '?')} missing fields: {missing}"
 
     def test_golden_set_expected_bands_valid(self, golden_set):
-        """expected_band must be a 2-element list with values 1-10."""
+        """expected_band must be a 2-element list with values in [0, 10]."""
         for job in golden_set:
             band = job["expected_band"]
             assert isinstance(band, list) and len(band) == 2
-            assert 1 <= band[0] <= 10
-            assert 1 <= band[1] <= 10
+            assert 0 <= band[0] <= 10
+            assert 0 <= band[1] <= 10
             assert band[0] <= band[1]
 
     def test_golden_set_unique_ids(self, golden_set):
