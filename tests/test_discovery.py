@@ -32,6 +32,7 @@ from career_os.discovery.adapters import (
     ScraperAdapter,
     _request_with_backoff,
 )
+from career_os.discovery.prefilter import PrefilterConfig, PrefilterStrategy
 from career_os.main import app
 from career_os.models.discovery import DiscoveryRun, SearchProfile
 from career_os.models.models import Application, Profile
@@ -41,6 +42,14 @@ from career_os.services.discovery import (
     _merge_raw_jobs,
     _normalize,
     run_discovery,
+)
+
+# All discovery integration tests disable the prefilter so that mock jobs are not
+# eliminated before reaching the DB upsert / assertions.  The prefilter itself is
+# tested separately.
+_PREFILTER_OFF = patch(
+    "career_os.services.discovery._build_prefilter_config",
+    return_value=PrefilterConfig(strategy=PrefilterStrategy.OFF),
 )
 
 # ---------------------------------------------------------------------------
@@ -227,9 +236,12 @@ class TestDiscoveryService:
             [_make_job("arbeitnow", title="PM", company="CompB", location="Munich")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter_a, adapter_b],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter_a, adapter_b],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_discovery(
                 db_session,
@@ -268,9 +280,12 @@ class TestDiscoveryService:
         adapter_a = MockAdapter("arbeitsagentur", [job_a])
         adapter_b = MockAdapter("arbeitnow", [job_b])
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter_a, adapter_b],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter_a, adapter_b],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_discovery(db_session, 1, keywords=["tpm"])
 
@@ -312,9 +327,12 @@ class TestDiscoveryService:
         adapter_a = MockAdapter("arbeitsagentur", [job_a])
         adapter_b = MockAdapter("arbeitnow", [job_b])
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter_a, adapter_b],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter_a, adapter_b],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_discovery(db_session, 1, keywords=["eng"])
 
@@ -333,9 +351,12 @@ class TestDiscoveryService:
             [_make_job("arbeitnow", title="Data Eng", company="DataCo", location="Remote")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_discovery(db_session, 1, keywords=["data"])
 
@@ -371,9 +392,12 @@ class TestDiscoveryService:
             raise_error=RuntimeError("API timeout"),
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter_fail, adapter_ok],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter_fail, adapter_ok],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_discovery(db_session, 1, keywords=["ml"])
 
@@ -396,9 +420,12 @@ class TestDiscoveryService:
         job = _make_job("arbeitnow", title="SWE", company="TechCo", location="Frankfurt")
         adapter = MockAdapter("arbeitnow", [job])
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             result1 = await run_discovery(db_session, 1, keywords=["swe"])
             assert result1["new_jobs"] == 1
@@ -413,9 +440,12 @@ class TestDiscoveryService:
         """VAL-DISC-006: Discovery run is logged in discovery_runs table."""
         adapter = MockAdapter("arbeitnow", [])
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             await run_discovery(db_session, 1, keywords=["test"], trigger="scheduled")
 
@@ -441,9 +471,12 @@ class TestDiscoverAPI:
             [_make_job("arbeitnow", title="SRE", company="CloudCo", location="Berlin")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             resp = client.post(
                 "/api/discover",
@@ -469,9 +502,12 @@ class TestDiscoverAPI:
         )
         adapter_fail = MockAdapter("arbeitsagentur", raise_error=RuntimeError("Network error"))
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter_fail, adapter_ok],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter_fail, adapter_ok],
+            ),
+            _PREFILTER_OFF,
         ):
             resp = client.post(
                 "/api/discover",
@@ -522,9 +558,12 @@ class TestDiscoverAPI:
             ],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             resp = client.post(
                 "/api/discover",
@@ -549,9 +588,12 @@ class TestDiscoverAPI:
             [_make_job("arbeitnow", title="PM", company="B", location="B")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter_a, adapter_b],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter_a, adapter_b],
+            ),
+            _PREFILTER_OFF,
         ):
             resp = client.post(
                 "/api/discover",
@@ -693,9 +735,12 @@ class TestDiscoveryRuns:
         """List discovery runs after a sweep."""
         adapter = MockAdapter("arbeitnow", [])
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             client.post(
                 "/api/discover",
@@ -849,9 +894,12 @@ class TestProfileScoping:
             [_make_job("arbeitnow", title="AI Eng", company="AIco", location="Remote")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             resp = client.post(
                 "/api/discover",
@@ -963,9 +1011,12 @@ class TestScheduledDiscovery:
             [_make_job("arbeitnow", title="AI Eng", company="AIco", location="Berlin")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_scheduled_discovery(db_session, 1)
 
@@ -995,9 +1046,12 @@ class TestEdgeCases:
         """Discovery with no results returns empty list."""
         adapter = MockAdapter("arbeitnow", [])
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             resp = client.post(
                 "/api/discover",
@@ -1013,9 +1067,12 @@ class TestEdgeCases:
         """When all sources fail, returns empty results with warnings."""
         adapter = MockAdapter("arbeitsagentur", raise_error=RuntimeError("API down"))
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             resp = client.post(
                 "/api/discover",
@@ -1150,9 +1207,12 @@ class TestScheduledDiscoverySkipsNullCadence:
             [_make_job("arbeitnow", title="AI Eng", company="AIco", location="Berlin")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_scheduled_discovery(db_session, 1)
 
@@ -1189,9 +1249,12 @@ class TestScheduledDiscoverySkipsNullCadence:
             [_make_job("arbeitnow", title="Eng", company="Co", location="Frankfurt")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_scheduled_discovery(db_session, 1)
 
@@ -1230,9 +1293,12 @@ class TestScheduledDiscoverySkipsNullCadence:
             [_make_job("arbeitnow", title="TPM", company="Corp", location="Berlin")],
         )
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[adapter],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_scheduled_discovery(db_session, 1)
 
