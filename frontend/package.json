@@ -8,7 +8,7 @@
     "build": "tsc -b tsconfig.build.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "size": "size-limit"
   },
   "dependencies": {
