@@ -143,16 +143,18 @@ jobs:
           FAILED=${{ steps.checks.outputs.failed_checks }}
 
           echo "Checks failed — commenting on release PR #$PR_NUMBER"
-          gh pr comment "$PR_NUMBER" --body "$(cat <<BODY
+          BODY=$(cat <<'BODY'
           ## Release rejected by Release Gate
 
-          The following checks failed: **$FAILED**
+          The following checks failed: **FAILED_PLACEHOLDER**
 
-          **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
           Release-please will recreate this PR when the fix lands on main.
           BODY
-          )"
+          )
+          BODY="${BODY//FAILED_PLACEHOLDER/$FAILED}"
+          gh pr comment "$PR_NUMBER" --body "$BODY"
 
           # Close the PR — release-please will recreate on next qualifying push
           gh pr close "$PR_NUMBER" --comment "Closing due to failed checks. Will retry after fix."
