@@ -21,6 +21,7 @@ on:
       - 'setup.sh'
       - 'pyproject.toml'
       - '.github/workflows/smoke.yml'
+  workflow_call:  # Allow other workflows to call this
 
 permissions:
   contents: read
