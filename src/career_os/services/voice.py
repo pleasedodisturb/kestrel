@@ -9,6 +9,7 @@ Supports three conversational modes, all STT-agnostic (work with any text input)
 from sqlalchemy.orm import Session
 
 from career_os.ai.factory import get_ai_provider
+from career_os.ai.privacy import check_privacy_boundary
 from career_os.models.models import Application, Profile
 from career_os.models.voice import VoiceMessage, VoiceSession
 from career_os.schemas.ai import AIFeature
@@ -194,6 +195,10 @@ async def send_message(
 
     provider = get_ai_provider()
     ai_feature = _mode_to_feature(session.mode)
+
+    # Enforce PII safety boundary before sending personal data to provider
+    check_privacy_boundary(str(ai_feature), provider.name)
+
     ai_response = await provider.complete(prompt=prompt, feature=ai_feature, context=context)
 
     # Store assistant message
