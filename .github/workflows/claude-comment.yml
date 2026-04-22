@@ -1,0 +1,131 @@
+name: Claude Comment Handler
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  process-comment:
+    name: Process @claude mention
+    runs-on: ubuntu-latest
+    # Only trigger on @claude mentions, ignore bot comments
+    if: |
+      contains(github.event.comment.body, '@claude') &&
+      github.event.comment.user.type != 'Bot'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Parse intent and respond
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
+            const author = context.payload.comment.user.login;
+            const issueTitleRaw = context.payload.issue?.title || 'PR comment';
+
+            // Rate limiting: check recent workflow runs
+            // (Simple approach — rely on GitHub Actions concurrency for now)
+
+            // Extract intent from comment
+            const body = comment.replace(/@claude\s*/i, '').trim();
+            let intent = 'auto';
+            let content = body;
+
+            const prefixes = ['bug:', 'todo:', 'ticket:', 'question:', 'review'];
+            for (const prefix of prefixes) {
+              if (body.toLowerCase().startsWith(prefix)) {
+                intent = prefix.replace(':', '');
+                content = body.substring(prefix.length).trim();
+                break;
+              }
+            }
+
+            // For bug/todo/ticket — create Linear ticket
+            if (['bug', 'todo', 'ticket'].includes(intent) || (intent === 'auto' && !body.toLowerCase().startsWith('?'))) {
+              const priority = intent === 'bug' ? 2 : 4; // 2=high, 4=low
+              const title = content.split('\n')[0].substring(0, 120) || `${intent} from GitHub #${issueNumber}`;
+
+              const description = [
+                `## Source`,
+                ``,
+                `GitHub ${context.payload.issue ? 'Issue' : 'PR'} #${issueNumber}: ${issueTitleRaw}`,
+                `Reported by: @${author}`,
+                `Link: ${context.payload.comment.html_url}`,
+                ``,
+                `## Details`,
+                ``,
+                content,
+              ].join('\n');
+
+              // Create Linear ticket via API
+              const linearResponse = await fetch('https://api.linear.app/graphql', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': process.env.LINEAR_API_KEY,
+                },
+                body: JSON.stringify({
+                  query: `mutation CreateIssue($input: IssueCreateInput!) {
+                    issueCreate(input: $input) {
+                      success
+                      issue { identifier url title }
+                    }
+                  }`,
+                  variables: {
+                    input: {
+                      teamId: 'c8ad716f-1fa3-4790-a8f5-46597ca2b76f', // Team G
+                      title: title,
+                      description: description,
+                      priority: priority,
+                    }
+                  }
+                })
+              });
+
+              const result = await linearResponse.json();
+
+              if (result.data?.issueCreate?.success) {
+                const issue = result.data.issueCreate.issue;
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: `Tracked as **[${issue.identifier}](${issue.url})**: ${issue.title}\n\n_Created by @claude comment handler_`
+                });
+                core.info(`Created Linear ticket: ${issue.identifier}`);
+              } else {
+                core.warning(`Failed to create Linear ticket: ${JSON.stringify(result.errors)}`);
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: `Failed to create Linear ticket — please create manually.\n\n_@claude comment handler error_`
+                });
+              }
+            } else if (intent === 'question' || (intent === 'auto' && body.startsWith('?'))) {
+              // For questions — respond with a note to check docs
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `Thanks for the question, @${author}! For code-level questions, try the [QUICKSTART guide](docs/guides/QUICKSTART.md) or [FAQ](docs/guides/FAQ.md). For deeper questions, a maintainer will follow up.\n\n_@claude comment handler_`
+              });
+            } else if (intent === 'review') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `Code review requested. A maintainer will review this PR.\n\n_@claude comment handler_`
+              });
+            }
