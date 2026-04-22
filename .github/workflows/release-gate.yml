@@ -120,17 +120,14 @@ jobs:
           PR_NUMBER=${{ steps.find-pr.outputs.number }}
           echo "All conditions met — auto-merging release PR #$PR_NUMBER"
           gh pr merge "$PR_NUMBER" --squash --auto
-          gh pr comment "$PR_NUMBER" --body "$(cat <<'BODY'
-          ## Auto-merged by Release Gate
+          gh pr comment "$PR_NUMBER" --body "## Auto-merged by Release Gate
 
           All conditions passed:
           - [x] CI checks passed
           - [x] Smoke tests passed
           - [x] No blocker issues open
           - [x] Contains qualifying commits (feat/fix)
-          - [x] Cool-down period elapsed (>1 hour)
-          BODY
-          )"
+          - [x] Cool-down period elapsed (>1 hour)"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -143,16 +140,13 @@ jobs:
           FAILED=${{ steps.checks.outputs.failed_checks }}
 
           echo "Checks failed — commenting on release PR #$PR_NUMBER"
-          gh pr comment "$PR_NUMBER" --body "$(cat <<BODY
-          ## Release rejected by Release Gate
+          gh pr comment "$PR_NUMBER" --body "## Release rejected by Release Gate
 
           The following checks failed: **$FAILED**
 
           **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          Release-please will recreate this PR when the fix lands on main.
-          BODY
-          )"
+          Release-please will recreate this PR when the fix lands on main."
 
           # Close the PR — release-please will recreate on next qualifying push
           gh pr close "$PR_NUMBER" --comment "Closing due to failed checks. Will retry after fix."
@@ -165,11 +159,8 @@ jobs:
           steps.blockers.outputs.blocked == 'true'
         run: |
           PR_NUMBER=${{ steps.find-pr.outputs.number }}
-          gh pr comment "$PR_NUMBER" --body "$(cat <<'BODY'
-          ## Release held by Release Gate
+          gh pr comment "$PR_NUMBER" --body "## Release held by Release Gate
 
-          Open blocker issues are preventing auto-merge. The release will proceed once all urgent/release-broken issues are resolved.
-          BODY
-          )"
+          Open blocker issues are preventing auto-merge. The release will proceed once all urgent/release-broken issues are resolved."
         env:
           GH_TOKEN: ${{ github.token }}
