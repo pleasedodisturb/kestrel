@@ -92,16 +92,21 @@ fi
 echo "[ok] Disk space looks fine"
 
 # -- Check internet (quick) --
-if ! curl -sf --max-time 5 https://registry-1.docker.io/v2/ >/dev/null 2>&1; then
-    echo ""
-    echo "Can't reach Docker's servers. Check your internet connection."
-    echo "Kestrel needs internet for the first setup (to download components)."
-    echo "After setup, it works fully offline."
-    echo ""
-    echo "  If you're behind a VPN or firewall, try disconnecting and running again."
-    exit 1
+# Skip in dry-run mode — internet is only needed for the actual build
+if [[ "${1:-}" != "--dry-run" ]]; then
+    if ! curl -sf --max-time 5 https://registry-1.docker.io/v2/ >/dev/null 2>&1; then
+        echo ""
+        echo "Can't reach Docker's servers. Check your internet connection."
+        echo "Kestrel needs internet for the first setup (to download components)."
+        echo "After setup, it works fully offline."
+        echo ""
+        echo "  If you're behind a VPN or firewall, try disconnecting and running again."
+        exit 1
+    fi
+    echo "[ok] Internet connection works"
+else
+    echo "[ok] Internet check skipped (dry-run)"
 fi
-echo "[ok] Internet connection works"
 
 # -- Config files --
 if [ ! -f .env ]; then

@@ -1,0 +1,98 @@
+name: Bug Sync (GitHub → Linear)
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  sync-to-linear:
+    name: Sync bug to Linear
+    runs-on: ubuntu-latest
+    # Only trigger for issues with 'bug' label
+    if: |
+      contains(github.event.issue.labels.*.name, 'bug') &&
+      !contains(github.event.issue.labels.*.name, 'synced-to-linear')
+    steps:
+      - name: Create Linear ticket from GitHub Issue
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title;
+            const body = issue.body || 'No description provided.';
+            const author = issue.user.login;
+            const issueUrl = issue.html_url;
+
+            // Determine priority from labels
+            let priority = 3; // default: medium
+            const labels = issue.labels.map(l => l.name);
+            if (labels.includes('priority:urgent') || labels.includes('critical')) priority = 1;
+            else if (labels.includes('priority:high')) priority = 2;
+            else if (labels.includes('priority:low')) priority = 4;
+
+            const description = [
+              `## GitHub Issue #${issue.number}`,
+              ``,
+              `**Author:** @${author}`,
+              `**Link:** ${issueUrl}`,
+              ``,
+              `---`,
+              ``,
+              body,
+            ].join('\n');
+
+            // Create Linear ticket
+            const linearResponse = await fetch('https://api.linear.app/graphql', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': process.env.LINEAR_API_KEY,
+              },
+              body: JSON.stringify({
+                query: `mutation CreateIssue($input: IssueCreateInput!) {
+                  issueCreate(input: $input) {
+                    success
+                    issue { identifier url title }
+                  }
+                }`,
+                variables: {
+                  input: {
+                    teamId: 'c8ad716f-1fa3-4790-a8f5-46597ca2b76f',
+                    title: title,
+                    description: description,
+                    priority: priority,
+                  }
+                }
+              })
+            });
+
+            const result = await linearResponse.json();
+
+            if (result.data?.issueCreate?.success) {
+              const ticket = result.data.issueCreate.issue;
+
+              // Comment on GitHub issue with Linear link
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Tracked in Linear as **[${ticket.identifier}](${ticket.url})**.\n\n_Synced automatically by bug-sync workflow_`
+              });
+
+              // Add 'synced-to-linear' label to prevent duplicate syncs
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['synced-to-linear']
+              });
+
+              core.info(`Created Linear ticket ${ticket.identifier} for GitHub Issue #${issue.number}`);
+            } else {
+              core.warning(`Failed to create Linear ticket: ${JSON.stringify(result.errors)}`);
+            }
