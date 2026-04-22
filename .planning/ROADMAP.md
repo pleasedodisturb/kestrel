@@ -1,8 +1,8 @@
-# Roadmap: Kestrel Onboarding Experience
+# Roadmap: Kestrel Public Roadmap
 
 ## Overview
 
-This roadmap takes a new Kestrel user from "just installed" to "seeing scored results and knowing where to go next" in under 10 minutes. The build order follows the dependency chain: shared onboarding state first (everything reads/writes it), then the CLI wizard (first touch for pip users), then demo data (needed before web can show results), then the web welcome flow, and finally the interactive tour and feedback channel (which attach to pages that must already exist). CV file parsing is v2 -- v1 uses guided questions and paste-text extraction only.
+This milestone transforms Kestrel's organic development history into a visible, structured public roadmap. No code changes — pure editorial work. The journey: first catalogue everything shipped (the "bag of cats" problem), then assemble the master ROADMAP.md with both retrospective and forward-looking content, then document all planned milestones through the end-user lens, then create deep-dive documents for each milestone, and finally make the whole thing contributor-friendly. The output becomes the backbone for BMAD PRDs, milestones, epics, and Linear tickets going forward.
 
 ## Phases
 
@@ -12,129 +12,78 @@ This roadmap takes a new Kestrel user from "just installed" to "seeing scored re
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Onboarding State Foundation** - Shared state model, API endpoints, and error infrastructure that all onboarding surfaces depend on — COMPLETE 2026-04-20
-- [x] **Phase 2: CLI Wizard** - Complete `kestrel init` interactive wizard with profile questions, paste-text extraction, health check, and guided next steps — COMPLETE 2026-04-20
-- [x] **Phase 3: Demo Data** - Pre-baked sample jobs with pre-computed scores that deliver the "aha moment" without requiring an API key — COMPLETE 2026-04-20
-- [ ] **Phase 4: Web Welcome Flow** - First-time welcome screen, onboarding guard, web profile questions, resume/skip/complete flow, and post-onboarding AI provider nudge
-- [x] **Phase 5: Interactive Tour, Feedback, and Polish** - Custom guided tour, empty state coaching, persistent feedback button, and non-developer documentation
-- [ ] **Phase 6: Test Suite Rewrite** - Rewrite all onboarding tests to new testing methodology, fix pre-existing environment failures
+- [ ] **Phase 1: Feature Inventory** - Catalogue all shipped work into a coherent, verifiable feature list organized by retrospective milestones
+- [ ] **Phase 2: Roadmap Foundation** - Assemble the master ROADMAP.md with shipped content, status indicators, Mermaid timeline, and structural elements
+- [ ] **Phase 3: Forward Vision** - Document all planned milestones through the end-user lens (deployment, browser extension, mobile, profiles, coaching, voice, feature flags, app packaging)
+- [ ] **Phase 4: Milestone Deep Dives** - Create docs/roadmap/ with per-milestone detail documents, research links, and BMAD integration points
+- [ ] **Phase 5: Contributor Experience** - Add contribution paths, planning hierarchy documentation, and one-click dev environment
 
 ## Phase Details
 
-### Phase 1: Onboarding State Foundation
-**Goal**: A shared, persistent onboarding state model exists that both CLI and web can read and write, with structured error handling that never shows stack traces to users
+### Phase 1: Feature Inventory
+**Goal**: Every piece of shipped work is catalogued, honestly assessed, and grouped into coherent retrospective milestones that tell the story of how Kestrel evolved
 **Depends on**: Nothing (first phase)
-**Requirements**: INF-01, INF-02, INF-03
+**Requirements**: INV-01, INV-02, INV-03, INV-04, INV-05, INV-06, INV-07, INV-08
 **Success Criteria** (what must be TRUE):
-  1. Onboarding state is persisted per-profile in the backend DB with timestamps (not booleans) and survives server restarts
-  2. `GET /api/onboarding/status` returns the current onboarding state for a profile and `PATCH /api/onboarding/status` updates it
-  3. Any onboarding error raised anywhere in the codebase carries a `user_message` and `resolution` field (no raw stack traces reach the user unless --verbose)
-**Plans**: 3 plans
+  1. A reader can see every shipped backend capability (routes, services, AI providers, scoring, discovery, CLI) in one organized list without reading source code
+  2. Infrastructure work (CI/CD, tests, token optimization, docs audit, privacy layer) is visible as shipped product investment, not hidden plumbing
+  3. The web frontend is documented as a shipped, working interface with specific page-level capabilities — not just "React app exists"
+  4. Deployment options are documented honestly, including the UX gaps that make each option developer-only (the G-488 Docker failure is acknowledged, not hidden)
+  5. Shipped features are grouped into retrospective milestones with a narrative that explains how Kestrel grew from initial tool to current state
+**Plans**: TBD
 
-Plans:
-- [x] 01-00-PLAN.md — Wave 0 failing test stubs for INF-01, INF-02, INF-03 (TDD contract) — COMPLETE 2026-04-20
-- [x] 01-01-PLAN.md — Error hierarchy, OnboardingState model, Pydantic schemas (INF-01, INF-02 foundation)
-- [x] 01-02-PLAN.md — Alembic migration registration, DB table creation, service layer business logic (INF-01, INF-02, INF-03 service)
-- [x] 01-03-PLAN.md — API routes, main.py wiring, full test suite (INF-01, INF-02, INF-03 complete) — COMPLETE 2026-04-20
-
-### Phase 2: CLI Wizard
-**Goal**: A user who runs `pip install kestrel-app` and types `kestrel` is guided through profile setup, sees their data confirmed, and knows exactly what to do next -- all from the terminal
+### Phase 2: Roadmap Foundation
+**Goal**: ROADMAP.md exists at repo root as a well-structured, GitHub-rendered document with shipped content, status system, timeline visualization, and all structural scaffolding
 **Depends on**: Phase 1
-**Requirements**: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-06, CLI-07, CLI-08, PROF-01, PROF-02, PROF-03
+**Requirements**: ROAD-01, ROAD-02, ROAD-03, ROAD-04, ROAD-05, ROAD-06, ROAD-07, ROAD-08
 **Success Criteria** (what must be TRUE):
-  1. Running `kestrel` for the first time after install prints a next-steps message pointing to `kestrel init`
-  2. `kestrel init` walks through 5-7 skippable profile questions (name, location, target roles, salary, skills, experience) with progress indicators, and optionally accepts pasted resume text for regex extraction
-  3. Extracted/entered data is shown for user confirmation before saving to the profile
-  4. `kestrel init --skip` creates a complete default profile and exits immediately; non-TTY environments get a clear message with `--non-interactive` guidance
-  5. `kestrel doctor` verifies setup health (DB, config, sample data, Python version) and every error during onboarding includes what happened, why, and what to do next
-**Plans**: 4 plans
+  1. A non-technical user visiting the GitHub repo can open ROADMAP.md and understand what Kestrel does, what is shipped, and what is planned — without reading any code or docs
+  2. Every roadmap item has a clear status (shipped/in-progress/planned/considering) and shipped items cross-reference CHANGELOG.md entries and release tags
+  3. Milestones are organized as Now/Next/Later horizons tied to version numbers so readers understand relative priority
+  4. A Mermaid timeline diagram renders correctly on GitHub and visualizes the milestone structure at a glance
+  5. The document states openly that this repo is non-commercial, plans may change, and known tech debt exists — honesty builds trust
+**Plans**: TBD
 
-Plans:
-- [x] 02-01-PLAN.md — Profile migration + resume extraction utilities — COMPLETE 2026-04-20
-- [x] 02-02-PLAN.md — kestrel doctor health check command — COMPLETE 2026-04-20
-- [x] 02-03-PLAN.md — kestrel init wizard core + first-run callback — COMPLETE 2026-04-20
-- [x] 02-04-PLAN.md — Resume paste integration + resume-from-last-step — COMPLETE 2026-04-20
-
-### Phase 3: Demo Data
-**Goal**: Users see realistic scored job results immediately after onboarding completes, proving the tool works without requiring any API key or external service
-**Depends on**: Phase 1
-**Requirements**: DEMO-01, DEMO-02, DEMO-03, DEMO-04, DEMO-05
+### Phase 3: Forward Vision
+**Goal**: Every planned milestone is documented through the end-user lens — what the user gains, not what gets built — with the deployment/packaging path given highest priority as THE gap between "dev tool" and "real product"
+**Depends on**: Phase 2
+**Requirements**: ROAD-09, ROAD-10, ROAD-11, ROAD-12, ROAD-13, ROAD-14, ROAD-15, ROAD-16
 **Success Criteria** (what must be TRUE):
-  1. Ten pre-baked sample jobs spanning 3+ job families (not just tech -- includes marketing, operations, finance) ship as fixture data in the package
-  2. Demo records display relative dates (never look stale), carry an `is_demo=True` flag, and show a "Sample Results" banner in the UI
-  3. The demo seeder is idempotent -- running it multiple times produces exactly the same result with no duplicate records
-**Plans**: 3 plans
+  1. The deployment/packaging milestone charts a clear progressive path (PWA as fast interim win, then native desktop app with Obsidian-style "download, open, use" experience) and a reader understands why this is the highest-priority forward milestone
+  2. Browser extension, mobile app, profile/skills, gap analysis/coaching, voice mode, and feature flags are each documented as distinct planned milestones with enough context that a reader understands the vision without implementation details
+  3. Each planned milestone is framed through end-user benefit ("you will be able to...") not developer tasks ("we will build...") — consistent with the user-first north star
+  4. The app packaging milestone specifically describes the PWA-to-native progressive path (Phase A: PWA installable from browser, Phase B: Electron/Tauri with .dmg/.exe and Apple dev cert)
+**Plans**: TBD
 
-Plans:
-- [x] 03-01-PLAN.md — Alembic migration, fixture JSON, and demo seeder module (DEMO-01, DEMO-02, DEMO-03, DEMO-05) — COMPLETE 2026-04-20
-- [x] 03-02-PLAN.md — CLI integration: init seeding, doctor auto-fix, pipeline banner (DEMO-04, DEMO-05) — COMPLETE 2026-04-20
-- [x] 03-03-PLAN.md — Auto-clear hook and full test suite (DEMO-01 through DEMO-05, D-13) — COMPLETE 2026-04-20
-
-### Phase 4: Web Welcome Flow
-**Goal**: A first-time web visitor is guided from an empty dashboard to a populated profile with demo results, knows what was configured and what was skipped, and sees the path to full AI-powered scoring
-**Depends on**: Phase 1, Phase 3
-**Requirements**: WEB-01, WEB-02, WEB-04, WEB-07, WEB-08, WEB-09, PROF-04
+### Phase 4: Milestone Deep Dives
+**Goal**: Each milestone has a detailed companion document in docs/roadmap/ that provides depth without cluttering the master roadmap, and these documents show how BMAD PRDs integrate into the planning hierarchy
+**Depends on**: Phase 2, Phase 3
+**Requirements**: DEEP-01, DEEP-02, DEEP-03, DEEP-04
 **Success Criteria** (what must be TRUE):
-  1. First-time visitors are redirected to `/welcome` via an OnboardingGuard route wrapper; returning visitors go straight to the dashboard
-  2. The welcome flow walks through setup steps including the same profile questions as the CLI (name, location, roles, salary, skills, experience), and users can resume from last completed step after closing the browser
-  3. End-of-onboarding summary shows what was configured and what was skipped, with "do it later" signposting providing exact navigation paths (e.g., "Settings > Profile")
-  4. After onboarding completes, an "Unlock full scoring" card shows AI provider options (OpenRouter one-click OAuth, Together.ai, Ollama) with a link to provider settings
-**Plans**: 4 plans
+  1. docs/roadmap/ exists with a consistent template that any future milestone document can follow
+  2. Each shipped milestone has a deep-dive document covering goal, context, features delivered, technical approach, current status, and links to relevant research and decision docs
+  3. Deep-dive documents show where BMAD PRDs plug into the planning hierarchy — the integration pattern is defined even though PRDs are incomplete
+**Plans**: TBD
 
-Plans:
-- [x] 04-01-PLAN.md — Infrastructure: backend schema fix, API layer, hooks, OnboardingGuard, route wiring, wizard removal — COMPLETE 2026-04-21
-- [x] 04-02-PLAN.md — WelcomePage + StepProgress: full welcome/step/summary flow implementation — COMPLETE 2026-04-21
-- [x] 04-03-PLAN.md — Test suite: OnboardingGuard, WelcomePage, StepProgress tests (31 tests, all green) — COMPLETE 2026-04-21
-- [ ] 04-04-PLAN.md — Visual verification checkpoint
-**UI hint**: yes
-
-### Phase 5: Interactive Tour, Feedback, and Polish
-**Goal**: Users who completed onboarding get a contextual guided tour of the actual UI, can always reach out for help, and non-developers have a documentation safety net
-**Depends on**: Phase 4
-**Requirements**: WEB-03, WEB-05, WEB-06, FB-01, FB-02, FB-03, INF-04
+### Phase 5: Contributor Experience
+**Goal**: A potential contributor can find meaningful work, understand the planning hierarchy, and spin up a development environment without reading source code or asking for help
+**Depends on**: Phase 2, Phase 3
+**Requirements**: CONT-01, CONT-02, CONT-03
 **Success Criteria** (what must be TRUE):
-  1. Custom interactive tour walks through Pipeline, Discovery, and Scoring pages with tooltips that are keyboard-navigable, have aria-live announcements, proper focus management, and a skip button (D-04: no Shepherd.js)
-  2. Pipeline, Discovery, Contacts, and Skills pages show empty state coaching when no data exists (guiding users to populate each section)
-  3. A persistent feedback button is visible on all web pages (bottom-right) that opens a pre-filled GitHub issue URL with system info
-  4. End-of-onboarding screen prompts for feedback with a link to GitHub issues
-  5. A "Getting Started for Non-Developers" documentation page exists explaining terminal basics needed for Kestrel
-**Plans**: 5 plans
-
-Plans:
-- [x] 05-01-PLAN.md — Shared EmptyState component + integration into Pipeline, Discovery, Contacts, Skills (WEB-03) — COMPLETE 2026-04-21
-- [x] 05-02-PLAN.md — FeedbackButton, HelpPage, WelcomePage feedback prompt, Layout + App.tsx wiring (FB-01, FB-02, FB-03, INF-04) — COMPLETE 2026-04-21
-- [x] 05-03-PLAN.md — Tour system: TourProvider, TourTooltip, TourOverlay + Layout integration (WEB-05, WEB-06) — COMPLETE 2026-04-21
-- [x] 05-04-PLAN.md — Full test suite for all Phase 5 components — COMPLETE 2026-04-21
-- [x] 05-05-PLAN.md — Visual verification checkpoint — COMPLETE 2026-04-21
-**UI hint**: yes
-
-### Phase 6: Test Suite Rewrite
-**Goal**: All onboarding tests rewritten to the new testing methodology standard, fixing pre-existing environment failures and ensuring comprehensive coverage across all 5 phases
-**Depends on**: Phase 5
-**Requirements**: TEST-01
-**Success Criteria** (what must be TRUE):
-  1. All onboarding test files follow the new testing methodology from main
-  2. Pre-existing localStorage/environment test failures in KanbanBoard, Skills, Discovery are fixed
-  3. Full test suite passes green (`npm run test` exits 0)
-**Plans**: 4 plans
-
-Plans:
-- [ ] 06-01-PLAN.md — Test infrastructure: localStorage polyfill + shared renderWithProviders wrapper
-- [ ] 06-02-PLAN.md — Pre-existing broken files: KanbanBoard, Discovery, Skills rewrite
-- [ ] 06-03-PLAN.md — Onboarding tests: OnboardingGuard + WelcomePage rewrite (API-level mocking)
-- [ ] 06-04-PLAN.md — Onboarding tests: TourProvider + HelpPage rewrite + full suite gate
+  1. Each milestone section in ROADMAP.md has a "Want to help?" callout that links to concrete contribution paths — not a generic "PRs welcome"
+  2. A planning hierarchy document explains the full chain from ROADMAP.md through BMAD PRDs, milestones, epics, to Linear tickets — so contributors understand how work gets defined and tracked
+  3. A .devcontainer/ config enables one-click GitHub Codespaces dev environment with Python, Node, and SQLite ready to go
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
-Note: Phases 2 and 3 can execute in parallel (both depend only on Phase 1).
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Onboarding State Foundation | 4/4 | Complete | 2026-04-20 |
-| 2. CLI Wizard | 4/4 | Complete | 2026-04-20 |
-| 3. Demo Data | 3/3 | Complete | 2026-04-20 |
-| 4. Web Welcome Flow | 3/4 | Executing | - |
-| 5. Interactive Tour, Feedback, and Polish | 5/5 | Complete | 2026-04-21 |
-| 6. Test Suite Rewrite | 0/4 | Planned | - |
+| 1. Feature Inventory | 0/0 | Not started | - |
+| 2. Roadmap Foundation | 0/0 | Not started | - |
+| 3. Forward Vision | 0/0 | Not started | - |
+| 4. Milestone Deep Dives | 0/0 | Not started | - |
+| 5. Contributor Experience | 0/0 | Not started | - |

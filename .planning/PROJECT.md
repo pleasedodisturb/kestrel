@@ -53,10 +53,15 @@ Make Kestrel's direction visible and structured so users can evaluate the produc
 
 ## Context
 
+**NORTH STAR: Web-first, user-first — NOT developer-first.**
+Kestrel is a web application for job seekers, not a dev tool that happens to have a UI. Every roadmap milestone must be framed through the lens of end-user experience. The web frontend is the primary interface. CLI and self-hosting are advanced options, not the default path. Moving to real end-user experience is the highest priority after this roadmap milestone.
+
 Kestrel has shipped substantial functionality across backend, frontend, AI, and infrastructure — but development has been organic and the full picture isn't captured anywhere. The codebase analysis (`.planning/codebase/`) documents the technical state. Memory files track individual epics and decisions. But there's no single document that tells the story: "here's what Kestrel is, here's what's done, here's what's next."
 
-**Deployment/packaging gap (critical for roadmap):**
-Currently 3 techy ways to run Kestrel: (1) clone + set env vars + uvicorn, (2) Docker compose, (3) pip install + manual config. None of these are "real product" UX. The roadmap must chart the path from "dev self-help tool" to "install and use entirely via interface" — this is one of the most important forward-looking milestones.
+**Deployment/packaging gap (CRITICAL — highest priority forward milestone):**
+Currently 3 techy ways to run Kestrel: (1) clone + set env vars + uvicorn, (2) Docker compose, (3) pip install + manual config. ALL of these are developer-oriented. None are acceptable for real end users. The roadmap must chart the path from "dev self-help tool" to "download, open, use" — this is THE most important forward-looking milestone, not just one of many.
+
+**Target deployment vision:** Native desktop app experience (Electron/Tauri wrapper or similar). Download a `.dmg`/`.exe`, install, open, use. Data stays local, experience is polished. Think Obsidian — self-hosted but feels like a real app. Apple Developer Certificate budget approved for proper macOS signing/notarization. The web frontend IS the app — just packaged as a desktop application with embedded backend.
 
 **Planned features for roadmap (not built this milestone, but documented):**
 - Browser extension (Chrome/Firefox) — one-click "add this job to scoring DB" from any job page, even beyond scraper reach

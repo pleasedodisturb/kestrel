@@ -35,6 +35,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **ROAD-13**: Gap analysis & coaching roadmap is documented as a planned milestone — select target role/path, continuous gap analysis, personal development stepping stones, progressive coaching depth (skill maps → MOOCs → AI-assisted learning)
 - [ ] **ROAD-14**: Voice mode vision is documented as a planned milestone — native superwhisper-to-claude style voice interaction, building on existing (untested) implementation
 - [ ] **ROAD-15**: Feature flag system is documented as a planned milestone — comprehensive flags covering all features and UI elements, enabling different app flavors/editions, hiding incomplete/broken features, adjusting capabilities per deployment
+- [ ] **ROAD-16**: App packaging is documented as a planned milestone with progressive path — Phase A: PWA (installable from browser, service worker, offline-capable, fast interim win) → Phase B: native desktop app (Electron/Tauri, .dmg/.exe, Apple dev cert, Obsidian-style "download, open, use" with embedded backend and local data)
 
 ### Milestone Deep Dives
 
@@ -87,42 +88,43 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INV-01 | — | Pending |
-| INV-02 | — | Pending |
-| INV-03 | — | Pending |
-| INV-04 | — | Pending |
-| INV-05 | — | Pending |
-| INV-06 | — | Pending |
-| INV-07 | — | Pending |
-| INV-08 | — | Pending |
-| ROAD-01 | — | Pending |
-| ROAD-02 | — | Pending |
-| ROAD-03 | — | Pending |
-| ROAD-04 | — | Pending |
-| ROAD-05 | — | Pending |
-| ROAD-06 | — | Pending |
-| ROAD-07 | — | Pending |
-| ROAD-08 | — | Pending |
-| ROAD-09 | — | Pending |
-| ROAD-10 | — | Pending |
-| ROAD-11 | — | Pending |
-| ROAD-12 | — | Pending |
-| ROAD-13 | — | Pending |
-| ROAD-14 | — | Pending |
-| ROAD-15 | — | Pending |
-| DEEP-01 | — | Pending |
-| DEEP-02 | — | Pending |
-| DEEP-03 | — | Pending |
-| DEEP-04 | — | Pending |
-| CONT-01 | — | Pending |
-| CONT-02 | — | Pending |
-| CONT-03 | — | Pending |
+| INV-01 | Phase 1 | Pending |
+| INV-02 | Phase 1 | Pending |
+| INV-03 | Phase 1 | Pending |
+| INV-04 | Phase 1 | Pending |
+| INV-05 | Phase 1 | Pending |
+| INV-06 | Phase 1 | Pending |
+| INV-07 | Phase 1 | Pending |
+| INV-08 | Phase 1 | Pending |
+| ROAD-01 | Phase 2 | Pending |
+| ROAD-02 | Phase 2 | Pending |
+| ROAD-03 | Phase 2 | Pending |
+| ROAD-04 | Phase 2 | Pending |
+| ROAD-05 | Phase 2 | Pending |
+| ROAD-06 | Phase 2 | Pending |
+| ROAD-07 | Phase 2 | Pending |
+| ROAD-08 | Phase 2 | Pending |
+| ROAD-09 | Phase 3 | Pending |
+| ROAD-10 | Phase 3 | Pending |
+| ROAD-11 | Phase 3 | Pending |
+| ROAD-12 | Phase 3 | Pending |
+| ROAD-13 | Phase 3 | Pending |
+| ROAD-14 | Phase 3 | Pending |
+| ROAD-15 | Phase 3 | Pending |
+| ROAD-16 | Phase 3 | Pending |
+| DEEP-01 | Phase 4 | Pending |
+| DEEP-02 | Phase 4 | Pending |
+| DEEP-03 | Phase 4 | Pending |
+| DEEP-04 | Phase 4 | Pending |
+| CONT-01 | Phase 5 | Pending |
+| CONT-02 | Phase 5 | Pending |
+| CONT-03 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 30 total
-- Mapped to phases: 0
-- Unmapped: 30 ⚠️
+- v1 requirements: 31 total
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-21*
-*Last updated: 2026-04-21 after initial definition*
+*Last updated: 2026-04-21 after roadmap creation*
