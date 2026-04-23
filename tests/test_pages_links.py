@@ -35,9 +35,11 @@ class TestDocumentationLinks:
         assert len(doc_files) > 0, "No docs found"
 
         # Internal/dev docs excluded from Pages - only user-facing docs need front matter
+        # index.md is auto-generated (sitemap) and doesn't need front matter
         skip_prefixes = ("validation-contract", "M6-M9", "JOB_SEARCH", "market-research", "images")
+        skip_names = {"index.md"}
         for f in doc_files:
-            if f.name.startswith(skip_prefixes):
+            if f.name.startswith(skip_prefixes) or f.name in skip_names:
                 continue
             content = f.read_text()
             assert content.startswith("---"), (
@@ -47,12 +49,12 @@ class TestDocumentationLinks:
     def test_required_docs_exist(self) -> None:
         """All docs referenced in README must exist."""
         required = [
-            "docs/QUICKSTART.md",
-            "docs/FAQ.md",
-            "docs/HELP.md",
-            "docs/AI-PROVIDERS.md",
-            "docs/COMPARISON.md",
-            "docs/REFERENCE.md",
+            "docs/guides/QUICKSTART.md",
+            "docs/guides/FAQ.md",
+            "docs/guides/HELP.md",
+            "docs/reference/AI-PROVIDERS.md",
+            "docs/guides/COMPARISON.md",
+            "docs/reference/REFERENCE.md",
             "DEPLOY.md",
             "CONTRIBUTING.md",
             "LICENSE",

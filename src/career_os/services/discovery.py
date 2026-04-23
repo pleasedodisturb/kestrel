@@ -348,8 +348,7 @@ async def _auto_score_and_refresh(db, profile_id, new_jobs_list, warnings):
             warnings.append(
                 {
                     "source": "batch_scoring",
-                    "batch_id": batch_id,
-                    "message": (
+                    "error": (
                         f"Submitted {len(new_jobs_list)} jobs for batch scoring. "
                         f"Poll batch {batch_id} for results."
                     ),
@@ -467,11 +466,12 @@ async def run_discovery(
         warnings.append(
             {
                 "source": "prefilter",
-                "strategy": prefilter_metrics.strategy,
-                "total": prefilter_metrics.total,
-                "passed": prefilter_metrics.passed,
-                "filtered": prefilter_metrics.filtered,
-                "filter_rate": f"{prefilter_metrics.filter_rate:.1f}%",
+                "error": (
+                    f"Pre-filter ({prefilter_metrics.strategy}): "
+                    f"{prefilter_metrics.passed}/{prefilter_metrics.total} passed, "
+                    f"{prefilter_metrics.filtered} filtered "
+                    f"({prefilter_metrics.filter_rate:.1f}%)"
+                ),
             }
         )
 
