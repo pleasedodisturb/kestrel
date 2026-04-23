@@ -536,7 +536,7 @@ class TestDiscoveryBatchRouting:
         # Should have a batch_scoring warning entry
         batch_warnings = [w for w in warnings if w.get("source") == "batch_scoring"]
         assert len(batch_warnings) == 1
-        assert batch_warnings[0]["batch_id"] == "batch_auto"
+        assert "batch_auto" in batch_warnings[0]["error"]
 
     @pytest.mark.asyncio
     async def test_auto_score_sequential_below_threshold(self) -> None:
