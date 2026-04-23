@@ -155,6 +155,22 @@ If you add a new AI provider:
 4. Update the mock provider to support any new features
 5. Add tests
 
+## How we build
+
+Every major decision — scoring, testing, CI/CD, token optimization — starts with research. We run parallel research passes, write up findings, then pick the sanest approach (not the fanciest).
+
+The research is public. If you're wondering *why* something works the way it does, the answer is probably in one of these:
+
+| Topic | Guide | Research | Raw data |
+|-------|-------|----------|----------|
+| Scoring | [How it works](docs/guides/how-scoring-works.md) | [Strategy](docs/research/scoring-research.md) | [Findings](docs/research/scoring-raw-research.md) |
+| Testing | [How it works](docs/guides/how-testing-works.md) | [Strategy](docs/research/testing-research.md) | [Findings](docs/research/testing-raw-research.md) |
+| CI/CD | [How it works](docs/guides/how-cicd-works.md) | [Strategy](docs/research/cicd-research.md) | [Findings](docs/research/cicd-raw-research.md) |
+| Observability | [How it works](docs/guides/how-observability-works.md) | [Strategy](docs/research/observability-research.md) | [Setup](docs/reference/observability-setup.md) |
+| Token costs | [How it works](docs/guides/how-token-optimization-works.md) | [Strategy](docs/research/token-optimization-research.md) | [Findings](docs/research/token-optimization-raw-research.md) |
+
+[Full documentation index →](docs/index.md)
+
 ## Questions?
 
 Open an issue on GitHub.
