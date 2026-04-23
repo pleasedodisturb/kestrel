@@ -12,7 +12,6 @@ Covers:
 """
 
 import json
-import logging
 import os
 from unittest.mock import patch
 
@@ -73,26 +72,23 @@ class TestXAIProviderInit:
 class TestXAIPrivacyWarning:
     """Test that XAIProvider logs a privacy warning on initialization."""
 
-    def test_init_logs_privacy_warning(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_init_logs_privacy_warning(self) -> None:
         """XAIProvider.__init__ emits a WARNING about irrevocable data sharing."""
-        with caplog.at_level(logging.WARNING, logger="career_os.ai.xai_provider"):
+        with patch("career_os.ai.xai_provider.logger") as mock_logger:
             XAIProvider(api_key=_TEST_CREDENTIAL)
 
-        warning_messages = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
-        assert len(warning_messages) >= 1
-        assert "irrevocable data sharing" in warning_messages[0]
-        assert "provider-privacy-audit.md" in warning_messages[0]
+        mock_logger.warning.assert_called_once()
+        msg = mock_logger.warning.call_args[0][0]
+        assert "irrevocable data sharing" in msg
+        assert "provider-privacy-audit.md" in msg
 
-    def test_privacy_warning_on_every_init(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_privacy_warning_on_every_init(self) -> None:
         """Each instantiation emits the warning (not cached/suppressed)."""
-        with caplog.at_level(logging.WARNING, logger="career_os.ai.xai_provider"):
+        with patch("career_os.ai.xai_provider.logger") as mock_logger:
             XAIProvider(api_key=_TEST_CREDENTIAL)
             XAIProvider(api_key=_TEST_CREDENTIAL)
 
-        warning_count = sum(
-            1 for r in caplog.records if r.levelno >= logging.WARNING and "irrevocable" in r.message
-        )
-        assert warning_count == 2
+        assert mock_logger.warning.call_count == 2
 
 
 # ---------------------------------------------------------------------------
