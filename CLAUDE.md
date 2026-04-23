@@ -174,3 +174,349 @@ BMAD drives the product planning pipeline: PRD → UX Design → Architecture �
 **Step-file workflow:** Each BMAD workflow (e.g., create-prd) uses sequential step files in `steps-c/`. Steps are loaded one at a time, executed in order, with A/P/C menus (Advanced Elicitation / Party Mode / Continue). Never skip steps or load multiple simultaneously.
 
 **History:** BMAD was first installed via G-225 (Ollama provider) but got collateral-damaged when that commit was reverted. Reinstalled independently via G-265 to prevent recurrence.
+
+<!-- GSD:project-start source:PROJECT.md -->
+## Project
+
+**Kestrel Public Roadmap**
+
+A public, demo-ready roadmap for Kestrel — the AI-powered, self-hosted job search platform — that lives on GitHub as the single source of truth for where the product is and where it's going. The roadmap documents everything shipped, lays out the forward vision, and becomes the backbone of a structured planning hierarchy: roadmap → BMAD PRDs → milestones → epics → Linear tickets.
+
+**Core Value:** Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
+
+### Constraints
+
+- **Format**: ROADMAP.md at repo root (GitHub-rendered Markdown), docs/roadmap/ for depth
+- **Audience**: Must be readable by non-technical users evaluating the product, developers wanting to contribute, and the maintainer for cross-session planning
+- **Accuracy**: Every claim about shipped features must be verifiable against codebase
+- **Structure**: Must support future BMAD PRD integration — milestones and epics as plug-in points
+- **No code changes**: This milestone is documentation and planning only
+<!-- GSD:project-end -->
+
+<!-- GSD:stack-start source:codebase/STACK.md -->
+## Technology Stack
+
+## Languages
+- Python 3.11+ — Backend API, CLI, AI providers, discovery engine (`src/career_os/`)
+- TypeScript 6.0 — Web frontend (`frontend/`), mobile app (`mobile/`)
+- SQL — Alembic migrations (`src/career_os/_alembic/versions/`), SQLite pragmas
+- JavaScript — Config files (`commitlint.config.js`)
+## Runtime
+- Python 3.11+ (Docker base: `python:3.11-slim`)
+- Node.js 22 (Docker base: `node:22-alpine`)
+- pip with setuptools (backend) — `pyproject.toml` build system
+- npm (frontend) — `frontend/package-lock.json` present
+- npm (mobile) — `mobile/node_modules/` present
+- Lockfile: pip has no lockfile (deps pinned with >= floors); npm lockfiles present
+## Frameworks
+- FastAPI >=0.115.0 — REST API server (`src/career_os/main.py`)
+- React 19.2 — Web frontend SPA (`frontend/`)
+- React Native 0.81 / Expo 54 — Mobile app (`mobile/`)
+- Tamagui 2.0 RC — Mobile UI component library
+- pytest >=8.3.0 — Backend tests (`tests/`)
+- pytest-asyncio >=0.25.0 — Async test support (mode: `auto`)
+- pytest-cov >=6.1.0 — Coverage reporting
+- pytest-timeout >=2.3.0 — Test timeout (30s default)
+- Vitest 4.1 — Frontend tests (`frontend/src/__tests__/`)
+- Testing Library (React 16.3, DOM 10.4, jest-dom 6.9) — Frontend component testing
+- Jest — Mobile tests (co-located `*.test.tsx`)
+- Vite 8.0 — Frontend bundler and dev server (`frontend/vite.config.ts`)
+- Ruff >=0.11.0 — Python linting + formatting (replaces flake8/black/isort)
+- ESLint 10.2 — TypeScript/React linting (`frontend/`)
+- Alembic >=1.15.0 — Database migrations (auto-run on startup)
+- Docker — Multi-stage build (`Dockerfile`)
+## Key Dependencies
+- SQLAlchemy >=2.0 — ORM and database layer (`src/career_os/database.py`, `src/career_os/models/`)
+- Pydantic >=2.10.0 — Request/response validation, settings management (`src/career_os/schemas/`)
+- pydantic-settings >=2.8.0 — Environment-based configuration (`src/career_os/config.py`)
+- httpx >=0.28.0 — Async HTTP client for AI providers, Pushover, TickTick
+- aiosqlite >=0.21.0 — Async SQLite driver for FastAPI
+- uvicorn[standard] >=0.34.0 — ASGI server
+- Typer >=0.15.0 — CLI framework (`src/career_os/cli/`), entry points: `kestrel`, `career`
+- slowapi >=0.1.9 — Rate limiting middleware for OAuth endpoints (`src/career_os/api/oauth.py`)
+- cryptography >=42.0.0 — Fernet encryption for AI response cache (`src/career_os/ai/cache.py`)
+- rapidfuzz >=3.6.0 — Fuzzy string matching (job family presets, skill normalization)
+- icalendar >=7.0.0 — Calendar event export (`.ics` files) (`src/career_os/services/calendar.py`)
+- Rich >=13.9.0 — CLI output formatting
+- python-dotenv >=1.1.0 — `.env` file loading
+- @tanstack/react-query 5.90 — Server state management / data fetching (`frontend/src/api/`)
+- react-router-dom 7.13 — Client-side routing (`frontend/src/pages/`)
+- Tailwind CSS 4.2 — Utility-first styling (via `@tailwindcss/vite` plugin)
+- Recharts 3.8 — Chart/visualization library
+- @dnd-kit (core 6.3, sortable 10.0) — Drag-and-drop UI
+- lucide-react 1.0 — Icon library
+- class-variance-authority 0.7 / clsx 2.1 / tailwind-merge 3.5 — CSS utility helpers
+- pandas >=2.2.0,<3 — Data analysis (blocked from 3.0 by python-jobspy constraint)
+- python-jobspy >=1.1.82,<1.2 — Job board scraping library (`src/career_os/discovery/`)
+- fpdf2 >=2.8.0 — PDF generation
+- warn-scraper >=0.4.0 — WARN Act data scraping (optional extra: `pip install kestrel-app[warn]`)
+## Configuration
+- Settings loaded via pydantic-settings from `.env` file (`src/career_os/config.py`)
+- All config in `Settings` class with env var mapping and defaults
+- Key settings: `AI_PROVIDER`, `DATABASE_URL`, `AUTH_ENABLED`, `AUTH_API_KEY`
+- Feature flags: `FEEDBACK_CALIBRATION_ENABLED`, `ACTIVE_QUERY_ENABLED`, `EMBEDDING_PREFILTER_ENABLED`, `BORDERLINE_SCORING_ENABLED`
+- `.env.example` documents all available env vars with descriptions
+- `pyproject.toml` — Python package config, Ruff config, pytest config
+- `frontend/vite.config.ts` — Vite bundler, dev proxy (`/api/*` -> port 8100), path alias `@/`
+- `frontend/tsconfig.app.json` — TypeScript strict mode, ES2023 target, bundler module resolution
+- `commitlint.config.js` — Conventional commit enforcement
+- `Dockerfile` — Multi-stage: Node 22 frontend build -> Python 3.11 runtime
+- Target: Python 3.11
+- Line length: 100
+- Rules: E, F, I, UP, B, SIM
+- Per-file ignores for FastAPI Depends patterns, CLI line length, migration files
+## Platform Requirements
+- Python 3.11+ with venv
+- Node.js 22 with npm
+- SQLite (bundled with Python, WAL mode enabled)
+- No external database server required
+- Docker (single container serves API + frontend on port 8100)
+- Persistent volume for `data/` directory (SQLite database)
+- Optional: AI provider API key (OpenRouter, Anthropic, Together, or Ollama for local)
+- GitHub Actions (`/.github/workflows/ci.yml`)
+- Jobs: Backend (Python 3.11 lint+test+audit+smoke), Frontend (React lint+test+audit), SonarCloud, actionlint
+- Security: pip-audit, npm audit, npm signature verification, PII leak scan
+- SonarCloud quality gate on PRs (informational, non-blocking)
+<!-- GSD:stack-end -->
+
+<!-- GSD:conventions-start source:CONVENTIONS.md -->
+## Conventions
+
+## Naming Patterns
+- snake_case for all modules: `applications.py`, `gap_analysis.py`, `star_stories.py`
+- Prefix `test_` for test files: `test_skills_api.py`, `test_token_usage.py`
+- Parallel naming across layers: `api/scoring.py` ↔ `services/scoring.py` ↔ `schemas/scoring.py` ↔ `models/scoring.py`
+- Private helpers prefixed with underscore: `_utcnow()`, `_get_active_application()`, `_enrich_with_readiness()`
+- PascalCase for React components: `GradeBadge.tsx`, `KanbanBoard.tsx`, `RedFlagBadge.tsx`
+- camelCase for API client modules: `applications.ts`, `discovery.ts`, `starStories.ts`
+- PascalCase for page components: `Discovery.tsx`, `Pipeline.tsx`, `SettingsPage.tsx`
+- Test files in `__tests__/` dir matching component name: `__tests__/GradeBadge.test.tsx`
+- snake_case for all functions: `create_application()`, `score_job()`, `get_readiness_score()`
+- Private helpers prefixed with underscore: `_derive_package_type()`, `_build_package_summary()`
+- Service functions are module-level (no class wrapping): `from career_os.services.applications import create_application`
+- camelCase for functions: `fetchApplications()`, `searchJobs()`, `scoreToLetterGrade()`
+- PascalCase for React components: `GradeBadge()`, `Layout()`, `Discovery()`
+- Prefix `render` for test helper render functions: `renderDiscovery()`, `renderBoard()`
+- Prefix `mock` for mock variables: `mockSearchJobs`, `mockFetchApplications`
+- SCREAMING_SNAKE for constants: `VALID_TRANSITIONS`, `FK_PROFILES_ID`, `CASCADE_ALL_DELETE_ORPHAN`
+- snake_case for variables: `db_session`, `app_obj`, `scored_jobs`
+- SCREAMING_SNAKE for constants: `APPLICATION_STATUSES`, `STATUS_LABELS`, `SORT_OPTIONS`, `SAMPLE_JOBS`
+- camelCase for variables: `queryClient`, `capturedOnDragEnd`
+- PascalCase for classes, exceptions, enums: `ApplicationNotFoundError`, `ApplicationStatus`, `ComplexityTier`
+- Exception classes always end with `Error`: `ProfileNotFoundError`, `InvalidStatusTransitionError`, `ScoringError`
+- PascalCase for types and interfaces: `ApplicationStatus`, `GradeBadgeProps`, `DiscoveredJob`
+- Prefix `readonly` on component props interface fields
+- Use `type` keyword for type-only imports: `import type { Application } from "./types"`
+## Code Style
+- Ruff handles linting and formatting
+- Line length: 100 characters
+- Config in `pyproject.toml` under `[tool.ruff]`
+- Target version: Python 3.11
+- No explicit Prettier config — relies on ESLint
+- Strict TypeScript mode (`"strict": true` in `tsconfig.app.json`)
+- `noUnusedLocals: true`, `noUnusedParameters: true`
+- `verbatimModuleSyntax: true` — enforces explicit `type` keyword on type-only imports
+- Ruff with rules: E (pycodestyle), F (pyflakes), I (isort), UP (pyupgrade), B (bugbear), SIM (simplify)
+- Per-file ignores for expected patterns:
+- ESLint flat config in `frontend/eslint.config.js`
+- Plugins: `typescript-eslint`, `react-hooks`, `react-refresh`
+- Extends: `js.configs.recommended`, `tseslint.configs.recommended`
+## Import Organization
+- Frontend: `@/*` maps to `frontend/src/*` (configured in `tsconfig.app.json` and `vitest.config.ts`)
+## Error Handling
+- Define domain-specific exception classes in service modules:
+- Services raise domain exceptions; API routes catch and convert to HTTPException:
+- Always use `from exc` to chain exceptions
+- Catch specific exceptions first, generic `Exception` last as 500 fallback
+- `ProviderQuotaError` — base quota/credits exhaustion error in `src/career_os/ai/base.py`
+- `CreditsExhaustedError` — OpenRouter-specific in `src/career_os/ai/openrouter_provider.py`
+- Provider exceptions store HTTP status code and provider name
+- Throw `Error` on non-ok responses with descriptive messages:
+- Special-case 404 with meaningful messages: `throw new Error("Application not found")`
+- Return typed Promises with `as Promise<T>` assertion
+## Logging
+- Module-level logger: `logger = logging.getLogger(__name__)` in `src/career_os/api/scoring.py`
+- Use logger in API routes for operational events, not in service layer
+## Comments
+- Module-level docstrings on every Python file: `"""Application pipeline CRUD API routes."""`
+- JSDoc on every TypeScript API module and component: `/** API client functions for the applications pipeline. */`
+- Section separators with dashed lines for grouping related code:
+- Validation reference IDs in test docstrings: `VAL-SKILL-006`, `VAL-SEARCH-001`, `VAL-PIPE-007`
+- Triple-quoted docstrings on all classes, functions, fixtures
+- First line is a brief summary, then blank line, then details if needed
+- Type hints in signatures (not in docstrings)
+- Use `/** */` on exported functions and components
+- Component files start with a JSDoc block describing purpose and props
+## Function Design
+- Use keyword-only args for clarity: `def _get_active_application(db, application_id, *, profile_id=None)`
+- Type annotations on all parameters and return types
+- Use `Annotated[Session, Depends(get_db)]` pattern for FastAPI dependencies
+- Destructure props in function signature: `function GradeBadge({ score, letterGrade, className, testId }: GradeBadgeProps)`
+- `readonly` on all props interface fields
+- Python services return ORM objects or raise exceptions — no None-as-error
+- TypeScript API functions return typed Promises
+- React components return JSX or `null` for conditional rendering
+## Module Design
+- No barrel files (`__init__.py` files are mostly empty)
+- Import directly from module: `from career_os.services.applications import create_application`
+- Named exports only (no default exports): `export function GradeBadge()`
+- One React component per file
+- Type exports use `export type` or `import type`
+- API module exports all client functions for that domain
+## Commit Convention
+- Conventional commits enforced by commitlint: `type(scope): description`
+- Valid types: `build`, `chore`, `ci`, `deps`, `docs`, `feat`, `fix`, `merge`, `perf`, `refactor`, `revert`, `style`, `test`
+- Scope includes Linear ticket ID: `feat(G-97): add onboarding flow`
+- Config: `commitlint.config.js`
+## Pydantic / Schema Patterns
+- All API schemas use Pydantic v2 `BaseModel` with `Field()` for validation
+- Enum classes use `StrEnum` (Python 3.11+): `class ApplicationStatus(StrEnum)`
+- Config via `pydantic-settings` `BaseSettings` in `src/career_os/config.py`
+- Settings loaded from env vars automatically (dotenv supported)
+- Use `model_validate()` to convert ORM objects to response schemas
+## SQLAlchemy Patterns
+- Mapped column style (SQLAlchemy 2.0): `Mapped[int] = mapped_column(Integer, ...)`
+- Relationships use `Mapped[list["RelatedModel"]]` type hints
+- Constants for repeated FK strings: `FK_PROFILES_ID = "profiles.id"`
+- `_utcnow()` helper for timezone-aware default timestamps
+- In-memory SQLite for tests with FK enforcement pragma
+<!-- GSD:conventions-end -->
+
+<!-- GSD:architecture-start source:ARCHITECTURE.md -->
+## Architecture
+
+## Pattern Overview
+- Single FastAPI backend serves REST API consumed by three frontends (web SPA, mobile app, CLI)
+- Classic layered architecture: Routes -> Services -> Models -> Database
+- AI provider abstraction via factory pattern with pluggable backends
+- Profile-scoped data isolation (all queries filter by `profile_id`)
+- Background task scheduling via asyncio (no external task queue)
+- Auto-migration on startup (Alembic runs at app boot)
+## Layers
+- Purpose: HTTP request handling, input validation, error mapping
+- Location: `src/career_os/api/`
+- Contains: 27 router modules, each defining FastAPI `APIRouter` with `/api/{domain}` prefix
+- Depends on: Schemas (Pydantic), Services, Database session via `get_db()` dependency
+- Used by: All frontends via REST
+- Pattern: Routes catch domain exceptions from services and map to HTTP status codes (e.g., `ApplicationNotFoundError` -> 404)
+- Key files: `src/career_os/api/applications.py`, `src/career_os/api/scoring.py`, `src/career_os/api/discovery.py`
+- Purpose: Pydantic models for request/response validation and domain enums
+- Location: `src/career_os/schemas/`
+- Contains: 27 schema modules mirroring API routes; includes business rules like `VALID_TRANSITIONS` state machine
+- Depends on: Pydantic, Python stdlib
+- Used by: API routes (request/response), Services (type contracts)
+- Pattern: Each domain has a schema module with `*Create`, `*Update`, `*Response` models
+- Key files: `src/career_os/schemas/applications.py` (state machine), `src/career_os/schemas/ai.py` (AIResponse, AIFeature, ScoreResult), `src/career_os/schemas/scoring.py`
+- Purpose: Business logic, domain operations, AI orchestration
+- Location: `src/career_os/services/`
+- Contains: 36 service modules; pure functions taking `db: Session` as first arg
+- Depends on: Models (ORM), Schemas, AI providers, external clients
+- Used by: API routes, CLI commands
+- Pattern: Functional style — service functions accept SQLAlchemy `Session`, raise domain exceptions (e.g., `ProfileNotFoundError`, `ScoringError`)
+- Key files: `src/career_os/services/scoring.py` (AI scoring engine), `src/career_os/services/applications.py` (CRUD + state transitions), `src/career_os/services/discovery.py`
+- Purpose: SQLAlchemy ORM definitions
+- Location: `src/career_os/models/`
+- Contains: 18 model files; `models.py` is the main file with core entities (Profile, Application, ActivityLog, FollowUp); domain-specific models in separate files
+- Depends on: SQLAlchemy, `career_os.database.Base`
+- Used by: Services, Alembic migrations
+- Pattern: All models inherit from `Base` (DeclarativeBase). Uses `Mapped[]` type annotations (SQLAlchemy 2.0 style). Foreign keys reference `profiles.id` for multi-profile isolation.
+- Key files: `src/career_os/models/models.py` (Profile, Application), `src/career_os/models/scoring.py`, `src/career_os/models/skills.py`, `src/career_os/models/discovery.py`
+- Purpose: Engine creation, session factory, SQLite configuration
+- Location: `src/career_os/database.py`
+- Contains: Engine with WAL mode + foreign keys enabled via `PRAGMA` on every connection
+- Pattern: Synchronous SQLAlchemy with `check_same_thread=False` for FastAPI async handlers; `get_db()` generator dependency yields sessions
+- Purpose: Pluggable AI backend abstraction
+- Location: `src/career_os/ai/`
+- Contains: Abstract base (`base.py`), factory (`factory.py`), 5 provider implementations, caching layer, PII masking, privacy registry
+- Pattern: Factory pattern — `get_ai_provider(name)` returns provider from `_PROVIDER_REGISTRY` dict. All providers implement `complete()`, `score()`, optional `batch_score()`, `embed()`.
+- Providers: `MockProvider`, `OpenRouterProvider`, `AnthropicProvider`, `OllamaProvider`, `TogetherProvider`
+- Complexity routing: `ComplexityTier` enum (SIMPLE/STANDARD/COMPLEX) routes to different model sizes
+- Cache: `CachedAIProvider` wraps any provider with encrypted SQLite cache (Fernet, 7-day TTL)
+- Key files: `src/career_os/ai/base.py` (AIProvider ABC), `src/career_os/ai/factory.py` (registry + factory)
+- Purpose: Pydantic Settings for all app configuration
+- Location: `src/career_os/config.py`
+- Pattern: Single `Settings` class with env var binding, `.env` file support, model validator for API key requirements
+- Singleton: `settings = Settings()` at module level
+## Data Flow
+- Backend: SQLite database with WAL mode (file: `data/career_os.db`)
+- Web frontend: TanStack React Query with 5-minute stale time; no client-side global state store
+- Mobile app: Planned — Expo Secure Store for auth tokens, React Query for server state
+## Key Abstractions
+- Purpose: Abstract interface for all AI backends
+- Examples: `src/career_os/ai/mock_provider.py`, `src/career_os/ai/openrouter_provider.py`, `src/career_os/ai/anthropic_provider.py`, `src/career_os/ai/ollama_provider.py`, `src/career_os/ai/together_provider.py`
+- Pattern: ABC with `complete()`, `score()`, optional `batch_score()`, `embed()`. Factory selects via `AI_PROVIDER` env var.
+- Purpose: Multi-user data isolation within single-instance deployment
+- Examples: `src/career_os/models/models.py` (all entities have `profile_id` FK), `src/career_os/services/applications.py` (`_get_active_application` filters by profile_id)
+- Pattern: Every query includes `profile_id` filter. Default profile seeded on first run.
+- Purpose: Service-layer errors that routes map to HTTP codes
+- Examples: `ApplicationNotFoundError` -> 404, `InvalidStatusTransitionError` -> 422, `ProfileIncompleteError` -> 400, `ProviderQuotaError` -> 503
+- Pattern: Each service module defines its own exception classes; API routes catch and convert to `HTTPException`
+- Purpose: Unified interface for multiple job board scrapers
+- Pattern: ABC with `scrape(params) -> list[RawJobResult]`. Individual adapter failures are caught and returned as warnings, never blocking other adapters.
+## Entry Points
+- Location: `src/career_os/main.py`
+- Triggers: `uvicorn career_os.main:app`, Docker, `kestrel start` CLI
+- Responsibilities: App creation, middleware registration (CORS, auth, rate limiting), router inclusion (27 routers), lifespan management (auto-migration, seeding, scheduler start/stop), static file serving in production
+- Location: `src/career_os/cli/main.py`
+- Triggers: `kestrel` or `career` CLI commands (entry points in `pyproject.toml`)
+- Responsibilities: Typer-based CLI with subcommand groups: pipeline, skills, goals, interview-prep, contacts, warn
+- Location: `worker/src/index.ts`
+- Triggers: Linear webhooks, cron schedule, HTTP requests
+- Responsibilities: Bi-directional Linear<->TickTick sync, calendar feed generation, dashboard rebuild triggers
+- Note: Separate deployment, not part of main backend
+- Location: `frontend/src/main.tsx` -> `frontend/src/App.tsx`
+- Triggers: Browser navigation
+- Responsibilities: React SPA with React Router; 11 pages wrapped in shared Layout
+## Error Handling
+- Services raise typed exceptions: `ApplicationNotFoundError`, `ProfileNotFoundError`, `InvalidStatusTransitionError`, `ScoringError`, `ProfileIncompleteError`
+- API routes catch specific exceptions and raise `HTTPException` with appropriate status codes
+- AI providers raise `ProviderQuotaError` (402/429) caught by routes and surfaced to frontend as `CreditsExhaustedBanner`
+- Discovery adapters use per-adapter error isolation — one adapter failing does not block others
+- Frontend: Class-based `ErrorBoundary` in `frontend/src/App.tsx` catches React render errors
+- Background schedulers log errors and continue (with consecutive error counting in discovery scheduler)
+## Cross-Cutting Concerns
+<!-- GSD:architecture-end -->
+
+<!-- GSD:skills-start source:skills/ -->
+## Project Skills
+
+| Skill | Description | Path |
+|-------|-------------|------|
+| bmad-advanced-elicitation | 'Push the LLM to reconsider, refine, and improve its recent output. Use when user asks for deeper critique or mentions a known deeper critique method, e.g. socratic, first principles, pre-mortem, red team.' | `.claude/skills/bmad-advanced-elicitation/SKILL.md` |
+| bmad-agent-pm | Product manager for PRD creation and requirements discovery. Use when the user asks to talk to John or requests the product manager. | `.claude/skills/bmad-agent-pm/SKILL.md` |
+| bmad-agent-ux-designer | UX designer and UI specialist. Use when the user asks to talk to Sally or requests the UX designer. | `.claude/skills/bmad-agent-ux-designer/SKILL.md` |
+| bmad-brainstorming | 'Facilitate interactive brainstorming sessions using diverse creative techniques and ideation methods. Use when the user says help me brainstorm or help me ideate.' | `.claude/skills/bmad-brainstorming/SKILL.md` |
+| bmad-create-prd | 'Create a PRD from scratch. Use when the user says "lets create a product requirements document" or "I want to create a new PRD"' | `.claude/skills/bmad-create-prd/SKILL.md` |
+| bmad-create-ux-design | 'Plan UX patterns and design specifications. Use when the user says "lets create UX design" or "create UX specifications" or "help me plan the UX"' | `.claude/skills/bmad-create-ux-design/SKILL.md` |
+| bmad-distillator | Lossless LLM-optimized compression of source documents. Use when the user requests to 'distill documents' or 'create a distillate'. | `.claude/skills/bmad-distillator/SKILL.md` |
+| bmad-edit-prd | 'Edit an existing PRD. Use when the user says "edit this PRD".' | `.claude/skills/bmad-edit-prd/SKILL.md` |
+| bmad-editorial-review-prose | 'Clinical copy-editor that reviews text for communication issues. Use when user says review for prose or improve the prose' | `.claude/skills/bmad-editorial-review-prose/SKILL.md` |
+| bmad-editorial-review-structure | 'Structural editor that proposes cuts, reorganization, and simplification while preserving comprehension. Use when user requests structural review or editorial review of structure' | `.claude/skills/bmad-editorial-review-structure/SKILL.md` |
+| bmad-help | 'Analyzes current state and user query to answer BMad questions or recommend the next skill(s) to use. Use when user asks for help, bmad help, what to do next, or what to start with in BMad.' | `.claude/skills/bmad-help/SKILL.md` |
+| bmad-index-docs | 'Generates or updates an index.md to reference all docs in the folder. Use if user requests to create or update an index of all files in a specific folder' | `.claude/skills/bmad-index-docs/SKILL.md` |
+| bmad-party-mode | 'Orchestrates group discussions between installed BMAD agents, enabling natural multi-agent conversations where each agent is a real subagent with independent thinking. Use when user requests party mode, wants multiple agent perspectives, group discussion, roundtable, or multi-agent conversation about their project.' | `.claude/skills/bmad-party-mode/SKILL.md` |
+| bmad-review-adversarial-general | 'Perform a Cynical Review and produce a findings report. Use when the user requests a critical review of something' | `.claude/skills/bmad-review-adversarial-general/SKILL.md` |
+| bmad-review-edge-case-hunter | 'Walk every branching path and boundary condition in content, report only unhandled edge cases. Orthogonal to adversarial review - method-driven not attitude-driven. Use when you need exhaustive edge-case analysis of code, specs, or diffs.' | `.claude/skills/bmad-review-edge-case-hunter/SKILL.md` |
+| bmad-shard-doc | 'Splits large markdown documents into smaller, organized files based on level 2 (default) sections. Use if the user says perform shard document' | `.claude/skills/bmad-shard-doc/SKILL.md` |
+| bmad-validate-prd | 'Validate a PRD against standards. Use when the user says "validate this PRD" or "run PRD validation"' | `.claude/skills/bmad-validate-prd/SKILL.md` |
+<!-- GSD:skills-end -->
+
+<!-- GSD:workflow-start source:GSD defaults -->
+## GSD Workflow Enforcement
+
+Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+
+Use these entry points:
+- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
+- `/gsd-debug` for investigation and bug fixing
+- `/gsd-execute-phase` for planned phase work
+
+Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
+<!-- GSD:workflow-end -->
+
+<!-- GSD:profile-start -->
+## Developer Profile
+
+> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
+> This section is managed by `generate-claude-profile` -- do not edit manually.
+<!-- GSD:profile-end -->

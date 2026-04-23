@@ -1,0 +1,166 @@
+name: Release Gate
+
+on:
+  # Trigger when checks complete on release-please PRs
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  check_suite:
+    types: [completed]
+
+jobs:
+  evaluate:
+    name: Evaluate release readiness
+    runs-on: ubuntu-latest
+    # Only run on release-please PRs
+    if: |
+      github.event_name == 'check_suite' ||
+      contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Find release-please PR
+        id: find-pr
+        run: |
+          PR=$(gh pr list --label "autorelease: pending" --json number,headRefName,createdAt -q '.[0]' 2>/dev/null || echo "{}")
+          PR_NUMBER=$(echo "$PR" | jq -r '.number // empty')
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No release-please PR found — skipping"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+          # Check PR age (1-hour cool-down)
+          CREATED=$(echo "$PR" | jq -r '.createdAt')
+          # Parse ISO 8601 date portably (works on both GNU and BSD date)
+          CREATED_EPOCH=$(date -d "$CREATED" +%s 2>/dev/null || python3 -c "from datetime import datetime; print(int(datetime.fromisoformat('$CREATED'.replace('Z','+00:00')).timestamp()))")
+          AGE_SECONDS=$(( $(date +%s) - CREATED_EPOCH ))
+          if [ "$AGE_SECONDS" -lt 3600 ]; then
+            echo "PR is less than 1 hour old ($AGE_SECONDS seconds) — cool-down period"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check for blocker issues
+        id: blockers
+        if: steps.find-pr.outputs.found == 'true'
+        run: |
+          BLOCKERS=$(gh issue list --label "priority:urgent" --state open --json number -q 'length' 2>/dev/null || echo "0")
+          RELEASE_BROKEN=$(gh issue list --label "release-broken" --state open --json number -q 'length' 2>/dev/null || echo "0")
+
+          if [ "$BLOCKERS" -gt 0 ] || [ "$RELEASE_BROKEN" -gt 0 ]; then
+            echo "blocked=true" >> "$GITHUB_OUTPUT"
+            echo "Blocked: $BLOCKERS urgent issues, $RELEASE_BROKEN release-broken issues"
+          else
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check qualifying commits
+        id: commits
+        if: steps.find-pr.outputs.found == 'true'
+        run: |
+          # Release-please PRs have a single "chore(main): release X" commit,
+          # so we check the PR body (changelog) for feat/fix entries instead.
+          PR_NUMBER=${{ steps.find-pr.outputs.number }}
+          PR_BODY=$(gh pr view "$PR_NUMBER" --json body -q '.body' 2>/dev/null || echo "")
+
+          # Release-please groups changes under ### headers (Bug Fixes, Features, etc.)
+          HAS_QUALIFYING=$(echo "$PR_BODY" | grep -cE '### (Bug Fixes|Features)' || echo "0")
+
+          if [ "$HAS_QUALIFYING" -gt 0 ]; then
+            echo "qualifying=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "qualifying=false" >> "$GITHUB_OUTPUT"
+            echo "No feat/fix commits — skipping release"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check CI and smoke test status
+        id: checks
+        if: steps.find-pr.outputs.found == 'true'
+        run: |
+          PR_NUMBER=${{ steps.find-pr.outputs.number }}
+
+          # Get check status
+          CHECKS=$(gh pr checks "$PR_NUMBER" --json name,state 2>/dev/null || echo "[]")
+
+          FAILED=$(echo "$CHECKS" | jq -r '[.[] | select(.state == "FAILURE")] | length')
+          PENDING=$(echo "$CHECKS" | jq -r '[.[] | select(.state == "PENDING")] | length')
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "status=failed" >> "$GITHUB_OUTPUT"
+            FAILED_NAMES=$(echo "$CHECKS" | jq -r '[.[] | select(.state == "FAILURE") | .name] | join(", ")')
+            echo "failed_checks=$FAILED_NAMES" >> "$GITHUB_OUTPUT"
+          elif [ "$PENDING" -gt 0 ]; then
+            echo "status=pending" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=passed" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Auto-merge if all conditions met
+        if: |
+          steps.find-pr.outputs.found == 'true' &&
+          steps.find-pr.outputs.ready == 'true' &&
+          steps.blockers.outputs.blocked == 'false' &&
+          steps.commits.outputs.qualifying == 'true' &&
+          steps.checks.outputs.status == 'passed'
+        run: |
+          PR_NUMBER=${{ steps.find-pr.outputs.number }}
+          echo "All conditions met — auto-merging release PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" --squash --auto
+          gh pr comment "$PR_NUMBER" --body "## Auto-merged by Release Gate
+
+          All conditions passed:
+          - [x] CI checks passed
+          - [x] Smoke tests passed
+          - [x] No blocker issues open
+          - [x] Contains qualifying commits (feat/fix)
+          - [x] Cool-down period elapsed (>1 hour)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Auto-reject on check failure
+        if: |
+          steps.find-pr.outputs.found == 'true' &&
+          steps.checks.outputs.status == 'failed'
+        run: |
+          PR_NUMBER=${{ steps.find-pr.outputs.number }}
+          FAILED=${{ steps.checks.outputs.failed_checks }}
+
+          echo "Checks failed — commenting on release PR #$PR_NUMBER"
+          gh pr comment "$PR_NUMBER" --body "## Release rejected by Release Gate
+
+          The following checks failed: **$FAILED**
+
+          **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Release-please will recreate this PR when the fix lands on main."
+
+          # Close the PR — release-please will recreate on next qualifying push
+          gh pr close "$PR_NUMBER" --comment "Closing due to failed checks. Will retry after fix."
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Log blocked status
+        if: |
+          steps.find-pr.outputs.found == 'true' &&
+          steps.blockers.outputs.blocked == 'true'
+        run: |
+          PR_NUMBER=${{ steps.find-pr.outputs.number }}
+          gh pr comment "$PR_NUMBER" --body "## Release held by Release Gate
+
+          Open blocker issues are preventing auto-merge. The release will proceed once all urgent/release-broken issues are resolved."
+        env:
+          GH_TOKEN: ${{ github.token }}

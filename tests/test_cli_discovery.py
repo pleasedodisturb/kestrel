@@ -30,6 +30,15 @@ from career_os.models.skills import Skill
 runner = CliRunner()
 
 
+def _extract_json(output: str) -> dict:
+    """Extract the first JSON object from CLI output, skipping any banner text."""
+    # Find the first '{' which starts the JSON object
+    idx = output.find("{")
+    if idx == -1:
+        raise ValueError(f"No JSON object found in output: {output!r}")
+    return json.loads(output[idx:])
+
+
 def _set_sqlite_pragmas(dbapi_conn, connection_record) -> None:  # noqa: ANN001
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
@@ -296,8 +305,8 @@ class TestDiscoverCommand:
                 ["discover", "--keywords", "TPM", "--output", "json"],
             )
         assert result.exit_code == 0
-        # Parse the JSON output - should be valid
-        data = json.loads(result.output)
+        # Parse the JSON output - should be valid (skip any banner text)
+        data = _extract_json(result.output)
         assert isinstance(data, dict)
         assert "jobs" in data
 
@@ -471,7 +480,7 @@ class TestScoreCommand:
                 ["score", "https://example.com/job", "--output", "json"],
             )
         assert result.exit_code == 0
-        data = json.loads(result.output)
+        data = _extract_json(result.output)
         assert "fit_score" in data
         assert data["fit_score"] == pytest.approx(8.5)
 
@@ -563,7 +572,7 @@ class TestMarketCommand:
         """--output json produces valid JSON with all 4 sections."""
         result = runner.invoke(app, ["market", "--output", "json"])
         assert result.exit_code == 0
-        data = json.loads(result.output)
+        data = _extract_json(result.output)
         assert "salary_trends" in data
         assert "skill_trends" in data
         assert "hiring_patterns" in data

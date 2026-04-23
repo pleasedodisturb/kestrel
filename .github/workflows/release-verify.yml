@@ -1,0 +1,103 @@
+name: Release Verification
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 6am UTC daily (4h after nightly)
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  verify-release:
+    name: Verify latest release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get latest release tag
+        id: release
+        run: |
+          TAG=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "none")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [ "$TAG" = "none" ]; then
+            echo "No releases found — skipping"
+            exit 0
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+      - uses: actions/checkout@v6
+        if: steps.release.outputs.tag != 'none'
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+
+      - name: Build and test production Docker
+        if: steps.release.outputs.tag != 'none'
+        run: |
+          docker compose -f docker-compose.prod.yml build
+          docker compose -f docker-compose.prod.yml up -d
+
+          for _ in $(seq 1 60); do
+            if curl -sf http://localhost:8100/health > /dev/null; then
+              echo "Release ${{ steps.release.outputs.tag }} health check passed."
+              break
+            fi
+            sleep 1
+          done
+
+          curl -sf http://localhost:8100/health > /dev/null || {
+            echo "::error::Release ${{ steps.release.outputs.tag }} failed health check"
+            docker compose -f docker-compose.prod.yml logs
+            exit 1
+          }
+
+          # Verify API
+          response=$(curl -sf http://localhost:8100/api/profiles)
+          echo "$response" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+            echo "::error::Release API check failed"
+            exit 1
+          }
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.prod.yml down -v 2>/dev/null || true
+
+  alert-on-failure:
+    name: Alert on release failure
+    runs-on: ubuntu-latest
+    needs: [verify-release]
+    if: failure()
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create GitHub Issue for broken release
+        run: |
+          TAG=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "unknown")
+
+          # Check if issue already exists
+          existing=$(gh issue list --label "release-broken" --state open --json number -q '.[0].number' 2>/dev/null || echo "")
+
+          if [ -z "$existing" ]; then
+            gh issue create \
+              --title "RELEASE BROKEN: $TAG failed verification" \
+              --label "bug,release-broken,priority:urgent" \
+              --body "$(cat <<BODY
+          ## Release $TAG failed automated verification
+
+          The daily release verification workflow detected that the latest release ($TAG) is broken.
+
+          **Failed run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ### Required actions
+          1. Investigate the failure logs above
+          2. Either fix forward or yank the release
+          3. Close this issue when resolved
+
+          This issue was created automatically by the release verification workflow.
+          BODY
+          )"
+          else
+            gh issue comment "$existing" \
+              --body "Release verification still failing as of $(date -u +%Y-%m-%dT%H:%M:%SZ). Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
