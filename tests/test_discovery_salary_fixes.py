@@ -21,11 +21,18 @@ from sqlalchemy.orm import sessionmaker
 
 from career_os.database import Base, get_db
 from career_os.discovery.adapters import RawJobResult, ScrapeParams, ScraperAdapter
+from career_os.discovery.prefilter import PrefilterConfig, PrefilterStrategy
 from career_os.main import app
 from career_os.models.discovery import DiscoveredJob, SearchProfile
 from career_os.models.models import Profile
 from career_os.services.discovery import _passes_sp_filters, run_discovery
 from career_os.services.salary import parse_salary_range, salary_midpoint
+
+# Disable prefilter so mock jobs are not eliminated before assertions.
+_PREFILTER_OFF = patch(
+    "career_os.services.discovery._build_prefilter_config",
+    return_value=PrefilterConfig(strategy=PrefilterStrategy.OFF),
+)
 
 # ---------------------------------------------------------------------------
 # Test database setup
@@ -147,9 +154,12 @@ class TestDedupProfileScoped:
                     ),
                 ]
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[MockAdapter()],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[MockAdapter()],
+            ),
+            _PREFILTER_OFF,
         ):
             # Discover for profile A
             result_a = await run_discovery(db_session, profile_id=1)
@@ -188,9 +198,12 @@ class TestDedupProfileScoped:
                     ),
                 ]
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[MockAdapter()],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[MockAdapter()],
+            ),
+            _PREFILTER_OFF,
         ):
             result1 = await run_discovery(db_session, profile_id=1)
             assert result1["new_jobs"] == 1
@@ -259,9 +272,12 @@ class TestSavedSearchFiltersApplied:
         db_session.commit()
         db_session.refresh(sp)
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[MockAdapter()],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[MockAdapter()],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_discovery(
                 db_session,
@@ -321,9 +337,12 @@ class TestSavedSearchFiltersApplied:
         db_session.commit()
         db_session.refresh(sp)
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[MockAdapter()],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[MockAdapter()],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_discovery(
                 db_session,
@@ -382,9 +401,12 @@ class TestSavedSearchFiltersApplied:
         db_session.commit()
         db_session.refresh(sp)
 
-        with patch(
-            "career_os.services.discovery.get_available_adapters",
-            return_value=[MockAdapter()],
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[MockAdapter()],
+            ),
+            _PREFILTER_OFF,
         ):
             result = await run_discovery(
                 db_session,

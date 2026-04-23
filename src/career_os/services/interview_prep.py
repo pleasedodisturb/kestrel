@@ -26,6 +26,7 @@ from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session
 
 from career_os.ai.factory import get_ai_provider
+from career_os.ai.privacy import check_privacy_boundary
 from career_os.models.interview_prep import InterviewPrepItem, InterviewPrepSession
 from career_os.models.models import Application, Profile
 from career_os.models.skills import JobRequirement, Skill, SkillHistory
@@ -650,6 +651,8 @@ async def get_or_create_interview_prep(
 
     try:
         provider = get_ai_provider()
+        # Enforce PII safety boundary before sending personal data to provider
+        check_privacy_boundary(str(AIFeature.interview_prep), provider.name)
         response = await provider.complete(
             prompt=prompt,
             feature=AIFeature.interview_prep,

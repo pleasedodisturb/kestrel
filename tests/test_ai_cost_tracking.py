@@ -124,7 +124,7 @@ class TestOpenRouterXTitle:
 
     @pytest.mark.asyncio
     async def test_x_title_header_is_kestrel(self) -> None:
-        """X-Title header should be 'kestrel' for cost attribution."""
+        """X-Title header should be 'Career OS' for cost attribution."""
         from unittest.mock import patch
 
         import httpx
@@ -149,4 +149,4 @@ class TestOpenRouterXTitle:
         with patch("httpx.AsyncClient.post", side_effect=mock_post):
             await provider.complete("test", feature=AIFeature.complete)
 
-        assert captured_headers.get("X-Title") == "kestrel"
+        assert captured_headers.get("X-Title") == "Career OS"
