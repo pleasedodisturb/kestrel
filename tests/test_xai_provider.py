@@ -75,6 +75,8 @@ class TestXAIPrivacyWarning:
 
     def test_init_logs_privacy_warning(self, caplog: pytest.LogCaptureFixture) -> None:
         """XAIProvider.__init__ emits a WARNING about irrevocable data sharing."""
+        logger = logging.getLogger("career_os.ai.xai_provider")
+        logger.propagate = True
         with caplog.at_level(logging.WARNING, logger="career_os.ai.xai_provider"):
             XAIProvider(api_key=_TEST_CREDENTIAL)
 
@@ -85,6 +87,8 @@ class TestXAIPrivacyWarning:
 
     def test_privacy_warning_on_every_init(self, caplog: pytest.LogCaptureFixture) -> None:
         """Each instantiation emits the warning (not cached/suppressed)."""
+        logger = logging.getLogger("career_os.ai.xai_provider")
+        logger.propagate = True
         with caplog.at_level(logging.WARNING, logger="career_os.ai.xai_provider"):
             XAIProvider(api_key=_TEST_CREDENTIAL)
             XAIProvider(api_key=_TEST_CREDENTIAL)
