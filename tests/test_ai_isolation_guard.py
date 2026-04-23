@@ -68,9 +68,7 @@ async def test_isolation_guard_blocks_gemini():
     """Guard must raise RuntimeError on any request to generativelanguage.googleapis.com."""
     async with httpx.AsyncClient() as client:
         with pytest.raises(RuntimeError, match="TEST ISOLATION VIOLATION"):
-            await client.get(
-                "https://generativelanguage.googleapis.com/v1beta/models"
-            )
+            await client.get("https://generativelanguage.googleapis.com/v1beta/models")
 
 
 @pytest.mark.asyncio
@@ -100,9 +98,7 @@ async def test_isolation_guard_allows_non_ai_domains():
             await client.get("http://localhost:9999/health", timeout=0.1)
         except RuntimeError as exc:
             if "TEST ISOLATION VIOLATION" in str(exc):
-                pytest.fail(
-                    f"Guard incorrectly blocked a non-AI domain: {exc}"
-                )
+                pytest.fail(f"Guard incorrectly blocked a non-AI domain: {exc}")
         except Exception:
             # Any other error (ConnectError, TimeoutError, etc.) is expected
             # for a non-existent local server — that's fine.
