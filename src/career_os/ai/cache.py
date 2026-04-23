@@ -23,6 +23,7 @@ from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 
 from career_os.ai.base import AIProvider, ComplexityTier
+from career_os.ai.observability import update_current_span
 from career_os.schemas.ai import AIFeature, AIResponse
 
 logger = logging.getLogger(__name__)
@@ -138,6 +139,7 @@ class CachedProvider(AIProvider):
         if cached is not None:
             self._hits += 1
             cached.usage = None  # No tokens consumed on cache hit
+            update_current_span(metadata={"cache": "hit"})
             return cached
 
         self._misses += 1
@@ -145,6 +147,7 @@ class CachedProvider(AIProvider):
             prompt, feature=feature, context=context, tier=tier, **kwargs
         )
         await asyncio.to_thread(self._put, key, response, feature.value)
+        update_current_span(metadata={"cache": "miss"})
         return response
 
     async def score(
@@ -161,11 +164,13 @@ class CachedProvider(AIProvider):
         if cached is not None:
             self._hits += 1
             cached.usage = None  # No tokens consumed on cache hit
+            update_current_span(metadata={"cache": "hit"})
             return cached
 
         self._misses += 1
         response = await self._inner.score(job_description, profile_data, tier=tier, **kwargs)
         await asyncio.to_thread(self._put, key, response, feature.value)
+        update_current_span(metadata={"cache": "miss"})
         return response
 
     # ------------------------------------------------------------------
