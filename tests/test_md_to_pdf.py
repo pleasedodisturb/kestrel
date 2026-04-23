@@ -100,7 +100,7 @@ class TestRenderCoverLetterFull:
 
         render_cover_letter(md_file, pdf_file)
 
-        _content = pdf_file.read_bytes()  # noqa: F841
+        content = pdf_file.read_bytes()
         # Basic structural check: PDF should have at least one page
         assert b"/Type /Page" in content
 
