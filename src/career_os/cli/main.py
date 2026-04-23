@@ -51,7 +51,8 @@ def main_callback(ctx: typer.Context) -> None:
 
             status = get_onboarding_status(profile_id=1, db=db)
             if not status.is_complete:
-                console.print(
+                # Print to stderr so JSON output on stdout stays parseable
+                Console(stderr=True).print(
                     Panel(
                         "[bold]Welcome to Kestrel![/bold]\n"
                         "Run [bold cyan]kestrel init[/bold cyan] to set up your profile.",
