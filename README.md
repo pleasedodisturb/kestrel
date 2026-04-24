@@ -95,9 +95,21 @@ Every recruiter, referral, mentor, and hiring manager in one place. Warmth indic
   <img src="docs/images/screenshots/contacts.png" alt="Contacts: 6 networking contacts with warmth indicators, relationship types, and company info" width="820">
 </p>
 
-### 9. Connect your tools
+### 9. Prepare for every interview
 
-TickTick for task sync. Calendar for interview scheduling. Pushover for mobile alerts when new matches arrive or follow-ups are due. Voice mode for hands-free coaching. AI providers for scoring intelligence.
+STAR story library — your best professional moments, tagged by skill. When you apply to a role that needs "system design leadership", Kestrel surfaces the story where you led the migration to microservices. Gap analysis tells you which required skills don't have a story yet, so you can prepare before the behavioral round starts.
+
+### 10. Brainstorm cover letters out loud
+
+Voice mode turns your messy thoughts into structured cover letter drafts. Pick an application, start talking about why you want the role, and Kestrel shapes your stream-of-consciousness into something you'd actually send. Three modes: cover letter brainstorming, career coaching Q&A, and job evaluation — all conversational.
+
+### 11. Track referrals from intro to offer
+
+Your contacts aren't just names — they're referral pipelines. Track each one from "contacted" through "CV sent" to "submitted" to "feedback received." Log every interaction. Know exactly who to follow up with and when. The warm intro is often worth more than the perfect resume.
+
+### 12. Connect your tools
+
+TickTick for task sync. Calendar for interview scheduling. Pushover for mobile alerts when new matches arrive or follow-ups are due. AI providers for scoring intelligence. Everything plugs in through Settings.
 
 <p align="center">
   <img src="docs/images/screenshots/settings.png" alt="Settings: integrations for TickTick, Calendar, Pushover, Voice Mode, and AI Providers" width="820">
@@ -106,6 +118,21 @@ TickTick for task sync. Calendar for interview scheduling. Pushover for mobile a
 ### The result
 
 You started with an empty pipeline and a vague sense of dread. Six weeks later, you're negotiating between two offers, your follow-ups are on autopilot, and you have data showing exactly which companies are worth your time. That's Kestrel.
+
+---
+
+## Your data stays yours
+
+This isn't a slogan — it's the architecture. Kestrel runs on your computer. Your database is a SQLite file in your home directory. Your resume, cover letters, STAR stories, salary expectations, networking notes — none of it touches a server unless you explicitly connect an AI provider.
+
+Even then, you control what goes where:
+
+- **Ollama** — everything stays on your machine. Zero network calls. Free.
+- **Anthropic** — 7-day data retention, shortest in the industry. SOC 2 certified.
+- **Together AI** — one-click Zero Data Retention (ZDR). SOC 2 Type 2. Frankfurt data center for EU users.
+- **OpenRouter** — routes to any model. Privacy depends on the underlying provider.
+
+Job descriptions are public data — safe to send anywhere. Your personal information (resume, stories, contacts) should only go to providers you trust. Kestrel keeps these separate by design.
 
 ---
 
@@ -119,20 +146,37 @@ You started with an empty pipeline and a vague sense of dread. Six weeks later, 
 | **Analytics** | Conversion funnel, response rate, time-in-stage, score distribution |
 | **Follow-up engine** | Due dates, urgency tracking, multiple channels (email, phone, LinkedIn) |
 | **Skills inventory** | Technical, tools, domain, soft skills — proficiency tracking and gap analysis |
-| **Networking CRM** | Contacts with warmth, relationship type, referral status, interaction history |
+| **Networking CRM** | Contacts with warmth, referral tracking, interaction history, intro pipeline |
 | **Daily auto-scans** | GitHub Actions runs discovery overnight — wake up to scored results |
 
-| Optional | What it does |
-|----------|-------------|
-| **Interview prep** | Company research, mock questions, STAR story library |
+| Also built | What it does |
+|------------|-------------|
+| **STAR story library** | Tag stories by skill, get recommendations per application, gap analysis for missing skills |
+| **Voice mode** | Cover letter brainstorming, career coaching, job evaluation — all conversational |
+| **Interview prep** | Company research, mock questions, behavioral round preparation |
 | **Learning paths** | AI-generated recommendations for skill gaps |
-| **Voice coaching** | Cover letter brainstorming, Q&A coaching, job evaluation — voice-driven |
 | **Calendar sync** | Export interviews and follow-ups to .ics |
 | **Mobile alerts** | Pushover notifications for new matches and due follow-ups |
 | **TickTick sync** | Bidirectional task management |
 | **AI Health Dashboard** | Monitor provider connectivity, quotas, and rate limits |
 
-Everything runs on your machine. No account needed. No data leaves your computer (unless you connect an AI provider).
+---
+
+## What's coming
+
+Kestrel is under active development. Here's what's next:
+
+| Feature | What it will do |
+|---------|----------------|
+| **Writing style flywheel** | Kestrel learns your voice from your past writing. Cover letters and messages start sounding like *you*, not a template. The more you write, the better it gets. |
+| **CV + cover letter generation** | One click: tailored resume and cover letter for any application, matched to the job description and your STAR stories. Export as PDF. |
+| **Cover letter review** | Paste a draft, get structural and tone feedback. "This paragraph buries the lede." "Your closer is generic — reference the team's recent launch." |
+| **LinkedIn network scanner** | Connect via browser tool and surface mutual connections at target companies. "You have 3 second-degree connections at Stripe — here's who to ask for an intro." |
+| **Intro message drafts** | For each warm contact, Kestrel drafts the ask: referral request, informational interview, or reconnection — in your voice, not a template. |
+| **Browser extension** | See a job posting anywhere? One click saves it to your local Kestrel database with full details. No copy-paste, no tab-switching. |
+| **Hosted version** | Don't want to run anything? A subscription-hosted Kestrel instance — same features, zero setup. Your data encrypted at rest, deletable on demand. |
+
+Everything above will follow the same principle: **your data, your machine, your choice.** The hosted version will be the only exception — and even there, you'll own your data with full export and delete.
 
 ---
 
