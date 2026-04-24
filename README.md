@@ -25,6 +25,117 @@
 
 ---
 
+## From unemployed to multiple offers
+
+A job search is chaos. Dozens of tabs. Spreadsheets that go stale. Applications you forget about. Kestrel replaces all of that with a single system that runs on your computer and gets smarter as you use it.
+
+Here's what that looks like in practice:
+
+### 1. Tell Kestrel about yourself (2 minutes)
+
+Answer six questions — name, location, target role, salary range, skills, experience level. That's your profile. Kestrel uses it to score every job it finds against what you actually want.
+
+<p align="center">
+  <img src="docs/images/screenshots/welcome.png" alt="Onboarding: Kestrel asks about your skills in a clean, step-by-step flow" width="720">
+</p>
+
+### 2. Discover jobs automatically
+
+Kestrel scans Indeed, LinkedIn, Glassdoor, and Arbeitsagentur. Every result gets an AI fit score — A+ means "apply today", C means "probably not worth your time". Stop scrolling job boards. Let the jobs come to you.
+
+<p align="center">
+  <img src="docs/images/screenshots/discovery.png" alt="Discovery: search for jobs across multiple boards, every result scored" width="820">
+</p>
+
+### 3. Track your entire pipeline
+
+Every application lives on a Kanban board. Drag cards between stages as you progress — from Discovered to Interested to Applied to Interviewing to Offer. At a glance, you know exactly where everything stands.
+
+<p align="center">
+  <img src="docs/images/screenshots/pipeline.png" alt="Pipeline: Kanban board with 17 applications across all stages from Discovered to Offer" width="820">
+</p>
+
+### 4. Go deep on any application
+
+Click into any application and you get everything: fit score breakdown, salary range, follow-up reminders, full activity log, interview prep materials, and a timeline of every interaction. No more "wait, where did I leave off with Stripe?"
+
+<p align="center">
+  <img src="docs/images/screenshots/application-detail.png" alt="Application detail: Stripe Senior Backend Engineer with offer status, 9.2 fit score, follow-ups, and activity log" width="820">
+</p>
+
+### 5. Never drop the ball
+
+Follow-ups with due dates, organized by urgency. "Respond to Stripe offer." "Call Datadog recruiter about competing offer." "Send thank-you after Vercel final round." Nothing slips through the cracks.
+
+<p align="center">
+  <img src="docs/images/screenshots/follow-ups.png" alt="Follow-ups: 5 upcoming tasks across email, phone, and LinkedIn with due dates" width="820">
+</p>
+
+### 6. See your progress in real numbers
+
+A 41.7% response rate. A conversion funnel showing where applications advance or stall. Time-in-stage metrics so you know if a company is ghosting you or just slow. Data replaces anxiety.
+
+<p align="center">
+  <img src="docs/images/screenshots/analytics.png" alt="Analytics: conversion funnel, 41.7% response rate, time-in-stage charts" width="820">
+</p>
+
+### 7. Know your strengths (and gaps)
+
+Your entire skill inventory, categorized and rated. Technical skills, tools, domain expertise, soft skills — each with a proficiency level from Beginner to Expert. When Kestrel scores a job, it matches against this.
+
+<p align="center">
+  <img src="docs/images/screenshots/skills.png" alt="Skills inventory: 18 skills across technical, tools, domain, and soft categories with proficiency badges" width="820">
+</p>
+
+### 8. Build your network, not a spreadsheet
+
+Every recruiter, referral, mentor, and hiring manager in one place. Warmth indicators (cold/warm/hot), relationship types, referral status, tags. Your network is an asset — treat it like one.
+
+<p align="center">
+  <img src="docs/images/screenshots/contacts.png" alt="Contacts: 6 networking contacts with warmth indicators, relationship types, and company info" width="820">
+</p>
+
+### 9. Connect your tools
+
+TickTick for task sync. Calendar for interview scheduling. Pushover for mobile alerts when new matches arrive or follow-ups are due. Voice mode for hands-free coaching. AI providers for scoring intelligence.
+
+<p align="center">
+  <img src="docs/images/screenshots/settings.png" alt="Settings: integrations for TickTick, Calendar, Pushover, Voice Mode, and AI Providers" width="820">
+</p>
+
+### The result
+
+You started with an empty pipeline and a vague sense of dread. Six weeks later, you're negotiating between two offers, your follow-ups are on autopilot, and you have data showing exactly which companies are worth your time. That's Kestrel.
+
+---
+
+## What it does
+
+| Core | What it does |
+|------|-------------|
+| **Job discovery** | Scans Indeed, LinkedIn, Glassdoor, Arbeitsagentur — AI-scores every result against your profile |
+| **Pipeline tracking** | Kanban board from Discovered to Offer — drag applications between stages |
+| **Deep application view** | Fit score, salary range, follow-ups, activity log, interview prep, timeline |
+| **Analytics** | Conversion funnel, response rate, time-in-stage, score distribution |
+| **Follow-up engine** | Due dates, urgency tracking, multiple channels (email, phone, LinkedIn) |
+| **Skills inventory** | Technical, tools, domain, soft skills — proficiency tracking and gap analysis |
+| **Networking CRM** | Contacts with warmth, relationship type, referral status, interaction history |
+| **Daily auto-scans** | GitHub Actions runs discovery overnight — wake up to scored results |
+
+| Optional | What it does |
+|----------|-------------|
+| **Interview prep** | Company research, mock questions, STAR story library |
+| **Learning paths** | AI-generated recommendations for skill gaps |
+| **Voice coaching** | Cover letter brainstorming, Q&A coaching, job evaluation — voice-driven |
+| **Calendar sync** | Export interviews and follow-ups to .ics |
+| **Mobile alerts** | Pushover notifications for new matches and due follow-ups |
+| **TickTick sync** | Bidirectional task management |
+| **AI Health Dashboard** | Monitor provider connectivity, quotas, and rate limits |
+
+Everything runs on your machine. No account needed. No data leaves your computer (unless you connect an AI provider).
+
+---
+
 ## Install
 
 Pick whichever feels right. They all give you the same app.
@@ -75,38 +186,6 @@ Requires [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Deskt
 Free with a GitHub account. Your own instance in 2 minutes. Nothing installed on your computer.
 
 **Lost?** [Step-by-step guide](docs/guides/QUICKSTART.md) or [FAQ](docs/guides/FAQ.md).
-
----
-
-## Preview
-
-<p align="center">
-  <strong>Pipeline — drag applications across stages</strong><br><br>
-  <img src="docs/images/preview-pipeline.svg" alt="Kanban board showing job applications across pipeline stages" width="820">
-</p>
-
-<p align="center">
-  <strong>Discovery — AI-scored job matches</strong><br><br>
-  <img src="docs/images/preview-discovery.svg" alt="Discovery page showing scored job listings from multiple boards" width="820">
-</p>
-
-<p align="center">
-  <strong>Settings — connect your integrations</strong><br><br>
-  <img src="docs/images/preview-settings.svg" alt="Settings page showing integration configuration" width="820">
-</p>
-
----
-
-## What it does
-
-- **Discovers jobs** from multiple boards automatically (Indeed, LinkedIn, Glassdoor, Arbeitsagentur)
-- **Scores them** against your profile with AI - stop guessing which jobs are worth applying to
-- **Tracks your pipeline** on a Kanban board - drag applications between stages
-- **Prepares you for interviews** - company research, mock questions, STAR story library
-- **Runs daily scans** via GitHub Actions - wake up to a scored digest of new matches
-- **Works offline** - Demo Mode included, zero cost to start. Add real AI when ready.
-
-Everything runs on your machine. No account needed. No data leaves your computer (unless you connect an AI provider).
 
 ---
 
