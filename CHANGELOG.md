@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.12.0](https://github.com/pleasedodisturb/kestrel/compare/v0.11.0...v0.12.0) (2026-04-23)
+
+
+### Features
+
+* **G-394:** make kestrel the primary CLI entry point, keep career as alias ([#316](https://github.com/pleasedodisturb/kestrel/issues/316)) ([debc225](https://github.com/pleasedodisturb/kestrel/commit/debc225d751990234c98652b21120e6e4f410263))
+* **G-407:** enforce PII safety boundary — block personal data from non-ZDR providers ([#311](https://github.com/pleasedodisturb/kestrel/issues/311)) ([268fd08](https://github.com/pleasedodisturb/kestrel/commit/268fd088d84ce0a18377991beabc7a2465b1b4c0))
+
+
+### Bug Fixes
+
+* **G-401, G-456:** fix flaky CLI test + test_md_to_pdf failures ([#305](https://github.com/pleasedodisturb/kestrel/issues/305)) ([8597990](https://github.com/pleasedodisturb/kestrel/commit/8597990384c5ab8c1e36dd6608495bb8633eba12))
+* **G-412:** add test isolation guard — block real AI provider HTTP calls ([#310](https://github.com/pleasedodisturb/kestrel/issues/310)) ([890514c](https://github.com/pleasedodisturb/kestrel/commit/890514caeb7458e844c6c712174f5eb3f0d69b8d))
+* **G-412:** format test_ai_isolation_guard.py for ruff ([#322](https://github.com/pleasedodisturb/kestrel/issues/322)) ([5125a53](https://github.com/pleasedodisturb/kestrel/commit/5125a5393724d8e32797d505f12aae55f85f6e92))
+* **G-419:** fix SonarCloud coverage report path configuration ([#303](https://github.com/pleasedodisturb/kestrel/issues/303)) ([fe3ab24](https://github.com/pleasedodisturb/kestrel/commit/fe3ab244213b623788282d6bb8ced5a938d4928a))
+* **G-457:** recalibrate golden set fixtures for scoring evolution ([6fe9374](https://github.com/pleasedodisturb/kestrel/commit/6fe9374816214ae83f437ac3dd3017b545d14ef0))
+* **G-458:** fix ContactCreate enum validation for Schemathesis stateful mode ([#306](https://github.com/pleasedodisturb/kestrel/issues/306)) ([01e1e31](https://github.com/pleasedodisturb/kestrel/commit/01e1e319d9a551e8eae041bdd3fe8f99734f0d27))
+* **G-488:** unblock all Docker install paths for new users ([#293](https://github.com/pleasedodisturb/kestrel/issues/293)) ([0a4ba32](https://github.com/pleasedodisturb/kestrel/commit/0a4ba3240e0e16177345602ef6d518d116eb1449))
+* **G-491:** fix release gate date parsing and qualifying commit detection ([#308](https://github.com/pleasedodisturb/kestrel/issues/308)) ([7751f6b](https://github.com/pleasedodisturb/kestrel/commit/7751f6bdd414afbd4cae003baa38025f1f143f4e))
+* **G-491:** fix release gate heredoc syntax errors ([#315](https://github.com/pleasedodisturb/kestrel/issues/315)) ([8a17d26](https://github.com/pleasedodisturb/kestrel/commit/8a17d268c6befc5cccd9b86232f26440713c1326))
+* **G-491:** safely handle failed_checks variable with special characters ([#312](https://github.com/pleasedodisturb/kestrel/issues/312)) ([9376d87](https://github.com/pleasedodisturb/kestrel/commit/9376d879ffeab6b5b7bd08b3e24eb13b71b8ebc2))
+* **G-495:** fix discovery test mock/schema breakage (22 CI failures) ([#317](https://github.com/pleasedodisturb/kestrel/issues/317)) ([159f496](https://github.com/pleasedodisturb/kestrel/commit/159f496fdb1afc316a00c470825b8728922f6f60))
+* **G-496:** wire observability spans into cache and PII masking layers ([#318](https://github.com/pleasedodisturb/kestrel/issues/318)) ([0aff60f](https://github.com/pleasedodisturb/kestrel/commit/0aff60f77f7c22c3717b87345668a0a9159fc51f))
+* **G-497:** add _build_fallback_chain to factory and wire into get_ai_provider ([#319](https://github.com/pleasedodisturb/kestrel/issues/319)) ([412101d](https://github.com/pleasedodisturb/kestrel/commit/412101dd410c359fae556d0679b7bf0321fe7642))
+* **G-498:** fix stale test assertions for X-Title header and batch payload ([#320](https://github.com/pleasedodisturb/kestrel/issues/320)) ([6c82021](https://github.com/pleasedodisturb/kestrel/commit/6c820214f6057668804ad85c8c769d37e67d1b08))
+* **G-499:** fix doc link tests for reorganized docs directory ([#321](https://github.com/pleasedodisturb/kestrel/issues/321)) ([9a8a647](https://github.com/pleasedodisturb/kestrel/commit/9a8a647748f1d2341329e1ebc4055cbe75667588))
+* **G-roadmap:** fix md_to_pdf test failures — undefined variable and empty file crash ([#327](https://github.com/pleasedodisturb/kestrel/issues/327)) ([82a3d2f](https://github.com/pleasedodisturb/kestrel/commit/82a3d2f88c72ba004e8aa63375b7f578033bc920))
+
+
+### Documentation
+
+* add session summary for 2026-04-23 ([#325](https://github.com/pleasedodisturb/kestrel/issues/325)) ([54142b1](https://github.com/pleasedodisturb/kestrel/commit/54142b1b6a2382d22a03f73e74389185d57728d1))
+* **G-464:** move "How we build" section to CONTRIBUTING.md ([#326](https://github.com/pleasedodisturb/kestrel/issues/326)) ([8cd3880](https://github.com/pleasedodisturb/kestrel/commit/8cd38805088639511c4f90517c4e926041b8e9a9))
+* **G-464:** rewrite README for first-time users — cut 55%, sharpen hook ([#323](https://github.com/pleasedodisturb/kestrel/issues/323)) ([90a9ba7](https://github.com/pleasedodisturb/kestrel/commit/90a9ba75836772cd980055baba45118f46bece65))
+* **G-489:** document release pipeline, smoke tests, and bug sync workflows ([#307](https://github.com/pleasedodisturb/kestrel/issues/307)) ([b3b75a4](https://github.com/pleasedodisturb/kestrel/commit/b3b75a44f765db6497ae6e53a0e55ef7b7537d09))
+
 ## [0.11.0](https://github.com/pleasedodisturb/kestrel/compare/v0.10.0...v0.11.0) (2026-04-21)
 
 
