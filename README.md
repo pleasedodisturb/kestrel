@@ -27,6 +27,10 @@
 
 ---
 
+**[See it in action](#from-unemployed-to-multiple-offers)** · **[Install](#install)** · **[Features](#what-it-does)** · **[Privacy](#your-data-stays-yours)** · **[Roadmap](#whats-coming)** · **[Docs](#docs)** · **[AI providers](#add-real-ai-optional)**
+
+---
+
 ## From unemployed to multiple offers
 
 A job search is chaos. Dozens of tabs. Spreadsheets that go stale. Applications you forget about. Kestrel replaces all of that with a single system that runs on your computer and gets smarter as you use it.
@@ -184,58 +188,54 @@ Everything above will follow the same principle: **your data, your machine, your
 
 ## Install
 
-Pick whichever feels right. They all give you the same app.
+Six ways in, ranked from "I don't want to think" to "I'll run it myself."
 
-### Quick install (one command)
+| # | Method | Effort | Data persists? | Limitations |
+|---|--------|--------|----------------|-------------|
+| 1 | [Codespaces](#1-try-in-your-browser) | Zero — click a button | No (ephemeral) | 60 free hours/month, sleeps after 30 min idle |
+| 2 | [Railway](#2-deploy-to-railway) | Zero — click a button | Yes | Free tier: 500h/month, 512MB RAM |
+| 3 | [One-liner](#3-one-command-install) | One command | Yes | Needs Python 3.11+ on your machine |
+| 4 | [pip](#4-pip-install) | Two commands | Yes | Needs Python 3.11+ |
+| 5 | [Docker](#5-docker) | Two commands | Yes | Needs Docker installed |
+| 6 | [From source](#contributing) | Clone + setup | Yes | For contributors |
+
+### 1. Try in your browser
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pleasedodisturb/kestrel)
+
+Nothing installed. Nothing configured. Free with a GitHub account — your own instance in 2 minutes. Data resets when the codespace stops.
+
+### 2. Deploy to Railway
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/pleasedodisturb/kestrel)
+
+Your own Kestrel instance with a permanent URL. Free tier, no credit card. Data persists across restarts. See [deployment guide](DEPLOY.md#railway) for volume setup.
+
+### 3. One-command install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pleasedodisturb/kestrel/main/install.sh | bash
 ```
 
-Detects your OS, checks for Python 3.11+, installs Kestrel, and opens it in your browser.
+Detects your OS, checks for Python 3.11+, installs Kestrel, opens it in your browser. Also available as `npx kestrel-app` (Node.js) or `brew install pleasedodisturb/kestrel/kestrel` (macOS).
 
-Or if you have Node.js:
-```bash
-npx kestrel-app
-```
-
-Or with Homebrew (macOS):
-```bash
-brew install pleasedodisturb/kestrel/kestrel
-kestrel start
-```
-
-### Option 1: pip install (simplest)
+### 4. pip install
 
 ```bash
 pip install kestrel-app
 kestrel start
 ```
 
-Opens your browser automatically. Data stored in `~/.kestrel/`.
+Opens your browser automatically. Data stored in `~/.kestrel/`. Requires Python 3.11+ — [install it here](https://www.python.org/downloads/) if you don't have it (2 minutes).
 
-Requires Python 3.11+. Don't have Python? Install it from [python.org/downloads](https://www.python.org/downloads/) (Mac/Windows installer, takes 2 minutes). Or use Option 2 or 3 below instead.
-
-### Option 2: Docker (isolated, nothing touches your system)
+### 5. Docker
 
 ```bash
 git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
 bash setup.sh
 ```
 
-Requires [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows). Both are free. Don't know what Docker is? The [step-by-step guide](docs/guides/QUICKSTART.md) explains everything.
-
-### Option 3: Try in your browser (zero install)
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pleasedodisturb/kestrel)
-
-Free with a GitHub account. Your own instance in 2 minutes. Nothing installed on your computer.
-
-### Option 4: Deploy to Railway (persistent, always-on)
-
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/pleasedodisturb/kestrel)
-
-Your own Kestrel instance with a permanent URL. Free tier — no credit card needed to start. Data persists across restarts. See [deployment guide](DEPLOY.md#railway) for details.
+Fully isolated — nothing touches your system Python. Requires [OrbStack](https://orbstack.dev) (Mac, recommended) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows).
 
 **Lost?** [Step-by-step guide](docs/guides/QUICKSTART.md) or [FAQ](docs/guides/FAQ.md).
 
