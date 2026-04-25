@@ -36,9 +36,7 @@ jobs:
 
           # Check PR age (1-hour cool-down)
           CREATED=$(echo "$PR" | jq -r '.createdAt')
-          # Parse ISO 8601 date portably (works on both GNU and BSD date)
-          CREATED_EPOCH=$(date -d "$CREATED" +%s 2>/dev/null || python3 -c "from datetime import datetime; print(int(datetime.fromisoformat('$CREATED'.replace('Z','+00:00')).timestamp()))")
-          AGE_SECONDS=$(( $(date +%s) - CREATED_EPOCH ))
+          AGE_SECONDS=$(( $(date +%s) - $(date -d "$CREATED" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$CREATED" +%s 2>/dev/null || echo 0) ))
           if [ "$AGE_SECONDS" -lt 3600 ]; then
             echo "PR is less than 1 hour old ($AGE_SECONDS seconds) — cool-down period"
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -68,13 +66,11 @@ jobs:
         id: commits
         if: steps.find-pr.outputs.found == 'true'
         run: |
-          # Release-please PRs have a single "chore(main): release X" commit,
-          # so we check the PR body (changelog) for feat/fix entries instead.
+          # Check if there are feat: or fix: commits (not just chore/docs)
           PR_NUMBER=${{ steps.find-pr.outputs.number }}
-          PR_BODY=$(gh pr view "$PR_NUMBER" --json body -q '.body' 2>/dev/null || echo "")
+          COMMITS=$(gh pr view "$PR_NUMBER" --json commits -q '.commits[].messageHeadline' 2>/dev/null || echo "")
 
-          # Release-please groups changes under ### headers (Bug Fixes, Features, etc.)
-          HAS_QUALIFYING=$(echo "$PR_BODY" | grep -cE '### (Bug Fixes|Features)' || echo "0")
+          HAS_QUALIFYING=$(echo "$COMMITS" | grep -cE '^(feat|fix)' || echo "0")
 
           if [ "$HAS_QUALIFYING" -gt 0 ]; then
             echo "qualifying=true" >> "$GITHUB_OUTPUT"
@@ -120,14 +116,17 @@ jobs:
           PR_NUMBER=${{ steps.find-pr.outputs.number }}
           echo "All conditions met — auto-merging release PR #$PR_NUMBER"
           gh pr merge "$PR_NUMBER" --squash --auto
-          gh pr comment "$PR_NUMBER" --body "## Auto-merged by Release Gate
+          gh pr comment "$PR_NUMBER" --body "$(cat <<'BODY'
+          ## Auto-merged by Release Gate
 
           All conditions passed:
           - [x] CI checks passed
           - [x] Smoke tests passed
           - [x] No blocker issues open
           - [x] Contains qualifying commits (feat/fix)
-          - [x] Cool-down period elapsed (>1 hour)"
+          - [x] Cool-down period elapsed (>1 hour)
+          BODY
+          )"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -140,13 +139,16 @@ jobs:
           FAILED=${{ steps.checks.outputs.failed_checks }}
 
           echo "Checks failed — commenting on release PR #$PR_NUMBER"
-          gh pr comment "$PR_NUMBER" --body "## Release rejected by Release Gate
+          gh pr comment "$PR_NUMBER" --body "$(cat <<BODY
+          ## Release rejected by Release Gate
 
-          The following checks failed: **FAILED_PLACEHOLDER**
+          The following checks failed: **$FAILED**
 
-          **Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          Release-please will recreate this PR when the fix lands on main."
+          Release-please will recreate this PR when the fix lands on main.
+          BODY
+          )"
 
           # Close the PR — release-please will recreate on next qualifying push
           gh pr close "$PR_NUMBER" --comment "Closing due to failed checks. Will retry after fix."
@@ -159,8 +161,11 @@ jobs:
           steps.blockers.outputs.blocked == 'true'
         run: |
           PR_NUMBER=${{ steps.find-pr.outputs.number }}
-          gh pr comment "$PR_NUMBER" --body "## Release held by Release Gate
+          gh pr comment "$PR_NUMBER" --body "$(cat <<'BODY'
+          ## Release held by Release Gate
 
-          Open blocker issues are preventing auto-merge. The release will proceed once all urgent/release-broken issues are resolved."
+          Open blocker issues are preventing auto-merge. The release will proceed once all urgent/release-broken issues are resolved.
+          BODY
+          )"
         env:
           GH_TOKEN: ${{ github.token }}
