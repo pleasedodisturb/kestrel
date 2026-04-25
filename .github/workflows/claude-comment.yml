@@ -18,14 +18,18 @@ jobs:
     # Only trigger on @claude mentions, ignore bot comments
     if: |
       contains(github.event.comment.body, '@claude') &&
-      github.event.comment.user.type != 'Bot'
+      github.event.comment.user.type != 'Bot' &&
+      (
+        github.event.comment.author_association == 'COLLABORATOR' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'OWNER'
+      )
     steps:
       - uses: actions/checkout@v6
 
       - name: Parse intent and respond
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
         with:
           script: |
