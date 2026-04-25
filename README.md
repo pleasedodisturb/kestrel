@@ -21,6 +21,8 @@
 
 <p align="center">
   <a href="https://codespaces.new/pleasedodisturb/kestrel"><img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces" height="32"></a>
+  &nbsp;&nbsp;
+  <a href="https://railway.com/new/template?template=https://github.com/pleasedodisturb/kestrel"><img src="https://railway.com/button.svg" alt="Deploy on Railway" height="32"></a>
 </p>
 
 ---
@@ -228,6 +230,12 @@ Requires [OrbStack](https://orbstack.dev) (recommended for Mac) or [Docker Deskt
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pleasedodisturb/kestrel)
 
 Free with a GitHub account. Your own instance in 2 minutes. Nothing installed on your computer.
+
+### Option 4: Deploy to Railway (persistent, always-on)
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/pleasedodisturb/kestrel)
+
+Your own Kestrel instance with a permanent URL. Free tier — no credit card needed to start. Data persists across restarts. See [deployment guide](DEPLOY.md#railway) for details.
 
 **Lost?** [Step-by-step guide](docs/guides/QUICKSTART.md) or [FAQ](docs/guides/FAQ.md).
 
