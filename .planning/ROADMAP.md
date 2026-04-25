@@ -44,7 +44,10 @@ Plans:
   3. Milestones are organized as Now/Next/Later horizons tied to version numbers so readers understand relative priority
   4. A Mermaid timeline diagram renders correctly on GitHub and visualizes the milestone structure at a glance
   5. The document states openly that this repo is non-commercial, plans may change, and known tech debt exists — honesty builds trust
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Write ROADMAP.md prose: hero pitch, shipped summary, Now/Next/Later scaffolding, Known Limitations, About section, and CHANGELOG cross-references
+- [ ] 02-02-PLAN.md — Add Mermaid diagrams (gantt timeline + dependency flowchart) and verify GitHub rendering
 
 ### Phase 3: Forward Vision
 **Goal**: Every planned milestone is documented through the end-user lens — what the user gains, not what gets built — with the deployment/packaging path given highest priority as THE gap between "dev tool" and "real product"
@@ -85,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Feature Inventory | 0/1 | Not started | - |
-| 2. Roadmap Foundation | 0/0 | Not started | - |
+| 2. Roadmap Foundation | 0/2 | Not started | - |
 | 3. Forward Vision | 0/0 | Not started | - |
 | 4. Milestone Deep Dives | 0/0 | Not started | - |
 | 5. Contributor Experience | 0/0 | Not started | - |
