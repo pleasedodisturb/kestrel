@@ -42,16 +42,62 @@ docker compose up --build
 
 ## Deploy to Railway
 
-1. Connect your GitHub repo in Railway
-2. Railway auto-detects the Dockerfile
-3. Set environment variables in the Railway dashboard
-4. Add a volume mounted at `/app/data` for persistent SQLite storage
-5. Railway assigns a public URL automatically
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/pleasedodisturb/kestrel)
 
-**Settings:**
-- Root directory: `/` (default)
-- Dockerfile path: `Dockerfile`
-- Port: `8100`
+### One-click deploy
+
+Click the button above. Railway reads the included `railway.json`, builds from the Dockerfile, and gives you a public URL. The only post-deploy step is adding a volume for data persistence (see below).
+
+### Manual deploy (Railway CLI)
+
+```bash
+# Install the CLI
+npm i -g @railway/cli
+
+# Login and initialize
+railway login
+railway init
+
+# Link to your project (or create one)
+railway link
+
+# Deploy
+railway up
+```
+
+### Environment variables
+
+Set these in the Railway dashboard under your service's **Variables** tab:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AI_PROVIDER` | `mock` | AI backend (`mock`, `openrouter`, `anthropic`, `together`, `ollama`) |
+| `OPENROUTER_API_KEY` | (empty) | Required when `AI_PROVIDER=openrouter` |
+| `AUTH_ENABLED` | `false` | Enable API key authentication |
+| `AUTH_API_KEY` | (empty) | Required when `AUTH_ENABLED=true` |
+| `PORT` | `8100` | Server port (Railway sets this automatically via `$PORT`) |
+
+`DATABASE_URL` and `FRONTEND_URL` are pre-configured in the Dockerfile and do not need to be set.
+
+### Data persistence (required)
+
+SQLite stores all data at `/app/data/career_os.db`. Without a volume, data is lost on every redeploy.
+
+1. Open your service in the Railway dashboard
+2. Go to **Settings > Volumes**
+3. Click **Add Volume**
+4. Set mount path to `/app/data`
+5. Choose a size (1 GB is plenty)
+
+### Free tier limitations
+
+Railway's free Hobby plan includes:
+
+- **500 hours/month** of execution (enough for always-on if you have one service)
+- **512 MB RAM** (sufficient for Kestrel with moderate usage)
+- **1 GB disk** per volume (enough for thousands of job applications)
+- **Automatic sleep** after 10 minutes of inactivity on the free trial; Hobby plan stays awake
+- No credit card required to start (trial), $5/month for the Hobby plan with included credits
 
 ## Deploy to Fly.io
 
