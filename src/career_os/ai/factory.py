@@ -10,6 +10,8 @@ from career_os.ai.anthropic_provider import AnthropicProvider
 from career_os.ai.base import AIProvider
 from career_os.ai.gemini_provider import GeminiProvider
 from career_os.ai.groq_provider import GroqProvider
+from career_os.ai.huggingface_provider import HuggingFaceProvider
+from career_os.ai.mistral_provider import MistralProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
 from career_os.ai.openrouter_provider import OpenRouterProvider
@@ -101,6 +103,20 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "gemini": lambda: GeminiProvider(
         api_key=_resolve_api_key("GEMINI_API_KEY", "gemini_api_key"),
         model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+    ),
+    "mistral": lambda: MistralProvider(
+        api_key=_resolve_api_key("MISTRAL_API_KEY", "mistral_api_key"),
+        model=os.getenv("MISTRAL_MODEL", "mistral-large-latest"),
+    ),
+    "huggingface": lambda: HuggingFaceProvider(
+        api_key=_resolve_api_key("HF_API_KEY", "hf_api_key")
+        or os.getenv("HUGGINGFACE_API_KEY", ""),
+        model=os.getenv("HF_MODEL", "meta-llama/Llama-3.3-70B-Instruct"),
+    ),
+    "hf": lambda: HuggingFaceProvider(
+        api_key=_resolve_api_key("HF_API_KEY", "hf_api_key")
+        or os.getenv("HUGGINGFACE_API_KEY", ""),
+        model=os.getenv("HF_MODEL", "meta-llama/Llama-3.3-70B-Instruct"),
     ),
 }
 
