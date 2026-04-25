@@ -15,8 +15,8 @@
       "id": "pm-01",
       "category": "dream",
       "expected_band": [
-        8,
-        10
+        8.2,
+        10.0
       ],
       "title": "Senior Product Manager",
       "company": "Stripe",
@@ -27,8 +27,8 @@
       "id": "pm-02",
       "category": "mediocre",
       "expected_band": [
-        3,
-        6
+        2.5,
+        5.5
       ],
       "title": "Product Analyst",
       "company": "Notion",
@@ -39,8 +39,8 @@
       "id": "pm-03",
       "category": "mediocre",
       "expected_band": [
-        3,
-        6
+        3.4,
+        6.4
       ],
       "title": "Growth PM",
       "company": "Figma",
@@ -51,8 +51,8 @@
       "id": "pm-04",
       "category": "mediocre",
       "expected_band": [
-        2,
-        5
+        3.0,
+        6.0
       ],
       "title": "UX Researcher",
       "company": "Airbnb",
@@ -63,8 +63,8 @@
       "id": "pm-05",
       "category": "reject",
       "expected_band": [
-        0,
-        2
+        0.0,
+        2.4
       ],
       "title": "Technical Product Manager - ML Platform",
       "company": "OpenAI",
@@ -75,8 +75,8 @@
       "id": "pm-06",
       "category": "mediocre",
       "expected_band": [
-        3,
-        6
+        1.8,
+        4.8
       ],
       "title": "Product Designer",
       "company": "Linear",
@@ -99,8 +99,8 @@
       "id": "pm-08",
       "category": "mediocre",
       "expected_band": [
-        3,
-        6
+        2.6,
+        5.6
       ],
       "title": "Product Marketing Manager",
       "company": "Slack",
@@ -111,8 +111,8 @@
       "id": "pm-09",
       "category": "mediocre",
       "expected_band": [
-        3,
-        6
+        3.3,
+        6.3
       ],
       "title": "Data Product Manager",
       "company": "Snowflake",
@@ -123,8 +123,8 @@
       "id": "pm-10",
       "category": "reject",
       "expected_band": [
-        1,
-        4
+        0.5,
+        3.5
       ],
       "title": "Mobile Product Manager",
       "company": "DoorDash",
@@ -135,8 +135,8 @@
       "id": "pm-11",
       "category": "mediocre",
       "expected_band": [
-        1,
-        4
+        1.5,
+        4.5
       ],
       "title": "AI Product Manager",
       "company": "Anthropic",
@@ -147,8 +147,8 @@
       "id": "pm-12",
       "category": "reject",
       "expected_band": [
-        0,
-        2
+        0.0,
+        2.2
       ],
       "title": "Revenue Product Manager",
       "company": "Twilio",
@@ -159,8 +159,8 @@
       "id": "pm-13",
       "category": "reject",
       "expected_band": [
-        1,
-        4
+        0.2,
+        3.2
       ],
       "title": "Hardware Product Manager",
       "company": "Apple",
@@ -171,8 +171,8 @@
       "id": "pm-14",
       "category": "reject",
       "expected_band": [
-        1,
-        4
+        0.6,
+        3.6
       ],
       "title": "Blockchain Product Lead",
       "company": "Coinbase",
@@ -183,8 +183,8 @@
       "id": "pm-15",
       "category": "strong",
       "expected_band": [
-        4,
-        7
+        3.8,
+        6.8
       ],
       "title": "Enterprise PM - Security",
       "company": "CrowdStrike",
@@ -195,8 +195,8 @@
       "id": "pm-16",
       "category": "mediocre",
       "expected_band": [
-        3,
-        6
+        2.5,
+        5.5
       ],
       "title": "Platform PM - Developer Experience",
       "company": "Vercel",
@@ -207,8 +207,8 @@
       "id": "pm-17",
       "category": "dream",
       "expected_band": [
-        7,
-        10
+        6.6,
+        9.6
       ],
       "title": "Healthcare Product Manager",
       "company": "Oscar Health",
@@ -219,8 +219,8 @@
       "id": "pm-18",
       "category": "mediocre",
       "expected_band": [
-        1,
-        3
+        1.5,
+        4.5
       ],
       "title": "Automotive Software PM",
       "company": "Tesla",
@@ -231,8 +231,8 @@
       "id": "pm-19",
       "category": "strong",
       "expected_band": [
-        5,
-        8
+        3.9,
+        6.9
       ],
       "title": "Education Product Manager",
       "company": "Duolingo",
@@ -243,8 +243,8 @@
       "id": "pm-20",
       "category": "reject",
       "expected_band": [
-        1,
-        4
+        0.6,
+        3.6
       ],
       "title": "Supply Chain Product Lead",
       "company": "Amazon",

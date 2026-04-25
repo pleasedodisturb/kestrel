@@ -61,7 +61,7 @@ def render_cover_letter(md_path: Path, pdf_path: Path):
             continue
 
         # Name (first line)
-        if i == 0 and line.startswith(line.split()[0]) and len(line.split()) <= 3:
+        if i == 0 and line.split() and len(line.split()) <= 3:
             pdf.set_font(*name_font)
             pdf.set_text_color(0, 102, 255)
             pdf.cell(0, 8, line, new_x="LMARGIN", new_y="NEXT")

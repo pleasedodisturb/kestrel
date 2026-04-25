@@ -163,6 +163,24 @@ async def onboarding_error_handler(request: Request, exc: OnboardingError) -> JS
     )
 
 
+# PII safety boundary error handler — returns 422 with clear user message
+from career_os.ai.privacy import PrivacyError  # noqa: E402
+
+
+@app.exception_handler(PrivacyError)
+async def privacy_error_handler(request: Request, exc: PrivacyError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": str(exc),
+            "resolution": (
+                "Switch to a privacy-safe provider: Ollama (local), Anthropic, "
+                "or OpenRouter with ZDR enabled. Set the AI_PROVIDER environment variable."
+            ),
+        },
+    )
+
+
 # API key auth middleware (disabled by default for local use)
 from career_os.middleware import APIKeyAuthMiddleware  # noqa: E402
 

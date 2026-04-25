@@ -105,7 +105,9 @@ class TestBatchScore:
         assert len(req["params"]["messages"]) == 1
         assert req["params"]["messages"][0]["role"] == "user"
         assert "Software Engineer at Acme Corp" in req["params"]["messages"][0]["content"]
-        assert "Jane Doe" in req["params"]["messages"][0]["content"]
+        # Profile data is in the system prompt (cache_control block), not the user message
+        system_text = req["params"]["system"][0]["text"]
+        assert "Jane Doe" in system_text
 
     @pytest.mark.asyncio
     async def test_sends_to_batch_api_endpoint(self) -> None:
@@ -536,7 +538,7 @@ class TestDiscoveryBatchRouting:
         # Should have a batch_scoring warning entry
         batch_warnings = [w for w in warnings if w.get("source") == "batch_scoring"]
         assert len(batch_warnings) == 1
-        assert batch_warnings[0]["batch_id"] == "batch_auto"
+        assert "batch_auto" in batch_warnings[0]["error"]
 
     @pytest.mark.asyncio
     async def test_auto_score_sequential_below_threshold(self) -> None:
