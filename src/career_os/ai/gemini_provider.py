@@ -12,7 +12,7 @@ import logging
 
 import httpx
 
-from career_os.ai.base import AIProvider, ProviderQuotaError
+from career_os.ai.base import AIProvider, ProviderQuotaError, ProviderUnavailableError
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
     _system_prompt_for_feature,
@@ -99,7 +99,15 @@ class GeminiProvider(AIProvider):
                 if response.status_code == 429:
                     detail = _extract_error_detail(response)
                     raise ProviderQuotaError("gemini", response.status_code, detail)
-                response.raise_for_status()
+                # Gemini auth uses ?key=<API_KEY> as a URL query param. Letting
+                # response.raise_for_status() propagate would embed that URL
+                # (with the key) in httpx.HTTPStatusError.__str__, which then
+                # leaks into job["fit_reasoning"], the digest, artifacts, and
+                # email. Translate non-2xx into a sanitized ProviderUnavailable
+                # error before any URL/key reaches an exception string.
+                if response.status_code >= 400:
+                    detail = _extract_error_detail(response) or "see logs"
+                    raise ProviderUnavailableError("gemini", response.status_code, detail)
                 data = response.json()
 
             content = data["candidates"][0]["content"]["parts"][0]["text"]
