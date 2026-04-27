@@ -165,6 +165,7 @@ async def _step_score_async(
     from job_scorer import PROFILE_CRITERIA, SCORING_SYSTEM_PROMPT_WITH_REVIEW, pre_filter_job
 
     from career_os.schemas.ai import AIFeature
+    from career_os.services.batch_scoring import _sanitize_description
 
     profile_context = ""
     if config.profile_path.exists():
@@ -209,6 +210,13 @@ async def _step_score_async(
                 f"Title: {title}\nCompany: {company}\nLocation: {location}\n"
                 f"Tags: {', '.join(job.get('tags', []))}"
             )
+
+        # Sanitize attacker-controlled job description before interpolating
+        # into the prompt. Job postings come from public ATS boards — content
+        # there is not trusted. Strips known prompt-injection patterns and
+        # truncates to MAX_DESCRIPTION_LENGTH. Reuses the same defense as
+        # batch scoring (career_os.services.batch_scoring._sanitize_description).
+        description = _sanitize_description(description)
 
         # Inline system + user content into one prompt because we use
         # AIFeature.complete (no auto system message). Preserves the

@@ -306,3 +306,96 @@ class TestFactoryFallbackChain:
 
         with patch.dict("os.environ", {"AI_PROVIDER_FALLBACK": "mock"}):
             assert _build_fallback_chain() is None
+
+
+# ==================== G-564 review-fix regression tests ====================
+#
+# These cover the two security/correctness fixes added during code review of
+# the G-564 PR. Without them the silent-degradation pattern would re-emerge
+# in disguise.
+
+
+class TestCreditsExhaustedErrorFallback:
+    """OpenRouter's CreditsExhaustedError must trigger fallback.
+
+    The class exists separately for a friendlier 'add credits at openrouter.ai'
+    message, but it MUST inherit from ProviderQuotaError so FallbackProvider
+    catches it. Without the inheritance, an OpenRouter 402/429 response bubbles
+    out of the chain unfiltered and fit_score=2 stubs accumulate silently —
+    the exact bug G-564 was meant to fix.
+    """
+
+    def test_credits_exhausted_inherits_provider_quota_error(self) -> None:
+        from career_os.ai.base import ProviderQuotaError
+        from career_os.ai.openrouter_provider import CreditsExhaustedError
+
+        assert issubclass(CreditsExhaustedError, ProviderQuotaError)
+
+    @pytest.mark.asyncio
+    async def test_credits_exhausted_triggers_fallback(self) -> None:
+        from career_os.ai.openrouter_provider import CreditsExhaustedError
+
+        p1 = _make_provider("openrouter")
+        p1.complete.side_effect = CreditsExhaustedError(429, "free tier limit")
+        p2 = _make_provider("together")
+
+        fb = FallbackProvider([p1, p2])
+        result = await fb.complete("test", feature=AIFeature.complete)
+
+        assert result.provider == "together"
+        p1.complete.assert_called_once()
+        p2.complete.assert_called_once()
+
+
+class TestGeminiKeyLeakPrevention:
+    """Gemini auth uses ?key=<API_KEY> as a query param. Letting
+    response.raise_for_status() propagate would embed that URL — including
+    the key — in the resulting httpx.HTTPStatusError, which the daily
+    pipeline persists into the public scored_*.json artifact and digest.
+
+    The fix translates non-2xx (other than 429, already handled separately)
+    into ProviderUnavailableError with a sanitized detail string, so no URL
+    or key reaches an exception's __str__.
+    """
+
+    @pytest.mark.asyncio
+    async def test_gemini_4xx_translates_to_provider_unavailable_no_url_in_msg(
+        self,
+    ) -> None:
+        """Gemini 400/401/403/404 must raise ProviderUnavailableError, never
+        an httpx.HTTPStatusError that could carry the request URL."""
+        import httpx as _httpx
+
+        from career_os.ai.gemini_provider import GeminiProvider
+
+        # Key marker — if sanitization works, this string never appears in str(exc).
+        provider = GeminiProvider(api_key="FAKE-LEAKY-KEY", model="gemini-2.5-flash")
+
+        # Build a request URL that contains the key (matches what Gemini's
+        # ?key= auth would produce in production).
+        leaky_url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            "gemini-2.5-flash:generateContent?key=FAKE-LEAKY-KEY"
+        )
+        request = _httpx.Request("POST", leaky_url)
+        mock_response = _httpx.Response(
+            403,
+            request=request,
+            json={"error": {"message": "PERMISSION_DENIED"}},
+        )
+
+        async def _mock_post(self, url, **kwargs):  # noqa: ARG001
+            return mock_response
+
+        with patch.object(_httpx.AsyncClient, "post", _mock_post):
+            with pytest.raises(ProviderUnavailableError) as exc_info:
+                await provider.complete("hello", feature=AIFeature.complete)
+
+        msg = str(exc_info.value)
+        assert "FAKE-LEAKY-KEY" not in msg, (
+            "Gemini key leaked into exception string — would propagate to "
+            "scored_*.json artifact and digest. See G-564 review."
+        )
+        assert "PERMISSION_DENIED" in msg or "see logs" in msg
+        assert exc_info.value.provider == "gemini"
+        assert exc_info.value.status_code == 403
