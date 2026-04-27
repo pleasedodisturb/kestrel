@@ -321,8 +321,19 @@ class TestGeminiErrorHandling:
             assert exc_info.value.provider == "gemini"
 
     @pytest.mark.asyncio
-    async def test_500_raises_http_error(self) -> None:
-        """HTTP 500 raises httpx.HTTPStatusError (not ProviderQuotaError)."""
+    async def test_500_raises_provider_unavailable_error(self) -> None:
+        """HTTP 500 (and any other non-2xx, non-429) raises
+        ProviderUnavailableError, NOT httpx.HTTPStatusError.
+
+        Intentional (G-564): Gemini auth uses ?key=<API_KEY> as a URL query
+        param, so httpx.HTTPStatusError.__str__ would embed the URL — and
+        the key — into the exception. Persisting that into the digest,
+        scored_*.json artifact, or notification email would leak the key.
+        Translation to ProviderUnavailableError happens inside the provider
+        before the URL ever reaches an exception's string representation.
+        """
+        from career_os.ai.base import ProviderUnavailableError
+
         provider = GeminiProvider(api_key=_TEST_CREDENTIAL)
 
         async def mock_post(url, params=None, headers=None, json=None, **kwargs):
@@ -333,8 +344,13 @@ class TestGeminiErrorHandling:
             )
 
         with patch("httpx.AsyncClient.post", side_effect=mock_post):
-            with pytest.raises(httpx.HTTPStatusError):
+            with pytest.raises(ProviderUnavailableError) as exc_info:
                 await provider.complete("test")
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.provider == "gemini"
+        # Key marker MUST NOT appear in the exception string.
+        assert _TEST_CREDENTIAL not in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_429_includes_error_detail(self) -> None:

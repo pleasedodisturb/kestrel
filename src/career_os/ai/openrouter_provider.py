@@ -10,7 +10,7 @@ import re
 
 import httpx
 
-from career_os.ai.base import AIProvider, ComplexityTier
+from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
 from career_os.schemas.ai import (
     AIFeature,
     AIResponse,
@@ -32,18 +32,25 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "anthropic/claude-sonnet-4"
 
 
-class CreditsExhaustedError(Exception):
-    """Raised when OpenRouter returns 402 or 429 indicating credits/quota exhaustion."""
+class CreditsExhaustedError(ProviderQuotaError):
+    """Raised when OpenRouter returns 402 or 429 indicating credits/quota exhaustion.
+
+    Inherits from ProviderQuotaError so FallbackProvider correctly classifies it
+    as a quota error and falls back to the next provider in the chain. Without
+    this inheritance, OpenRouter quota exhaustion would bubble out of the chain
+    as a generic Exception (the silent-degradation pattern G-564 set out to fix).
+    """
 
     def __init__(self, status_code: int, detail: str = "") -> None:
-        self.status_code = status_code
-        message = (
+        msg = (
             f"OpenRouter credits exhausted (HTTP {status_code}). "
             "Add credits at https://openrouter.ai"
         )
         if detail:
-            message += f": {detail}"
-        super().__init__(message)
+            msg += f": {detail}"
+        # Bypass ProviderQuotaError's message format; we already built our own.
+        super().__init__("openrouter", status_code, "")
+        self.args = (msg,)
 
 
 def _extract_error_detail(response: httpx.Response) -> str:

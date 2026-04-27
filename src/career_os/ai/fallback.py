@@ -14,7 +14,12 @@ import logging
 
 import httpx
 
-from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
+from career_os.ai.base import (
+    AIProvider,
+    ComplexityTier,
+    ProviderQuotaError,
+    ProviderUnavailableError,
+)
 from career_os.schemas.ai import AIFeature, AIResponse
 
 logger = logging.getLogger(__name__)
@@ -23,8 +28,13 @@ logger = logging.getLogger(__name__)
 class FallbackProvider(AIProvider):
     """AI provider that tries a chain of providers in order.
 
-    Falls back to the next provider when the current one raises
-    ProviderQuotaError (402/429) or httpx.TimeoutException.
+    Falls back to the next provider when the current one raises:
+      - ProviderQuotaError (402/429 — quota/credit exhaustion)
+      - ProviderUnavailableError (404 — model-routing failure)
+      - httpx.TimeoutException (transient network)
+      - httpx.HTTPStatusError (any other non-2xx — provider returned an HTTP
+        error that wasn't translated to a domain exception, e.g., 5xx)
+    Re-raises the last exception when all providers in the chain fail.
     """
 
     def __init__(self, chain: list[AIProvider]) -> None:
@@ -72,15 +82,21 @@ class FallbackProvider(AIProvider):
     async def _try_chain(self, method: str, call):
         """Execute call against each provider in the chain.
 
-        Catches ProviderQuotaError and TimeoutException, logs the fallback,
-        and tries the next provider. Re-raises if all providers fail.
+        Catches ProviderQuotaError, ProviderUnavailableError, TimeoutException,
+        and any HTTPStatusError, logs the fallback, and tries the next provider.
+        Re-raises the last error if all providers fail.
         """
         last_error: Exception | None = None
 
         for i, provider in enumerate(self._chain):
             try:
                 return await call(provider)
-            except (ProviderQuotaError, httpx.TimeoutException) as exc:
+            except (
+                ProviderQuotaError,
+                ProviderUnavailableError,
+                httpx.TimeoutException,
+                httpx.HTTPStatusError,
+            ) as exc:
                 last_error = exc
                 remaining = len(self._chain) - i - 1
                 if remaining > 0:

@@ -34,6 +34,22 @@ class ProviderQuotaError(Exception):
         super().__init__(message)
 
 
+class ProviderUnavailableError(Exception):
+    """Raised when an AI provider returns 404 / model-routing failure / similar
+    "service unavailable" indicators (e.g., OpenRouter 'no allowed providers
+    available for the selected model'). Distinct from quota exhaustion: the
+    provider has capacity but cannot serve the requested model.
+    """
+
+    def __init__(self, provider: str, status_code: int, detail: str = "") -> None:
+        self.provider = provider
+        self.status_code = status_code
+        message = f"{provider} unavailable (HTTP {status_code})."
+        if detail:
+            message += f" {detail}"
+        super().__init__(message)
+
+
 class AIProvider(ABC):
     """Abstract AI provider interface.
 

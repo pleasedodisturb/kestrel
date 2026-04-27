@@ -3,8 +3,24 @@
 # Automated job discovery + AI scoring + notifications.
 # Runs Mon-Fri at 07:00 UTC. Trigger manually from GitHub Actions tab.
 #
-# Required secrets (Settings > Secrets > Actions):
-#   OPENAI_API_KEY          - For AI job scoring (OpenAI or OpenRouter key)
+# AI scoring uses the provider stack at src/career_os/ai/. Configure via:
+#   AI_PROVIDER_FALLBACK    - Comma-separated chain (recommended). Example:
+#                             "mistral,openai,together,anthropic". Each entry
+#                             needs its <PROVIDER>_API_KEY secret set below.
+#                             FallbackProvider tries each in order on
+#                             quota / 4xx / 5xx / timeout failures.
+#   AI_PROVIDER             - Single-provider name (used when no chain set).
+#   SCORING_MAX_FAILURE_RATE - Float in [0,1]. Workflow fails if more than
+#                              this fraction of jobs fail to score.
+#                              Default: 0.50.
+#
+# Required secrets per provider in your chain (only set the ones you use):
+#   MISTRAL_API_KEY         - Mistral AI direct
+#   OPENAI_API_KEY          - OpenAI or OpenRouter key (sk-or-* auto-detected)
+#   ANTHROPIC_API_KEY       - Anthropic direct
+#   TOGETHER_API_KEY        - Together.ai direct
+#   GEMINI_API_KEY          - Google AI Studio
+#   GROQ_API_KEY, XAI_API_KEY, HF_API_KEY - others as needed
 #
 # Optional secrets (for notifications and integrations):
 #   PUSHOVER_APP_TOKEN      - Push notifications (https://pushover.net)
@@ -17,6 +33,8 @@
 #
 # Optional variables (Settings > Variables > Actions):
 #   PIPELINE_LOCATION       - Default search location (default: "Remote")
+#   AI_PROVIDER_FALLBACK    - Comma-separated chain (set as repo variable
+#                             so it isn't hidden as a secret).
 
 name: Daily Job Scan
 
@@ -81,7 +99,21 @@ jobs:
 
       - name: Run daily pipeline
         env:
+          # AI provider configuration. Set AI_PROVIDER_FALLBACK as a repo
+          # variable to enable cross-vendor fallback. Per-provider keys
+          # below are read by career_os.ai.factory; missing ones are
+          # silently skipped from the chain.
+          AI_PROVIDER_FALLBACK: ${{ vars.AI_PROVIDER_FALLBACK }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+          SCORING_MAX_FAILURE_RATE: ${{ vars.SCORING_MAX_FAILURE_RATE || '0.50' }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          HF_API_KEY: ${{ secrets.HF_API_KEY }}
           PIPELINE_MODE: ${{ inputs.mode || 'api-only' }}
           PIPELINE_MIN_SCORE: ${{ inputs.min_score || '5' }}
           PIPELINE_HOURS_OLD: ${{ inputs.hours_old || '24' }}
