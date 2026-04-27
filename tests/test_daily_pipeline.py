@@ -4,6 +4,7 @@ import os
 import sys
 from unittest.mock import patch
 
+import pytest
 from daily_pipeline import (
     PipelineConfig,
     _fallback_score,
@@ -304,3 +305,188 @@ class TestStepGenerateDigest:
 
         assert summary_file.exists()
         assert "Daily Job Scan" in summary_file.read_text()
+
+
+# ==================== G-564: Failure-rate alarm + regression guard ====================
+#
+# These tests cover the loud-fail behavior introduced when the AI scoring
+# regression (PR #96 era — Llama 3.3 free routing 404s for a week) was
+# silently degrading scoring. The new contract:
+#   - if more than SCORING_MAX_FAILURE_RATE of AI-attempted jobs fail to
+#     score, raise RuntimeError so the workflow fails LOUD
+#   - tools/daily_pipeline.py never imports the openai SDK directly
+#     (regression guard against re-introducing the hand-rolled client)
+
+
+class TestScoringFailureRateAlarm:
+    """The failure-rate alarm raises when chain is broken (G-564)."""
+
+    @staticmethod
+    def _build_failing_provider(fail_count: int, success_count: int):
+        """Build an AsyncMock provider that fails N times then succeeds M times.
+
+        Returned provider's .complete() is awaitable. The first N calls raise
+        a generic Exception; subsequent calls return a parseable AIResponse.
+        """
+        from unittest.mock import AsyncMock
+
+        from career_os.schemas.ai import AIFeature, AIResponse
+
+        ok_response = AIResponse(
+            content='{"score": 7, "reasoning": "ok", "estimated_salary": "120k", '
+            '"effort_flag": "low", "prep_level": 1, "prep_notes": "", '
+            '"review_flag": false, "review_reason": ""}',
+            provider="mock",
+            feature=AIFeature.complete,
+            structured=None,
+            model="mock-model",
+        )
+
+        side_effects: list = []
+        for _ in range(fail_count):
+            side_effects.append(RuntimeError("provider boom"))
+        for _ in range(success_count):
+            side_effects.append(ok_response)
+
+        provider = AsyncMock()
+        provider.name = "mock-chain"
+        provider.complete.side_effect = side_effects
+        return provider
+
+    def test_failure_rate_above_threshold_raises(self, tmp_path):
+        """When >50% of AI calls fail, step_score raises RuntimeError."""
+        import asyncio
+
+        import daily_pipeline
+
+        config = daily_pipeline.PipelineConfig()
+        config.tracking_dir = tmp_path
+        config.scored_path = tmp_path / "scored.json"
+        config.profile_path = tmp_path / "profile.md"
+        config.profile_path.write_text("test profile")
+
+        # 4 jobs, 3 fail = 75% failure rate (above default 50%)
+        provider = self._build_failing_provider(fail_count=3, success_count=1)
+        jobs = [
+            {"title": "Engineer", "company": f"C{i}", "description": "desc", "remote": False}
+            for i in range(4)
+        ]
+
+        with patch.dict(os.environ, {"SCORING_MAX_FAILURE_RATE": "0.50"}):
+            with pytest.raises(RuntimeError, match="failure rate"):
+                asyncio.run(daily_pipeline._step_score_async(config, jobs, provider))
+
+    def test_failure_rate_below_threshold_returns_normally(self, tmp_path):
+        """When failure rate is under threshold, scoring completes."""
+        import asyncio
+
+        import daily_pipeline
+
+        config = daily_pipeline.PipelineConfig()
+        config.tracking_dir = tmp_path
+        config.scored_path = tmp_path / "scored.json"
+        config.profile_path = tmp_path / "profile.md"
+        config.profile_path.write_text("test profile")
+
+        # 4 jobs, 1 fails = 25% failure rate (below 50%)
+        provider = self._build_failing_provider(fail_count=1, success_count=3)
+        jobs = [
+            {"title": "Engineer", "company": f"C{i}", "description": "desc", "remote": False}
+            for i in range(4)
+        ]
+
+        with patch.dict(os.environ, {"SCORING_MAX_FAILURE_RATE": "0.50"}):
+            result = asyncio.run(daily_pipeline._step_score_async(config, jobs, provider))
+
+        assert len(result) == 4
+        assert config.scored_path.exists()
+
+    def test_threshold_configurable(self, tmp_path):
+        """Strict threshold (10%) catches lower failure rates."""
+        import asyncio
+
+        import daily_pipeline
+
+        config = daily_pipeline.PipelineConfig()
+        config.tracking_dir = tmp_path
+        config.scored_path = tmp_path / "scored.json"
+        config.profile_path = tmp_path / "profile.md"
+        config.profile_path.write_text("test profile")
+
+        # 10 jobs, 2 fail = 20% failure rate
+        provider = self._build_failing_provider(fail_count=2, success_count=8)
+        jobs = [
+            {"title": "Eng", "company": f"C{i}", "description": "x", "remote": False}
+            for i in range(10)
+        ]
+
+        with patch.dict(os.environ, {"SCORING_MAX_FAILURE_RATE": "0.10"}):
+            with pytest.raises(RuntimeError, match="20%"):
+                asyncio.run(daily_pipeline._step_score_async(config, jobs, provider))
+
+    def test_zero_ai_attempts_does_not_raise(self, tmp_path):
+        """When all jobs are pre-filtered (zero AI attempts), no division-by-
+        zero, no spurious raise — defensive against an edge case."""
+        import asyncio
+
+        import daily_pipeline
+
+        config = daily_pipeline.PipelineConfig()
+        config.tracking_dir = tmp_path
+        config.scored_path = tmp_path / "scored.json"
+        config.profile_path = tmp_path / "profile.md"
+        config.profile_path.write_text("test profile")
+
+        # Provider should never be called — all jobs hit pre-filter (nurse/driver
+        # titles are in REJECT_TITLE_PATTERNS in tools/job_scorer.py)
+        provider = self._build_failing_provider(fail_count=0, success_count=0)
+        jobs = [
+            {
+                "title": "Registered Nurse",
+                "company": "Hospital",
+                "description": "",
+                "remote": False,
+            },
+            {"title": "Truck Driver", "company": "Logistics", "description": "", "remote": False},
+        ]
+
+        result = asyncio.run(daily_pipeline._step_score_async(config, jobs, provider))
+        assert len(result) == 2
+        # Provider was never called because all jobs were pre-filtered
+        provider.complete.assert_not_called()
+
+
+class TestNoHandrolledOpenAIClient:
+    """Regression guard: tools/daily_pipeline.py must NEVER re-introduce the
+    hand-rolled OpenAI client. All AI access goes through the provider stack
+    at src/career_os/ai/. Re-introducing the bare openai SDK creates the
+    silent-degradation risk that broke daily-scan in G-564."""
+
+    def test_no_openai_import_in_daily_pipeline_source(self):
+        """Source file must not contain `from openai import` or `OpenAI(api_key=`."""
+        import inspect
+
+        import daily_pipeline
+
+        source = inspect.getsource(daily_pipeline)
+        assert "from openai import" not in source, (
+            "Hand-rolled OpenAI import re-introduced. All AI calls must go "
+            "through career_os.ai.factory.get_ai_provider(). See G-564."
+        )
+        assert "OpenAI(api_key=" not in source, (
+            "Hand-rolled OpenAI client re-introduced. Use the provider stack."
+        )
+        # The class name AsyncOpenAI (Eyas-side) is also banned:
+        assert "AsyncOpenAI(api_key=" not in source
+
+    def test_step_score_uses_provider_factory(self):
+        """step_score must delegate to career_os.ai.factory.get_ai_provider."""
+        import inspect
+
+        import daily_pipeline
+
+        source = inspect.getsource(daily_pipeline.step_score)
+        assert "get_ai_provider" in source, (
+            "step_score should obtain its provider via "
+            "career_os.ai.factory.get_ai_provider — not construct one inline."
+        )

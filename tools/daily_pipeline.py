@@ -11,22 +11,36 @@ Designed to run headlessly via:
   - Manual: .venv/bin/python tools/daily_pipeline.py
 
 Environment variables:
-  OPENAI_API_KEY       — Required for AI scoring (GPT-4o-mini)
-  PIPELINE_MODE        — api-only | api-plus | all (default: api-only)
-  PIPELINE_MIN_SCORE   — Minimum score to include in digest (default: 5)
-  PIPELINE_HOURS_OLD   — Max posting age in hours (default: 24)
-  PIPELINE_LOCATION    — Search location (default: Berlin)
-  PIPELINE_DRY_RUN     — Set to "1" to skip CSV writes (default: 0)
-  GITHUB_STEP_SUMMARY  — GitHub Actions summary file (auto-set in Actions)
+  AI_PROVIDER             — Single provider name (e.g. ``mistral``); used when
+                            no fallback chain is configured.
+  AI_PROVIDER_FALLBACK    — Comma-separated ordered chain (e.g.
+                            ``mistral,openai,together,anthropic``). When set,
+                            scoring routes through ``FallbackProvider`` and
+                            falls back across vendors on quota/timeout/HTTP
+                            errors.
+  <PROVIDER>_API_KEY      — Per-provider API key (MISTRAL_API_KEY,
+                            OPENAI_API_KEY, TOGETHER_API_KEY, etc.). See
+                            :mod:`career_os.ai.factory` for the full list.
+  SCORING_MAX_FAILURE_RATE — Float in [0, 1]. If the post-run scoring
+                            failure rate exceeds this, the pipeline raises
+                            (default: 0.50). The exit-2 path turns into a
+                            loud failure so silent degradation alerts.
+  PIPELINE_MODE           — api-only | api-plus | all (default: api-only)
+  PIPELINE_MIN_SCORE      — Minimum score to include in digest (default: 5)
+  PIPELINE_HOURS_OLD      — Max posting age in hours (default: 24)
+  PIPELINE_LOCATION       — Search location (default: Berlin)
+  PIPELINE_DRY_RUN        — Set to "1" to skip CSV writes (default: 0)
+  GITHUB_STEP_SUMMARY     — GitHub Actions summary file (auto-set in Actions)
 
 Exit codes:
   0 — Success
-  1 — Fatal error (missing deps, no API key)
+  1 — Fatal error (missing deps, scoring failure-rate threshold exceeded)
   2 — Partial failure (some sources failed, digest still generated)
 """
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import json
 import logging
@@ -38,8 +52,15 @@ from pathlib import Path
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 logger = logging.getLogger("daily_pipeline")
+
+# Default failure-rate threshold for the scoring loud-fail alarm. Configurable
+# via SCORING_MAX_FAILURE_RATE env. Above this rate the pipeline raises so
+# a misconfigured chain or mass provider outage produces an immediate alert
+# rather than days of silent score=2 fallbacks.
+DEFAULT_SCORING_MAX_FAILURE_RATE = 0.50
 
 
 # --- Config ---
@@ -97,37 +118,70 @@ def step_scrape(config: PipelineConfig) -> list[dict]:
 
 
 def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
-    """Score each job against the profile using OpenAI."""
+    """Score each job against the profile via the AI provider stack.
+
+    Routes through ``career_os.ai.factory.get_ai_provider``, which builds a
+    ``FallbackProvider`` chain when ``AI_PROVIDER_FALLBACK`` is set. The chain
+    transparently fails over on quota/timeout/HTTP errors. Sync wrapper around
+    an internal async helper so the rest of the pipeline stays synchronous.
+
+    Falls back to keyword-based scoring **only** when no AI provider can be
+    constructed (e.g. running locally with no keys configured). When a provider
+    chain is configured but every call fails, the pipeline raises so the
+    workflow fails loudly instead of silently producing score=2 stubs — see
+    ``SCORING_MAX_FAILURE_RATE``.
+    """
     logger.info("=" * 60)
     logger.info("STEP 2: SCORE")
     logger.info("=" * 60)
 
-    if not config.openai_key:
-        logger.warning("No OPENAI_API_KEY — using keyword-based fallback scoring")
+    try:
+        from career_os.ai.factory import get_ai_provider
+    except ImportError as exc:
+        logger.warning("career_os.ai unavailable (%s) — using keyword-based fallback scoring", exc)
         return _fallback_score(jobs)
 
     try:
-        from openai import OpenAI
-    except ImportError:
-        logger.warning("openai package not installed — using fallback scoring")
+        provider = get_ai_provider()
+    except Exception as exc:  # missing keys, unsupported provider, etc.
+        logger.warning("AI provider unavailable (%s) — using keyword-based fallback scoring", exc)
         return _fallback_score(jobs)
 
-    # Support OpenRouter keys (sk-or-*) by auto-detecting base_url
-    base_url = os.getenv("OPENAI_BASE_URL")
-    if not base_url and config.openai_key.startswith("sk-or-"):
-        base_url = "https://openrouter.ai/api/v1"
-    client = OpenAI(api_key=config.openai_key, base_url=base_url)
+    return asyncio.run(_step_score_async(config, jobs, provider))
 
-    # Load profile for context
+
+async def _step_score_async(
+    config: PipelineConfig,
+    jobs: list[dict],
+    provider,  # AIProvider
+) -> list[dict]:
+    """Async scoring loop driving the provider stack one job at a time.
+
+    Sequential by design — keeps memory + cost predictable for the daily
+    cron, and the FallbackProvider already handles per-call resilience.
+    Tracks failure count and raises when ``failures/scored_via_ai`` exceeds
+    ``SCORING_MAX_FAILURE_RATE`` so silent degradation can't recur.
+    """
+    from job_scorer import PROFILE_CRITERIA, SCORING_SYSTEM_PROMPT_WITH_REVIEW, pre_filter_job
+
+    from career_os.schemas.ai import AIFeature
+    from career_os.services.batch_scoring import _sanitize_description
+
     profile_context = ""
     if config.profile_path.exists():
         profile_context = config.profile_path.read_text()[:3000]
 
-    from job_scorer import PROFILE_CRITERIA, SCORING_SYSTEM_PROMPT_WITH_REVIEW, pre_filter_job
+    max_failure_rate = float(
+        os.getenv("SCORING_MAX_FAILURE_RATE", str(DEFAULT_SCORING_MAX_FAILURE_RATE))
+    )
 
-    scored = []
+    scored: list[dict] = []
     skipped = 0
+    failures = 0
+    ai_attempts = 0
     total = len(jobs)
+    logger.info("Provider chain: %s", provider.name)
+
     for i, job in enumerate(jobs):
         title = job.get("title", "Unknown")
         company = job.get("company", "Unknown")
@@ -135,9 +189,7 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
         remote = bool(job.get("remote", False))
         description = job.get("description", "")
 
-        # --- Pre-filter: skip obviously irrelevant jobs before AI scoring ---
         should_skip, filter_reason, score_cap = pre_filter_job(title, company, location, remote)
-
         if should_skip:
             job["fit_score"] = 0
             job["fit_reasoning"] = f"Pre-filtered: {filter_reason}"
@@ -150,38 +202,52 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
             scored.append(job)
             skipped += 1
             if (i + 1) % 10 == 0:
-                logger.info(f"Scored {i + 1}/{total} jobs (skipped {skipped})")
+                logger.info("Scored %d/%d jobs (skipped %d)", i + 1, total, skipped)
             continue
 
         if not description or description == "nan":
-            # Use title + company + tags as description proxy
-            description = f"Title: {title}\nCompany: {company}\nLocation: {location}\nTags: {', '.join(job.get('tags', []))}"
-
-        desc_truncated = description[:3000]
-
-        try:
-            response = client.chat.completions.create(
-                model="anthropic/claude-sonnet-4.6",
-                messages=[
-                    {"role": "system", "content": SCORING_SYSTEM_PROMPT_WITH_REVIEW},
-                    {
-                        "role": "user",
-                        "content": f"CANDIDATE PROFILE:\n{PROFILE_CRITERIA}\n\nADDITIONAL CONTEXT:\n{profile_context[:1000]}\n\nJOB POSTING:\nTitle: {title}\nCompany: {company}\nDescription: {desc_truncated}",
-                    },
-                ],
-                temperature=0.1,
+            description = (
+                f"Title: {title}\nCompany: {company}\nLocation: {location}\n"
+                f"Tags: {', '.join(job.get('tags', []))}"
             )
 
-            raw = response.choices[0].message.content.strip()
+        # Sanitize attacker-controlled job description before interpolating
+        # into the prompt. Job postings come from public ATS boards — content
+        # there is not trusted. Strips known prompt-injection patterns and
+        # truncates to MAX_DESCRIPTION_LENGTH. Reuses the same defense as
+        # batch scoring (career_os.services.batch_scoring._sanitize_description).
+        description = _sanitize_description(description)
+
+        # Inline system + user content into one prompt because we use
+        # AIFeature.complete (no auto system message). Preserves the
+        # CLI-specific scoring schema with review_flag / review_reason
+        # consumed downstream by update_sheet.py and the digest "Review
+        # Queue" section.
+        prompt = (
+            f"{SCORING_SYSTEM_PROMPT_WITH_REVIEW}\n\n"
+            f"CANDIDATE PROFILE:\n{PROFILE_CRITERIA}\n\n"
+            f"ADDITIONAL CONTEXT:\n{profile_context[:1000]}\n\n"
+            f"JOB POSTING:\nTitle: {title}\nCompany: {company}\n"
+            f"Description: {description[:3000]}"
+        )
+
+        ai_attempts += 1
+        try:
+            response = await provider.complete(prompt, feature=AIFeature.complete)
+            raw = (response.content or "").strip()
             try:
                 result = json.loads(raw)
             except json.JSONDecodeError:
-                # Handle single quotes from some models
-                result = json.loads(raw.replace("'", '"'))
+                # Strip common markdown fences before retry-parse
+                stripped = raw
+                for fence in ("```json", "```"):
+                    stripped = stripped.replace(fence, "")
+                try:
+                    result = json.loads(stripped.strip().replace("'", '"'))
+                except json.JSONDecodeError as parse_exc:
+                    raise ValueError(f"unparseable JSON: {raw[:200]!r}") from parse_exc
 
-            ai_score = int(result.get("score", 2))
-
-            # Apply score cap from pre-filter (e.g. US-only location)
+            ai_score = int(result.get("score", result.get("fit_score", 2)))
             if score_cap is not None and ai_score > score_cap:
                 result["reasoning"] = (
                     f"Capped from {ai_score} to {score_cap}: {result.get('reasoning', '')}"
@@ -197,49 +263,50 @@ def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
             job["review_flag"] = bool(result.get("review_flag", False))
             job["review_reason"] = result.get("review_reason", "")
 
-        except Exception as e:
-            status_code = getattr(e, "status_code", None)
-            error_str = str(e)
-
-            if status_code in (402, 429) or "insufficient_quota" in error_str.lower():
-                logger.error(
-                    f"AI credits exhausted after scoring {len(scored)}/{total} jobs — stopping. "
-                    "Add credits at https://openrouter.ai"
-                )
-                job["fit_score"] = 0
-                job["fit_reasoning"] = "Not scored: AI credits exhausted"
-                job["estimated_salary"] = "unknown"
-                job["effort_flag"] = "unknown"
-                job["prep_level"] = 0
-                job["prep_notes"] = ""
-                scored.append(job)
-                for remaining_job in jobs[i + 1 :]:
-                    remaining_job["fit_score"] = 0
-                    remaining_job["fit_reasoning"] = "Not scored: AI credits exhausted"
-                    remaining_job["estimated_salary"] = "unknown"
-                    remaining_job["effort_flag"] = "unknown"
-                    remaining_job["prep_level"] = 0
-                    remaining_job["prep_notes"] = ""
-                    scored.append(remaining_job)
-                break
-
-            logger.warning(f"Scoring failed for {title} @ {company}: {e}")
-            job["fit_score"] = 2  # Default to 2, not 5 -- unknown jobs shouldn't pass
-            job["fit_reasoning"] = f"Scoring error: {e}"
+        except Exception as exc:
+            failures += 1
+            logger.warning("Scoring failed for %s @ %s: %s", title, company, exc)
+            job["fit_score"] = 2
+            job["fit_reasoning"] = f"Scoring error: {exc}"
             job["estimated_salary"] = "unknown"
             job["effort_flag"] = "unknown"
             job["prep_level"] = 0
             job["prep_notes"] = ""
+            job["review_flag"] = False
+            job["review_reason"] = ""
 
         scored.append(job)
-
         if (i + 1) % 10 == 0:
-            logger.info(f"Scored {i + 1}/{total} jobs (skipped {skipped})")
+            logger.info(
+                "Scored %d/%d jobs (skipped %d, failures %d)",
+                i + 1,
+                total,
+                skipped,
+                failures,
+            )
 
-    logger.info(f"Scoring complete: {len(scored)} jobs scored")
+    logger.info(
+        "Scoring complete: %d jobs (%d AI attempts, %d failures, %d pre-filter-skipped)",
+        len(scored),
+        ai_attempts,
+        failures,
+        skipped,
+    )
 
-    # Save scored results
     config.scored_path.write_text(json.dumps(scored, indent=2, ensure_ascii=False))
+
+    # Loud-fail alarm: if too many AI calls failed, the chain is broken.
+    # Raise so the workflow fails and existing Pushover failure path triggers,
+    # rather than producing a digest full of score=2 stubs that look fine.
+    if ai_attempts > 0:
+        failure_rate = failures / ai_attempts
+        if failure_rate > max_failure_rate:
+            raise RuntimeError(
+                f"Scoring failure rate {failure_rate:.0%} ({failures}/{ai_attempts}) "
+                f"exceeds threshold {max_failure_rate:.0%}. "
+                f"Provider chain '{provider.name}' is unhealthy — check API keys, "
+                f"quotas, and provider status pages."
+            )
 
     return scored
 
@@ -571,8 +638,15 @@ def run_pipeline() -> int:
         return exit_code or 2
 
     # Step 2: Score
+    # The failure-rate alarm raises RuntimeError when too many AI calls fail
+    # (chain misconfigured / mass provider outage). We let that propagate as
+    # exit 1 so the workflow fails loudly and existing Pushover failure path
+    # triggers. Other scoring exceptions still get the soft exit-2 treatment.
     try:
         scored = step_score(config, all_scraped)
+    except RuntimeError:
+        # Loud-fail alarm — re-raise so main() exits non-zero.
+        raise
     except Exception as e:
         logger.error(f"Scoring failed: {e}")
         scored = all_scraped
