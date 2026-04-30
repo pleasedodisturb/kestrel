@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.13.0](https://github.com/pleasedodisturb/kestrel/compare/v0.12.0...v0.13.0) (2026-04-27)
+
+
+### Features
+
+* **G-540, G-541:** add Mistral + Hugging Face AI providers ([#331](https://github.com/pleasedodisturb/kestrel/issues/331)) ([55ac65f](https://github.com/pleasedodisturb/kestrel/commit/55ac65fb75b20afcf28b4c536c2d7dfac7af6d75))
+
+
+### Bug Fixes
+
+* route daily_pipeline through provider stack + loud failure alarm ([#332](https://github.com/pleasedodisturb/kestrel/issues/332)) ([2ec1e46](https://github.com/pleasedodisturb/kestrel/commit/2ec1e46be4bb7df7793f53867f8955d73fdca7ea))
+
+
+### Documentation
+
+* add nav index + restructure install by effort level ([#330](https://github.com/pleasedodisturb/kestrel/issues/330)) ([3e24999](https://github.com/pleasedodisturb/kestrel/commit/3e24999e534d141275c387e167a8d80cadc24dd4))
+* public roadmap — real screenshots, user story, deploy buttons ([#328](https://github.com/pleasedodisturb/kestrel/issues/328)) ([5c2368e](https://github.com/pleasedodisturb/kestrel/commit/5c2368e15272835c4e6d0cb7c36095a16f63389c))
+
 ## [0.12.0](https://github.com/pleasedodisturb/kestrel/compare/v0.11.0...v0.12.0) (2026-04-23)
 
 
