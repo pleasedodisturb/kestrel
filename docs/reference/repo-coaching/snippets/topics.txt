@@ -1,0 +1,53 @@
+# GitHub topics audit — pick up to 20 from the list below that actually
+# describe your repo, then set them in GitHub UI (gear icon next to "About").
+#
+# Browse https://github.com/topics to find which exact slugs are popular.
+
+# Stack / language (pick the ones you use)
+python
+typescript
+rust
+go
+react
+fastapi
+nextjs
+svelte
+
+# Architecture / approach
+self-hosted
+local-first
+cli
+api
+mcp
+mcp-server
+serverless
+microservices
+
+# Domain / category (pick what your project IS)
+ai
+llm
+ai-agent
+agent
+chatbot
+job-search
+productivity
+developer-tools
+devops
+observability
+analytics
+
+# Audience signals
+indie-hackers
+opensource
+
+# Distribution
+docker
+homebrew
+pip-package
+npm-package
+
+# Quality / posture
+typescript-strict
+type-safe
+zero-config
+batteries-included

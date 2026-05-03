@@ -8,6 +8,10 @@ Each item has the same shape:
 
 A `·` prefix means "nice-to-have." Everything else is "default-yes for a serious public repo." If you skip a default-yes item, write down why.
 
+> **Companions:**
+> - To **act** on items: see [`QUICK-APPLY.md`](./QUICK-APPLY.md) (time-budgeted phases) + [`snippets/`](./snippets/) (copy-paste templates).
+> - To **dig deeper** on any item: see [`research/`](./research/) — six topical deep-dives with WHY/HOW/PITFALL per item and citations.
+
 ---
 
 ## Layer 1 — Technical
