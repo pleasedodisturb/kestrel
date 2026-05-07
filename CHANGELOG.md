@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/pleasedodisturb/kestrel/compare/v0.14.0...v0.14.1) (2026-05-07)
+
+
+### Dependencies
+
+* bump the tailwind group across 1 directory with 2 updates ([#358](https://github.com/pleasedodisturb/kestrel/issues/358)) ([87a8114](https://github.com/pleasedodisturb/kestrel/commit/87a81142b28bfb49c1806d29f9f9645befeb883d))
+
 ## [0.14.0](https://github.com/pleasedodisturb/kestrel/compare/v0.13.0...v0.14.0) (2026-05-07)
 
 
