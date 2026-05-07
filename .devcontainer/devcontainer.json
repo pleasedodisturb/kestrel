@@ -1,6 +1,6 @@
 {
   "name": "Kestrel",
-  "image": "mcr.microsoft.com/devcontainers/python:3.14",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22"
@@ -10,11 +10,17 @@
     "AI_PROVIDER": "mock"
   },
   "postCreateCommand": "cp .env.example .env 2>/dev/null; pip install -e '.[dev]' && cd frontend && npm install --legacy-peer-deps && npm run build && cd .. && mkdir -p data && alembic upgrade head",
-  "postStartCommand": "uvicorn career_os.main:app --host 0.0.0.0 --port 8100",
-  "forwardPorts": [8100],
+  "postAttachCommand": {
+    "server": "echo 'Servers auto-start via .vscode/tasks.json. If not running, run task: Tasks: Run Task → Start Backend / Start Frontend (or check Terminal panel for KESTREL-SERVERS terminals).'"
+  },
+  "forwardPorts": [8100, 8101],
   "portsAttributes": {
     "8100": {
-      "label": "Kestrel Dashboard",
+      "label": "Kestrel API",
+      "onAutoForward": "openBrowser"
+    },
+    "8101": {
+      "label": "Kestrel Frontend",
       "onAutoForward": "openBrowser"
     }
   },
@@ -25,7 +31,9 @@
       },
       "extensions": [
         "ms-python.python",
-        "charliermarsh.ruff"
+        "charliermarsh.ruff",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
       ]
     }
   }
