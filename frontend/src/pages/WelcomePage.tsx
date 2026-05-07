@@ -106,16 +106,31 @@ export function WelcomePage() {
   }, [stepIndex]);
 
   // ---------------------------------------------------------------------------
-  // Resume logic (D-05): determine initial screen from backend status
+  // Resume logic (D-05): determine initial screen from backend status.
+  //
+  // This is a legitimate "sync state with an external system" effect — the
+  // backend's onboarding status is the source of truth for whether to show
+  // welcome / step / summary. We guard with `resumeInitializedRef` so the
+  // hydration runs exactly once after status first arrives, eliminating any
+  // cascading-render risk from setState inside an effect.
   // ---------------------------------------------------------------------------
 
+  const resumeInitializedRef = useRef(false);
+
   useEffect(() => {
+    if (resumeInitializedRef.current) return;
     if (!status) return;
     if (skipResumeRef.current) return;
 
     if (status.welcome_completed_at) {
+      resumeInitializedRef.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot hydration from backend external state
       setScreen("summary");
-    } else if (status.profile_started_at) {
+      return;
+    }
+
+    if (status.profile_started_at) {
+      resumeInitializedRef.current = true;
       // Resume at the first step whose profile field is empty (D-05).
       // If a user skipped a field, they'll see it again (one-click re-skip).
       if (profile) {
