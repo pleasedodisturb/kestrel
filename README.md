@@ -184,6 +184,8 @@ Kestrel is under active development. Here's what's next:
 
 Everything above will follow the same principle: **your data, your machine, your choice.** The hosted version will be the only exception — and even there, you'll own your data with full export and delete.
 
+For the full picture — every shipped milestone with deep dives, every planned milestone with open questions, and "Want to help?" callouts pointing to concrete contribution areas — see [ROADMAP.md](ROADMAP.md).
+
 ---
 
 ## Install
@@ -319,7 +321,7 @@ AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get exp
 | **Batch scoring** | Scoring a big backlog overnight? Batch APIs give a flat 50% discount for non-urgent work. | [50% off everything](https://docs.anthropic.com/en/api/creating-message-batches) |
 | **Provider fallback** | If one provider's quota runs out, Kestrel automatically tries the next one. No failed scores, no wasted retries. | Resilience (not cost) |
 
-**Benchmarked on a real profile + real job posting:** Naive approach = ~$16/month. With all optimizations = **~$1-5/month** for the same results. [How it works →](docs/guides/how-token-optimization-works.md)
+**Benchmarked on a real profile + real job posting:** Naive approach = ≈$16/month. With all optimizations = **≈$1-5/month** for the same results. [How it works →](docs/guides/how-token-optimization-works.md)
 
 <details>
 <summary>Benchmark: 50-job scoring batch, same user</summary>

@@ -1,0 +1,70 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Backend",
+      "type": "shell",
+      "command": "uvicorn career_os.main:app --host 0.0.0.0 --port 8100",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "group": "kestrel-servers"
+      },
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": "^.*$",
+              "file": 0,
+              "location": 1,
+              "message": 2
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".",
+            "endsPattern": "Application startup complete|Uvicorn running"
+          }
+        }
+      ],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "Start Frontend",
+      "type": "shell",
+      "command": "npm run dev -- --host 0.0.0.0 --port 8101",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "group": "kestrel-servers"
+      },
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": "^.*$",
+              "file": 0,
+              "location": 1,
+              "message": 2
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".",
+            "endsPattern": "ready in|Local:"
+          }
+        }
+      ],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}
