@@ -58,7 +58,7 @@ def block_real_ai_calls(monkeypatch):
     async def guarded_send(self, request, **kwargs):
         host = request.url.host
         for domain in _BLOCKED_AI_DOMAINS:
-            if domain in host:
+            if host == domain or host.endswith("." + domain):
                 raise RuntimeError(
                     f"TEST ISOLATION VIOLATION: attempted real HTTP call to {host}. "
                     f"Tests must use AI_PROVIDER=mock. "
