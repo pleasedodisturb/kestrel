@@ -47,7 +47,7 @@ export function TourTooltip() {
 
   useEffect(() => {
     if (!targetRect || !tooltipRef.current) {
-      setOpacity(0);
+      setOpacity(0); // eslint-disable-line react-hooks/set-state-in-effect -- guard reset, not cascading
       return;
     }
 
