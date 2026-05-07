@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.2](https://github.com/pleasedodisturb/kestrel/compare/v0.14.1...v0.14.2) (2026-05-07)
+
+
+### Bug Fixes
+
+* **frontend:** resolve react-hooks/set-state-in-effect lint error ([#361](https://github.com/pleasedodisturb/kestrel/issues/361)) ([6ca83b5](https://github.com/pleasedodisturb/kestrel/commit/6ca83b589e1aa5155685e421a7683145231b7b50))
+
 ## [0.14.1](https://github.com/pleasedodisturb/kestrel/compare/v0.14.0...v0.14.1) (2026-05-07)
 
 
