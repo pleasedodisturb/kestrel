@@ -77,7 +77,9 @@ async def test_isolation_guard_error_message_includes_domain():
     async with httpx.AsyncClient() as client:
         with pytest.raises(RuntimeError) as exc_info:
             await client.get("https://api.openai.com/v1/models")
-    assert "api.openai.com" in str(exc_info.value)
+    # The error message format pins the host with a trailing period
+    # (see conftest.py guarded_send): "...HTTP call to {host}. Tests must..."
+    assert "HTTP call to api.openai.com." in str(exc_info.value)
 
 
 def test_ai_provider_env_is_mock():
