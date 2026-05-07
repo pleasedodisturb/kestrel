@@ -1,9 +1,9 @@
-# v1.0 Public Roadmap — ARCHIVED
+# roadmap-m1 (Public Roadmap) — ARCHIVED
 
 > **Shipped:** 2026-05-07
 > **Status:** Complete (8/9 plans, Phase 1 deferred to v1.1)
-> **Audit:** `.planning/milestones/v1.0-MILESTONE-AUDIT.md`
-> This is a frozen snapshot of the v1.0 milestone roadmap. The active roadmap lives in `.planning/ROADMAP.md`.
+> **Audit:** `.planning/milestones/roadmap-m1-MILESTONE-AUDIT.md`
+> This is a frozen snapshot of the roadmap-m1 milestone roadmap. The active roadmap lives in `.planning/ROADMAP.md`.
 
 ## Overview
 

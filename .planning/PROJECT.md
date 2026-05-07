@@ -2,7 +2,7 @@
 
 ## Current State
 
-**v1.0 Public Roadmap shipped 2026-05-07.** The repo now has a public roadmap at root, 20 milestone deep dives in `docs/roadmap/`, contributor callouts pointing to concrete contribution areas, a Finding Work section in CONTRIBUTING.md, and a Codespaces one-click dev environment. Phase 1 (Feature Inventory) was deferred to v1.1 — its intent was naturally absorbed into deep dives + `docs/roadmap/inventory.md`.
+**roadmap-m1 (Public Roadmap) shipped 2026-05-07.** The repo now has a public roadmap at root, 20 milestone deep dives in `docs/roadmap/`, contributor callouts pointing to concrete contribution areas, a Finding Work section in CONTRIBUTING.md, and a Codespaces one-click dev environment. Phase 1 (Feature Inventory) was deferred to v1.1 — its intent was naturally absorbed into deep dives + `docs/roadmap/inventory.md`.
 
 ## Next Milestone Goals
 
@@ -47,7 +47,7 @@ Make Kestrel's direction visible and structured so users can evaluate the produc
 
 - [ ] Define epic structure within milestones that links to Linear tickets
 
-### Validated in v1.0 Public Roadmap (2026-05-07)
+### Validated in roadmap-m1 (Public Roadmap) (2026-05-07)
 
 - ✓ Write comprehensive ROADMAP.md at repo root documenting shipped progress and forward vision — Phase 2 (ROAD-01..08)
 - ✓ Document forward milestones through end-user lens — Phase 3 (ROAD-09..16)
@@ -163,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 after v1.0 Public Roadmap milestone completion*
+*Last updated: 2026-05-07 after roadmap-m1 (Public Roadmap) milestone completion*

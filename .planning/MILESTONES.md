@@ -2,7 +2,7 @@
 
 Historical record of shipped milestones. Each entry archives to `.planning/milestones/v[X.Y]-ROADMAP.md` and `.planning/milestones/v[X.Y]-REQUIREMENTS.md` for full details.
 
-## v1.0 Public Roadmap — Shipped 2026-05-07
+## roadmap-m1 (Public Roadmap) — Shipped 2026-05-07
 
 **Goal:** Transform Kestrel's organic development history into a visible, structured public roadmap. Make the project legible to non-technical users evaluating the product, contributors picking meaningful work, and the maintainer planning across sessions.
 
@@ -22,13 +22,13 @@ Historical record of shipped milestones. Each entry archives to `.planning/miles
 
 ### Known Deferred Items
 
-- **INV-01 through INV-08** (Phase 1 Feature Inventory) — deliberately skipped during execution. The intent was naturally absorbed into Phase 4's deep dives and `docs/roadmap/inventory.md`. Formally deferred to v1.1 if a unified inventory.md is still wanted; otherwise can be retired. See `.planning/v1.0-MILESTONE-AUDIT.md`.
+- **INV-01 through INV-08** (Phase 1 Feature Inventory) — deliberately skipped during execution. The intent was naturally absorbed into Phase 4's deep dives and `docs/roadmap/inventory.md`. Formally deferred to v1.1 if a unified inventory.md is still wanted; otherwise can be retired. See `.planning/roadmap-m1-MILESTONE-AUDIT.md`.
 
 ### Audit
 
-`.planning/v1.0-MILESTONE-AUDIT.md` — final status `gaps_found` due to INV-* deferrals (intentional). All 3 cross-phase wiring gaps were fixed inline before close (commit `8be5b12`).
+`.planning/roadmap-m1-MILESTONE-AUDIT.md` — final status `gaps_found` due to INV-* deferrals (intentional). All 3 cross-phase wiring gaps were fixed inline before close (commit `8be5b12`).
 
 ### Archives
 
-- `.planning/milestones/v1.0-ROADMAP.md` — full milestone roadmap with phase details
-- `.planning/milestones/v1.0-REQUIREMENTS.md` — final requirements status with outcomes
+- `.planning/milestones/roadmap-m1-ROADMAP.md` — full milestone roadmap with phase details
+- `.planning/milestones/roadmap-m1-REQUIREMENTS.md` — final requirements status with outcomes

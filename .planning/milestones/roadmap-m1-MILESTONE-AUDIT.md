@@ -1,5 +1,5 @@
 ---
-milestone: v1.0
+milestone: roadmap-m1
 milestone_name: Public Roadmap
 audited: 2026-05-07T17:30:00Z
 status: gaps_found
@@ -53,7 +53,7 @@ deferred_decision:
   rationale: "Editorial milestone; inventory work was naturally absorbed into deep-dive content (Phase 4) and the planning hierarchy section in inventory.md (Phase 5)"
 ---
 
-# v1.0 Public Roadmap — Milestone Audit
+# roadmap-m1 (Public Roadmap) — Milestone Audit
 
 ## Summary
 

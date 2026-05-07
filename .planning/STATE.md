@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
+milestone: roadmap-m1
 milestone_name: milestone
 status: milestone_complete
 stopped_at: Phase 5 complete. Milestone phases 2-5 done (Phase 1 skipped).
 last_updated: "2026-05-07T17:40:00.000Z"
-last_activity: 2026-05-07 — v1.0 Public Roadmap milestone archived
+last_activity: 2026-05-07 — roadmap-m1 (Public Roadmap) milestone archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -89,7 +89,7 @@ None.
 
 ## Deferred Items
 
-Items acknowledged and deferred at v1.0 milestone close on 2026-05-07:
+Items acknowledged and deferred at roadmap-m1 milestone close on 2026-05-07:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|

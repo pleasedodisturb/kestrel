@@ -2,12 +2,12 @@
 
 ## Milestones
 
-- ✅ **v1.0 Public Roadmap** — Phases 2-5 (shipped 2026-05-07) — see [archive](milestones/v1.0-ROADMAP.md)
+- ✅ **roadmap-m1 (Public Roadmap)** — Phases 2-5 (shipped 2026-05-07) — see [archive](milestones/roadmap-m1-ROADMAP.md)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Public Roadmap (Phases 1-5) — SHIPPED 2026-05-07</summary>
+<summary>✅ roadmap-m1 (Public Roadmap) (Phases 1-5) — SHIPPED 2026-05-07</summary>
 
 - [ ] Phase 1: Feature Inventory (0/1 plans) — _deferred to v1.1_
 - [x] Phase 2: Roadmap Foundation (2/2 plans) — completed 2026-04-25
@@ -15,8 +15,8 @@
 - [x] Phase 4: Milestone Deep Dives (2/2 plans) — completed 2026-04-27
 - [x] Phase 5: Contributor Experience (2/2 plans) — completed 2026-05-07
 
-Full archive: `.planning/milestones/v1.0-ROADMAP.md`
-Audit: `.planning/milestones/v1.0-MILESTONE-AUDIT.md`
+Full archive: `.planning/milestones/roadmap-m1-ROADMAP.md`
+Audit: `.planning/milestones/roadmap-m1-MILESTONE-AUDIT.md`
 
 </details>
 
