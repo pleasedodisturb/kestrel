@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.14.0](https://github.com/pleasedodisturb/kestrel/compare/v0.13.0...v0.14.0) (2026-05-07)
+
+
+### Features
+
+* initial public roadmap with deep dives and one-click dev environment ([#350](https://github.com/pleasedodisturb/kestrel/issues/350)) ([b7b6e03](https://github.com/pleasedodisturb/kestrel/commit/b7b6e03f3bfd728c098327979bd4189bdc73c17c))
+
+
+### Bug Fixes
+
+* harden AI isolation guard against substring spoofing ([#353](https://github.com/pleasedodisturb/kestrel/issues/353)) ([229cf6f](https://github.com/pleasedodisturb/kestrel/commit/229cf6f6864fc38545a82a810f7e4c3a5a1d6f3a))
+
+
+### Dependencies
+
+* bump @tanstack/react-query in /frontend in the tanstack group ([#357](https://github.com/pleasedodisturb/kestrel/issues/357)) ([a6b717c](https://github.com/pleasedodisturb/kestrel/commit/a6b717ce543501d8a4b7a6b6ad6edb082e22ef54))
+* bump @types/node from 24.12.0 to 25.6.0 in /frontend ([#344](https://github.com/pleasedodisturb/kestrel/issues/344)) ([6b7ba13](https://github.com/pleasedodisturb/kestrel/commit/6b7ba13515df6cd5211ea740cf0e4042a83b6ad2))
+* bump globals from 17.4.0 to 17.5.0 in /frontend ([#343](https://github.com/pleasedodisturb/kestrel/issues/343)) ([4b6ed73](https://github.com/pleasedodisturb/kestrel/commit/4b6ed73f457fa05717859ac11c664877b32d23d5))
+* bump react-router-dom from 7.13.1 to 7.14.2 in /frontend ([#336](https://github.com/pleasedodisturb/kestrel/issues/336)) ([3ebe316](https://github.com/pleasedodisturb/kestrel/commit/3ebe31644f5d29716304a079bf80c0d07875b292))
+* bump the react group across 1 directory with 2 updates ([#354](https://github.com/pleasedodisturb/kestrel/issues/354)) ([b986940](https://github.com/pleasedodisturb/kestrel/commit/b98694020a14137fe151f0f74f6eb6d7c7b8452f))
+* bump typescript-eslint from 8.57.0 to 8.59.1 in /frontend ([#341](https://github.com/pleasedodisturb/kestrel/issues/341)) ([2d4f8ff](https://github.com/pleasedodisturb/kestrel/commit/2d4f8ff0a6fbaf9a2bbd724f9a1833ea313ac84f))
+* bump vite from 8.0.7 to 8.0.11 in /frontend ([#359](https://github.com/pleasedodisturb/kestrel/issues/359)) ([5235469](https://github.com/pleasedodisturb/kestrel/commit/52354691c9789626af9ce0eb405757c1c9b73b23))
+* update openai requirement from &gt;=1.0.0 to &gt;=2.35.1 ([#342](https://github.com/pleasedodisturb/kestrel/issues/342)) ([768ae7d](https://github.com/pleasedodisturb/kestrel/commit/768ae7d7378fd8aabe3ce7927dc8977238771190))
+* update pandas requirement from &lt;3,&gt;=2.2.0 to &gt;=2.2.0,&lt;4 ([#335](https://github.com/pleasedodisturb/kestrel/issues/335)) ([25b42e0](https://github.com/pleasedodisturb/kestrel/commit/25b42e0db5a12fdae2f603a8c0b8ab366bd42108))
+* update pyyaml requirement from &gt;=6.0 to &gt;=6.0.3 ([#340](https://github.com/pleasedodisturb/kestrel/issues/340)) ([caa49c9](https://github.com/pleasedodisturb/kestrel/commit/caa49c97a83096d1b4447c8a54183a2f4d01072b))
+
 ## [0.13.0](https://github.com/pleasedodisturb/kestrel/compare/v0.12.0...v0.13.0) (2026-04-27)
 
 
