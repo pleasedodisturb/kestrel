@@ -2,6 +2,14 @@
 
 > Auto-generated sitemap of all project documentation. Grouped by audience.
 
+## Roadmap
+
+What Kestrel does, where it is heading, and where contributors can help.
+
+- [Project Roadmap](../ROADMAP.md) — Top-level milestones with status, "Want to help?" callouts, and deep dive links
+- [Roadmap Index](roadmap/inventory.md) — Index of all milestone deep dives with the planning hierarchy explained
+- [Deep Dives](roadmap/) — Per-milestone detail documents (shipped and planned)
+
 ## Guides
 
 User-facing explanations and how-tos.

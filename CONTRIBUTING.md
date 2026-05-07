@@ -12,7 +12,19 @@ Note: The Python package is internally named `career_os` (from the original proj
 
 Thanks for wanting to help. Here's how to get started.
 
+## Finding Work
+
+Not sure where to start? Browse [ROADMAP.md](ROADMAP.md) for milestones that interest you. Each milestone has a "Want to help?" callout with specific contribution ideas, and a link to a detailed deep dive covering what exists, what is planned, and where help is needed.
+
 ## Development Setup
+
+### Quick Start with Codespaces
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pleasedodisturb/kestrel?quickstart=1)
+
+Codespaces gives you a full dev environment in your browser with both servers running. No local setup needed. The first time you open a Codespace, allow 1-2 minutes for the setup script to install dependencies and start the servers.
+
+### Manual Setup
 
 1. Fork and clone the repo
 2. Run `./setup.sh` or set up manually:
