@@ -17,8 +17,11 @@ venv/
 env/
 uv.lock
 
-# IDE
-.vscode/
+# IDE — ignore personal config but commit shared workspace tasks/launch
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo

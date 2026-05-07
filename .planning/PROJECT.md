@@ -1,4 +1,15 @@
-# Kestrel Public Roadmap
+# Kestrel
+
+## Current State
+
+**roadmap-m1 (Public Roadmap) shipped 2026-05-07.** The repo now has a public roadmap at root, 20 milestone deep dives in `docs/roadmap/`, contributor callouts pointing to concrete contribution areas, a Finding Work section in CONTRIBUTING.md, and a Codespaces one-click dev environment. Phase 1 (Feature Inventory) was deferred to v1.1 — its intent was naturally absorbed into deep dives + `docs/roadmap/inventory.md`.
+
+## Next Milestone Goals
+
+To be defined via `/gsd-new-milestone`. Carry-over candidates:
+- **Feature Inventory deferred (INV-01..08)** — only worth picking up if a unified standalone inventory.md is wanted
+- **Deployment/packaging milestone** — highest-priority forward work per Phase 3 (PWA → native desktop app)
+- **BMAD PRD process** — 5/13 steps complete from earlier work, could be picked back up
 
 ## What This Is
 
@@ -34,13 +45,20 @@ Make Kestrel's direction visible and structured so users can evaluate the produc
 
 ### Active
 
-- [ ] Write comprehensive ROADMAP.md at repo root documenting shipped progress and forward vision
-- [ ] Create docs/roadmap/ structure for per-milestone deep dives
-- [ ] Map all existing shipped work into coherent product narrative (including web frontend and parked mobile)
-- [ ] Document deployment/packaging status and chart path from "dev self-help tool" to "usable via interface"
-- [ ] Define milestone structure that BMAD PRDs can plug into
 - [ ] Define epic structure within milestones that links to Linear tickets
-- [ ] Chart the evolution path: dev tool → real product (free + commercial fork)
+
+### Validated in roadmap-m1 (Public Roadmap) (2026-05-07)
+
+- ✓ Write comprehensive ROADMAP.md at repo root documenting shipped progress and forward vision — Phase 2 (ROAD-01..08)
+- ✓ Document forward milestones through end-user lens — Phase 3 (ROAD-09..16)
+- ✓ Create docs/roadmap/ structure for per-milestone deep dives (20 files) — Phase 4 (DEEP-01..04)
+- ✓ Add "Want to help?" callouts to every milestone, planning hierarchy in inventory.md — Phase 5 (CONT-01)
+- ✓ Finding Work section in CONTRIBUTING.md pointing back to ROADMAP.md — Phase 5 (CONT-02 partial — formal hierarchy doc lives in inventory.md)
+- ✓ Codespaces one-click dev environment with auto-starting backend + frontend servers — Phase 5 (CONT-03)
+
+### Deferred to v1.1
+
+- INV-01..08 — Feature Inventory was deliberately not executed; intent absorbed into deep dives + inventory.md. Picks back up only if a unified standalone inventory artifact is desired.
 
 ### Out of Scope
 
@@ -145,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after initialization*
+*Last updated: 2026-05-07 after roadmap-m1 (Public Roadmap) milestone completion*
