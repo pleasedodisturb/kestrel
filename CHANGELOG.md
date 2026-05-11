@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.3](https://github.com/pleasedodisturb/kestrel/compare/v0.14.2...v0.14.3) (2026-05-11)
+
+
+### Dependencies
+
+* **frontend:** bump eslint group manually (replaces stuck [#355](https://github.com/pleasedodisturb/kestrel/issues/355)) ([#363](https://github.com/pleasedodisturb/kestrel/issues/363)) ([b4bbf53](https://github.com/pleasedodisturb/kestrel/commit/b4bbf5306a1dcdbba02e72ae4faca1fd569cda19))
+
 ## [0.14.2](https://github.com/pleasedodisturb/kestrel/compare/v0.14.1...v0.14.2) (2026-05-07)
 
 
