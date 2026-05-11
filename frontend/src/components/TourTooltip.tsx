@@ -47,7 +47,7 @@ export function TourTooltip() {
 
   useEffect(() => {
     if (!targetRect || !tooltipRef.current) {
-      setOpacity(0); // eslint-disable-line react-hooks/set-state-in-effect -- guard reset, not cascading
+      setOpacity(0);
       return;
     }
 
@@ -118,7 +118,8 @@ export function TourTooltip() {
 
   useEffect(() => {
     if (!isActive || !currentStepData) {
-      setAnnouncement(""); // eslint-disable-line react-hooks/set-state-in-effect -- guard reset, not cascading
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- guard reset on inactive state, not cascading
+      setAnnouncement("");
       return;
     }
 
