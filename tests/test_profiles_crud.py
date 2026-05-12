@@ -215,7 +215,7 @@ class TestDeleteProfile:
         db_session.commit()
         skill_id = skill.id
 
-        resp = client.delete(f"/api/profiles/{pid}")
+        resp = client.delete(f"/api/profiles/{pid}?force=true")
         assert resp.status_code == 204
         assert db_session.get(Skill, skill_id) is None
 
@@ -242,7 +242,7 @@ class TestDeleteProfile:
         db_session.commit()
         history_id = history.id
 
-        resp = client.delete(f"/api/profiles/{pid}")
+        resp = client.delete(f"/api/profiles/{pid}?force=true")
         assert resp.status_code == 204
         assert db_session.get(SkillHistory, history_id) is None
 
@@ -259,7 +259,7 @@ class TestDeleteProfile:
         db_session.commit()
         resource_id = resource.id
 
-        resp = client.delete(f"/api/profiles/{pid}")
+        resp = client.delete(f"/api/profiles/{pid}?force=true")
         assert resp.status_code == 204
         assert db_session.get(LearningResource, resource_id) is None
 
@@ -276,7 +276,7 @@ class TestDeleteProfile:
         db_session.commit()
         goal_id = goal.id
 
-        resp = client.delete(f"/api/profiles/{pid}")
+        resp = client.delete(f"/api/profiles/{pid}?force=true")
         assert resp.status_code == 204
         assert db_session.get(Goal, goal_id) is None
 
@@ -304,7 +304,7 @@ class TestDeleteProfile:
         db_session.commit()
         req_id = req.id
 
-        resp = client.delete(f"/api/profiles/{pid}")
+        resp = client.delete(f"/api/profiles/{pid}?force=true")
         assert resp.status_code == 204
         assert db_session.get(JobRequirement, req_id) is None
 
@@ -321,7 +321,7 @@ class TestDeleteProfile:
         db_session.commit()
         suggestion_id = suggestion.id
 
-        resp = client.delete(f"/api/profiles/{pid}")
+        resp = client.delete(f"/api/profiles/{pid}?force=true")
         assert resp.status_code == 204
         assert db_session.get(CoachingSuggestion, suggestion_id) is None
 
@@ -388,7 +388,7 @@ class TestDeleteProfile:
         )
         db_session.commit()
 
-        resp = client.delete(f"/api/profiles/{pid}")
+        resp = client.delete(f"/api/profiles/{pid}?force=true")
         assert resp.status_code == 204
         # Verify profile is gone
         assert client.get(f"/api/profiles/{pid}").status_code == 404

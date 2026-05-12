@@ -4,7 +4,7 @@ import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from career_os.api.constants import PROFILE_NOT_FOUND, RESP_404
@@ -19,6 +19,34 @@ from career_os.schemas.profiles import (
 from career_os.services.scoring import flag_stale_scores, regenerate_weights_for_job_family
 
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
+
+# Child tables owned by a profile, in (table, label) form. Counted in one
+# round-trip SQL statement to decide whether DELETE /api/profiles/{id} should
+# refuse with 409 (safe default) or proceed (force=true).
+_PROFILE_CHILD_TABLES: tuple[tuple[str, str], ...] = (
+    ("applications", "applications"),
+    ("application_packages", "application_packages"),
+    ("activity_log", "activity_logs"),
+    ("follow_ups", "follow_ups"),
+    ("skills", "skills"),
+    ("learning_resources", "learning_resources"),
+    ("goals", "goals"),
+    ("coaching_suggestions", "coaching_suggestions"),
+    ("job_requirements", "job_requirements"),
+)
+
+
+def _count_profile_children(db: Session, profile_id: int) -> dict[str, int]:
+    """Return a row-count for every child table that references profile_id.
+
+    Single SQL round-trip; relies on (profile_id) indexes for sub-millisecond cost.
+    """
+    selects = ", ".join(
+        f"(SELECT COUNT(*) FROM {table} WHERE profile_id = :pid) AS {label}"
+        for table, label in _PROFILE_CHILD_TABLES
+    )
+    row = db.execute(text(f"SELECT {selects}"), {"pid": profile_id}).mappings().one()
+    return dict(row)
 
 
 @router.get("")
@@ -104,29 +132,46 @@ async def update_profile(
 @router.delete(
     "/{profile_id}",
     status_code=204,
-    responses={**RESP_404, 409: {"description": "Conflict"}},
+    responses={
+        **RESP_404,
+        409: {
+            "description": "Conflict — profile has child rows; pass ?force=true to cascade-delete"
+        },
+    },
 )
 async def delete_profile(
     profile_id: int,
     db: Annotated[Session, Depends(get_db)],
+    force: bool = False,
 ) -> None:
     """Delete a profile.
 
-    Returns 404 if profile doesn't exist. Cascading deletes remove
-    associated applications, activity logs, follow-ups, skills,
-    learning resources, goals, job requirements, and coaching suggestions.
+    By default, refuses with HTTP 409 if the profile owns any rows in
+    applications, application_packages, activity_log, follow_ups, skills,
+    learning_resources, goals, coaching_suggestions, or job_requirements.
+
+    Pass ?force=true to cascade-delete the profile and every child row.
+
+    The previous behavior of this endpoint (cascade on plain DELETE) is what
+    wiped a downstream user's full dataset on 2026-05-11 with one stray API
+    call; the same DELETE on every Kestrel install would have done the same.
     """
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if profile is None:
         raise HTTPException(status_code=404, detail=PROFILE_NOT_FOUND)
 
-    try:
-        db.delete(profile)
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete profile with existing records. "
-            "Please remove associated data first.",
-        ) from None
+    if not force:
+        counts = _count_profile_children(db, profile_id)
+        non_empty = {k: v for k, v in counts.items() if v > 0}
+        if non_empty:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "Profile has child rows; refusing to cascade-delete",
+                    "child_counts": non_empty,
+                    "hint": "Pass ?force=true to delete the profile and all child rows.",
+                },
+            )
+
+    db.delete(profile)
+    db.commit()
