@@ -903,6 +903,223 @@ class TestSelectDropdownOption:
         assert result is True
         select_loc.first.select_option.assert_called_with(label="Europe")
 
+    @pytest.mark.asyncio
+    async def test_dispatches_portaled_combobox_when_no_label_match(self):
+        """When neither label nor div matches but a global combobox trigger
+        with matching aria-label exists, we still drive the portaled menu.
+
+        This covers the Anthropic Greenhouse pattern where the visible label
+        isn't a <label> element and isn't a wrapping div either."""
+        from tools.batch_apply_browser import _select_dropdown_option
+
+        trigger_loc = _make_found_locator(tag="button")
+        option_loc = _make_found_locator()
+
+        page = make_page_with_fields(
+            {
+                'button[aria-haspopup="listbox"]': trigger_loc,
+                'role="option"': option_loc,
+            }
+        )
+
+        result = await _select_dropdown_option(page, "Do you require visa sponsorship?", "No")
+        assert result is True
+        # Trigger was clicked to open the portaled listbox
+        trigger_loc.first.click.assert_called()
+        # Option was clicked AND a mousedown was dispatched (react-select pattern)
+        option_loc.first.click.assert_called()
+        option_loc.first.dispatch_event.assert_called_with("mousedown")
+
+    @pytest.mark.asyncio
+    async def test_portaled_fallback_when_inline_option_missing(self):
+        """When the label is found and a button trigger exists near it but
+        the inline-option lookup returns nothing, we fall through to the
+        portaled-menu path so an option in document.body is still picked."""
+        from tools.batch_apply_browser import _select_dropdown_option
+
+        label_loc = _make_found_locator()
+        parent_loc = AsyncMock()
+        # The inline trigger is a button (so the native-select branch is skipped).
+        button_loc = _make_found_locator(tag="button")
+        parent_loc.locator = MagicMock(return_value=button_loc)
+        label_loc.first.locator = MagicMock(return_value=parent_loc)
+
+        # Inline option lookup returns nothing — simulates a portaled menu
+        # that's NOT inside the label's parent.
+        empty_option_loc = _make_empty_locator()
+        # But a page-scoped portaled option exists.
+        portaled_option_loc = _make_found_locator()
+
+        # Distinguish between inline and portaled selectors using has-text
+        # on different keys: inline option selector contains the option text,
+        # the portaled selector also does. We want the FIRST option lookup
+        # (the inline one) to return empty and the SECOND (portaled) to find.
+        # Easiest: have field_map return the empty locator for
+        # 'role="option"' AND a different match for the portaled path?
+        # Actually the inline lookup uses the same role="option" selector.
+        # We side-step this by making the inline call return empty via a
+        # counter-based factory.
+        call_count = {"n": 0}
+
+        def factory(sel):
+            if 'role="option"' in sel:
+                call_count["n"] += 1
+                if call_count["n"] == 1:
+                    return empty_option_loc
+                return portaled_option_loc
+            if 'label:has-text("Visa")' in sel:
+                return label_loc
+            return _make_empty_locator()
+
+        page = AsyncMock()
+        page.goto = AsyncMock()
+        page.wait_for_timeout = AsyncMock()
+        page.locator = MagicMock(side_effect=factory)
+        page.get_by_text = MagicMock(return_value=_make_empty_locator())
+
+        result = await _select_dropdown_option(page, "Visa", "No")
+        assert result is True
+        button_loc.first.click.assert_called()
+        portaled_option_loc.first.click.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# _click_portaled_option and _select_portaled_combobox
+# ---------------------------------------------------------------------------
+
+
+class TestPortaledComboboxDispatch:
+    """Cover the new portaled-React-combobox dispatch path (G-626)."""
+
+    @pytest.mark.asyncio
+    async def test_click_portaled_option_dispatches_mousedown_and_click(self):
+        from tools.batch_apply_browser import _click_portaled_option
+
+        option_loc = _make_found_locator()
+        page = make_page_with_fields({'role="option"': option_loc})
+
+        result = await _click_portaled_option(page, "Yes")
+        assert result is True
+        option_loc.first.dispatch_event.assert_called_with("mousedown")
+        option_loc.first.click.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_click_portaled_option_survives_dispatch_failure(self):
+        """If dispatch_event raises (older Playwright / weird mock), we still
+        click. This is the safety net referenced in the docstring."""
+        from tools.batch_apply_browser import _click_portaled_option
+
+        option_loc = _make_found_locator()
+        option_loc.first.dispatch_event = AsyncMock(side_effect=RuntimeError("no dispatch"))
+        page = make_page_with_fields({'role="option"': option_loc})
+
+        result = await _click_portaled_option(page, "Yes")
+        assert result is True
+        option_loc.first.click.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_click_portaled_option_returns_false_when_not_found(self):
+        from tools.batch_apply_browser import _click_portaled_option
+
+        page = make_page_with_fields({})
+
+        result = await _click_portaled_option(page, "Anything")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_select_portaled_combobox_uses_aria_haspopup_trigger(self):
+        """The Anthropic pattern: <button aria-haspopup="listbox"> opens a
+        portaled <div role="listbox"> in document.body."""
+        from tools.batch_apply_browser import _select_portaled_combobox
+
+        trigger_loc = _make_found_locator(tag="button")
+        option_loc = _make_found_locator()
+        page = make_page_with_fields(
+            {
+                'button[aria-haspopup="listbox"]': trigger_loc,
+                'role="option"': option_loc,
+            }
+        )
+
+        result = await _select_portaled_combobox(page, "Are you open to relocation?", "Yes")
+        assert result is True
+        trigger_loc.first.click.assert_called()
+        option_loc.first.click.assert_called()
+        option_loc.first.dispatch_event.assert_called_with("mousedown")
+
+    @pytest.mark.asyncio
+    async def test_select_portaled_combobox_returns_false_with_no_trigger(self):
+        from tools.batch_apply_browser import _select_portaled_combobox
+
+        page = make_page_with_fields({})
+        # All selectors return empty — no combobox trigger anywhere.
+        result = await _select_portaled_combobox(page, "Anything", "Value")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_select_portaled_combobox_skips_failing_selectors(self):
+        """Some Playwright selectors (e.g. :has() with certain inner exprs)
+        may raise. We should swallow those and keep trying other patterns."""
+        from tools.batch_apply_browser import _select_portaled_combobox
+
+        # First selectors raise; final selector finds the trigger.
+        trigger_loc = _make_found_locator(tag="button")
+        option_loc = _make_found_locator()
+
+        def factory(sel):
+            if "aria-label" in sel:
+                # Simulate Playwright rejecting this selector
+                raise ValueError("bad selector")
+            if "aria-haspopup" in sel:
+                return trigger_loc
+            if 'role="option"' in sel:
+                return option_loc
+            return _make_empty_locator()
+
+        page = AsyncMock()
+        page.wait_for_timeout = AsyncMock()
+        page.locator = MagicMock(side_effect=factory)
+        page.get_by_text = MagicMock(return_value=_make_empty_locator())
+
+        result = await _select_portaled_combobox(page, "Label", "Value")
+        assert result is True
+        trigger_loc.first.click.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# _fill_field_by_label falls through to portaled combobox
+# ---------------------------------------------------------------------------
+
+
+class TestFillFieldByLabelComboboxFallback:
+    @pytest.mark.asyncio
+    async def test_falls_through_to_combobox_when_no_sibling_input(self):
+        """If the label is found but no input/textarea/select sibling exists,
+        and the field is actually a portaled React combobox, the new fallback
+        should drive it."""
+        from tools.batch_apply_browser import _fill_field_by_label
+
+        label_loc = _make_found_locator()
+        label_loc.first.get_attribute = AsyncMock(return_value=None)
+        # Sibling lookup returns empty for every tag.
+        label_loc.first.locator = MagicMock(return_value=_make_empty_locator())
+
+        trigger_loc = _make_found_locator(tag="button")
+        option_loc = _make_found_locator()
+
+        page = make_page_with_fields(
+            {
+                'label:has-text("Visa sponsorship")': label_loc,
+                'button[aria-haspopup="listbox"]': trigger_loc,
+                'role="option"': option_loc,
+            }
+        )
+
+        result = await _fill_field_by_label(page, "Visa sponsorship", "No")
+        assert result is True
+        trigger_loc.first.click.assert_called()
+        option_loc.first.click.assert_called()
+
 
 # ---------------------------------------------------------------------------
 # Company-specific constants
