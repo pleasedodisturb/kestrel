@@ -458,6 +458,91 @@ N8N_WHY = (
     "and it's here. That matters to me."
 )
 
+# ---------------------------------------------------------------------------
+# Per-role Greenhouse qualifying-question overlays (G-627 / issue #347)
+# ---------------------------------------------------------------------------
+#
+# Anthropic Greenhouse postings ask role-specific Yes/No qualifying questions
+# in addition to the shared baseline (Country, visa, Why Anthropic, etc.).
+# These questions vary per role and are often the actual gating filter, so
+# leaving them blank causes silent auto-rejects.
+#
+# `GH_FIELDS_BY_SLUG` maps an application's `slug` (lowercased) to extra
+# `(label_text, value, exact_match)` tuples that get *appended* to the shared
+# baseline at form-fill time via `_get_gh_fields_for_slug()`. Slug lookups are
+# substring matches so minor slug-suffix variations between scrapes
+# (e.g. `anthropic-technical-deployment-lead-paris`) still resolve.
+#
+# TODO(G-627): the values below are conservative placeholders aligned with
+# the maintainer's profile but have NOT been verified field-by-field against
+# any `cv/applications/<slug>/form-answers.md`. Verify with user before live
+# submission. Dry-run is safe.
+
+# Anthropic — Technical Deployment Lead (Paris)
+# Source: GitHub issue #347 body, "TDL Paris asks:" section
+_GH_ANTHROPIC_TDL_PARIS: list[tuple[str, str, bool]] = [
+    ("owned e2e delivery of technical programmes", "Yes", False),
+    ("native or C1-level French", "No", False),  # TODO: verify with user before submit
+    ("delivered AI/ML/LLM into production", "Yes", False),
+    ("led delivery engagements with C-suite", "Yes", False),
+]
+
+# Anthropic — Manager, Forward Deployed Engineering (London)
+# Source: GitHub issue #347 body, "Mgr FDE London asks:" section
+_GH_ANTHROPIC_MGR_FDE_LONDON: list[tuple[str, str, bool]] = [
+    ("directly managed engineering teams", "Yes", False),
+    ("building/leading technical delivery teams in enterprise", "Yes", False),
+    ("navigating regulated industries", "Yes", False),
+]
+
+# Anthropic — Applied AI Architect (Munich)
+# Source: GitHub issue #347 body, "Applied AI Architect Munich asks:" section
+_GH_ANTHROPIC_ARCHITECT_MUNICH: list[tuple[str, str, bool]] = [
+    ("7+ years pre-sales technical role", "Yes", False),  # TODO: verify with user before submit
+    ("Hands-on AI/ML in customer-facing", "Yes", False),
+    ("Technical demonstrations to C-level", "Yes", False),
+    ("Professional fluency in German", "No", False),  # TODO: verify with user before submit
+]
+
+GH_FIELDS_BY_SLUG: dict[str, list[tuple[str, str, bool]]] = {
+    "anthropic-technical-deployment-lead": _GH_ANTHROPIC_TDL_PARIS,
+    "anthropic-manager-fde-applied-ai": _GH_ANTHROPIC_MGR_FDE_LONDON,
+    "anthropic-solutions-architect": _GH_ANTHROPIC_ARCHITECT_MUNICH,
+}
+
+
+def _get_gh_fields_for_slug(
+    baseline: list[tuple[str, str, bool]],
+    slug: str,
+    overlay: dict[str, list[tuple[str, str, bool]]] | None = None,
+) -> list[tuple[str, str, bool]]:
+    """Merge baseline Greenhouse fields with any per-slug qualifying-question overlay.
+
+    Args:
+        baseline: shared Greenhouse field list applied to every role.
+        slug: application slug (case-insensitive); typically `app["slug"]`.
+        overlay: optional override mapping for tests; defaults to GH_FIELDS_BY_SLUG.
+
+    Returns:
+        baseline + extras for the first overlay key found as a substring of slug.
+        If a question label is defined in both baseline and overlay, the baseline
+        entry wins (de-duped by exact label string) so role-specific values can't
+        accidentally override shared answers like "Why Anthropic".
+    """
+    if overlay is None:
+        overlay = GH_FIELDS_BY_SLUG
+    slug_l = (slug or "").lower()
+    extras: list[tuple[str, str, bool]] = []
+    for key, fields in overlay.items():
+        if key in slug_l:
+            extras = fields
+            break
+    if not extras:
+        return list(baseline)
+    seen_labels = {label for label, _value, _exact in baseline}
+    deduped_extras = [t for t in extras if t[0] not in seen_labels]
+    return list(baseline) + deduped_extras
+
 
 async def _fill_field_by_label(page, label_text: str, value: str, exact: bool = False) -> bool:
     """Find an input/textarea/select near a label containing `label_text` and fill it.
@@ -764,7 +849,7 @@ async def fill_custom_questions(page, app: dict) -> None:
     from career_os.utils.url_validation import url_has_domain
 
     if url_has_domain(url, "greenhouse.io") and ("anthropic" in slug or "anthropic" in url.lower()):
-        gh_fields = [
+        gh_fields_baseline: list[tuple[str, str, bool]] = [
             # (label_text, value, exact_match)
             ("Country", "United Kingdom", False),
             ("open to working in-person 25%", "Yes", False),
@@ -777,6 +862,9 @@ async def fill_custom_questions(page, app: dict) -> None:
             ("experience with Claude Code", ANTHROPIC_CLAUDE_CODE_EXP, False),
             ("Working address", PERSONAL["location"], False),
         ]
+        # Append any per-role qualifying-question overlay (G-627). Non-Anthropic
+        # Greenhouse roles fall through with baseline only — no regression.
+        gh_fields = _get_gh_fields_for_slug(gh_fields_baseline, slug)
         for label, value, exact in gh_fields:
             try:
                 filled = await _fill_field_by_label(page, label, value, exact=exact)
