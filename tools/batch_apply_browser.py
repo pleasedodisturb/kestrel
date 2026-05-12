@@ -815,13 +815,17 @@ async def fill_custom_questions(page, app: dict) -> None:
                                         }
                                     }
                                 } else {
-                                    const setter =
-                                        Object.getOwnPropertyDescriptor(
-                                            window.HTMLInputElement.prototype, 'value'
-                                        ).set ||
-                                        Object.getOwnPropertyDescriptor(
-                                            window.HTMLTextAreaElement.prototype, 'value'
-                                        ).set;
+                                    // Use the correct prototype setter based on element type.
+                                    // HTMLInputElement.prototype.value.set throws "Illegal
+                                    // invocation" when called on a textarea, so dispatch by
+                                    // tagName rather than relying on a ||-fallback (the input
+                                    // descriptor always exists, so the fallback never fired).
+                                    const proto = input.tagName === 'TEXTAREA'
+                                        ? window.HTMLTextAreaElement.prototype
+                                        : window.HTMLInputElement.prototype;
+                                    const setter = Object.getOwnPropertyDescriptor(
+                                        proto, 'value'
+                                    ).set;
                                     setter.call(input, value);
                                     input.dispatchEvent(new Event('input', { bubbles: true }));
                                     input.dispatchEvent(new Event('change', { bubbles: true }));
