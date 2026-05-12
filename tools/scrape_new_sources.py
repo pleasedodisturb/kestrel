@@ -14,6 +14,7 @@ All scrapers return list[ScrapedJob] and gracefully return [] on failure.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import sys
@@ -581,6 +582,304 @@ def scrape_thehub(
 
 
 # ---------------------------------------------------------------------------
+# arbeitnow.com (free public API, EU/DE tech-heavy job board)
+# https://documenter.getpostman.com/view/18545278/UVJbJdKh
+# ---------------------------------------------------------------------------
+
+ARBEITNOW_BOARD_API = "https://www.arbeitnow.com/api/job-board-api"
+
+
+def scrape_arbeitnow(
+    keyword_filter: list[str] | None = None,
+    max_pages: int = 1,
+    per_page_limit: int = 100,
+) -> list[ScrapedJob]:
+    """Scrape the public arbeitnow.com job board API.
+
+    Returns the latest postings (newest first) across the full board, with
+    optional client-side title-keyword filter. arbeitnow is heavily EU/DE
+    tech-skewed and complements the existing germany_jobs Arbeitnow path
+    (which filters through ``is_likely_german_only`` and burns through
+    keyword presets); this adapter pulls the unfiltered firehose so we
+    don't miss English-language EU postings.
+
+    Args:
+        keyword_filter: Optional list of substrings; if any matches the job
+            title (case-insensitive), the job is kept. ``None`` keeps all.
+        max_pages: How many pages of 100 results to walk (default: 1).
+        per_page_limit: Defensive cap on per-page results.
+
+    Returns:
+        List of ScrapedJob, or ``[]`` on transport failure.
+    """
+    jobs: list[ScrapedJob] = []
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    kw_lower = [k.lower() for k in (keyword_filter or [])]
+
+    for page in range(1, max_pages + 1):
+
+        def _fetch(p=page):
+            with httpx.Client(timeout=30, headers={"User-Agent": _get_user_agent()}) as client:
+                r = client.get(ARBEITNOW_BOARD_API, params={"page": p})
+                r.raise_for_status()
+                return r.json()
+
+        data = _retry_with_backoff(_fetch)
+        if not data:
+            continue
+
+        listings = data.get("data", []) if isinstance(data, dict) else []
+        if not isinstance(listings, list):
+            continue
+
+        for j in listings[:per_page_limit]:
+            if not isinstance(j, dict):
+                continue
+            title = j.get("title", "")
+            if kw_lower and not any(k in title.lower() for k in kw_lower):
+                continue
+
+            tags = j.get("tags", [])
+            if not isinstance(tags, list):
+                tags = []
+
+            # arbeitnow exposes posted timestamp as unix seconds in created_at
+            posted = ""
+            created_at = j.get("created_at")
+            if isinstance(created_at, int):
+                try:
+                    posted = datetime.fromtimestamp(created_at).isoformat()
+                except (OverflowError, OSError, ValueError):
+                    posted = str(created_at)
+            elif created_at:
+                posted = str(created_at)
+
+            desc = str(j.get("description", ""))
+            # Strip HTML tags — arbeitnow descriptions are HTML
+            desc = re.sub(r"<[^>]+>", " ", unescape(desc))[:MAX_DESCRIPTION_LENGTH]
+
+            jobs.append(
+                ScrapedJob(
+                    title=title,
+                    company=str(j.get("company_name", "")),
+                    location=str(j.get("location", "")),
+                    url=str(j.get("url", "")),
+                    source="arbeitnow",
+                    description=desc,
+                    posted=posted,
+                    remote=bool(j.get("remote", False)),
+                    tags=[str(t) for t in tags],
+                    scraped_at=now,
+                )
+            )
+
+        # If page returned fewer than 100, no point asking for the next one.
+        if len(listings) < 100:
+            break
+
+        _random_delay()
+
+    logger.info(f"arbeitnow: {len(jobs)} jobs")
+    return jobs
+
+
+# ---------------------------------------------------------------------------
+# remotely.de (German remote/hybrid job board, JSON-LD per page via sitemap)
+# Public sitemap-jobs.xml + JSON-LD JobPosting schema on every job detail page.
+# No public list API, no auth needed for read-only crawl.
+# ---------------------------------------------------------------------------
+
+REMOTELY_SITEMAP = "https://www.remotely.de/sitemap-jobs.xml"
+
+
+def scrape_remotely_de(
+    keyword_filter: list[str] | None = None,
+    limit: int = 50,
+    max_age_hours: int | None = 48,
+) -> list[ScrapedJob]:
+    """Scrape recent job postings from remotely.de.
+
+    Pulls the public sitemap to get the freshest job URLs (sorted newest
+    first by lastmod), then fetches each detail page and parses the
+    embedded ``schema.org/JobPosting`` JSON-LD block. No API key needed.
+
+    Historically high-yield for Munich/Köln deep-tech and AI roles that
+    don't appear on the international boards. See GitHub issue #348 /
+    Linear G-630 for the original motivation (4 strong picks surfaced
+    only from this board on a single March 9 scan).
+
+    Args:
+        keyword_filter: Optional substrings; if any matches the job title
+            (case-insensitive) the posting is kept. ``None`` keeps all.
+        limit: Maximum number of detail-page fetches (default: 50). Keeps
+            the run under the 20-min total pipeline budget.
+        max_age_hours: If set, drop sitemap entries with ``lastmod`` older
+            than this many hours. ``None`` disables the freshness filter.
+
+    Returns:
+        List of ScrapedJob, ``[]`` on sitemap or repeated detail failures.
+    """
+    jobs: list[ScrapedJob] = []
+    now_dt = datetime.now()
+    now = now_dt.strftime("%Y-%m-%dT%H:%M:%S")
+    kw_lower = [k.lower() for k in (keyword_filter or [])]
+
+    def _fetch_sitemap():
+        with httpx.Client(timeout=30, headers={"User-Agent": _get_user_agent()}) as client:
+            r = client.get(REMOTELY_SITEMAP)
+            r.raise_for_status()
+            return r.text
+
+    sitemap_xml = _retry_with_backoff(_fetch_sitemap)
+    if not sitemap_xml:
+        logger.info("remotely.de: sitemap unavailable")
+        return jobs
+
+    # Parse sitemap — sitemap-jobs.xml lists newest entries first
+    import xml.etree.ElementTree as ET
+
+    try:
+        root = ET.fromstring(sitemap_xml)
+    except ET.ParseError as exc:
+        logger.error(f"remotely.de sitemap parse error: {exc}")
+        return jobs
+
+    ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    entries = root.findall(".//sm:url", ns)
+
+    candidates: list[str] = []
+    for entry in entries:
+        loc_el = entry.find("sm:loc", ns)
+        if loc_el is None or not loc_el.text:
+            continue
+        url = loc_el.text.strip()
+
+        if max_age_hours is not None:
+            lastmod_el = entry.find("sm:lastmod", ns)
+            if lastmod_el is not None and lastmod_el.text:
+                try:
+                    lastmod = datetime.fromisoformat(lastmod_el.text.strip().replace("Z", "+00:00"))
+                    age_hours = (now_dt.astimezone(lastmod.tzinfo) - lastmod).total_seconds() / 3600
+                    if age_hours > max_age_hours:
+                        continue
+                except (ValueError, TypeError):
+                    pass  # don't drop on parse failure; keep candidate
+
+        candidates.append(url)
+        if len(candidates) >= limit:
+            break
+
+    logger.info(f"remotely.de: {len(candidates)} candidate URLs from sitemap")
+
+    detail_failures = 0
+    for url in candidates:
+
+        def _fetch_detail(u=url):
+            with httpx.Client(timeout=20, headers={"User-Agent": _get_user_agent()}) as client:
+                r = client.get(u, follow_redirects=True)
+                r.raise_for_status()
+                return r.text
+
+        html = _retry_with_backoff(_fetch_detail)
+        if not html:
+            detail_failures += 1
+            continue
+
+        # Find JSON-LD JobPosting block
+        ld_blocks = re.findall(
+            r'<script[^>]+type="application/ld\+json"[^>]*>(.*?)</script>',
+            html,
+            re.S,
+        )
+        posting = None
+        for raw in ld_blocks:
+            try:
+                d = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(d, dict) and d.get("@type") == "JobPosting":
+                posting = d
+                break
+            if isinstance(d, list):
+                for item in d:
+                    if isinstance(item, dict) and item.get("@type") == "JobPosting":
+                        posting = item
+                        break
+                if posting:
+                    break
+
+        if not posting:
+            detail_failures += 1
+            continue
+
+        title = str(posting.get("title", "")).strip()
+        if kw_lower and not any(k in title.lower() for k in kw_lower):
+            continue
+
+        org = posting.get("hiringOrganization", {})
+        company = (
+            org.get("name", "")
+            if isinstance(org, dict)
+            else str(org)
+        )
+
+        loc_obj = posting.get("jobLocation", {})
+        location = ""
+        if isinstance(loc_obj, dict):
+            addr = loc_obj.get("address", {})
+            if isinstance(addr, dict):
+                location = ", ".join(
+                    filter(
+                        None,
+                        [addr.get("addressLocality", ""), addr.get("addressCountry", "")],
+                    )
+                )
+        elif isinstance(loc_obj, list) and loc_obj:
+            first = loc_obj[0]
+            if isinstance(first, dict):
+                addr = first.get("address", {})
+                if isinstance(addr, dict):
+                    location = ", ".join(
+                        filter(
+                            None,
+                            [
+                                addr.get("addressLocality", ""),
+                                addr.get("addressCountry", ""),
+                            ],
+                        )
+                    )
+
+        desc = posting.get("description", "")
+        if isinstance(desc, str):
+            desc = re.sub(r"<[^>]+>", " ", unescape(desc))[:MAX_DESCRIPTION_LENGTH]
+        else:
+            desc = ""
+
+        category = posting.get("occupationalCategory", "")
+        tags = [category] if isinstance(category, str) and category else []
+
+        jobs.append(
+            ScrapedJob(
+                title=title,
+                company=str(company),
+                location=location,
+                url=str(posting.get("url", url)),
+                source="remotely.de",
+                description=desc,
+                posted=str(posting.get("datePosted", "")),
+                remote=True,
+                tags=tags,
+                scraped_at=now,
+            )
+        )
+
+    if detail_failures:
+        logger.info(f"remotely.de: {detail_failures} detail fetches failed (skipped)")
+    logger.info(f"remotely.de: {len(jobs)} jobs")
+    return jobs
+
+
+# ---------------------------------------------------------------------------
 # Convenience: scrape all new sources at once
 # ---------------------------------------------------------------------------
 
@@ -591,6 +890,7 @@ def scrape_all_new_sources(
     lever_companies: list[str] | None = None,
     ashby_companies: list[str] | None = None,
     ats_keyword_filter: list[str] | None = None,
+    remotely_limit: int = 50,
 ) -> list[ScrapedJob]:
     """Run all new source scrapers. Each source is independent - failures are logged and skipped."""
     all_jobs: list[ScrapedJob] = []
@@ -661,6 +961,29 @@ def scrape_all_new_sources(
         all_jobs.extend(scrape_thehub(keywords=keywords))
     except Exception as e:
         logger.error(f"TheHub failed: {e}")
+
+    _random_delay()
+
+    # arbeitnow (public board, no auth)
+    logger.info("=== New Source: arbeitnow.com ===")
+    try:
+        all_jobs.extend(scrape_arbeitnow(keyword_filter=ats_keyword_filter))
+    except Exception as e:
+        logger.error(f"arbeitnow failed: {e}")
+
+    _random_delay()
+
+    # remotely.de (sitemap + JSON-LD per job page)
+    logger.info("=== New Source: remotely.de ===")
+    try:
+        all_jobs.extend(
+            scrape_remotely_de(
+                keyword_filter=ats_keyword_filter,
+                limit=remotely_limit,
+            )
+        )
+    except Exception as e:
+        logger.error(f"remotely.de failed: {e}")
 
     logger.info(f"New sources total: {len(all_jobs)} jobs (before dedup)")
     return all_jobs
