@@ -7,10 +7,12 @@ from scrape_new_sources import (
     GREENHOUSE_COMPANIES,
     LEVER_COMPANIES,
     scrape_all_new_sources,
+    scrape_arbeitnow,
     scrape_ashby,
     scrape_greenhouse,
     scrape_himalayas,
     scrape_lever,
+    scrape_remotely_de,
     scrape_startupjobs,
     scrape_thehub,
 )
@@ -489,6 +491,8 @@ class TestScrapeTheHub:
 
 
 class TestScrapeAllNewSources:
+    @patch("scrape_new_sources.scrape_remotely_de", return_value=[])
+    @patch("scrape_new_sources.scrape_arbeitnow", return_value=[])
     @patch("scrape_new_sources.scrape_thehub", return_value=[])
     @patch("scrape_new_sources.scrape_startupjobs", return_value=[])
     @patch("scrape_new_sources.scrape_ashby", return_value=[])
@@ -497,7 +501,16 @@ class TestScrapeAllNewSources:
     @patch("scrape_new_sources.scrape_himalayas", return_value=[])
     @patch("scrape_new_sources._random_delay")
     def test_calls_all_sources(
-        self, mock_delay, mock_h, mock_gh, mock_lv, mock_as, mock_sj, mock_th
+        self,
+        mock_delay,
+        mock_h,
+        mock_gh,
+        mock_lv,
+        mock_as,
+        mock_sj,
+        mock_th,
+        mock_an,
+        mock_rd,
     ):
         from scrape_resilient import ScrapedJob
 
@@ -509,16 +522,26 @@ class TestScrapeAllNewSources:
                 title="Job2", company="Co2", location="Berlin", url="u2", source="greenhouse"
             )
         ]
+        mock_an.return_value = [
+            ScrapedJob(title="J3", company="C3", location="Berlin", url="u3", source="arbeitnow")
+        ]
+        mock_rd.return_value = [
+            ScrapedJob(title="J4", company="C4", location="Köln", url="u4", source="remotely.de")
+        ]
 
         result = scrape_all_new_sources()
-        assert len(result) == 2
+        assert len(result) == 4
         mock_h.assert_called_once()
         mock_gh.assert_called_once()
         mock_lv.assert_called_once()
         mock_as.assert_called_once()
         mock_sj.assert_called_once()
         mock_th.assert_called_once()
+        mock_an.assert_called_once()
+        mock_rd.assert_called_once()
 
+    @patch("scrape_new_sources.scrape_remotely_de", return_value=[])
+    @patch("scrape_new_sources.scrape_arbeitnow", return_value=[])
     @patch("scrape_new_sources.scrape_thehub", side_effect=Exception("boom"))
     @patch("scrape_new_sources.scrape_startupjobs", return_value=[])
     @patch("scrape_new_sources.scrape_ashby", return_value=[])
@@ -527,11 +550,256 @@ class TestScrapeAllNewSources:
     @patch("scrape_new_sources.scrape_himalayas", return_value=[])
     @patch("scrape_new_sources._random_delay")
     def test_graceful_on_individual_failure(
-        self, mock_delay, mock_h, mock_gh, mock_lv, mock_as, mock_sj, mock_th
+        self,
+        mock_delay,
+        mock_h,
+        mock_gh,
+        mock_lv,
+        mock_as,
+        mock_sj,
+        mock_th,
+        mock_an,
+        mock_rd,
     ):
         """If one source throws, others still run."""
         result = scrape_all_new_sources()
         assert isinstance(result, list)  # no exception
+
+    @patch("scrape_new_sources.scrape_thehub", return_value=[])
+    @patch("scrape_new_sources.scrape_startupjobs", return_value=[])
+    @patch("scrape_new_sources.scrape_ashby", return_value=[])
+    @patch("scrape_new_sources.scrape_lever", return_value=[])
+    @patch("scrape_new_sources.scrape_greenhouse", return_value=[])
+    @patch("scrape_new_sources.scrape_himalayas", return_value=[])
+    @patch("scrape_new_sources.scrape_arbeitnow", side_effect=Exception("boom"))
+    @patch("scrape_new_sources.scrape_remotely_de", side_effect=Exception("boom"))
+    @patch("scrape_new_sources._random_delay")
+    def test_eu_source_failures_isolated(
+        self,
+        mock_delay,
+        mock_rd,
+        mock_an,
+        mock_h,
+        mock_gh,
+        mock_lv,
+        mock_as,
+        mock_sj,
+        mock_th,
+    ):
+        """arbeitnow / remotely.de exceptions must not break the orchestrator."""
+        result = scrape_all_new_sources()
+        assert isinstance(result, list)
+
+
+# ==================== arbeitnow scraper ====================
+
+
+class TestScrapeArbeitnow:
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_parses_response(self, mock_client_cls, mock_delay):
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "data": [
+                    {
+                        "slug": "senior-pm-berlin-1",
+                        "company_name": "Acme GmbH",
+                        "title": "Senior Product Manager (m/w/d)",
+                        "description": "<p>Build cool stuff.</p>",
+                        "remote": True,
+                        "url": "https://www.arbeitnow.com/jobs/acme/senior-pm-1",
+                        "tags": ["product", "ai"],
+                        "job_types": ["Full Time"],
+                        "location": "Berlin, Deutschland",
+                        "created_at": 1700000000,
+                    }
+                ]
+            },
+        )
+
+        jobs = scrape_arbeitnow()
+        assert len(jobs) == 1
+        j = jobs[0]
+        assert j.title == "Senior Product Manager (m/w/d)"
+        assert j.company == "Acme GmbH"
+        assert j.location == "Berlin, Deutschland"
+        assert j.source == "arbeitnow"
+        assert j.remote is True
+        assert "product" in j.tags
+        # HTML stripped from description
+        assert "<p>" not in j.description
+        assert "Build cool stuff" in j.description
+        # created_at unix → ISO
+        assert j.posted.startswith("20")
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_keyword_filter(self, mock_client_cls, mock_delay):
+        _mock_httpx_client(
+            mock_client_cls,
+            {
+                "data": [
+                    {"title": "Product Manager", "company_name": "A", "url": "u1"},
+                    {"title": "Accountant", "company_name": "B", "url": "u2"},
+                ]
+            },
+        )
+        jobs = scrape_arbeitnow(keyword_filter=["product"])
+        assert len(jobs) == 1
+        assert jobs[0].title == "Product Manager"
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_handles_empty(self, mock_client_cls, mock_delay):
+        _mock_httpx_client(mock_client_cls, {"data": []})
+        assert scrape_arbeitnow() == []
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_handles_malformed_response(self, mock_client_cls, mock_delay):
+        """Unexpected shape — return [] rather than crash."""
+        _mock_httpx_client(mock_client_cls, {"unexpected": "shape"})
+        assert scrape_arbeitnow() == []
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_handles_api_failure(self, mock_client_cls, mock_delay):
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.side_effect = Exception("500")
+        mock_client_cls.return_value = mock_client
+        assert scrape_arbeitnow() == []
+
+
+# ==================== remotely.de scraper ====================
+
+
+class TestScrapeRemotelyDe:
+    SITEMAP = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        "<url><loc>https://www.remotely.de/job/orbem-ai-engineer</loc>"
+        "<lastmod>2099-01-01T00:00:00.000Z</lastmod></url>"
+        "<url><loc>https://www.remotely.de/job/old-listing</loc>"
+        "<lastmod>2099-01-01T00:00:00.000Z</lastmod></url>"
+        "</urlset>"
+    )
+
+    JOB_HTML = """
+    <html>
+      <head>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org/",
+          "@type": "JobPosting",
+          "title": "AI Engineer",
+          "description": "<p>Build ML systems</p>",
+          "datePosted": "2026-03-09T00:00:00+00:00",
+          "hiringOrganization": {"@type": "Organization", "name": "Orbem"},
+          "jobLocation": {
+            "@type": "Place",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Munich",
+              "addressCountry": "DE"
+            }
+          },
+          "occupationalCategory": "AI/ML",
+          "url": "https://www.remotely.de/job/orbem-ai-engineer"
+        }
+        </script>
+      </head>
+      <body></body>
+    </html>
+    """
+
+    def _make_client_mock(self, sitemap_text, detail_html):
+        """Return a mock httpx.Client whose .get dispatches by URL substring."""
+
+        def _get(url, *args, **kwargs):
+            resp = MagicMock()
+            resp.raise_for_status = MagicMock()
+            if "sitemap" in url:
+                resp.text = sitemap_text
+            else:
+                resp.text = detail_html
+            return resp
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.side_effect = _get
+        return mock_client
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_parses_jobposting(self, mock_client_cls, mock_delay):
+        mock_client_cls.return_value = self._make_client_mock(self.SITEMAP, self.JOB_HTML)
+        jobs = scrape_remotely_de(limit=1, max_age_hours=None)
+        assert len(jobs) == 1
+        j = jobs[0]
+        assert j.title == "AI Engineer"
+        assert j.company == "Orbem"
+        assert "Munich" in j.location
+        assert "DE" in j.location
+        assert j.source == "remotely.de"
+        assert j.remote is True
+        assert "AI/ML" in j.tags
+        # HTML stripped
+        assert "<p>" not in j.description
+        assert "Build ML systems" in j.description
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_keyword_filter(self, mock_client_cls, mock_delay):
+        mock_client_cls.return_value = self._make_client_mock(self.SITEMAP, self.JOB_HTML)
+        # "ai engineer" matches → 1 (both sitemap entries return same JobPosting)
+        jobs = scrape_remotely_de(keyword_filter=["ai engineer"], limit=2, max_age_hours=None)
+        assert len(jobs) == 2
+        # Non-matching keyword → 0
+        mock_client_cls.return_value = self._make_client_mock(self.SITEMAP, self.JOB_HTML)
+        jobs = scrape_remotely_de(keyword_filter=["accountant"], limit=2, max_age_hours=None)
+        assert jobs == []
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_empty_sitemap(self, mock_client_cls, mock_delay):
+        empty_sitemap = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
+        )
+        mock_client_cls.return_value = self._make_client_mock(empty_sitemap, "")
+        assert scrape_remotely_de(limit=10, max_age_hours=None) == []
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_malformed_detail_no_jsonld(self, mock_client_cls, mock_delay):
+        """Detail page without a JobPosting block must be skipped, not crash."""
+        mock_client_cls.return_value = self._make_client_mock(
+            self.SITEMAP, "<html><body>no structured data</body></html>"
+        )
+        # Two sitemap entries, both lacking JSON-LD → 0 jobs, no exception
+        jobs = scrape_remotely_de(limit=2, max_age_hours=None)
+        assert jobs == []
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_sitemap_fetch_failure(self, mock_client_cls, mock_delay):
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.side_effect = Exception("503")
+        mock_client_cls.return_value = mock_client
+        assert scrape_remotely_de(limit=10) == []
+
+    @patch("scrape_new_sources._random_delay")
+    @patch("scrape_new_sources.httpx.Client")
+    def test_malformed_sitemap_xml(self, mock_client_cls, mock_delay):
+        """Bad XML must return [] rather than propagate ParseError."""
+        mock_client_cls.return_value = self._make_client_mock("<not-xml", self.JOB_HTML)
+        assert scrape_remotely_de(limit=5, max_age_hours=None) == []
 
 
 # ==================== Keyword preset expansions ====================

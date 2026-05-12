@@ -671,10 +671,12 @@ def deduplicate(jobs: list[ScrapedJob]) -> list[ScrapedJob]:
 try:
     from scrape_new_sources import (
         scrape_all_new_sources,
+        scrape_arbeitnow,
         scrape_ashby,
         scrape_greenhouse,
         scrape_himalayas,
         scrape_lever,
+        scrape_remotely_de,
         scrape_startupjobs,
         scrape_thehub,
     )
