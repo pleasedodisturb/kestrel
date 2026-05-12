@@ -131,6 +131,33 @@ You started with an empty pipeline and a vague sense of dread. Six weeks later, 
 
 This isn't a slogan — it's the architecture. Kestrel runs on your computer. Your database is a SQLite file in your home directory. Your resume, cover letters, STAR stories, salary expectations, networking notes — none of it touches a server unless you explicitly connect an AI provider.
 
+### Snapshots and recovery
+
+Months of job-search history sit in one SQLite file. Lose it and you've lost the search. Kestrel ships with a rotating-snapshot script so an accidental wipe is recoverable in under a minute:
+
+```bash
+python tools/snapshot_db.py                # daily snapshot, last 7 days retained
+python tools/snapshot_db.py --keep 30      # 30-day window instead
+python tools/snapshot_db.py --dry-run      # preview without writing
+```
+
+Snapshots land in `data/snapshots/career_os-YYYY-MM-DD.db`. The script uses SQLite's online backup API, not plain `cp`, so the file is consistent even if the live DB is mid-transaction under WAL.
+
+**Wire it into your daily cron** (Linux/macOS):
+
+```cron
+0 3 * * * cd /path/to/kestrel && /path/to/kestrel/.venv/bin/python tools/snapshot_db.py
+```
+
+Or as a macOS launchd plist / systemd timer if you prefer. Recovery is a copy:
+
+```bash
+cp data/snapshots/career_os-2026-05-04.db data/career_os.db
+rm -f data/career_os.db-shm data/career_os.db-wal
+# restart the server
+```
+
+
 Even then, you control what goes where:
 
 - **Ollama** — everything stays on your machine. Zero network calls. Free.
