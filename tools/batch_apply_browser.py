@@ -16,6 +16,7 @@ Usage:
 
 import argparse
 import asyncio
+import contextlib
 import os
 import re
 import sqlite3
@@ -495,6 +496,12 @@ async def _fill_field_by_label(page, label_text: str, value: str, exact: bool = 
                     await sibling.first.fill(value)
                 return True
 
+        # Portaled React combobox fallback (Anthropic Greenhouse pattern):
+        # the labeled control is a <button role="combobox"> whose menu is
+        # rendered into document.body, so the sibling lookup above misses it.
+        if await _select_portaled_combobox(page, label_text, value):
+            return True
+
     # Fallback: search by placeholder or aria-label
     for sel in [
         f'textarea[aria-label*="{label_text}" i]',
@@ -574,9 +581,20 @@ async def _click_radio_by_label(page, label_text: str) -> bool:
 
 
 async def _select_dropdown_option(page, label_text: str, option_text: str) -> bool:
-    """For Ashby-style custom dropdowns: click the dropdown near `label_text`,
-    then select the option matching `option_text`.
-    Returns True if successful.
+    """Dispatch a dropdown-style answer to the field labeled `label_text`.
+
+    Supports three dropdown shapes, tried in order:
+    1. Native ``<select>`` — use Playwright's ``select_option``.
+    2. Inline custom dropdown (Ashby-style) — click the sibling trigger, then
+       click a ``[role="option"]`` rendered in-place.
+    3. Portaled React combobox (Anthropic-style Greenhouse) — click the
+       ``<button>`` trigger (often ``aria-haspopup="listbox"`` or
+       ``role="combobox"``), wait for a ``[role="listbox"]`` that may be
+       portaled to ``document.body``, then click a ``[role="option"]``
+       and dispatch a synthetic ``mousedown`` for libraries that listen
+       on mousedown instead of click.
+
+    Returns True if a dropdown was successfully filled, False otherwise.
     """
     # Find the dropdown trigger near the label
     label_loc = page.locator(f'label:has-text("{label_text}")')
@@ -584,7 +602,11 @@ async def _select_dropdown_option(page, label_text: str, option_text: str) -> bo
         # Try finding by text in a parent div
         label_loc = page.locator(f'div:has-text("{label_text}")')
     if await label_loc.count() == 0:
-        return False
+        # Last resort: portaled combobox where the trigger button carries
+        # aria-label / aria-labelledby with the label text, but the visible
+        # label sits in a separate, non-wrapping element. Fall through to the
+        # portaled-combobox path below using a global trigger search.
+        return await _select_portaled_combobox(page, label_text, option_text)
 
     # Click on the dropdown/select element near the label
     parent = label_loc.first.locator("..")
@@ -595,7 +617,7 @@ async def _select_dropdown_option(page, label_text: str, option_text: str) -> bo
         if tag == "select":
             await el.select_option(label=option_text)
             return True
-        # Custom dropdown: click to open, then click option
+        # Custom dropdown: click to open, then click option (inline first).
         await el.click()
         await page.wait_for_timeout(500)
         option = page.locator(
@@ -605,7 +627,86 @@ async def _select_dropdown_option(page, label_text: str, option_text: str) -> bo
             await option.first.click()
             return True
 
-    return False
+        # Portaled-menu fallback: the listbox may have been rendered into
+        # document.body, outside the label's parent. Try a page-scoped
+        # option lookup and dispatch mousedown for React combobox libs that
+        # commit selection on mousedown rather than click.
+        if await _click_portaled_option(page, option_text):
+            return True
+
+    # Final fallback: search the entire page for a combobox trigger whose
+    # accessible name contains the label, then drive the portaled menu.
+    return await _select_portaled_combobox(page, label_text, option_text)
+
+
+async def _click_portaled_option(page, option_text: str) -> bool:
+    """Click a ``[role="option"]`` rendered anywhere in the document.
+
+    Used after the listbox has been opened — handles React libraries that
+    portal the menu into ``document.body`` (Anthropic Greenhouse pattern).
+    Dispatches a synthetic ``mousedown`` in addition to ``click`` because
+    some libraries (e.g. react-select) commit the selection on mousedown.
+
+    Returns True if an option was clicked, False otherwise.
+    """
+    option = page.locator(
+        f'[role="option"]:has-text("{option_text}"), [role="listbox"] >> text="{option_text}"'
+    )
+    if await option.count() == 0:
+        return False
+    first = option.first
+    # Dispatch mousedown first (some React libs commit on mousedown), then
+    # also click() to cover the click-listening libraries. Either alone is
+    # not sufficient across the ecosystem. Suppress dispatch errors so a
+    # detached node or older Playwright still falls through to click().
+    with contextlib.suppress(Exception):
+        await first.dispatch_event("mousedown")
+    await first.click()
+    return True
+
+
+async def _select_portaled_combobox(page, label_text: str, option_text: str) -> bool:
+    """Open a portaled React combobox keyed by accessible name and pick a value.
+
+    Looks for ``<button>`` elements that act as combobox triggers
+    (``aria-haspopup="listbox"`` or ``role="combobox"``) whose accessible
+    label matches ``label_text``. Clicks the trigger, waits for the
+    portaled listbox to mount, then dispatches the option click via
+    :func:`_click_portaled_option`.
+
+    Returns True on success, False if no matching trigger is found.
+    """
+    # Candidate trigger selectors — order matters: most-specific first.
+    # We match by aria-label or aria-labelledby text via :has(), then fall
+    # back to a button living next to a label that contains the text.
+    trigger_selectors = [
+        f'button[aria-haspopup="listbox"][aria-label*="{label_text}" i]',
+        f'button[role="combobox"][aria-label*="{label_text}" i]',
+        f'[role="combobox"][aria-label*="{label_text}" i]',
+        # Trigger sits inside a container whose label child has the text.
+        f'div:has(> label:has-text("{label_text}")) button[aria-haspopup="listbox"]',
+        f'div:has(> label:has-text("{label_text}")) button[role="combobox"]',
+        f'div:has(label:has-text("{label_text}")) button[aria-haspopup="listbox"]',
+        f'div:has(label:has-text("{label_text}")) button[role="combobox"]',
+    ]
+    trigger = None
+    for sel in trigger_selectors:
+        try:
+            loc = page.locator(sel)
+            if await loc.count() > 0:
+                trigger = loc.first
+                break
+        except Exception:
+            # Some selectors may be rejected by Playwright when the engine
+            # behind :has() doesn't accept the inner expression. Skip and
+            # keep looking — we have several alternatives.
+            continue
+    if trigger is None:
+        return False
+    await trigger.click()
+    # React portals can take a tick to mount; wait briefly before scanning.
+    await page.wait_for_timeout(300)
+    return await _click_portaled_option(page, option_text)
 
 
 async def fill_custom_questions(page, app: dict) -> None:
