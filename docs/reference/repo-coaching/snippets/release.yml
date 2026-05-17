@@ -1,0 +1,26 @@
+# Categorize auto-generated GitHub release notes by PR label / title prefix.
+# Runs whenever GitHub generates release notes (manual or release-please).
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - duplicate
+      - invalid
+    authors:
+      - dependabot
+      - renovate-bot
+  categories:
+    - title: 🚨 Breaking changes
+      labels: [breaking-change]
+    - title: ✨ New features
+      labels: [type/feature]
+    - title: 🐛 Bug fixes
+      labels: [type/bug]
+    - title: 🔒 Security
+      labels: [type/security]
+    - title: 📚 Docs
+      labels: [type/docs]
+    - title: 🏠 Internal / chore
+      labels: [type/chore, dependencies]
+    - title: Other
+      labels: ["*"]
