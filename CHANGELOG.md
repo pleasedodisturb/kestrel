@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.15.0](https://github.com/pleasedodisturb/kestrel/compare/v0.14.3...v0.15.0) (2026-05-12)
+
+
+### Features
+
+* **G-626:** dispatch React-combobox dropdowns in batch_apply_browser ([#370](https://github.com/pleasedodisturb/kestrel/issues/370)) ([7935768](https://github.com/pleasedodisturb/kestrel/commit/7935768d71667a0ef9cdfd10bec4a7832652e67e))
+* **G-627:** per-role qualifying-question overlay in batch_apply_browser ([#369](https://github.com/pleasedodisturb/kestrel/issues/369)) ([6047148](https://github.com/pleasedodisturb/kestrel/commit/6047148c9785987be6ba846a208f7148a66f9d19)), closes [#347](https://github.com/pleasedodisturb/kestrel/issues/347)
+* **G-630:** add remotely.de + arbeitnow EU-tech sources to daily_pipeline ([#372](https://github.com/pleasedodisturb/kestrel/issues/372)) ([c6e9c51](https://github.com/pleasedodisturb/kestrel/commit/c6e9c518741aad55323a9e9b6a650ae41d51c9d4))
+* **G-636:** tier-0 ATS poller (Greenhouse/Lever/Ashby) for dream companies ([#371](https://github.com/pleasedodisturb/kestrel/issues/371)) ([42538b5](https://github.com/pleasedodisturb/kestrel/commit/42538b5a7d332368b5f5cdb1947737485c49bda1))
+
+
+### Bug Fixes
+
+* **G-625:** type-aware setter for textarea fill in batch_apply_browser ([#373](https://github.com/pleasedodisturb/kestrel/issues/373)) ([e334b49](https://github.com/pleasedodisturb/kestrel/commit/e334b492daa360da1e761ad0f62797ffd510b458))
+* **profiles:** refuse DELETE if profile owns child rows; add rotating snapshot script ([#367](https://github.com/pleasedodisturb/kestrel/issues/367)) ([75d837e](https://github.com/pleasedodisturb/kestrel/commit/75d837eafa6bc8cd106f288b4adcc4cd98b1673a))
+
 ## [0.14.3](https://github.com/pleasedodisturb/kestrel/compare/v0.14.2...v0.14.3) (2026-05-11)
 
 
