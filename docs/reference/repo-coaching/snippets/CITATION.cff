@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: "Your Project Name"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - given-names: "Jane"
+    family-names: "Doe"
+    email: "jane@example.com"
+    orcid: "https://orcid.org/0000-0000-0000-0000"  # optional
+repository-code: "https://github.com/owner/repo"
+url: "https://yourproject.dev"
+abstract: "One-paragraph description of what the project does and why it matters."
+keywords:
+  - keyword-1
+  - keyword-2
+license: AGPL-3.0-or-later   # SPDX identifier
+version: "1.0.0"
+date-released: "2026-05-02"

@@ -1,0 +1,11 @@
+# Catch-all — required reviewer for everything not matched below.
+*                       @OWNER
+
+# Critical surfaces — require senior review.
+/.github/workflows/     @OWNER @security-lead
+/SECURITY.md            @OWNER @security-lead
+
+# Per-area ownership (adapt to your project).
+/src/api/               @OWNER @backend-team
+/frontend/              @OWNER @frontend-team
+/docs/                  @OWNER @docs-team

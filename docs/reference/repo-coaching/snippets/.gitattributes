@@ -1,0 +1,36 @@
+# Auto-detect text files; normalize line endings on commit.
+* text=auto
+
+# Force LF for shell scripts and configs that must be LF.
+*.sh        text eol=lf
+*.bash      text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Force CRLF for Windows-only files.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Treat as binary (no diffs, no merge).
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.webp      binary
+*.ico       binary
+*.pdf       binary
+*.zip       binary
+*.tar.gz    binary
+*.woff      binary
+*.woff2     binary
+
+# Linguist overrides — exclude vendored / generated / docs from language stats.
+docs/**            linguist-documentation
+**/vendor/**       linguist-vendored
+**/generated/**    linguist-generated
+*.min.js           linguist-generated
+*.min.css          linguist-generated
+
+# Keep newline at EOF on commit.
+*.md        text eol=lf
