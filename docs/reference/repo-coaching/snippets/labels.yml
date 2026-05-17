@@ -1,0 +1,67 @@
+# Drop-in label taxonomy. Apply with one of:
+#   - https://github.com/EndBug/label-sync
+#   - gh CLI: `gh label create "type/bug" --color e11d48 --description "..."`
+#
+# Keep the taxonomy small and orthogonal.
+
+# Type — what kind of work is this?
+- name: type/bug
+  color: e11d48
+  description: Something broken or behaving unexpectedly.
+- name: type/feature
+  color: 22c55e
+  description: New capability or enhancement.
+- name: type/docs
+  color: 3b82f6
+  description: Documentation only.
+- name: type/chore
+  color: 64748b
+  description: Tooling, refactor, internals — no user-visible change.
+- name: type/security
+  color: 7f1d1d
+  description: Security-related issue or fix.
+
+# Priority — how urgent is this?
+- name: priority/p0
+  color: 7f1d1d
+  description: Critical — drop everything.
+- name: priority/p1
+  color: dc2626
+  description: High — fix this milestone.
+- name: priority/p2
+  color: f97316
+  description: Normal — fix when possible.
+- name: priority/p3
+  color: facc15
+  description: Low — nice to have.
+
+# Status — where is this in the flow?
+- name: status/needs-triage
+  color: a3a3a3
+  description: Awaiting initial triage.
+- name: status/needs-info
+  color: a3a3a3
+  description: Waiting for more info from reporter.
+- name: status/needs-repro
+  color: a3a3a3
+  description: Cannot reproduce as filed.
+- name: status/blocked
+  color: a3a3a3
+  description: Blocked on something else.
+- name: status/wontfix
+  color: a3a3a3
+  description: Closed without action; explanation in last comment.
+
+# Special — GitHub-recognized.
+- name: good first issue
+  color: 8b5cf6
+  description: Good entry point for new contributors.
+- name: help wanted
+  color: 06b6d4
+  description: We'd appreciate help on this.
+
+# Areas — adapt to your project.
+# - name: area/api
+# - name: area/frontend
+# - name: area/docs
+# - name: area/ai-providers

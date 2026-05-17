@@ -1,0 +1,10 @@
+# These are supported funding model platforms.
+# Pick at most a few — the more you list, the more diluted the ask.
+
+github: [your-username]              # GitHub Sponsors profile
+# patreon: your-handle               # Patreon
+# open_collective: your-project      # Open Collective
+# ko_fi: your-handle                 # Ko-fi
+# tidelift: pkg-manager/package-name # Tidelift (commercial OSS support)
+# polar: your-username               # Polar.sh (per-issue bounties)
+# custom: ['https://buymeacoffee.com/your-handle']
