@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/pleasedodisturb/kestrel/compare/v0.15.0...v0.15.1) (2026-05-17)
+
+
+### Documentation
+
+* **G-677:** land repo-coaching playbook (research + masterlist + QUICK-APPLY + 19 snippets) ([#374](https://github.com/pleasedodisturb/kestrel/issues/374)) ([25b55f6](https://github.com/pleasedodisturb/kestrel/commit/25b55f6cb185bcfae453e011cd415e14ee9a12c0))
+
 ## [0.15.0](https://github.com/pleasedodisturb/kestrel/compare/v0.14.3...v0.15.0) (2026-05-12)
 
 
