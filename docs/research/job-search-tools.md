@@ -72,5 +72,10 @@ Entities stored in Cursor (preferences, target companies, etc.) are visible to G
 ## Out of Scope (Our Choices)
 
 - **Notion MCP**: We use Linear + TickTick
-- **LinkedIn MCP**: Skipped (account ban risk); use JobSpy anonymous or browsermcp
+- **LinkedIn MCP**: Skipped (account ban risk). Per the 2026-05 browser routing matrix in CLAUDE.md, escalate through:
+  1. **JobSpy anonymous** (no auth, lowest ban risk) — first choice
+  2. **Firecrawl** (cloud markdown, no local fingerprint) — token-optimised
+  3. **Obscura** (low-RAM stealth, server-rendered) — runs cleanly on macOS host
+  4. **CloakBrowser** (binary-patched fingerprint stealth) — sandbox only, *never* point at authenticated session
+  5. **BrowserMCP** (user's real browser with cookies) — last resort, high ban risk if LinkedIn detects automation
 - **Adzuna MCP**: Optional later
