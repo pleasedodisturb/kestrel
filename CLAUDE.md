@@ -98,6 +98,26 @@ Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 - `.env` / `.env.example` — Backend environment variables
 - `.github/workflows/ci.yml` — CI: Python lint+test, frontend lint+test, CodeQL, PII scan
 
+## Browser routing (2026-05 matrix)
+
+When an *agent session* needs to navigate, scrape, or fill a web page, use these tools in priority order. Fall through to the next tier when the previous fails. Empirical ranking from a Docker-sandboxed 49-attempt sweep on 2026-05-21 (top to bottom = most-correct to least-correct on this corpus; full methodology + numbers in the [web-agent-comparison repo](https://github.com/pleasedodisturb/web-agent-comparison)).
+
+| # | Tool | Use for | Notes |
+|---|------|---------|-------|
+| 1 | **WebFetch** (built-in, no MCP) | Static-HTML reads — JD pages, "About" pages, blog posts | ~20× more token-efficient than browser snapshots. First choice for read-only public content. |
+| 2 | **Playwright MCP** (`@playwright/mcp`) | Interactive agent-driven flows (default driver) | 28 tools, accessibility-tree representation, deterministic. The baseline. |
+| 3 | **chrome-devtools MCP** (`chrome-devtools-mcp`) | DevTools-aware work — network panel, perf traces, console | Official ChromeDevTools team. Needs local Chrome/Brave. |
+| 4 | **browser-use** (`browser-use --mcp`) | Python-agent flows; high-level extract/act primitives | ~95K-star framework. Direct mode = no LLM key needed. Adds session management on top of Playwright primitives. |
+| 5 | **Obscura** (`obscura-mcp`) | Low-RAM stealth scraping — server-rendered or CDP-driven | Rust engine, ~30 MB RAM/tab, anti-fingerprint built in. Container arch packaging is fragile mid-2026 — runs cleanly on macOS host. |
+| 6 | **CloakBrowser** (`cloakbrowsermcp`) | Fingerprint-blocked sites (Workday, Cloudflare-protected ATSes) | Patched-Chromium with ~58 C++ stealth patches. **Sandbox only** — closed binary touches cookies, never point at an authenticated session. |
+| 7 | **Firecrawl** (`firecrawl-mcp`) | Token-optimised cloud markdown scraping | 96% coverage / 0.638 F1 on 1000-URL benchmark, ~7s avg. Needs `FIRECRAWL_API_KEY`. |
+| 8 | **Lightpanda** (`lightpanda mcp`) | Server-rendered HTML only, ~1.8s/page, tiny RAM | Zig engine. SPA/React pages return empty (by design). MCP subcommand verified working on darwin-aarch64 as of 2026-05-21. |
+| 9 | **BrowserMCP** (`@browsermcp/mcp`) | Authenticated host pages (LinkedIn, Greenhouse with real cookies) | Project-level `.mcp.json` only. Needs a Chrome Agent profile. **Never use on banking or credential pages** — content goes to the model provider's API. |
+
+**Removed / superseded:** `vercel-labs/agent-browser` (project unmaintained mid-2026; superseded by browser-use direct mode + Playwright MCP).
+
+**Note for `tools/*.py`:** the raw `playwright.sync_api` / `playwright.async_api` imports in batch scripts are correct as-is — those are server-side automation, not agent-driven. The matrix above governs *agent sessions* (Claude Code interactions, MCP tool calls).
+
 ## Workflow Rules
 
 ### Commits
