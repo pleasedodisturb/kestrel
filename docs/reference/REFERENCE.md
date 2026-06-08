@@ -21,7 +21,7 @@ title: Features and API Reference
   <img src="https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Tests-1773_passing-22c55e?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-3744_passing-22c55e?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0 License">
 </p>
 
@@ -251,7 +251,7 @@ kestrel/
 │   │   └── ...
 │   └── api/                   # API client layer (17 modules)
 ├── alembic/                   # Database migrations
-├── tests/                     # 42 test modules, 1773 tests
+├── tests/                     # 143 test modules, 3744 tests
 ├── docker-compose.yml         # Backend + Frontend orchestration
 ├── Dockerfile                 # Backend image
 ├── Dockerfile.frontend        # Frontend image
