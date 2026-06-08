@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.15.2](https://github.com/pleasedodisturb/kestrel/compare/v0.15.1...v0.15.2) (2026-06-08)
+
+
+### Documentation
+
+* **G-842:** CLAUDE.md cleanup — fix stale refs + strip GSD boilerplate ([#389](https://github.com/pleasedodisturb/kestrel/issues/389)) ([9140093](https://github.com/pleasedodisturb/kestrel/commit/9140093216b33cb2c7a41df61d602a1307681439))
+* **G-851:** fix stale test-count badge in REFERENCE.md ([#390](https://github.com/pleasedodisturb/kestrel/issues/390)) ([cece6ac](https://github.com/pleasedodisturb/kestrel/commit/cece6ac8f020993240e09e56fd03fadecc62f079))
+
+
+### Dependencies
+
+* bump @tanstack/react-query from 5.100.9 to 5.101.0 in /frontend ([#386](https://github.com/pleasedodisturb/kestrel/issues/386)) ([71dbbf1](https://github.com/pleasedodisturb/kestrel/commit/71dbbf1cfb5a12c82e4dde009087be5604a492a4))
+* bump react-router and react-router-dom in /frontend ([#392](https://github.com/pleasedodisturb/kestrel/issues/392)) ([232bf32](https://github.com/pleasedodisturb/kestrel/commit/232bf32a13584b56551720d0e8fe190906310916))
+* bump the eslint group in /frontend with 2 updates ([#385](https://github.com/pleasedodisturb/kestrel/issues/385)) ([36df76b](https://github.com/pleasedodisturb/kestrel/commit/36df76b99608b4b831f13696ef3aa26da076a5fc))
+* bump the react group in /frontend with 3 updates ([#384](https://github.com/pleasedodisturb/kestrel/issues/384)) ([d567c4e](https://github.com/pleasedodisturb/kestrel/commit/d567c4ed4ec9cb28a59175eb27212d2b325795c1))
+* bump the tailwind group in /frontend with 2 updates ([#387](https://github.com/pleasedodisturb/kestrel/issues/387)) ([ecf71d6](https://github.com/pleasedodisturb/kestrel/commit/ecf71d6b02ce04120e6db88731054aee5f9a0f98))
+* bump the vitest group in /frontend with 2 updates ([#388](https://github.com/pleasedodisturb/kestrel/issues/388)) ([5f4ec68](https://github.com/pleasedodisturb/kestrel/commit/5f4ec6818ee56760e0b1e44ab66485e3e163d635))
+* update openai requirement from &gt;=2.35.1 to &gt;=2.40.0 ([#380](https://github.com/pleasedodisturb/kestrel/issues/380)) ([bfaa9f7](https://github.com/pleasedodisturb/kestrel/commit/bfaa9f75f8c3147e04e8f1380dcc185a6722bda4))
+
 ## [0.15.1](https://github.com/pleasedodisturb/kestrel/compare/v0.15.0...v0.15.1) (2026-05-17)
 
 
