@@ -11,7 +11,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Backend API | `src/career_os/` | Python 3.11+, FastAPI, SQLAlchemy, SQLite | 8100 |
 | Web Frontend | `frontend/` | React 19, Vite, TypeScript, Tailwind CSS | 8101 |
 
-The Python package is internally named `career_os` (historical). PyPI name is `kestrel-app`. The `mobile/` directory is preserved for a future release — do not develop against it.
+The Python package is internally named `career_os` (historical). PyPI name is `kestrel-app`.
+
+A native mobile app is planned but **not yet in this repo** — there is no `mobile/` directory today.
+
+This file does not restate global rules — read `~/.claude/CLAUDE.md` first.
 
 ## Development Commands
 
@@ -69,7 +73,7 @@ Models (src/career_os/models/)      → SQLAlchemy ORM definitions
 Database (database.py, config.py)   → SQLite (WAL mode), async via aiosqlite
 ```
 
-- **AI Provider Abstraction** (`src/career_os/ai/`): Factory pattern — `AI_PROVIDER` env var selects provider. 9 providers: Mock, OpenRouter, Anthropic, OpenAI, Together, Groq, xAI, Gemini, Ollama. All implement `complete()` and `score()` async methods. Fallback chain via `AI_PROVIDER_FALLBACK`.
+- **AI Provider Abstraction** (`src/career_os/ai/`): Factory pattern — `AI_PROVIDER` env var selects provider. 11 providers: Mock, OpenRouter, Anthropic, OpenAI, Together, Groq, xAI, Gemini, Ollama, Mistral, HuggingFace. All implement `complete()` and `score()` async methods. Fallback chain via `AI_PROVIDER_FALLBACK`.
 - **Cost Presets** (`src/career_os/services/presets.py`): One setting (Free/Budget/Quality/Private/Custom) configures provider, model, pre-filter aggressiveness, and batch size. Default: Budget (~$0.81/mo). API: `GET/PUT /api/presets/active`.
 - **Pre-filter** (`src/career_os/discovery/prefilter.py`): Eliminates ~60% of jobs before AI scoring. Configurable: `PREFILTER_STRATEGY=strict|moderate|off`.
 - **Batch Scoring** (`src/career_os/services/batch_scoring.py`): 10 jobs per prompt. `BATCH_SCORING_SIZE` env var. Fallback to individual on parse failure.
@@ -175,7 +179,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 ### BMAD (Build More, Architect Dreams)
 
 **Installation:** Per-project in `_bmad/` (config) and `.claude/skills/bmad-*/` (skills). Version 6.3.0.
-**Output directory:** `_bmad-output/planning-artifacts/` (PRD, architecture docs, etc.)
+**Output directory:** `_bmad-output/` (PRD, architecture docs, etc. — created on first use; configured in `_bmad/bmm/config.yaml`)
 **Config:** `_bmad/bmm/config.yaml` (project name, user, languages, output paths)
 
 BMAD drives the product planning pipeline: PRD → UX Design → Architecture → Epics → Stories.
@@ -218,7 +222,7 @@ A public, demo-ready roadmap for Kestrel — the AI-powered, self-hosted job sea
 
 ## Languages
 - Python 3.11+ — Backend API, CLI, AI providers, discovery engine (`src/career_os/`)
-- TypeScript 6.0 — Web frontend (`frontend/`), mobile app (`mobile/`)
+- TypeScript 6.0 — Web frontend (`frontend/`)
 - SQL — Alembic migrations (`src/career_os/_alembic/versions/`), SQLite pragmas
 - JavaScript — Config files (`commitlint.config.js`)
 ## Runtime
@@ -226,20 +230,16 @@ A public, demo-ready roadmap for Kestrel — the AI-powered, self-hosted job sea
 - Node.js 22 (Docker base: `node:22-alpine`)
 - pip with setuptools (backend) — `pyproject.toml` build system
 - npm (frontend) — `frontend/package-lock.json` present
-- npm (mobile) — `mobile/node_modules/` present
-- Lockfile: pip has no lockfile (deps pinned with >= floors); npm lockfiles present
+- Lockfile: pip has no lockfile (deps pinned with >= floors); npm lockfile present
 ## Frameworks
 - FastAPI >=0.115.0 — REST API server (`src/career_os/main.py`)
 - React 19.2 — Web frontend SPA (`frontend/`)
-- React Native 0.81 / Expo 54 — Mobile app (`mobile/`)
-- Tamagui 2.0 RC — Mobile UI component library
 - pytest >=8.3.0 — Backend tests (`tests/`)
 - pytest-asyncio >=0.25.0 — Async test support (mode: `auto`)
 - pytest-cov >=6.1.0 — Coverage reporting
 - pytest-timeout >=2.3.0 — Test timeout (30s default)
 - Vitest 4.1 — Frontend tests (`frontend/src/__tests__/`)
 - Testing Library (React 16.3, DOM 10.4, jest-dom 6.9) — Frontend component testing
-- Jest — Mobile tests (co-located `*.test.tsx`)
 - Vite 8.0 — Frontend bundler and dev server (`frontend/vite.config.ts`)
 - Ruff >=0.11.0 — Python linting + formatting (replaces flake8/black/isort)
 - ESLint 10.2 — TypeScript/React linting (`frontend/`)
@@ -402,101 +402,6 @@ A public, demo-ready roadmap for Kestrel — the AI-powered, self-hosted job sea
 - In-memory SQLite for tests with FK enforcement pragma
 <!-- GSD:conventions-end -->
 
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
-## Architecture
-
-## Pattern Overview
-- Single FastAPI backend serves REST API consumed by three frontends (web SPA, mobile app, CLI)
-- Classic layered architecture: Routes -> Services -> Models -> Database
-- AI provider abstraction via factory pattern with pluggable backends
-- Profile-scoped data isolation (all queries filter by `profile_id`)
-- Background task scheduling via asyncio (no external task queue)
-- Auto-migration on startup (Alembic runs at app boot)
-## Layers
-- Purpose: HTTP request handling, input validation, error mapping
-- Location: `src/career_os/api/`
-- Contains: 27 router modules, each defining FastAPI `APIRouter` with `/api/{domain}` prefix
-- Depends on: Schemas (Pydantic), Services, Database session via `get_db()` dependency
-- Used by: All frontends via REST
-- Pattern: Routes catch domain exceptions from services and map to HTTP status codes (e.g., `ApplicationNotFoundError` -> 404)
-- Key files: `src/career_os/api/applications.py`, `src/career_os/api/scoring.py`, `src/career_os/api/discovery.py`
-- Purpose: Pydantic models for request/response validation and domain enums
-- Location: `src/career_os/schemas/`
-- Contains: 27 schema modules mirroring API routes; includes business rules like `VALID_TRANSITIONS` state machine
-- Depends on: Pydantic, Python stdlib
-- Used by: API routes (request/response), Services (type contracts)
-- Pattern: Each domain has a schema module with `*Create`, `*Update`, `*Response` models
-- Key files: `src/career_os/schemas/applications.py` (state machine), `src/career_os/schemas/ai.py` (AIResponse, AIFeature, ScoreResult), `src/career_os/schemas/scoring.py`
-- Purpose: Business logic, domain operations, AI orchestration
-- Location: `src/career_os/services/`
-- Contains: 36 service modules; pure functions taking `db: Session` as first arg
-- Depends on: Models (ORM), Schemas, AI providers, external clients
-- Used by: API routes, CLI commands
-- Pattern: Functional style — service functions accept SQLAlchemy `Session`, raise domain exceptions (e.g., `ProfileNotFoundError`, `ScoringError`)
-- Key files: `src/career_os/services/scoring.py` (AI scoring engine), `src/career_os/services/applications.py` (CRUD + state transitions), `src/career_os/services/discovery.py`
-- Purpose: SQLAlchemy ORM definitions
-- Location: `src/career_os/models/`
-- Contains: 18 model files; `models.py` is the main file with core entities (Profile, Application, ActivityLog, FollowUp); domain-specific models in separate files
-- Depends on: SQLAlchemy, `career_os.database.Base`
-- Used by: Services, Alembic migrations
-- Pattern: All models inherit from `Base` (DeclarativeBase). Uses `Mapped[]` type annotations (SQLAlchemy 2.0 style). Foreign keys reference `profiles.id` for multi-profile isolation.
-- Key files: `src/career_os/models/models.py` (Profile, Application), `src/career_os/models/scoring.py`, `src/career_os/models/skills.py`, `src/career_os/models/discovery.py`
-- Purpose: Engine creation, session factory, SQLite configuration
-- Location: `src/career_os/database.py`
-- Contains: Engine with WAL mode + foreign keys enabled via `PRAGMA` on every connection
-- Pattern: Synchronous SQLAlchemy with `check_same_thread=False` for FastAPI async handlers; `get_db()` generator dependency yields sessions
-- Purpose: Pluggable AI backend abstraction
-- Location: `src/career_os/ai/`
-- Contains: Abstract base (`base.py`), factory (`factory.py`), 5 provider implementations, caching layer, PII masking, privacy registry
-- Pattern: Factory pattern — `get_ai_provider(name)` returns provider from `_PROVIDER_REGISTRY` dict. All providers implement `complete()`, `score()`, optional `batch_score()`, `embed()`.
-- Providers: `MockProvider`, `OpenRouterProvider`, `AnthropicProvider`, `OllamaProvider`, `TogetherProvider`
-- Complexity routing: `ComplexityTier` enum (SIMPLE/STANDARD/COMPLEX) routes to different model sizes
-- Cache: `CachedAIProvider` wraps any provider with encrypted SQLite cache (Fernet, 7-day TTL)
-- Key files: `src/career_os/ai/base.py` (AIProvider ABC), `src/career_os/ai/factory.py` (registry + factory)
-- Purpose: Pydantic Settings for all app configuration
-- Location: `src/career_os/config.py`
-- Pattern: Single `Settings` class with env var binding, `.env` file support, model validator for API key requirements
-- Singleton: `settings = Settings()` at module level
-## Data Flow
-- Backend: SQLite database with WAL mode (file: `data/career_os.db`)
-- Web frontend: TanStack React Query with 5-minute stale time; no client-side global state store
-- Mobile app: Planned — Expo Secure Store for auth tokens, React Query for server state
-## Key Abstractions
-- Purpose: Abstract interface for all AI backends
-- Examples: `src/career_os/ai/mock_provider.py`, `src/career_os/ai/openrouter_provider.py`, `src/career_os/ai/anthropic_provider.py`, `src/career_os/ai/ollama_provider.py`, `src/career_os/ai/together_provider.py`
-- Pattern: ABC with `complete()`, `score()`, optional `batch_score()`, `embed()`. Factory selects via `AI_PROVIDER` env var.
-- Purpose: Multi-user data isolation within single-instance deployment
-- Examples: `src/career_os/models/models.py` (all entities have `profile_id` FK), `src/career_os/services/applications.py` (`_get_active_application` filters by profile_id)
-- Pattern: Every query includes `profile_id` filter. Default profile seeded on first run.
-- Purpose: Service-layer errors that routes map to HTTP codes
-- Examples: `ApplicationNotFoundError` -> 404, `InvalidStatusTransitionError` -> 422, `ProfileIncompleteError` -> 400, `ProviderQuotaError` -> 503
-- Pattern: Each service module defines its own exception classes; API routes catch and convert to `HTTPException`
-- Purpose: Unified interface for multiple job board scrapers
-- Pattern: ABC with `scrape(params) -> list[RawJobResult]`. Individual adapter failures are caught and returned as warnings, never blocking other adapters.
-## Entry Points
-- Location: `src/career_os/main.py`
-- Triggers: `uvicorn career_os.main:app`, Docker, `kestrel start` CLI
-- Responsibilities: App creation, middleware registration (CORS, auth, rate limiting), router inclusion (27 routers), lifespan management (auto-migration, seeding, scheduler start/stop), static file serving in production
-- Location: `src/career_os/cli/main.py`
-- Triggers: `kestrel` or `career` CLI commands (entry points in `pyproject.toml`)
-- Responsibilities: Typer-based CLI with subcommand groups: pipeline, skills, goals, interview-prep, contacts, warn
-- Location: `worker/src/index.ts`
-- Triggers: Linear webhooks, cron schedule, HTTP requests
-- Responsibilities: Bi-directional Linear<->TickTick sync, calendar feed generation, dashboard rebuild triggers
-- Note: Separate deployment, not part of main backend
-- Location: `frontend/src/main.tsx` -> `frontend/src/App.tsx`
-- Triggers: Browser navigation
-- Responsibilities: React SPA with React Router; 11 pages wrapped in shared Layout
-## Error Handling
-- Services raise typed exceptions: `ApplicationNotFoundError`, `ProfileNotFoundError`, `InvalidStatusTransitionError`, `ScoringError`, `ProfileIncompleteError`
-- API routes catch specific exceptions and raise `HTTPException` with appropriate status codes
-- AI providers raise `ProviderQuotaError` (402/429) caught by routes and surfaced to frontend as `CreditsExhaustedBanner`
-- Discovery adapters use per-adapter error isolation — one adapter failing does not block others
-- Frontend: Class-based `ErrorBoundary` in `frontend/src/App.tsx` catches React render errors
-- Background schedulers log errors and continue (with consecutive error counting in discovery scheduler)
-## Cross-Cutting Concerns
-<!-- GSD:architecture-end -->
-
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
 
@@ -520,23 +425,3 @@ A public, demo-ready roadmap for Kestrel — the AI-powered, self-hosted job sea
 | bmad-shard-doc | 'Splits large markdown documents into smaller, organized files based on level 2 (default) sections. Use if the user says perform shard document' | `.claude/skills/bmad-shard-doc/SKILL.md` |
 | bmad-validate-prd | 'Validate a PRD against standards. Use when the user says "validate this PRD" or "run PRD validation"' | `.claude/skills/bmad-validate-prd/SKILL.md` |
 <!-- GSD:skills-end -->
-
-<!-- GSD:workflow-start source:GSD defaults -->
-## GSD Workflow Enforcement
-
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
-
-Use these entry points:
-- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
-- `/gsd-debug` for investigation and bug fixing
-- `/gsd-execute-phase` for planned phase work
-
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
-<!-- GSD:workflow-end -->
-
-<!-- GSD:profile-start -->
-## Developer Profile
-
-> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-<!-- GSD:profile-end -->
