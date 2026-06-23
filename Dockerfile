@@ -62,9 +62,11 @@ ENV AI_PROVIDER=mock \
 
 EXPOSE 8100
 
-# Health check
+# Health check (honors $PORT; defaults to 8100 for local runs)
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -sf http://localhost:8100/health || exit 1
+    CMD curl -sf "http://localhost:${PORT:-8100}/health" || exit 1
 
-# Run Alembic migrations, then start uvicorn
-CMD ["sh", "-c", "alembic upgrade head && uvicorn career_os.main:app --host 0.0.0.0 --port 8100"]
+# Run Alembic migrations, then start uvicorn.
+# Bind to $PORT so platforms that inject it (Railway, etc.) route correctly;
+# falls back to 8100 for local docker/compose.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn career_os.main:app --host 0.0.0.0 --port ${PORT:-8100}"]

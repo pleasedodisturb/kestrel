@@ -42,11 +42,23 @@ docker compose up --build
 
 ## Deploy to Railway
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/pleasedodisturb/kestrel)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/github)
 
-### One-click deploy
+### Deploy from GitHub repo
 
-Click the button above. Railway reads the included `railway.json`, builds from the Dockerfile, and gives you a public URL. The only post-deploy step is adding a volume for data persistence (see below).
+Click the button above (or go to **railway.com/new → Deploy from GitHub repo**) and select your fork of `kestrel`. Railway reads the included `railway.json`, builds from the Dockerfile, binds to the injected `$PORT`, and gives you a public URL. The only post-deploy step is adding a volume for data persistence (see below).
+
+> **Note:** `railway.com/new/template?template=<github-url>` does **not** work for a plain GitHub repo — that URL form expects a *published* Railway template and falls through to a generic database/service picker. Use the deploy-from-repo flow above instead.
+
+### True one-click button (optional, owner-only)
+
+To get a real one-click button that provisions the volume and variables automatically, publish a template once from the Railway dashboard:
+
+1. Deploy the repo once (above), then open the project → **Settings → Publish as Template**.
+2. Railway mints a stable URL: `https://railway.com/new/template/<code>`.
+3. Replace the button target in `README.md` and this file with that URL.
+
+This is a manual dashboard step tied to your Railway account, so it can't be committed from the repo alone.
 
 ### Manual deploy (Railway CLI)
 
