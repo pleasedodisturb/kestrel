@@ -22,7 +22,7 @@
 <p align="center">
   <a href="https://codespaces.new/pleasedodisturb/kestrel"><img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces" height="32"></a>
   &nbsp;&nbsp;
-  <a href="https://railway.com/new/github"><img src="https://railway.com/button.svg" alt="Deploy on Railway" height="32"></a>
+  <a href="https://railway.com/deploy/loMUk4?referralCode=SVkZXi&utm_medium=integration&utm_source=template&utm_campaign=generic"><img src="https://railway.com/button.svg" alt="Deploy on Railway" height="32"></a>
 </p>
 
 ---
