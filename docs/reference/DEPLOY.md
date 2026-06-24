@@ -46,7 +46,7 @@ docker compose up --build
 
 ### One-click deploy
 
-Click the button above. Railway reads the included `railway.json`, builds from the Dockerfile, and gives you a public URL. The only post-deploy step is adding a volume for data persistence (see below).
+Click the button above. Railway reads the included `railway.json`, builds from the Dockerfile, and gives you a public URL. The `railway.json` declares `requiredMountPath: /app/data`, and the published template provisions a persistent volume at that path — so data persistence is set up automatically, with no manual post-deploy step.
 
 ### Manual deploy (Railway CLI)
 
@@ -79,15 +79,21 @@ Set these in the Railway dashboard under your service's **Variables** tab:
 
 `DATABASE_URL` and `FRONTEND_URL` are pre-configured in the Dockerfile and do not need to be set.
 
-### Data persistence (required)
+### Data persistence
 
-SQLite stores all data at `/app/data/career_os.db`. Without a volume, data is lost on every redeploy.
+SQLite stores all data at `/app/data/career_os.db`. Without a volume mounted there, data is lost on every redeploy.
+
+**One-click template deploys:** persistence is automatic. `railway.json` sets `deploy.requiredMountPath` to `/app/data`, and the published Railway template attaches a volume at that path — nothing to do.
+
+**Manual / CLI deploys (`railway up`):** `requiredMountPath` declares the requirement, but you attach the volume yourself:
 
 1. Open your service in the Railway dashboard
 2. Go to **Settings > Volumes**
 3. Click **Add Volume**
 4. Set mount path to `/app/data`
 5. Choose a size (1 GB is plenty)
+
+> Note: a volume can't be defined in `railway.json` itself (Railway's config schema has no `volumes` key) — `requiredMountPath` only declares where the mount must be. The volume resource is provisioned by the template or added in the dashboard.
 
 ### Free tier limitations
 
