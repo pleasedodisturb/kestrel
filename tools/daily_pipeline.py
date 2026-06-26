@@ -116,6 +116,55 @@ def step_scrape(config: PipelineConfig) -> list[dict]:
 
 # --- Step 2: Score ---
 
+# Budget-based scoring cap (ported from Eyas G-1119). Instead of a fixed job
+# count, derive how many jobs to AI-score from a daily $ budget, clamped to a
+# sane floor/ceiling. Combined with source-priority ordering (G-1114) below,
+# the cap only ever trims the lowest-signal generic-board overflow.
+DEFAULT_DAILY_BUDGET_USD = 5.0
+EST_COST_PER_JOB_USD = 0.0015
+SCORING_CAP_FLOOR = 500
+SCORING_CAP_CEILING = 6000
+
+
+def effective_scoring_cap() -> int:
+    """Resolve the scoring cap: explicit PIPELINE_MAX_SCORE, else budget-derived."""
+    override = os.getenv("PIPELINE_MAX_SCORE")
+    if override:
+        try:
+            return max(1, int(override))
+        except ValueError:
+            pass
+    try:
+        budget = float(os.getenv("PIPELINE_DAILY_BUDGET_USD", DEFAULT_DAILY_BUDGET_USD))
+    except ValueError:
+        budget = DEFAULT_DAILY_BUDGET_USD
+    return max(SCORING_CAP_FLOOR, min(SCORING_CAP_CEILING, int(budget / EST_COST_PER_JOB_USD)))
+
+
+# When the scrape exceeds the cap, score the highest-signal sources FIRST so the
+# cap never silently drops curated roles (ported from Eyas G-1114). The ATS
+# board scrapers (greenhouse/ashby/lever/workable) carry the curated target
+# companies and tend to be scraped last, so before this fix they were the first
+# to be cap-skipped.
+SOURCE_SCORING_PRIORITY: dict[str, int] = {
+    "greenhouse": 0,
+    "ashby": 0,
+    "lever": 0,
+    "workable": 0,
+    "ai-jobs": 1,
+    "germany_api": 2,
+    "arbeitsagentur": 2,
+    "arbeitnow": 2,
+    "himalayas": 3,
+}
+_DEFAULT_SOURCE_PRIORITY = 5
+
+
+def _source_priority(job: dict) -> int:
+    return SOURCE_SCORING_PRIORITY.get(
+        (job.get("source") or "").lower().strip(), _DEFAULT_SOURCE_PRIORITY
+    )
+
 
 def step_score(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
     """Score each job against the profile via the AI provider stack.
@@ -175,12 +224,18 @@ async def _step_score_async(
         os.getenv("SCORING_MAX_FAILURE_RATE", str(DEFAULT_SCORING_MAX_FAILURE_RATE))
     )
 
+    # Order by source priority BEFORE the budget cap so high-signal ATS sources
+    # are scored first and never cap-skipped (G-1114). Stable sort preserves the
+    # original within-source order.
+    jobs = sorted(jobs, key=_source_priority)
+    scoring_cap = effective_scoring_cap()
+
     scored: list[dict] = []
     skipped = 0
     failures = 0
     ai_attempts = 0
     total = len(jobs)
-    logger.info("Provider chain: %s", provider.name)
+    logger.info("Provider chain: %s (scoring cap: %d jobs)", provider.name, scoring_cap)
 
     for i, job in enumerate(jobs):
         title = job.get("title", "Unknown")
@@ -203,6 +258,23 @@ async def _step_score_async(
             skipped += 1
             if (i + 1) % 10 == 0:
                 logger.info("Scored %d/%d jobs (skipped %d)", i + 1, total, skipped)
+            continue
+
+        # Budget cap (G-1119): once effective_scoring_cap() jobs have gone to the
+        # AI, stub the remainder. Jobs are pre-sorted by source priority, so the
+        # overflow trimmed here is always the lowest-signal generic-board tail,
+        # never a curated ATS role (G-1114).
+        if ai_attempts >= scoring_cap:
+            job["fit_score"] = 2
+            job["fit_reasoning"] = "Skipped: scoring cap reached"
+            job["estimated_salary"] = "unknown"
+            job["effort_flag"] = "unknown"
+            job["prep_level"] = 0
+            job["prep_notes"] = ""
+            job["review_flag"] = False
+            job["review_reason"] = ""
+            scored.append(job)
+            skipped += 1
             continue
 
         if not description or description == "nan":
@@ -397,6 +469,11 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
     logger.info("STEP 3: DEDUP AGAINST TRACKING")
     logger.info("=" * 60)
 
+    # Canonical dedup key (G-1122): normalize company/title so trivial drift
+    # ("Hugging Face" vs slug-derived "Huggingface", "Acme GmbH" vs "Acme",
+    # "Senior PM" vs "Senior PM (m/f/d)") doesn't let the same role re-surface.
+    from normalize import job_key
+
     tracked_keys: set[tuple[str, str]] = set()
 
     # Check CareerOS DB (primary)
@@ -408,7 +485,7 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
         db = SessionLocal()
         apps = db.query(Application).filter(Application.archived_at.is_(None)).all()
         for app in apps:
-            tracked_keys.add((app.company.lower().strip(), app.role.lower().strip()))
+            tracked_keys.add(job_key(app.company, app.role))
         db.close()
         logger.info(f"Loaded {len(tracked_keys)} tracked jobs from CareerOS DB")
     except Exception as e:
@@ -420,10 +497,10 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
                 with open(config.csv_path) as f:
                     reader = csv.DictReader(f)
                     for row in reader:
-                        company = row.get("company", "").lower().strip()
-                        role = row.get("role", "").lower().strip()
+                        company = (row.get("company") or "").strip()
+                        role = (row.get("role") or "").strip()
                         if company and role:
-                            tracked_keys.add((company, role))
+                            tracked_keys.add(job_key(company, role))
                 logger.info(f"Fallback: loaded {len(tracked_keys)} tracked jobs from CSV")
             except Exception as e2:
                 logger.warning(f"Could not read tracking CSV either: {e2}")
@@ -431,7 +508,7 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
     new_jobs = []
     already_tracked = 0
     for job in jobs:
-        key = (job.get("company", "").lower().strip(), job.get("title", "").lower().strip())
+        key = job_key(job.get("company"), job.get("title"))
         if key in tracked_keys:
             already_tracked += 1
         else:
