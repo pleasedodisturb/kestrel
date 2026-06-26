@@ -9,6 +9,7 @@ Requires ANTHROPIC_API_KEY in environment.
 
 import json
 import logging
+from urllib.parse import urlparse
 
 import httpx
 
@@ -415,6 +416,15 @@ class AnthropicProvider(AIProvider):
 
         results_url = data.get("results_url")
         if not results_url:
+            return {"status": status, "results": {}}
+
+        # Validate results_url points to Anthropic's domain before fetching.
+        # The request below carries the x-api-key header, so a tampered or
+        # unexpected results_url could exfiltrate the API key to an arbitrary
+        # host. Restrict to Anthropic's domains.
+        parsed_url = urlparse(results_url)
+        if parsed_url.hostname not in ("api.anthropic.com", "anthropic.com"):
+            logger.error("Batch results_url points to unexpected host: %s", parsed_url.hostname)
             return {"status": status, "results": {}}
 
         # Fetch JSONL results
