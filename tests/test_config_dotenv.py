@@ -4,27 +4,29 @@ config.py calls load_dotenv(override=False) at import so that .env values land
 in os.environ even for consumers that read os.getenv directly (e.g. the tools/
 pipeline) rather than as pydantic Settings fields — without clobbering real
 environment variables set by tests, CI, or containers.
+
+These tests deliberately avoid importlib.reload(career_os.config): reloading
+the module rebuilds the global `settings` singleton and desyncs it from every
+module that did `from career_os.config import settings`, which silently breaks
+unrelated tests (e.g. preset propagation). The import-time wiring is verified
+statically instead; the override=False contract is verified behaviorally.
 """
 
 from __future__ import annotations
 
-import importlib
+import inspect
 import os
-from unittest.mock import patch
 
 
-def test_config_calls_load_dotenv_with_override_false():
-    """Reimporting config invokes load_dotenv(override=False) exactly once."""
+def test_config_wires_load_dotenv_with_override_false():
+    """config.py calls load_dotenv(override=False) at import (static check)."""
     import career_os.config as cfg
 
-    # Patch the source (dotenv.load_dotenv) so the module's
-    # `from dotenv import load_dotenv` binds the mock on reload.
-    with patch("dotenv.load_dotenv") as mock_ld:
-        importlib.reload(cfg)
-        mock_ld.assert_called_once_with(override=False)
-
-    # Restore real module state for any later tests in the session.
-    importlib.reload(cfg)
+    # load_dotenv is imported into the module namespace...
+    assert hasattr(cfg, "load_dotenv")
+    # ...and invoked with override=False at import time.
+    source = inspect.getsource(cfg)
+    assert "load_dotenv(override=False)" in source
 
 
 def test_override_false_respects_existing_env(tmp_path, monkeypatch):
