@@ -646,3 +646,73 @@ class TestBatchScoreCaching:
         assert "Backend role" in user_msg_2
         # System blocks are identical (same object reference)
         assert requests[0]["params"]["system"] is requests[1]["params"]["system"]
+
+
+class TestBatchResultsUrlValidation:
+    """results_url host validation prevents API-key exfiltration (SSRF guard).
+
+    get_batch_results() fetches the batch results_url with the x-api-key header
+    attached. A tampered or unexpected results_url must never be requested, or
+    the API key would leak to an arbitrary host.
+    """
+
+    @pytest.mark.asyncio
+    async def test_rejects_non_anthropic_results_url(self) -> None:
+        provider = AnthropicProvider(api_key=_TEST_CREDENTIAL)
+        requested_urls: list[str] = []
+
+        async def mock_get(url, headers=None, **kwargs):
+            requested_urls.append(url)
+            # Status poll returns a malicious results_url on a foreign host.
+            return httpx.Response(
+                200,
+                json={
+                    "processing_status": "ended",
+                    "results_url": "https://evil.example.com/leak",
+                },
+                request=httpx.Request("GET", url),
+            )
+
+        with patch("httpx.AsyncClient.get", side_effect=mock_get):
+            result = await provider.get_batch_results("batch_123")
+
+        assert result["status"] == "ended"
+        assert result["results"] == {}
+        # The malicious results_url must never be fetched (no key leak).
+        assert not any("evil.example.com" in u for u in requested_urls)
+
+    @pytest.mark.asyncio
+    async def test_accepts_anthropic_results_url(self) -> None:
+        provider = AnthropicProvider(api_key=_TEST_CREDENTIAL)
+        jsonl = json.dumps(
+            {
+                "custom_id": "req_0",
+                "result": {
+                    "type": "succeeded",
+                    "message": {
+                        "content": [{"type": "text", "text": "ok"}],
+                        "model": "claude-sonnet-4-20250514",
+                        "usage": {"input_tokens": 1, "output_tokens": 1},
+                    },
+                },
+            }
+        )
+
+        async def mock_get(url, headers=None, **kwargs):
+            if "/results" in url:
+                return httpx.Response(200, text=jsonl, request=httpx.Request("GET", url))
+            return httpx.Response(
+                200,
+                json={
+                    "processing_status": "ended",
+                    "results_url": "https://api.anthropic.com/v1/messages/batches/batch_123/results",
+                },
+                request=httpx.Request("GET", url),
+            )
+
+        with patch("httpx.AsyncClient.get", side_effect=mock_get):
+            result = await provider.get_batch_results("batch_123")
+
+        assert result["status"] == "ended"
+        assert "req_0" in result["results"]
+        assert result["results"]["req_0"].content == "ok"
