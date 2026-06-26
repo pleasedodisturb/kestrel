@@ -6,6 +6,7 @@ Covers sources not in the original pipeline:
 - Greenhouse Job Board API (public, per-company, no auth)
 - Lever Postings API (public, per-company, no auth)
 - Ashby Job Board API (public, per-company, no auth)
+- Workable Job Board API (public v3, per-company, no auth)
 - startup.jobs (Algolia-backed search)
 - TheHub.io (Berlin/Nordic startup ecosystem, HTML scraping)
 
@@ -418,6 +419,85 @@ def scrape_ashby(
         _random_delay()
 
     logger.info(f"Ashby: {len(jobs)} jobs from {len(companies)} companies")
+    return jobs
+
+
+# ---------------------------------------------------------------------------
+# Workable Job Board API (public v3, per-company, no auth)
+# POST https://apply.workable.com/api/v3/accounts/{slug}/jobs -> {total, results}
+# Adds an entire ATS the pipeline was otherwise blind to (ported from Eyas
+# G-1119). Ships with an EMPTY company list — add your own account slugs (the
+# {slug} in apply.workable.com/{slug}); the scraper returns [] until you do.
+# ---------------------------------------------------------------------------
+
+WORKABLE_API = "https://apply.workable.com/api/v3/accounts/{slug}/jobs"
+WORKABLE_COMPANIES: list[str] = []
+
+
+def scrape_workable(
+    companies: list[str] | None = None,
+    keyword_filter: list[str] | None = None,
+) -> list[ScrapedJob]:
+    """
+    Scrape the Workable public job-board API for specific companies.
+    No auth. The list endpoint returns title/location/shortcode (no description);
+    the apply URL is built from the slug + shortcode. Returns [] when no
+    companies are configured.
+    """
+    jobs: list[ScrapedJob] = []
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    companies = companies or WORKABLE_COMPANIES
+    kw_lower = [k.lower() for k in (keyword_filter or [])]
+
+    for slug in companies:
+        url = WORKABLE_API.format(slug=slug)
+
+        def _fetch(u=url):
+            with httpx.Client(timeout=20, headers={"User-Agent": _get_user_agent()}) as client:
+                r = client.post(u, json={})
+                r.raise_for_status()
+                return r.json()
+
+        data = _retry_with_backoff(_fetch)
+        if not data:
+            continue
+
+        for j in data.get("results", []):
+            title = j.get("title", "")
+            if kw_lower and not any(k in title.lower() for k in kw_lower):
+                continue
+
+            loc = j.get("location", {})
+            if isinstance(loc, dict):
+                parts = [loc.get("city", ""), loc.get("country", "")]
+                location = ", ".join(p for p in parts if p)
+            else:
+                location = str(loc)
+
+            shortcode = j.get("shortcode", "")
+            job_url = f"https://apply.workable.com/{slug}/j/{shortcode}/" if shortcode else ""
+            department = j.get("department", [])
+            tags = department if isinstance(department, list) else [str(department)]
+
+            jobs.append(
+                ScrapedJob(
+                    title=title,
+                    company=slug.replace("-", " ").title(),
+                    location=location,
+                    url=job_url,
+                    source="workable",
+                    description="",  # not in list endpoint; avoid N+1 detail calls
+                    posted=str(j.get("published", "")),
+                    remote=bool(j.get("remote")) or "remote" in location.lower(),
+                    salary="",
+                    tags=tags,
+                    scraped_at=now,
+                )
+            )
+
+        _random_delay()
+
+    logger.info(f"Workable: {len(jobs)} jobs from {len(companies)} companies")
     return jobs
 
 
@@ -889,6 +969,7 @@ def scrape_all_new_sources(
     greenhouse_companies: list[str] | None = None,
     lever_companies: list[str] | None = None,
     ashby_companies: list[str] | None = None,
+    workable_companies: list[str] | None = None,
     ats_keyword_filter: list[str] | None = None,
     remotely_limit: int = 50,
 ) -> list[ScrapedJob]:
@@ -943,6 +1024,20 @@ def scrape_all_new_sources(
         )
     except Exception as e:
         logger.error(f"Ashby failed: {e}")
+
+    _random_delay()
+
+    # Workable
+    logger.info("=== New Source: Workable ATS ===")
+    try:
+        all_jobs.extend(
+            scrape_workable(
+                companies=workable_companies,
+                keyword_filter=ats_keyword_filter,
+            )
+        )
+    except Exception as e:
+        logger.error(f"Workable failed: {e}")
 
     _random_delay()
 
