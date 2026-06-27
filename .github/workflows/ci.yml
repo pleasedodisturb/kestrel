@@ -65,6 +65,14 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml
 
+      - name: Run tool-script tests
+        # tools/ is dev tooling, not the shipped package, so these run as a
+        # separate gate without --cov (keeps src/career_os coverage clean).
+        # Install the optional mcp extra so the kestrel-mcp server tests run too.
+        run: |
+          pip install -e ".[mcp]"
+          pytest tools/tests/ -v --tb=short
+
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v7

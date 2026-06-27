@@ -38,6 +38,11 @@ Documentation = "https://github.com/pleasedodisturb/kestrel/blob/main/docs/QUICK
 warn = [
     "warn-scraper>=0.4.0",
 ]
+# Optional: the standalone Kestrel MCP server (tools/kestrel-mcp/server.py).
+# Only needed to run that server or its tests; the core app never imports it.
+mcp = [
+    "mcp>=1.0.0",
+]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.25.0",
