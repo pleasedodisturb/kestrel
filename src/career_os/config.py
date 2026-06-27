@@ -2,8 +2,16 @@
 
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+# Ensure .env vars land in os.environ before anything reads them (ported from
+# Eyas). pydantic-settings can silently fail to load some variables from .env,
+# and the tools/ pipeline reads several config vars via os.getenv rather than as
+# Settings fields — an explicit load_dotenv backfills both. override=False so
+# real environment vars (tests/CI/containers) always take precedence over .env.
+load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
