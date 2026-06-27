@@ -19,6 +19,13 @@ jobs:
         with:
           app-id: ${{ secrets.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_KEY }}
+          # Scope the app token to least privilege — matches the job-level
+          # permissions above and exactly what release-please needs. Resolves
+          # the zizmor `github-app` finding (unscoped token). Permission
+          # scoping does not affect the app token's ability to trigger
+          # downstream workflows on the release PR.
+          permission-contents: write
+          permission-pull-requests: write
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
