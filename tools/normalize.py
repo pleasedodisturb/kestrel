@@ -5,7 +5,9 @@ Job-discovery dedup used to compare raw ``(company, title)`` strings exactly,
 so trivial drift ("Hugging Face" vs the Greenhouse slug-derived "Huggingface",
 "Acme GmbH" vs "Acme", "Senior PM" vs "Senior PM (m/f/d)") slipped through and
 the same roles re-surfaced daily. This module centralizes normalization so the
-scraper, dedup, and any future matcher all agree on what "the same job" means.
+daily-pipeline tracking dedup (and any future matcher) can agree on what "the
+same job" means. (Intra-scrape dedup in scrape_resilient still keys on the raw
+title/company pair — migrating it is a follow-up.)
 
 Deliberately conservative: normalization is deterministic and only collapses
 known noise (legal suffixes, punctuation, case, location/gender tags). The
@@ -17,6 +19,7 @@ distinct roles.
 from __future__ import annotations
 
 import re
+import unicodedata
 from difflib import SequenceMatcher
 
 # Legal-entity / vanity suffixes that carry no identity signal.
@@ -68,8 +71,15 @@ _TITLE_NOISE = re.compile(
 
 
 def _collapse(s: str) -> str:
-    """Lowercase, drop punctuation to spaces, collapse whitespace."""
-    s = re.sub(r"[^a-z0-9]+", " ", s.lower())
+    """Lowercase, transliterate accents to ASCII, drop punctuation, collapse space.
+
+    The NFKD pass folds accented variants onto their base letters so common EU
+    scraper drift dedups: "Café" -> "cafe" (not the mangled "caf" you get from
+    stripping the accent byte), "Müller" == "Muller", "Søren" == "Soren".
+    """
+    # Decompose accents then drop the combining marks (ASCII-fold).
+    s = unicodedata.normalize("NFKD", s.lower()).encode("ascii", "ignore").decode("ascii")
+    s = re.sub(r"[^a-z0-9]+", " ", s)
     return re.sub(r"\s+", " ", s).strip()
 
 

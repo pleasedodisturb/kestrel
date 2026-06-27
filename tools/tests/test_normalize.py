@@ -34,6 +34,16 @@ class TestNormalizeCompany:
     def test_punctuation_collapsed(self):
         assert normalize_company("Cal.com") == normalize_company("cal com")
 
+    def test_accents_folded_to_ascii(self):
+        # NFKD transliteration: combining-accent variants dedup against their
+        # base form and aren't mangled (the old code turned "Café" into "caf").
+        # Note: distinct letters that don't decompose (ø, ß, ł) are dropped, not
+        # transliterated — accepted limitation.
+        assert normalize_company("Café") == normalize_company("Cafe")
+        assert normalize_company("Müller") == normalize_company("Muller")
+        assert normalize_company("Zürich Labs") == normalize_company("Zurich")
+        assert normalize_title("Señor Engineer") == normalize_title("Senor Engineer")
+
     def test_empty_and_none(self):
         assert normalize_company("") == ""
         assert normalize_company(None) == ""

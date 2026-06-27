@@ -232,6 +232,7 @@ async def _step_score_async(
 
     scored: list[dict] = []
     skipped = 0
+    cap_skipped = 0
     failures = 0
     ai_attempts = 0
     total = len(jobs)
@@ -274,7 +275,7 @@ async def _step_score_async(
             job["review_flag"] = False
             job["review_reason"] = ""
             scored.append(job)
-            skipped += 1
+            cap_skipped += 1
             continue
 
         if not description or description == "nan":
@@ -358,11 +359,13 @@ async def _step_score_async(
             )
 
     logger.info(
-        "Scoring complete: %d jobs (%d AI attempts, %d failures, %d pre-filter-skipped)",
+        "Scoring complete: %d jobs (%d AI attempts, %d failures, "
+        "%d pre-filter-skipped, %d cap-skipped)",
         len(scored),
         ai_attempts,
         failures,
         skipped,
+        cap_skipped,
     )
 
     config.scored_path.write_text(json.dumps(scored, indent=2, ensure_ascii=False))

@@ -14,19 +14,32 @@ statically instead; the override=False contract is verified behaviorally.
 
 from __future__ import annotations
 
+import ast
 import inspect
 import os
 
 
 def test_config_wires_load_dotenv_with_override_false():
-    """config.py calls load_dotenv(override=False) at import (static check)."""
+    """config.py calls load_dotenv(override=False) at import (AST check).
+
+    Uses the AST rather than a substring match so a commented-out or
+    docstring-mentioned call can't false-pass.
+    """
     import career_os.config as cfg
 
-    # load_dotenv is imported into the module namespace...
     assert hasattr(cfg, "load_dotenv")
-    # ...and invoked with override=False at import time.
-    source = inspect.getsource(cfg)
-    assert "load_dotenv(override=False)" in source
+
+    tree = ast.parse(inspect.getsource(cfg))
+    called_with_override_false = any(
+        isinstance(node, ast.Call)
+        and getattr(node.func, "id", None) == "load_dotenv"
+        and any(
+            kw.arg == "override" and isinstance(kw.value, ast.Constant) and kw.value.value is False
+            for kw in node.keywords
+        )
+        for node in ast.walk(tree)
+    )
+    assert called_with_override_false, "config.py must call load_dotenv(override=False)"
 
 
 def test_override_false_respects_existing_env(tmp_path, monkeypatch):
@@ -50,6 +63,10 @@ def test_override_false_backfills_missing_env(tmp_path, monkeypatch):
     env_file.write_text("KESTREL_TEST_DOTENV_BACKFILL=from_file\n")
     monkeypatch.delenv("KESTREL_TEST_DOTENV_BACKFILL", raising=False)
 
-    load_dotenv(env_file, override=False)
-
-    assert os.environ["KESTREL_TEST_DOTENV_BACKFILL"] == "from_file"
+    # load_dotenv mutates os.environ directly; monkeypatch won't revert an
+    # *added* var, so clean it up explicitly to avoid leaking into later tests.
+    try:
+        load_dotenv(env_file, override=False)
+        assert os.environ["KESTREL_TEST_DOTENV_BACKFILL"] == "from_file"
+    finally:
+        os.environ.pop("KESTREL_TEST_DOTENV_BACKFILL", None)
