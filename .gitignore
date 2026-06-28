@@ -103,6 +103,8 @@ _bmad-output/
 # GSD auto-generated (not infrastructure)
 .planning/codebase/
 .planning/intel/
+.planning/graphs/
+graphify-out/
 GSD-CLAUDE.md
 
 # Internal business docs
