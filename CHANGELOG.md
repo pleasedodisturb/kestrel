@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.16.0](https://github.com/pleasedodisturb/kestrel/compare/v0.15.2...v0.16.0) (2026-06-28)
+
+
+### Features
+
+* **G-1200:** declare Railway volume via requiredMountPath ([#400](https://github.com/pleasedodisturb/kestrel/issues/400)) ([bcc4a55](https://github.com/pleasedodisturb/kestrel/commit/bcc4a5536cbfd20a0b68d5e5feb5f22b9558364d))
+* **G-1217:** upstream Eyas discovery-pipeline improvements (PII-free) ([#404](https://github.com/pleasedodisturb/kestrel/issues/404)) ([2e8d94f](https://github.com/pleasedodisturb/kestrel/commit/2e8d94ff5866e663f7aa4868620bc701105be809))
+
+
+### Bug Fixes
+
+* **deploy:** make Railway one-click deploy actually work ([#398](https://github.com/pleasedodisturb/kestrel/issues/398)) ([8c3c65b](https://github.com/pleasedodisturb/kestrel/commit/8c3c65b99dd52aee49620989618ab591bfe2b25e))
+
 ## [0.15.2](https://github.com/pleasedodisturb/kestrel/compare/v0.15.1...v0.15.2) (2026-06-08)
 
 
