@@ -17,6 +17,12 @@ import httpx
 # Ensure kestrel-mcp/ is importable (hyphen means it's not a package)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "kestrel-mcp"))
 
+import pytest  # noqa: E402
+
+# kestrel-mcp/server.py imports the `mcp` SDK (an optional extra). Skip the whole
+# module when it isn't installed so test collection doesn't error in minimal envs.
+pytest.importorskip("mcp.server.fastmcp")
+
 from server import (  # noqa: I001, E402
     KESTREL_URL,
     PROFILE_ID,

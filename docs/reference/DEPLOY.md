@@ -46,11 +46,11 @@ docker compose up --build
 
 ### One-click deploy (published template)
 
-Click the button above. It opens Kestrel's **published Railway template**, which provisions the service, the persistent volume, and the default variables for you. Railway builds from the Dockerfile (via the committed `railway.json`) and binds to the injected `$PORT`, then hands you a public URL.
+Click the button above. It opens Kestrel's **published Railway template**, which provisions the service, the persistent volume, and the default variables for you. Railway builds from the Dockerfile (via the committed `railway.json`) and binds to the injected `$PORT`, then hands you a public URL. The `railway.json` declares `requiredMountPath: /app/data`, so the template attaches a persistent volume at that path automatically — data persistence is set up with no manual post-deploy step.
 
 ### Deploy from GitHub repo (alternative)
 
-Prefer to deploy your own fork directly? Go to **railway.com/new → Deploy from GitHub repo** and select your fork of `kestrel`. Railway reads `railway.json`, builds the Dockerfile, and binds `$PORT` the same way — you'll just add the volume yourself (see below).
+Prefer to deploy your own fork directly? Go to **railway.com/new → Deploy from GitHub repo** and select your fork of `kestrel`. Railway reads `railway.json`, builds the Dockerfile, and binds `$PORT` the same way — you'll just attach the volume yourself (see below).
 
 > **Note:** `railway.com/new/template?template=<github-url>` does **not** work for a plain GitHub repo — that URL form falls through to a generic database/service picker. Use the published-template button or the deploy-from-repo flow above.
 
@@ -85,15 +85,21 @@ Set these in the Railway dashboard under your service's **Variables** tab:
 
 `DATABASE_URL` and `FRONTEND_URL` are pre-configured in the Dockerfile and do not need to be set.
 
-### Data persistence (required)
+### Data persistence
 
-SQLite stores all data at `/app/data/career_os.db`. Without a volume, data is lost on every redeploy.
+SQLite stores all data at `/app/data/career_os.db`. Without a volume mounted there, data is lost on every redeploy.
+
+**One-click template deploys:** persistence is automatic. `railway.json` sets `deploy.requiredMountPath` to `/app/data`, and the published Railway template attaches a volume at that path — nothing to do.
+
+**Manual / CLI deploys (`railway up`):** `requiredMountPath` declares the requirement, but you attach the volume yourself:
 
 1. Open your service in the Railway dashboard
 2. Go to **Settings > Volumes**
 3. Click **Add Volume**
 4. Set mount path to `/app/data`
 5. Choose a size (1 GB is plenty)
+
+> Note: a volume can't be defined in `railway.json` itself (Railway's config schema has no `volumes` key) — `requiredMountPath` only declares where the mount must be. The volume resource is provisioned by the template or added in the dashboard.
 
 ### Free tier limitations
 
