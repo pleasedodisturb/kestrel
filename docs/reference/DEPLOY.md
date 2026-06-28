@@ -42,11 +42,17 @@ docker compose up --build
 
 ## Deploy to Railway
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/pleasedodisturb/kestrel)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/loMUk4?referralCode=SVkZXi&utm_medium=integration&utm_source=template&utm_campaign=generic)
 
-### One-click deploy
+### One-click deploy (published template)
 
-Click the button above. Railway reads the included `railway.json`, builds from the Dockerfile, and gives you a public URL. The `railway.json` declares `requiredMountPath: /app/data`, and the published template provisions a persistent volume at that path — so data persistence is set up automatically, with no manual post-deploy step.
+Click the button above. It opens Kestrel's **published Railway template**, which provisions the service, the persistent volume, and the default variables for you. Railway builds from the Dockerfile (via the committed `railway.json`) and binds to the injected `$PORT`, then hands you a public URL. The `railway.json` declares `requiredMountPath: /app/data`, so the template attaches a persistent volume at that path automatically — data persistence is set up with no manual post-deploy step.
+
+### Deploy from GitHub repo (alternative)
+
+Prefer to deploy your own fork directly? Go to **railway.com/new → Deploy from GitHub repo** and select your fork of `kestrel`. Railway reads `railway.json`, builds the Dockerfile, and binds `$PORT` the same way — you'll just attach the volume yourself (see below).
+
+> **Note:** `railway.com/new/template?template=<github-url>` does **not** work for a plain GitHub repo — that URL form falls through to a generic database/service picker. Use the published-template button or the deploy-from-repo flow above.
 
 ### Manual deploy (Railway CLI)
 
