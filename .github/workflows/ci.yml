@@ -146,9 +146,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: reviewdog/action-actionlint@v1
+      # Run actionlint directly (pinned official image) instead of the reviewdog
+      # wrapper. reviewdog fetches the PR diff via the GitHub API to scope
+      # findings; with this repo's read-only token it can 403 ("Resource not
+      # accessible by integration") on large PRs, failing the job for reasons
+      # unrelated to workflow lint. A direct run needs no diff, token, or extra
+      # permissions and fails only on real lint errors.
+      - name: Run actionlint
+        uses: docker://rhysd/actionlint:1.7.7
         with:
-          reporter: github-pr-check
+          args: -color
+        env:
+          # Only fail on shellcheck error/warning, not "style"/"info" nits
+          # (e.g. SC2126/SC2129). Keeps real enforcement without blocking on style.
+          SHELLCHECK_OPTS: --severity=warning
 
   frontend:
     name: Frontend (React)
