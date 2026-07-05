@@ -960,6 +960,186 @@ def scrape_remotely_de(
 
 
 # ---------------------------------------------------------------------------
+# SmartRecruiters public postings API (no auth, per-company)
+# https://api.smartrecruiters.com/v1/companies/{slug}/postings
+# ---------------------------------------------------------------------------
+
+SMARTRECRUITERS_API = "https://api.smartrecruiters.com/v1/companies/{slug}/postings"
+SMARTRECRUITERS_JOB_URL = "https://jobs.smartrecruiters.com/{slug}/{job_id}"
+
+# EXAMPLE company slugs only — replace with the SmartRecruiters account slugs you
+# want to track (the slug is the path segment on jobs.smartrecruiters.com/<slug>).
+SMARTRECRUITERS_COMPANIES: list[str] = ["example-company-slug"]
+
+# Relevance queries run server-side (q=) against big-corp boards. q= is fuzzy, so a
+# client-side title keyword_filter then trims the noise. This keeps a several-thousand
+# role board down to the handful of target-shaped roles instead of paging it all.
+_SR_QUERIES: tuple[str, ...] = (
+    "product manager",
+    "program manager",
+    "technical program manager",
+    "developer advocate",
+    "solutions architect",
+    "ai engineer",
+    "founding engineer",
+)
+
+
+def scrape_smartrecruiters(
+    companies: list[str] | None = None,
+    keyword_filter: list[str] | None = None,
+) -> list[ScrapedJob]:
+    """Scrape the SmartRecruiters public postings API for big-corp boards.
+
+    No auth. Runs a small set of relevance queries server-side, dedups by posting id,
+    and (when ``keyword_filter`` is given) keeps only matching titles -- big-corp
+    boards are huge, so unlike curated boards these DO get a title gate. Defaults to
+    an EXAMPLE company list; pass your own slugs.
+    """
+    jobs: list[ScrapedJob] = []
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    companies = companies or SMARTRECRUITERS_COMPANIES
+    kw_lower = [k.lower() for k in (keyword_filter or [])]
+
+    for slug in companies:
+        seen: set[str] = set()
+        for query in _SR_QUERIES:
+
+            def _fetch(s=slug, q=query):
+                with httpx.Client(
+                    timeout=20, headers={"User-Agent": _get_user_agent()}, follow_redirects=True
+                ) as client:
+                    r = client.get(
+                        SMARTRECRUITERS_API.format(slug=s),
+                        params={"q": q, "limit": 50},
+                    )
+                    r.raise_for_status()
+                    return r.json()
+
+            data = _retry_with_backoff(_fetch)
+            if not data:
+                continue
+
+            for p in data.get("content", []):
+                job_id = str(p.get("id", ""))
+                if not job_id or job_id in seen:
+                    continue
+                title = p.get("name", "")
+                if kw_lower and not any(k in title.lower() for k in kw_lower):
+                    continue
+                seen.add(job_id)
+
+                loc = p.get("location", {}) or {}
+                location = loc.get("fullLocation") or ", ".join(
+                    part for part in (loc.get("city"), loc.get("country")) if part
+                )
+                dept = (p.get("department", {}) or {}).get("label", "")
+
+                jobs.append(
+                    ScrapedJob(
+                        title=title,
+                        company=slug.replace("-", " ").title(),
+                        location=location,
+                        url=SMARTRECRUITERS_JOB_URL.format(slug=slug, job_id=job_id),
+                        source="smartrecruiters",
+                        description="",
+                        posted=p.get("releasedDate", ""),
+                        remote=bool(loc.get("remote")),
+                        tags=[dept] if dept else [],
+                        scraped_at=now,
+                    )
+                )
+        _random_delay()
+
+    logger.info(f"SmartRecruiters: {len(jobs)} jobs from {len(companies)} companies")
+    return jobs
+
+
+# ---------------------------------------------------------------------------
+# Personio Job Board XML feed (public, per-company, no auth)
+# https://{slug}.jobs.personio.de/xml
+# ---------------------------------------------------------------------------
+
+PERSONIO_XML = "https://{slug}.jobs.personio.de/xml"
+PERSONIO_JOB_URL = "https://{slug}.jobs.personio.de/job/{job_id}"
+
+# EXAMPLE company slugs only — replace with the Personio subdomain slugs you want to
+# track (the slug is the subdomain on <slug>.jobs.personio.de).
+PERSONIO_COMPANIES: list[str] = ["example-company-slug"]
+
+
+def scrape_personio(
+    companies: list[str] | None = None,
+    keyword_filter: list[str] | None = None,
+) -> list[ScrapedJob]:
+    """Scrape Personio public XML job feeds. No auth.
+
+    Personio boards are small (EU mid-market), so the full feed is fetched and
+    title-filtered client-side. Defaults to an EXAMPLE company list; pass your own.
+    """
+    import xml.etree.ElementTree as ET
+
+    jobs: list[ScrapedJob] = []
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    companies = companies or PERSONIO_COMPANIES
+    kw_lower = [k.lower() for k in (keyword_filter or [])]
+
+    for slug in companies:
+
+        def _fetch(s=slug):
+            with httpx.Client(
+                timeout=20, headers={"User-Agent": _get_user_agent()}, follow_redirects=True
+            ) as client:
+                r = client.get(PERSONIO_XML.format(slug=s))
+                r.raise_for_status()
+                return r.text
+
+        raw = _retry_with_backoff(_fetch)
+        if not raw:
+            continue
+        try:
+            root = ET.fromstring(raw)
+        except ET.ParseError as exc:
+            logger.warning("Personio: XML parse failed for '%s': %s", slug, exc)
+            continue
+
+        for pos in root.findall(".//position"):
+            title = (pos.findtext("name") or "").strip()
+            if not title:
+                continue
+            if kw_lower and not any(k in title.lower() for k in kw_lower):
+                continue
+            job_id = (pos.findtext("id") or "").strip()
+            primary = (pos.findtext("office") or "").strip()
+            offices = [primary] if primary else []
+            offices += [
+                o.text.strip()
+                for o in pos.findall("./additionalOffices/office")
+                if o.text and o.text.strip()
+            ]
+            dept = (pos.findtext("department") or "").strip()
+
+            jobs.append(
+                ScrapedJob(
+                    title=title,
+                    company=slug.replace("-", " ").title(),
+                    location=primary or (offices[0] if offices else ""),
+                    url=PERSONIO_JOB_URL.format(slug=slug, job_id=job_id),
+                    source="personio",
+                    description="",
+                    posted=(pos.findtext("createdAt") or ""),
+                    remote="remote" in primary.lower(),
+                    tags=[dept] if dept else [],
+                    scraped_at=now,
+                )
+            )
+        _random_delay()
+
+    logger.info(f"Personio: {len(jobs)} jobs from {len(companies)} companies")
+    return jobs
+
+
+# ---------------------------------------------------------------------------
 # Convenience: scrape all new sources at once
 # ---------------------------------------------------------------------------
 
