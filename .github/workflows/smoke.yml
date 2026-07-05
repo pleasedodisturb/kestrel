@@ -35,7 +35,7 @@ jobs:
     name: Docker prod build + health
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build production image
         run: docker compose -f docker-compose.prod.yml build
@@ -77,7 +77,7 @@ jobs:
     name: Docker dev compose + proxy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build and start dev containers
         run: docker compose up -d --build
@@ -131,7 +131,7 @@ jobs:
     name: Wheel build + server start
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -185,7 +185,7 @@ jobs:
     name: setup.sh --dry-run
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Dry-run setup script
         run: bash setup.sh --dry-run
