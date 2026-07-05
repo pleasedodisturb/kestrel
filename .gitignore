@@ -42,6 +42,9 @@ credentials.json
 
 # Personal config (generated from examples)
 config/personal.yaml
+# Company blocklist + geo-eligibility (personal; copy from the .example.yaml)
+config/blocklist.yaml
+config/geo.yaml
 # Voice corpus (raw personal writing — never commit)
 config/voice-corpus.md
 
