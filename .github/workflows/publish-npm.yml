@@ -1,5 +1,12 @@
 name: Publish npm package
 
+# Publishes the npm-package/ wrapper via OIDC Trusted Publishing — no
+# NPM_TOKEN secret anywhere (same pattern as llm-safe-haven). REQUIRES a
+# Trusted Publisher configured for `kestrel-app` on npmjs.com pointing at
+# this repo + this workflow file (Settings → Publishing access on the
+# package page). Until that is configured, publish cannot authenticate —
+# keep the workflow disabled (G-1275).
+
 on:
   push:
     tags:
@@ -12,6 +19,10 @@ jobs:
   publish:
     name: Publish to npm
     runs-on: ubuntu-latest
+    # Least privilege: token-minting rights live on the publish job only.
+    permissions:
+      contents: read
+      id-token: write # Mint the OIDC token for trusted publishing
     steps:
       - uses: actions/checkout@v7
 
@@ -19,6 +30,11 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
+
+      # OIDC Trusted Publishing needs npm >= 11.5.0 (node 22 ships ~10.x).
+      # Pinned (not @latest) per supply-chain hygiene — bump deliberately.
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@11.18.0
 
       - name: Sync version from pyproject.toml
         run: |
@@ -32,9 +48,23 @@ jobs:
           "
           echo "Publishing version $VERSION"
 
+      # No NODE_AUTH_TOKEN: authentication is via OIDC (id-token: write).
+      # Provenance is automatic under OIDC; the flag is kept for clarity.
       - name: Publish
         run: |
           cd npm-package
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --provenance --access public
+
+      # Confirm the version we just published carries a provenance
+      # attestation on the registry (the wrapper has zero dependencies, so
+      # `npm audit signatures` has nothing to verify here).
+      - name: Verify published provenance
+        run: |
+          sleep 30
+          VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          PROV=$(npm view "kestrel-app@${VERSION}" dist.attestations.provenance.predicateType 2>/dev/null)
+          if [ -z "$PROV" ]; then
+            echo "::error::No provenance attestation found for kestrel-app@${VERSION}"
+            exit 1
+          fi
+          echo "Provenance OK for ${VERSION}: ${PROV}"
