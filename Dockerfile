@@ -39,14 +39,15 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy dependency specification and source (needed for pip install)
-COPY pyproject.toml ./
-COPY src/ ./src/
-
 # Upgrade build tooling before installing the package — pip's bundled
 # setuptools/wheel can lag behind fixed CVEs (wheel, vendored
 # jaraco.context) that Trivy flags as fixable CRITICAL/HIGH.
+# Runs before the COPY layers so source edits don't invalidate it.
 RUN pip install --no-cache-dir -U pip setuptools wheel
+
+# Copy dependency specification and source (needed for pip install)
+COPY pyproject.toml ./
+COPY src/ ./src/
 
 # Install the package (non-editable production install)
 RUN pip install --no-cache-dir .
