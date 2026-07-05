@@ -12,7 +12,10 @@ jobs:
   automerge:
     name: Auto-merge patch/minor Dependabot PRs
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' }}
+    # PR author from the event payload, not github.actor — the actor is
+    # whoever triggered the run (e.g. a re-run) and is spoofable
+    # (zizmor bot-conditions).
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     steps:
       # This uses the default GITHUB_TOKEN, elevated via the permissions block
       # (which applies even to Dependabot-triggered runs). Known tradeoff:
