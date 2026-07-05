@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/pleasedodisturb/kestrel/compare/v0.17.0...v0.17.1) (2026-07-05)
+
+
+### Documentation
+
+* **G-1281:** distill writing system — anti-slop, voice corpus, cover letters, LinkedIn ([#433](https://github.com/pleasedodisturb/kestrel/issues/433)) ([8057e9d](https://github.com/pleasedodisturb/kestrel/commit/8057e9d4d5da2f2d6ce177d5b18a50a11dadc4a3))
+
 ## [0.17.0](https://github.com/pleasedodisturb/kestrel/compare/v0.16.0...v0.17.0) (2026-07-05)
 
 
