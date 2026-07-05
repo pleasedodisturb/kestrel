@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-21)
 Phase: 5 of 5 (Contributor Experience) — Complete
 Plan: 2 of 2 in phase 5 (both plans complete, verified)
 Status: Phase 5 complete. All requirements verified (CONT-01, CONT-02, CONT-03). 3 items in human UAT.
-Last activity: 2026-07-05 — Completed quick task 260705-jcr: G-1274 workflow fixes (scorecard pin, daily-scan guard, release-checks)
+Last activity: 2026-07-05 — Completed quick task 260705-kil: G-1277 automated fix inclusion
 
 Progress: [██████████] 100%
 
@@ -92,6 +92,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260705-jcr | G-1274: fix and re-enable disabled workflows (scorecard pin, daily-scan guard, release-checks) | 2026-07-05 | efd1d0a | [260705-jcr-g-1274-fix-and-re-enable-disabled-workfl](./quick/260705-jcr-g-1274-fix-and-re-enable-disabled-workfl/) |
+| 260705-kil | G-1277: Dependabot automerge + docker ecosystem + weekly image rebuild, Renovate removed | 2026-07-05 | 89973c6 | [260705-kil-g-1277-automate-security-fix-inclusion-d](./quick/260705-kil-g-1277-automate-security-fix-inclusion-d/) |
 
 ## Deferred Items
 

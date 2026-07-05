@@ -1,0 +1,48 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    name: Auto-merge patch/minor Dependabot PRs
+    runs-on: ubuntu-latest
+    # PR author from the event payload, not github.actor — the actor is
+    # whoever triggered the run (e.g. a re-run) and is spoofable
+    # (zizmor bot-conditions).
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    steps:
+      # This uses the default GITHUB_TOKEN, elevated via the permissions block
+      # (which applies even to Dependabot-triggered runs). Known tradeoff:
+      # pushes from auto-merges enabled with GITHUB_TOKEN do NOT trigger
+      # downstream push workflows (docker-publish, release-checks,
+      # release-please). Mitigation: docker-publish has a weekly scheduled
+      # rebuild, and release-please self-heals on the next human push.
+      #
+      # Why not the RELEASE_APP_ID/RELEASE_APP_KEY app token like
+      # release-please.yml: Dependabot-triggered workflow runs read from the
+      # separate *Dependabot secrets* store, not Actions secrets — those
+      # secrets resolve empty here. To restore downstream triggers, duplicate
+      # the app credentials into the Dependabot store
+      # (gh secret set --app dependabot) and re-add a create-github-app-token
+      # step.
+      - name: Fetch dependency metadata
+        id: meta
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Only patch/minor updates get auto-merge. Major version bumps
+      # intentionally get NO automerge and stay manual — they're the ones
+      # most likely to carry breaking changes worth a human look.
+      - name: Enable auto-merge for patch/minor
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
