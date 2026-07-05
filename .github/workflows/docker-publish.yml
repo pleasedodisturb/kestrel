@@ -5,6 +5,11 @@ on:
     branches: [main]
     tags:
       - "v*"
+  # Weekly rebuild re-runs the Dockerfile's `apt-get upgrade` layer so the
+  # published image picks up OS security patches between releases, even
+  # when no app-level release happens that week (G-1274 context).
+  schedule:
+    - cron: "0 5 * * 1" # Mon 05:00 UTC
 
 permissions:
   contents: read

@@ -206,23 +206,29 @@ jobs:
     needs: [backend, frontend, actionlint]
     steps:
       - name: Check required jobs
+        env:
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
         run: |
-          # Frontend and actionlint are hard gates — must pass.
-          # Backend is advisory until 60 pre-existing golden-set failures
-          # are resolved (tracked separately). Backend failures are logged
-          # but do not block the merge gate.
-          for job in frontend actionlint; do
-            result="${{ needs.frontend.result }}"
-            [ "$job" = "actionlint" ] && result="${{ needs.actionlint.result }}"
+          # All three jobs are hard gates. Backend was advisory while the
+          # golden-set failures were being resolved; those are fixed (main
+          # has been fully green since 2026-06) and CI Complete is now a
+          # required status check gating Dependabot automerge (G-1277) —
+          # a soft backend gate would let a broken pip bump auto-merge.
+          failed=0
+          for job in backend frontend actionlint; do
+            case "$job" in
+              backend) result="$BACKEND_RESULT" ;;
+              frontend) result="$FRONTEND_RESULT" ;;
+              actionlint) result="$ACTIONLINT_RESULT" ;;
+            esac
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
               echo "::error::Required job '$job' failed or was cancelled: $result"
-              exit 1
+              failed=1
             fi
           done
-          backend="${{ needs.backend.result }}"
-          if [ "$backend" = "failure" ]; then
-            echo "::warning::Backend tests failed (advisory — pre-existing failures on main)"
-          fi
+          [ "$failed" -eq 0 ] || exit 1
           echo "All required jobs passed or were skipped."
 
   sonarcloud:
