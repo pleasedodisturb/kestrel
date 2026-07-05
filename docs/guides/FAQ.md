@@ -266,8 +266,9 @@ The daily scan runs as a GitHub Action - it uses GitHub's servers to scrape job 
 1. Fork the Kestrel repo to your own GitHub account
 2. Go to your fork's Settings > Secrets and variables > Actions
 3. Add your AI key as a secret called OPENAI_API_KEY
-4. The scan runs automatically Monday-Friday at 7am UTC
-5. Results appear as commits in your repo's tracking/ folder
+4. On the Variables tab, add a repository variable called DAILY_SCAN_ENABLED with the value `true` (the scheduled scan stays off until you opt in — this keeps forks and the upstream repo from running broken scans)
+5. The scan runs automatically Monday-Friday at 7am UTC
+6. Results appear as commits in your repo's tracking/ folder
 
 This is the most technical feature to set up. If GitHub Actions feels like too much, you can run the same thing manually: `docker compose exec backend python tools/daily_pipeline.py`
 
