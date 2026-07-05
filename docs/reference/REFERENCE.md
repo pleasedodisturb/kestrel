@@ -473,7 +473,7 @@ Kestrel includes a GitHub Actions workflow that runs an automated job discovery 
 
 ### Schedule
 
-By default it runs Monday through Friday at 07:00 UTC. Edit `.github/workflows/daily-scan.yml` to change the schedule:
+Scheduled runs are opt-in: set the `DAILY_SCAN_ENABLED` repository variable to `true` (Settings - Secrets and variables - Actions - Variables). Once enabled, it runs Monday through Friday at 07:00 UTC. Manual runs from the Actions tab always work, no variable needed. Edit `.github/workflows/daily-scan.yml` to change the schedule:
 
 ```yaml
 on:
@@ -502,6 +502,7 @@ Set these in your GitHub repo under Settings - Secrets and variables - Actions:
 
 | Variable | Default | Purpose |
 |:---|:---|:---|
+| `DAILY_SCAN_ENABLED` | unset (off) | Set to `true` to enable the scheduled Mon-Fri scan |
 | `PIPELINE_LOCATION` | `Remote` | Default location filter for job search |
 
 At minimum you need `OPENAI_API_KEY` for the scoring to work. Everything else is optional - the pipeline will still scrape and score without notifications.

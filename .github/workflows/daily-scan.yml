@@ -35,6 +35,7 @@
 #   PIPELINE_LOCATION       - Default search location (default: "Remote")
 #   AI_PROVIDER_FALLBACK    - Comma-separated chain (set as repo variable
 #                             so it isn't hidden as a secret).
+#   DAILY_SCAN_ENABLED      - Set to "true" to enable the scheduled cron run.
 
 name: Daily Job Scan
 
@@ -75,6 +76,7 @@ permissions:
 
 jobs:
   daily-scan:
+    if: github.event_name == 'workflow_dispatch' || vars.DAILY_SCAN_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
