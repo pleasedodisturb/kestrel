@@ -25,7 +25,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: steps.release.outputs.tag != 'none'
         with:
           ref: ${{ steps.release.outputs.tag }}
@@ -67,7 +67,7 @@ jobs:
     needs: [verify-release]
     if: failure()
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Create GitHub Issue for broken release
         run: |
