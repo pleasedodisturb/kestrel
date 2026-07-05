@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate applications-to-submit-batch.yaml from hooks.yaml + DB URLs."""
+"""Generate batch-apply.yaml from hooks.yaml + DB URLs."""
 
 import os
 import sqlite3
@@ -72,7 +72,7 @@ output = {
     "applications": apps,
 }
 
-out_path = ROOT / "batch-apply-2026-03-27.yaml"
+out_path = ROOT / "batch-apply.yaml"
 out_path.write_text(
     yaml.dump(output, default_flow_style=False, allow_unicode=True, sort_keys=False)
 )
