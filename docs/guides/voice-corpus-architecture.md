@@ -5,7 +5,7 @@ description: "A three-layer system for capturing your real writing voice so an A
 
 # Building a Voice Corpus
 
-When you ask an AI to draft something in your voice, it can't read your mind — it can only pattern-match against whatever you give it. Give it nothing and it hands back the generic assistant register: smooth, agreeable, and detectably not you. Give it a small, well-organized library of things you actually wrote, and it has something real to calibrate against. That library is your **voice corpus**. Think of it like a musician's tuning fork: before you play, you sound a note you *know* is right, and everything else tunes to it. This guide shows you how to build that corpus, keep it honest, and turn it into a system that gets sharper over time instead of just bigger.
+An AI assistant drafting "in your voice" has exactly one source of truth: whatever you've shown it. Show it nothing and you get the generic assistant register back: smooth and agreeable, and not you. A **voice corpus** fixes that. It's a small, organized library of things you actually wrote, kept where your tools can read it, so every draft calibrates against your real register instead of a statistical average of everyone's. Building one takes an afternoon. Keeping it honest takes a system, and the system is what this guide teaches: three layers, one flywheel, one firewall.
 
 ## The Short Version
 

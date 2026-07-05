@@ -1,3 +1,4 @@
+// NOT a standalone script (`node --check` fails by design): this file runs inside an agent-runner harness that injects `agent`, `parallel`, and `log`.
 /*
  * anti-slop-frontier — a weekly frontier scan for AI-writing tells.
  *

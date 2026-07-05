@@ -5,7 +5,7 @@ description: "How recruiter search actually reads your profile, and how to write
 
 # Optimizing a LinkedIn Profile
 
-Your LinkedIn profile has two audiences, and they read it in completely different ways. First comes the machine: recruiter search filters and, increasingly, AI screening assistants that decide whether you even appear in a result. Only if you clear that gate does a human ever read a word you wrote. Most people write only for the human and quietly stay invisible to the machine — a beautifully worded profile that no search ever surfaces. Think of it like a storefront on a street no one drives down: the window display doesn't matter if the map never lists the address. This guide covers both readers: the keyword discipline that gets you found, and the writing that makes a human keep reading once they arrive.
+Recruiters don't browse LinkedIn. They search it. Filters and AI screening assistants decide who appears in a result list at all, and a human reads only the handful of profiles that survive that cut. Which means your profile has two audiences — the machine first, then the person — and most people write for only the second one. The result is a beautifully worded page no search ever surfaces: a storefront on a street nobody drives down. This guide covers both readers in the order they arrive: the keyword discipline that gets you found, then the writing that makes a human keep reading once they do.
 
 ## The Short Version
 

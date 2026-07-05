@@ -19,7 +19,7 @@ A recruiter reading your cover letter has read a hundred others this month, and 
 
 ### Why "AI-sounding" is a register, not a fingerprint
 
-When people say a piece "reads like AI," they rarely mean a specific banned word. They mean the whole thing sits in one flat, over-helpful tone: balanced hedges, tidy transitions, every paragraph the same shape, a confident summary at the end. That register comes from how assistant models are tuned to be agreeable and complete. The good news is that your own natural writing — jagged, opinionated, occasionally blunt — is already the antidote. The job is mostly to *protect* that jaggedness, not to add polish on top of it.
+When people say a piece "reads like AI," they rarely mean a specific banned word. They mean the whole thing sits in one flat, over-helpful tone: balanced hedges, tidy transitions, every paragraph the same shape, a confident summary at the end. That register comes from how assistant models are tuned to be agreeable and complete. The good news is that your own natural writing — jagged and opinionated — is already the antidote. The job is mostly to *protect* that jaggedness, not to add polish on top of it.
 
 This also means the lexical tricks age fast. The buzzwords everyone flagged two years ago (*delve*, *tapestry*, *meticulous*) are already fading, because writers learned to avoid them and models drifted too. Structural tells — rhythm, density, paragraph shape — don't decay that way. Chase those first.
 
