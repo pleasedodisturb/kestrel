@@ -49,7 +49,7 @@ class TestDetectPlatform:
         assert detect_platform("https://jobs.ashbyhq.com/company/abc123") == "ashby"
 
     def test_lever(self):
-        assert detect_platform("https://jobs.lever.co/mistral/abc123") == "lever"
+        assert detect_platform("https://jobs.lever.co/nimbusworks/abc123") == "lever"
 
     def test_lever_eu(self):
         assert detect_platform("https://jobs.eu.lever.co/tradelink/abc123") == "lever"
@@ -908,7 +908,7 @@ class TestSelectDropdownOption:
         """When neither label nor div matches but a global combobox trigger
         with matching aria-label exists, we still drive the portaled menu.
 
-        This covers the Anthropic Greenhouse pattern where the visible label
+        This covers the portaled-menu Greenhouse pattern where the visible label
         isn't a <label> element and isn't a wrapping div either."""
         from tools.batch_apply_browser import _select_dropdown_option
 
@@ -1028,7 +1028,7 @@ class TestPortaledComboboxDispatch:
 
     @pytest.mark.asyncio
     async def test_select_portaled_combobox_uses_aria_haspopup_trigger(self):
-        """The Anthropic pattern: <button aria-haspopup="listbox"> opens a
+        """The portaled-menu pattern: <button aria-haspopup="listbox"> opens a
         portaled <div role="listbox"> in document.body."""
         from tools.batch_apply_browser import _select_portaled_combobox
 
@@ -1122,30 +1122,50 @@ class TestFillFieldByLabelComboboxFallback:
 
 
 # ---------------------------------------------------------------------------
-# Company-specific constants
+# Config-driven answer bank
 # ---------------------------------------------------------------------------
 
 
-class TestCompanyConstants:
-    def test_anthropic_why_not_empty(self):
-        from tools.batch_apply_browser import ANTHROPIC_WHY
+class TestAnswerBank:
+    """The answer bank + @-ref resolver that replaced the hardcoded essays."""
 
-        assert len(ANTHROPIC_WHY) > 100
+    def test_answer_bank_populated(self):
+        from tools.batch_apply_browser import ANSWERS
 
-    def test_anthropic_ai_policy_not_empty(self):
-        from tools.batch_apply_browser import ANTHROPIC_AI_POLICY
+        assert "why_company" in ANSWERS
+        assert len(ANSWERS["why_company"]) > 20
 
-        assert len(ANTHROPIC_AI_POLICY) > 20
+    def test_location_ref_seeded_from_personal(self):
+        from tools.batch_apply_browser import ANSWERS, PERSONAL
 
-    def test_n8n_why_not_empty(self):
-        from tools.batch_apply_browser import N8N_WHY
+        assert ANSWERS["location"] == PERSONAL["location"]
 
-        assert len(N8N_WHY) > 50
+    def test_resolve_answer_dereferences_ref(self):
+        from tools.batch_apply_browser import ANSWERS, _resolve_answer
 
-    def test_anthropic_claude_code_exp_not_empty(self):
-        from tools.batch_apply_browser import ANTHROPIC_CLAUDE_CODE_EXP
+        assert _resolve_answer("@why_company") == ANSWERS["why_company"]
 
-        assert len(ANTHROPIC_CLAUDE_CODE_EXP) > 20
+    def test_resolve_answer_passes_through_literal(self):
+        from tools.batch_apply_browser import _resolve_answer
+
+        assert _resolve_answer("Yes") == "Yes"
+
+    def test_resolve_answer_unknown_ref_returns_empty(self):
+        from tools.batch_apply_browser import _resolve_answer
+
+        assert _resolve_answer("@nonexistent_key") == ""
+
+    def test_custom_questions_floor_present(self):
+        # The fictional floor rules are always loaded so the fill mechanism is
+        # testable regardless of the (gitignored) config contents.
+        from tools.batch_apply_browser import CUSTOM_QUESTIONS
+
+        matches = {
+            (r["match"].get("platform"), r["match"].get("slug_or_url")) for r in CUSTOM_QUESTIONS
+        }
+        assert ("greenhouse", "meridianlabs") in matches
+        assert ("lever", "nimbusworks") in matches
+        assert ("ashby", "novadynamics") in matches
 
 
 # ---------------------------------------------------------------------------
@@ -1155,31 +1175,39 @@ class TestCompanyConstants:
 
 class TestFillCustomQuestions:
     @pytest.mark.asyncio
-    async def test_lever_mistral_fills_location(self):
+    async def test_lever_rule_fills_location(self):
         from tools.batch_apply_browser import fill_custom_questions
 
         page = make_page_with_fields({})
-        app = {"url": "https://jobs.lever.co/mistral/abc123", "slug": "mistral"}
+        app = {"url": "https://jobs.lever.co/nimbusworks/abc123", "slug": "nimbusworks"}
 
         with patch(
             "tools.batch_apply_browser._fill_field_by_label",
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_fill:
-            await fill_custom_questions(page, app)
+            with patch(
+                "tools.batch_apply_browser._click_radio_by_label",
+                new_callable=AsyncMock,
+                return_value=True,
+            ):
+                with patch(
+                    "tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock
+                ):
+                    await fill_custom_questions(page, app)
             # Should have tried to fill "Current location"
-            calls = [c[0] for c in mock_fill.call_args_list]
-            location_calls = [c for c in calls if len(c) >= 2 and "location" in c[1].lower()]
+            labels = [c[0][1] for c in mock_fill.call_args_list if len(c[0]) >= 2]
+            location_calls = [label for label in labels if "location" in label.lower()]
             assert len(location_calls) > 0
 
     @pytest.mark.asyncio
-    async def test_greenhouse_anthropic_fills_fields(self):
+    async def test_greenhouse_rule_fills_fields(self):
         from tools.batch_apply_browser import fill_custom_questions
 
         page = make_page_with_fields({})
         app = {
-            "url": "https://job-boards.greenhouse.io/anthropic/jobs/123",
-            "slug": "anthropic",
+            "url": "https://job-boards.greenhouse.io/meridianlabs/jobs/123",
+            "slug": "meridianlabs-senior-engineer",
         }
 
         with patch(
@@ -1190,18 +1218,40 @@ class TestFillCustomQuestions:
             with patch("tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
                 await fill_custom_questions(page, app)
                 assert mock_fill.call_count > 0
-                # Check "Why Anthropic" was one of the labels
+                # Check the "Why {company}" / "Country" baseline labels were filled
                 labels = [c[0][1] for c in mock_fill.call_args_list if len(c[0]) >= 2]
-                assert any("Anthropic" in label or "Country" in label for label in labels)
+                assert any("Meridian" in label or "Country" in label for label in labels)
 
     @pytest.mark.asyncio
-    async def test_ashby_n8n_fills_fields(self):
+    async def test_greenhouse_rule_appends_role_overlay(self):
+        # The slug matches a role overlay, so the qualifying-question extras
+        # (which mention a local-language question) must also be filled.
         from tools.batch_apply_browser import fill_custom_questions
 
         page = make_page_with_fields({})
         app = {
-            "url": "https://jobs.ashbyhq.com/n8n/a8aea5b5",
-            "slug": "n8n",
+            "url": "https://job-boards.greenhouse.io/meridianlabs/jobs/123",
+            "slug": "meridianlabs-senior-engineer",
+        }
+
+        with patch(
+            "tools.batch_apply_browser._fill_field_by_label",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_fill:
+            with patch("tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
+                await fill_custom_questions(page, app)
+        labels = " ".join(c[0][1] for c in mock_fill.call_args_list if len(c[0]) >= 2).lower()
+        assert "language" in labels
+
+    @pytest.mark.asyncio
+    async def test_ashby_rule_fills_fields(self):
+        from tools.batch_apply_browser import fill_custom_questions
+
+        page = make_page_with_fields({})
+        app = {
+            "url": "https://jobs.ashbyhq.com/novadynamics/abc123",
+            "slug": "novadynamics",
         }
 
         with patch(
@@ -1220,7 +1270,7 @@ class TestFillCustomQuestions:
                     await fill_custom_questions(page, app)
                     labels = [c[0][1] for c in mock_fill.call_args_list if len(c[0]) >= 2]
                     assert any(
-                        "salary" in label.lower() or "n8n" in label.lower() for label in labels
+                        "salary" in label.lower() or "notice" in label.lower() for label in labels
                     )
 
     @pytest.mark.asyncio

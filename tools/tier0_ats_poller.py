@@ -2,8 +2,8 @@
 """Tier-0 ATS poller — direct ATS JSON for dream companies.
 
 Beats aggregator lag (hours to days) by hitting each dream company's public ATS
-JSON endpoint directly. Supports Greenhouse, Lever, Ashby. Custom-site companies
-(Oxide, Proton, Tuta) are deferred to follow-up tickets per G-636 MVP scope.
+JSON endpoint directly. Supports Greenhouse, Lever, Ashby. Companies on custom
+(non-Greenhouse/Lever/Ashby) career sites are out of scope for this poller.
 
 Endpoint patterns:
   - Greenhouse: https://boards-api.greenhouse.io/v1/boards/{slug}/jobs
@@ -37,9 +37,11 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_STATE_PATH = PROJECT_ROOT / "data" / "tier0_state.json"
+COMPANIES_CONFIG = PROJECT_ROOT / "config" / "companies.yaml"
 DEFAULT_TIMEOUT = 20.0
 DEFAULT_INTER_COMPANY_DELAY = 1.5  # seconds between company fetches
 WATCH_INTERVAL_SECONDS = 15 * 60
@@ -50,28 +52,39 @@ logger = logging.getLogger("tier0_ats_poller")
 
 # --- Config: company → (ATS type, slug) --------------------------------------
 
-# MVP shortlist (one per ATS type, plus extras). Custom-ATS companies
-# (Oxide, Proton, Tuta) and any slug we couldn't verify on a single ATS
-# (HuggingFace's listed Lever board returns 404 as of 2026-05) are explicit
-# follow-ups, see PR for G-636.
-#
-# Slugs verified live against each ATS on 2026-05-12. Note that companies
-# sometimes use a different ATS than the issue's research suggested — Cohere
-# and Attio are on Ashby, not Greenhouse — so the canonical evidence for this
-# table is the live HTTP probe, not the original research doc.
-TIER_0_COMPANIES: dict[str, tuple[str, str]] = {
-    # Greenhouse
-    "anthropic": ("greenhouse", "anthropic"),
-    "block": ("greenhouse", "block"),
-    # Lever
-    "mistral": ("lever", "mistral"),
-    # Ashby
-    "linear": ("ashby", "Linear"),
-    "n8n": ("ashby", "n8n"),
-    "lovable": ("ashby", "lovable"),
-    "cohere": ("ashby", "cohere"),
-    "attio": ("ashby", "attio"),
+# The poller hits each dream company's public ATS JSON directly, so it needs a
+# ``name -> (ats_type, slug)`` map. The embedded defaults below are
+# OBVIOUSLY-FICTIONAL examples; the real shortlist loads from
+# ``config/companies.yaml`` (gitignored — copy ``config/companies.example.yaml``)
+# under a ``tier0:`` key of ``name: [ats_type, slug]``. This keeps a personal
+# dream-company list out of the public repo while the poller mechanism stays
+# fully functional. Note Ashby slugs are sometimes case-sensitive.
+_FLOOR_TIER_0_COMPANIES: dict[str, tuple[str, str]] = {
+    "example-greenhouse-co": ("greenhouse", "example-greenhouse-co"),
+    "example-lever-co": ("lever", "example-lever-co"),
+    "example-ashby-co": ("ashby", "example-ashby-co"),
 }
+
+
+def _load_tier0_companies() -> dict[str, tuple[str, str]]:
+    """Load the Tier-0 map from config/companies.yaml, falling back to the floor."""
+    companies = dict(_FLOOR_TIER_0_COMPANIES)
+    try:
+        data = yaml.safe_load(COMPANIES_CONFIG.read_text(encoding="utf-8")) or {}
+        tier0 = data.get("tier0")
+        if isinstance(tier0, dict) and tier0:
+            parsed: dict[str, tuple[str, str]] = {}
+            for name, spec in tier0.items():
+                if isinstance(spec, (list, tuple)) and len(spec) == 2:
+                    parsed[str(name)] = (str(spec[0]), str(spec[1]))
+            if parsed:
+                companies = parsed
+    except (OSError, yaml.YAMLError):
+        pass
+    return companies
+
+
+TIER_0_COMPANIES: dict[str, tuple[str, str]] = _load_tier0_companies()
 
 
 # --- Normalized result shape -------------------------------------------------
@@ -89,7 +102,7 @@ class Tier0Job:
     company: str
     location: str
     url: str
-    source: str  # "tier0:greenhouse:anthropic" etc.
+    source: str  # "tier0:greenhouse:example-greenhouse-co" etc.
     description: str = ""
     posted: str = ""
     remote: bool = False
@@ -190,7 +203,7 @@ def fetch_ashby(slug: str, *, company_key: str, client: httpx.Client) -> list[Ti
     """Fetch Ashby jobs for ``slug``.
 
     Endpoint: ``https://api.ashbyhq.com/posting-api/job-board/{slug}``
-    Note: Ashby slugs are sometimes case-sensitive (e.g. ``Linear`` not ``linear``).
+    Note: Ashby slugs are sometimes case-sensitive (e.g. ``NovaDynamics`` not ``novadynamics``).
     Returns ``{"jobs": [...]}`` with each job having ``id``, ``title``,
     ``location``, ``jobUrl``, ``publishedAt``, ``isRemote``, ``employmentType``,
     ``department``, ``team``, ``descriptionPlain``.

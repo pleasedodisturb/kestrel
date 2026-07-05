@@ -13,7 +13,7 @@ contact:
   linkedin: "https://linkedin.com/in/janedoe"
   github: "https://github.com/janedoe"
 
-location: "Berlin, Germany"
+location: "Example City, Country"
 
 target_roles:
   - "Senior Software Engineer"
@@ -25,7 +25,7 @@ salary_range:
   max: 140000
   currency: "EUR"
 
-languages: "English (fluent), German (B1)"
+languages: "English (fluent)"
 
 values:
   - "builder culture"
@@ -33,3 +33,56 @@ values:
   - "user empathy"
 
 background_summary: "Senior engineer with 8+ years at TechCorp, StartupAI, DataInc"
+
+# ---------------------------------------------------------------------------
+# Batch-apply answer bank + custom-question rules (optional)
+# ---------------------------------------------------------------------------
+# Used by tools/batch_apply_browser.py to auto-fill company-specific form
+# questions. Everything below is a FICTIONAL example — replace with your own.
+# The tool ships with the same fictional fallbacks embedded, so these sections
+# are only needed to add your real answers/companies.
+
+# Answer bank: reusable long-form answers, referenced elsewhere as "@key"
+# (e.g. value: "@why_company"). "@location" resolves to `location` above.
+answers:
+  why_company: "Explain, in your own words, what draws you to this company."
+  ai_policy: "I use AI to structure and organise my own writing, not to generate answers."
+  tools_experience: "Daily user of modern AI developer tooling."
+  product_experience: "Shipped B2B and B2C products end to end."
+  notice_period: "Available within a few weeks of an offer."
+  expected_salary: "Open to a market-rate range."
+
+# Company-specific custom-question rules, matched by platform + slug/url
+# substring. `text_fields` are filled via label (dropdown fallback);
+# `radio_fields` click the answer label (dropdown fallback). Set
+# `react_fallback: true` for Greenhouse-style React forms.
+custom_questions:
+  - match: {platform: greenhouse, slug_or_url: meridianlabs}
+    react_fallback: true
+    text_fields:
+      - {label: "Country", value: "Country"}
+      - {label: "Why Meridian", value: "@why_company"}
+      - {label: "AI Policy", value: "@ai_policy"}
+      - {label: "Require visa sponsorship", value: "No"}
+      - {label: "Working address", value: "@location"}
+  - match: {platform: lever, slug_or_url: nimbusworks}
+    text_fields:
+      - {label: "Current location", value: "@location"}
+      - {label: "Product experience", value: "@product_experience"}
+    radio_fields:
+      - {question: "right to work", answer: "Yes"}
+  - match: {platform: ashby, slug_or_url: novadynamics}
+    text_fields:
+      - {label: "Expected yearly salary", value: "@expected_salary"}
+      - {label: "Notice period", value: "@notice_period"}
+    radio_fields:
+      - {question: "worked in a PE/VC backed startup", answer: "Yes"}
+
+# Per-role Greenhouse qualifying-question overlays, keyed by slug substring:
+#   slug: [[label, value, exact_match], ...]
+# Appended to the matching custom_questions text_fields at fill time.
+role_overlays:
+  meridianlabs-senior-engineer:
+    - ["owned end-to-end delivery of technical programmes", "Yes", false]
+    - ["native or C1-level in the local language", "No", false]
+    - ["delivered AI/ML into production", "Yes", false]

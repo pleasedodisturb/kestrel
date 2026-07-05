@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "command": "cd /path/to/job-search-hq && ./automation/cron_runner.sh",
+        "command": "cd /path/to/kestrel && ./automation/cron_runner.sh",
         "timeout": 600
       },
       "id": "run-pipeline",
@@ -30,11 +30,11 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [220, 0],
-      "notes": "UPDATE the path to your job-search-hq directory. Requires OPENAI_API_KEY in n8n environment."
+      "notes": "UPDATE the path to your kestrel directory. Requires OPENAI_API_KEY in the workflow environment."
     },
     {
       "parameters": {
-        "command": "cat /path/to/job-search-hq/tracking/daily-scan-$(date +%Y-%m-%d).md"
+        "command": "cat /path/to/kestrel/tracking/daily-scan-$(date +%Y-%m-%d).md"
       },
       "id": "read-digest",
       "name": "Read Digest",
