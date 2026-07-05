@@ -1,0 +1,32 @@
+# Company blocklist -- copy this file to config/blocklist.yaml and customize.
+#
+#   cp config/blocklist.example.yaml config/blocklist.yaml
+#
+# config/blocklist.yaml is gitignored (it is your personal list); only this
+# .example.yaml template is tracked in git.
+#
+# Matching is word-boundary + case-insensitive (see tools/blocklist.py), so
+# short tokens are safe: "orbix" blocks "Orbix Technologies" but NOT
+# "Orbixual Systems". Group the hard-block entries under any keys you like --
+# the group names are only for your own organization; every value across all
+# groups is loaded into one flat blocklist.
+#
+# All entries below are FICTIONAL examples. Replace them with your own.
+
+blocked:
+  surveillance:
+    - acme spyware
+    - shadowtrack
+    - panopticorp
+  values_mismatch:
+    - villain industries
+    - evilcorp
+  lowball_comp:
+    - lowball labs
+    - orbix
+
+# soft_flag: surface-with-warning companies -- do NOT hard-block, but never
+# cold-apply. Map of company token -> human-readable reason.
+soft_flag:
+  flagco: "example soft-flag -- recruiter-only intro; route warm, never cold-batch"
+  cooldownco: "example soft-flag -- recently in pipeline; hold before re-applying"
