@@ -15,6 +15,10 @@ updates:
     commit-message:
       prefix: "deps"
     open-pull-requests-limit: 5
+    ignore:
+      # Types track the pinned Node 22 runtime (see docker ignore below).
+      - dependency-name: "@types/node"
+        versions: [">=26"]
     groups:
       react:
         patterns:
@@ -54,3 +58,13 @@ updates:
       interval: weekly
     commit-message:
       prefix: "deps"
+    ignore:
+      # Runtime pins — Python 3.x bumps classify as semver-MINOR and would
+      # auto-merge, but for a runtime they are de-facto majors. The project
+      # targets Python 3.11 (requires-python, ruff target) and Node 22 LTS.
+      # Bumping either is a deliberate upgrade ticket, not a dep PR (G-1288;
+      # policy carried over from the retired renovate.json).
+      - dependency-name: "python"
+        versions: [">=3.12"]
+      - dependency-name: "node"
+        versions: [">=23"]

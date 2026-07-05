@@ -47,6 +47,27 @@ class TestDependabotConfig:
             limit = update.get("open-pull-requests-limit", 5)
             assert limit <= 10, f"{update['package-ecosystem']}: PR limit {limit} too high"
 
+    def test_runtime_version_guards(self, config):
+        """Runtime images must not auto-bump (G-1288: python 3.14 slipped
+        through automerge as a semver-minor). Policy from retired
+        renovate.json: Python 3.11, Node 22 LTS — upgrades are deliberate."""
+        docker = next(u for u in config["updates"] if u["package-ecosystem"] == "docker")
+        ignored = {i["dependency-name"] for i in docker.get("ignore", [])}
+        assert {"python", "node"} <= ignored, (
+            "docker ecosystem must ignore python/node runtime bumps"
+        )
+        npm = next(u for u in config["updates"] if u["package-ecosystem"] == "npm")
+        npm_ignored = {i["dependency-name"] for i in npm.get("ignore", [])}
+        assert "@types/node" in npm_ignored, "@types/node majors must track the pinned Node runtime"
+
+    def test_dockerfile_runtime_is_python_311(self):
+        """The runtime base image tracks the project's pinned Python."""
+        dockerfile = (PROJECT_ROOT / "Dockerfile").read_text()
+        assert "FROM python:3.11-slim AS runtime" in dockerfile, (
+            "Runtime image must stay on python:3.11-slim until the deliberate "
+            "upgrade ticket (G-1289) lands"
+        )
+
 
 class TestAutomergeWorkflow:
     """Validate the Dependabot automerge workflow policy (G-1277)."""
