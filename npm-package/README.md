@@ -36,4 +36,4 @@ git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel && bash s
 
 ## License
 
-MIT
+[AGPL-3.0-or-later](https://github.com/pleasedodisturb/kestrel/blob/main/LICENSE) — same as the main Kestrel project.
