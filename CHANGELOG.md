@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.17.0](https://github.com/pleasedodisturb/kestrel/compare/v0.16.0...v0.17.0) (2026-07-05)
+
+
+### Features
+
+* **G-1275:** switch npm publish to OIDC Trusted Publishing — no token needed ([#428](https://github.com/pleasedodisturb/kestrel/issues/428)) ([e5d2c21](https://github.com/pleasedodisturb/kestrel/commit/e5d2c21a20478e2f1ae187a61cbddf1d14ce8d78))
+* **G-1277:** automate security-fix inclusion — Dependabot automerge, docker ecosystem, weekly rebuild ([#417](https://github.com/pleasedodisturb/kestrel/issues/417)) ([eef5deb](https://github.com/pleasedodisturb/kestrel/commit/eef5debc108ef4d9204ebcc796012126306d2902))
+
+
+### Bug Fixes
+
+* **G-1274:** repair disabled workflows — scorecard pin, daily-scan guard, release-checks ([#415](https://github.com/pleasedodisturb/kestrel/issues/415)) ([f7b1a5e](https://github.com/pleasedodisturb/kestrel/commit/f7b1a5eea078d9b5ff23149cc7c757de4a576970))
+* **G-1288:** revert runtime to python:3.11-slim, guard runtime images from auto-bumps ([#427](https://github.com/pleasedodisturb/kestrel/issues/427)) ([16f0ce4](https://github.com/pleasedodisturb/kestrel/commit/16f0ce4358763856f7606bdcc42f214994604774))
+
+
+### Dependencies
+
+* bump @tanstack/react-query in /frontend in the tanstack group ([#411](https://github.com/pleasedodisturb/kestrel/issues/411)) ([e17d7f8](https://github.com/pleasedodisturb/kestrel/commit/e17d7f8c531893185e32bb28294b66edf222222e))
+* bump globals from 17.5.0 to 17.7.0 in /frontend ([#414](https://github.com/pleasedodisturb/kestrel/issues/414)) ([2341a70](https://github.com/pleasedodisturb/kestrel/commit/2341a707423a983bad78cf10930cfc0cc96172c6))
+* bump python from 3.11-slim to 3.14-slim ([#418](https://github.com/pleasedodisturb/kestrel/issues/418)) ([1c84cab](https://github.com/pleasedodisturb/kestrel/commit/1c84cab7877130aeb59a255247a8a8d4123e79e1))
+* bump the eslint group across 1 directory with 3 updates ([#409](https://github.com/pleasedodisturb/kestrel/issues/409)) ([8f613b9](https://github.com/pleasedodisturb/kestrel/commit/8f613b90c2552c0b3eb67a35ed7549fe2b0e4973))
+* bump the tailwind group across 1 directory with 2 updates ([#412](https://github.com/pleasedodisturb/kestrel/issues/412)) ([c7bce76](https://github.com/pleasedodisturb/kestrel/commit/c7bce7625a7b3877cd5c7a6b556f7d631ebcee32))
+* bump the vitest group across 1 directory with 2 updates ([#413](https://github.com/pleasedodisturb/kestrel/issues/413)) ([ec3171b](https://github.com/pleasedodisturb/kestrel/commit/ec3171be6f1fb28b79a36e6b23890e7a247a10eb))
+* bump typescript from 6.0.2 to 6.0.3 in /frontend ([#424](https://github.com/pleasedodisturb/kestrel/issues/424)) ([bc17c50](https://github.com/pleasedodisturb/kestrel/commit/bc17c5000796ee8ffdf47a0834ca19fcc52e7897))
+* update openai requirement from &gt;=2.41.0 to &gt;=2.44.0 ([#410](https://github.com/pleasedodisturb/kestrel/issues/410)) ([190b9d5](https://github.com/pleasedodisturb/kestrel/commit/190b9d5987d40f259577ccc2c4ec9113d8a76834))
+
 ## [0.16.0](https://github.com/pleasedodisturb/kestrel/compare/v0.15.2...v0.16.0) (2026-06-28)
 
 
