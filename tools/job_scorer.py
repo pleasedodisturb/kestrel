@@ -15,6 +15,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pandas as pd
 import yaml
@@ -577,6 +578,103 @@ def main():
     print("\nTop 10 matches:")
     for _, row in top.iterrows():
         print(f"  [{row['fit_score']}/10] {row.get('title', '?')} @ {row.get('company', '?')}")
+
+
+# ==========================================================================
+# Geo-eligibility + API-submittable helpers (additive)
+#
+# These delegate the geo classification to tools/batch_probe.py's authoritative,
+# home-parameterized gate rather than the legacy US_ONLY/EU_LOCATIONS lists
+# above, and add an ATS-host check used to decide whether a role can be applied
+# to via a structured ATS API. Tier/floor routing that consumes these lands in a
+# follow-up slice.
+# ==========================================================================
+
+# Ensure tools/ is importable so the flat `from batch_probe import ...` resolves
+# whether this module is run as a script or imported in a test that inserts
+# tools/ onto sys.path.
+_TOOLS_DIR = str(Path(__file__).resolve().parent)
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
+
+# ATS sources whose applications can be driven through a structured API/board.
+ATS_SUBMITTABLE_SOURCES: tuple[str, ...] = (
+    "greenhouse",
+    "lever",
+    "ashby",
+    "workable",
+    "smartrecruiters",
+    "personio",
+)
+
+# Host suffixes that identify a submittable ATS board.
+_ATS_HOSTS: tuple[str, ...] = (
+    "greenhouse.io",
+    "lever.co",
+    "ashbyhq.com",
+    "workable.com",
+    "smartrecruiters.com",
+    "personio.de",
+    "personio.com",
+)
+
+
+def geo_eligibility(
+    location: str | None,
+    offices: list[str] | None = None,
+    remote: bool = False,
+) -> str:
+    """Classify a role's geo eligibility for the configured home region.
+
+    Delegates to tools/batch_probe.py's authoritative gate. Authoritative
+    ``offices`` override the (unreliable) ``location`` list string; ``remote``
+    never rescues a foreign role on its own.
+
+    Returns one of: "home", "eligible_remote", "foreign", "unknown".
+    """
+    from batch_probe import _classify_token
+
+    office_candidates = [o for o in (offices or []) if o and o.strip()]
+    if office_candidates:
+        candidates = office_candidates
+    elif location and location.strip():
+        candidates = [location]
+    else:
+        return "eligible_remote" if remote else "unknown"
+
+    classes = [_classify_token(c) for c in candidates]
+    if "home" in classes:
+        return "home"
+    if "eu_remote" in classes:
+        return "eligible_remote"
+    if "foreign" in classes:
+        return "foreign"
+    return "eligible_remote" if remote else "unknown"
+
+
+def _is_ats_host(url: str | None) -> bool:
+    """True if ``url`` is an https URL on a known submittable-ATS host."""
+    if not url:
+        return False
+    parsed = urlparse(str(url).strip())
+    if parsed.scheme != "https":
+        return False
+    host = parsed.netloc.lower().split(":")[0].removeprefix("www.")
+    return any(host == h or host.endswith("." + h) for h in _ATS_HOSTS)
+
+
+def is_api_submittable(job: dict) -> bool:
+    """True if ``job`` can be applied to via a structured ATS API/board.
+
+    A job qualifies when it names a known ATS ``source`` OR its ``url`` resolves
+    to a validated https ATS host. The host check guards against non-ATS or
+    non-https links masquerading as submittable.
+    """
+    source = str(job.get("source") or job.get("ats") or "").strip().lower()
+    if source in ATS_SUBMITTABLE_SOURCES and _is_ats_host(job.get("url")):
+        return True
+    # No/unknown source but a valid ATS host URL still counts.
+    return _is_ats_host(job.get("url"))
 
 
 if __name__ == "__main__":
