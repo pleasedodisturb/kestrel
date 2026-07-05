@@ -677,5 +677,129 @@ def is_api_submittable(job: dict) -> bool:
     return _is_ats_host(job.get("url"))
 
 
+# --------------------------------------------------------------------------
+# Dream-tier floor (never bury a top target on a sparse JD)
+# --------------------------------------------------------------------------
+
+# Top-tier targets that must never vanish from the digest because an empty/sparse
+# JD made the AI under-score them. These are FICTIONAL example slugs -- replace the
+# tuple (or load it from your own config) with the companies you never want buried.
+DREAM_TIER_COMPANIES: tuple[str, ...] = (
+    "zephyrx",
+    "aspirational labs",
+    "fictional ai systems",
+    "sample target corp",
+)
+DREAM_TIER_FLOOR = 8
+
+# Word-boundary match (not substring): short slugs are not distinctive enough for a
+# substring match (it would floor "Nonlinear ..." or "Linear Technology"). Floored
+# roles are review-flagged anyway, so a rare whole-word collision surfaces for human
+# review rather than being silently applied.
+_DREAM_TIER_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(d) for d in DREAM_TIER_COMPANIES) + r")\b",
+    re.IGNORECASE,
+) if DREAM_TIER_COMPANIES else None
+
+
+def is_dream_tier(company: str | None) -> bool:
+    """True if ``company`` matches a configured dream-tier target (word-boundary)."""
+    if _DREAM_TIER_RE is None:
+        return False
+    return bool(_DREAM_TIER_RE.search(company or ""))
+
+
+def apply_floors(jobs: list[dict]) -> list[dict]:
+    """Raise dream-tier company roles to a score floor so they are never buried.
+
+    A dream-tier role that the AI under-scored is floored and flagged for review.
+    Geo is respected: a geo-ineligible dream role is NOT floored into the digest but
+    is force-flagged for review so it is never lost. A role a hard-cap deliberately
+    buried (wrong function/sales/HR) is likewise not resurrected. Pre-filtered /
+    blocked rows (score<=0) are never resurrected.
+    """
+    for job in jobs:
+        if job.get("fit_score", 0) <= 0:
+            continue  # pre-filtered / blocked -- do not resurrect
+        if not is_dream_tier(job.get("company")):
+            continue
+
+        geo_foreign = job.get("geo_class") == "foreign"
+        # A hard-cap (sales/HR/wrong-function) deliberately buried this role -- the
+        # floor must NOT resurrect it. geo_ineligible caps are handled by the
+        # geo_foreign branch below, not treated as a "wrong function" cap.
+        wrong_function_cap = (
+            bool(job.get("cap_applied")) and job.get("cap_reason") != "geo_ineligible"
+        )
+
+        if geo_foreign or wrong_function_cap:
+            # Don't floor into the digest: geo-ineligible or deliberately buried by
+            # function. Keep it visible in the review queue only -- never lost, never
+            # promoted to a top gem.
+            reason = "geo-ineligible" if geo_foreign else job.get("cap_reason")
+            job["review_flag"] = True
+            job.setdefault(
+                "review_reason",
+                f"Dream-tier company not auto-floored ({reason}, "
+                f"{job.get('location', '')}) -- review",
+            )
+            continue
+
+        if job.get("fit_score", 0) < DREAM_TIER_FLOOR:
+            orig = job.get("fit_score", 0)
+            job["fit_score"] = DREAM_TIER_FLOOR
+            job["floor_applied"] = True
+            job["review_flag"] = True
+            job["review_reason"] = (
+                f"Dream-tier company floored {orig}->{DREAM_TIER_FLOOR}; "
+                "verify the role actually fits"
+            )
+            job["fit_reasoning"] = (
+                f"Floored from {orig} to {DREAM_TIER_FLOOR} (dream-tier company): "
+                + (job.get("fit_reasoning") or "")
+            )
+    return jobs
+
+
+# --------------------------------------------------------------------------
+# Tier classifier — routes each scored gem to its operating-model lane
+# --------------------------------------------------------------------------
+
+def classify_tier(job: dict) -> str | None:
+    """Assign the tiered operating-model lane for a scored job.
+
+    - T1 (dream / high-touch): dream-tier company, OR fit_score >= 8, OR a warm
+      intro. These are written by hand.
+    - T2 (strong / rapid-fire kit): fit_score 6-7.
+    - T3 (volume / auto-fill + 1-click confirm): fit_score >= 5, geo-eligible, and
+      on an auto-fillable ATS. The actual no-open-Q check happens in the T3 lane
+      before anything is prefilled.
+    - None: below the bar (or pre-filtered/blocked) -> not routed to any lane.
+
+    Geo-foreign roles are typically score-capped low upstream, so they fall out
+    naturally here (except dream companies, which stay T1 and are review-flagged by
+    ``apply_floors``).
+    """
+    score = job.get("fit_score", 0) or 0
+    if score <= 0:
+        return None
+    if is_dream_tier(job.get("company")) or score >= 8 or job.get("warm_intro"):
+        return "T1"
+    if score >= 6:
+        return "T2"
+    if score >= 5 and job.get("geo_class") != "foreign" and is_api_submittable(job):
+        return "T3"
+    return None
+
+
+def assign_tiers(jobs: list[dict]) -> list[dict]:
+    """Tag each job with its tier + auto_fillable flag (mutates in place)."""
+    for job in jobs:
+        tier = classify_tier(job)
+        job["tier"] = tier
+        job["auto_fillable"] = tier == "T3"
+    return jobs
+
+
 if __name__ == "__main__":
     main()
