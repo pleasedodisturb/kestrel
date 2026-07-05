@@ -14,20 +14,20 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
-      # We mint an app token instead of using the default GITHUB_TOKEN because
-      # merges performed with GITHUB_TOKEN produce merge pushes that do NOT
-      # trigger downstream workflows (docker-publish, release-checks,
-      # release-please). The app token restores those triggers so a merged
-      # Dependabot PR still kicks off the rest of the pipeline.
-      - name: Generate token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_KEY }}
-          permission-contents: write
-          permission-pull-requests: write
-
+      # This uses the default GITHUB_TOKEN, elevated via the permissions block
+      # (which applies even to Dependabot-triggered runs). Known tradeoff:
+      # pushes from auto-merges enabled with GITHUB_TOKEN do NOT trigger
+      # downstream push workflows (docker-publish, release-checks,
+      # release-please). Mitigation: docker-publish has a weekly scheduled
+      # rebuild, and release-please self-heals on the next human push.
+      #
+      # Why not the RELEASE_APP_ID/RELEASE_APP_KEY app token like
+      # release-please.yml: Dependabot-triggered workflow runs read from the
+      # separate *Dependabot secrets* store, not Actions secrets — those
+      # secrets resolve empty here. To restore downstream triggers, duplicate
+      # the app credentials into the Dependabot store
+      # (gh secret set --app dependabot) and re-add a create-github-app-token
+      # step.
       - name: Fetch dependency metadata
         id: meta
         uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
@@ -40,6 +40,6 @@ jobs:
       - name: Enable auto-merge for patch/minor
         if: steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor'
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr merge --auto --squash "$PR_URL"
