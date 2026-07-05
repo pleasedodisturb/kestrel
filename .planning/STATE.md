@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-21)
 Phase: 5 of 5 (Contributor Experience) — Complete
 Plan: 2 of 2 in phase 5 (both plans complete, verified)
 Status: Phase 5 complete. All requirements verified (CONT-01, CONT-02, CONT-03). 3 items in human UAT.
-Last activity: 2026-04-28 — Phase 5 verified and marked complete
+Last activity: 2026-07-05 — Completed quick task 260705-jcr: G-1274 workflow fixes (scorecard pin, daily-scan guard, release-checks)
 
 Progress: [██████████] 100%
 
@@ -86,6 +86,12 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260705-jcr | G-1274: fix and re-enable disabled workflows (scorecard pin, daily-scan guard, release-checks) | 2026-07-05 | efd1d0a | [260705-jcr-g-1274-fix-and-re-enable-disabled-workfl](./quick/260705-jcr-g-1274-fix-and-re-enable-disabled-workfl/) |
 
 ## Deferred Items
 

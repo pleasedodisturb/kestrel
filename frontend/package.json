@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@size-limit/file": "^11.2.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -42,9 +43,20 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
     "jsdom": "29.0.2",
+    "size-limit": "^11.2.0",
     "typescript": "6.0.2",
     "typescript-eslint": "^8.60.1",
     "vite": "^8.0.11",
     "vitest": "^4.1.0"
-  }
+  },
+  "size-limit": [
+    {
+      "path": "dist/assets/index-*.js",
+      "limit": "350 kB"
+    },
+    {
+      "path": "dist/assets/index-*.css",
+      "limit": "15 kB"
+    }
+  ]
 }

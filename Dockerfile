@@ -31,10 +31,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system dependencies (curl for health check)
+# Install system dependencies (curl for health check).
+# `apt-get upgrade` picks up security patches to base-image packages
+# (e.g. libssh2) that Trivy flags as fixable CRITICAL/HIGH.
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
+
+# Upgrade build tooling before installing the package — pip's bundled
+# setuptools/wheel can lag behind fixed CVEs (wheel, vendored
+# jaraco.context) that Trivy flags as fixable CRITICAL/HIGH.
+# Runs before the COPY layers so source edits don't invalidate it.
+RUN pip install --no-cache-dir -U pip setuptools wheel
 
 # Copy dependency specification and source (needed for pip install)
 COPY pyproject.toml ./

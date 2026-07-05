@@ -66,9 +66,7 @@ jobs:
         run: npm run build
 
       - name: Bundle size check
-        run: |
-          npm install --no-save --legacy-peer-deps size-limit @size-limit/file
-          npx size-limit
+        run: npm run size
 
       - name: Accessibility smoke check
         continue-on-error: true
