@@ -2,10 +2,10 @@
 # Daily job scan — cron/launchd runner
 #
 # Schedule with cron (edit via: crontab -e):
-#   0 7 * * 1-5 /path/to/job-search-hq/automation/cron_runner.sh >> /path/to/job-search-hq/logs/cron.log 2>&1
+#   0 7 * * 1-5 /path/to/kestrel/automation/cron_runner.sh >> /path/to/kestrel/logs/cron.log 2>&1
 #
 # Schedule with launchd (macOS):
-#   See automation/com.jobsearchhq.daily-scan.plist
+#   See automation/com.kestrel.daily-scan.plist
 #
 # Required env vars (set in your shell profile or pass inline):
 #   OPENAI_API_KEY — for AI scoring

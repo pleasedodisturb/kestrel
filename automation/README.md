@@ -63,7 +63,7 @@ Automated daily job discovery: scrape → score → deduplicate → digest.
 crontab -e
 
 # Add this line (runs Mon-Fri at 7am local time):
-0 7 * * 1-5 /path/to/job-search-hq/automation/cron_runner.sh >> /path/to/job-search-hq/logs/cron.log 2>&1
+0 7 * * 1-5 /path/to/kestrel/automation/cron_runner.sh >> /path/to/kestrel/logs/cron.log 2>&1
 ```
 
 Make sure `OPENAI_API_KEY` is in your `.env` file or shell profile.
@@ -72,11 +72,11 @@ Make sure `OPENAI_API_KEY` is in your `.env` file or shell profile.
 
 ```bash
 # Edit the plist — update all paths marked "UPDATE THIS PATH"
-vim automation/com.jobsearchhq.daily-scan.plist
+vim automation/com.kestrel.daily-scan.plist
 
 # Install
-cp automation/com.jobsearchhq.daily-scan.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.jobsearchhq.daily-scan.plist
+cp automation/com.kestrel.daily-scan.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.kestrel.daily-scan.plist
 ```
 
 ### Option 4: n8n
