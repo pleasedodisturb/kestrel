@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.18.0](https://github.com/pleasedodisturb/kestrel/compare/v0.17.1...v0.18.0) (2026-07-05)
+
+
+### Features
+
+* **G-1282:** port blocklist + parameterized geo gate from private fork (PII-stripped) ([#436](https://github.com/pleasedodisturb/kestrel/issues/436)) ([d02ca5a](https://github.com/pleasedodisturb/kestrel/commit/d02ca5a1dc814b416efceab5ce26e898e1ca3e64))
+
+
+### Dependencies
+
+* bump @size-limit/file from 11.2.0 to 12.1.0 in /frontend ([#425](https://github.com/pleasedodisturb/kestrel/issues/425)) ([c11603c](https://github.com/pleasedodisturb/kestrel/commit/c11603c4f4d793d008d0241e7fe75dc24fb8468f))
+* bump size-limit from 11.2.0 to 12.1.0 in /frontend ([#426](https://github.com/pleasedodisturb/kestrel/issues/426)) ([9e0ad53](https://github.com/pleasedodisturb/kestrel/commit/9e0ad5322736389bd47710b107f36437134766ac))
+
 ## [0.17.1](https://github.com/pleasedodisturb/kestrel/compare/v0.17.0...v0.17.1) (2026-07-05)
 
 
