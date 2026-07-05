@@ -1,0 +1,37 @@
+# Geo-eligibility configuration -- copy this file to config/geo.yaml and customize.
+#
+#   cp config/geo.example.yaml config/geo.yaml
+#
+# config/geo.yaml is gitignored (it is your personal home region); only this
+# .example.yaml template is tracked in git.
+#
+# home_tokens
+#   The place names (cities + country/region names) that count as YOUR home
+#   location. A role anchored in any of these classifies as "home" and is always
+#   eligible (intra-home relocation is assumed OK). A home token ALWAYS wins
+#   classification, so you may even list a place that also appears in the
+#   built-in foreign list -- it will be treated as home.
+#
+#   The values below are an ILLUSTRATIVE EXAMPLE ONLY (a sample home country).
+#   There is NO built-in country assumption -- set this to your own country's
+#   cities and country/region names before using the gate for real.
+#
+# allow_pan_region_remote
+#   When true, EMEA / EU-wide / Europe / global / unspecified-remote postings
+#   count as eligible remote. Set false to require an explicit home-region anchor.
+#
+# extra_foreign_tokens
+#   Optional extra place names to treat as foreign (drop), on top of the public
+#   geography list in tools/batch_probe.py.
+
+home_tokens:
+  # --- EXAMPLE home region -- replace this whole block with your own ---
+  - ireland
+  - dublin
+  - cork
+  - galway
+  - limerick
+
+allow_pan_region_remote: true
+
+extra_foreign_tokens: []
