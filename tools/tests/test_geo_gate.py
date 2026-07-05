@@ -5,9 +5,11 @@ Encodes the eligibility rule for a HOME-based applicant:
   drop      <=> foreign onsite OR country-locked foreign remote
 
 The home region is parameterized (loaded from config). These tests pin an
-explicit home region (a set of home cities) via an autouse fixture so the
-classification logic is verified independently of whatever the shipped
-config/geo.example.yaml happens to contain.
+explicit home region via an autouse fixture -- the same illustrative Ireland set
+that config/geo.example.yaml ships -- so the classification logic is verified
+deterministically. Because "ireland"/"dublin" also appear in the built-in public
+foreign-geography list, this fixture additionally exercises the documented
+precedence rule: a configured home token ALWAYS wins over the foreign list.
 """
 
 import sys
@@ -28,22 +30,15 @@ from batch_probe import (  # noqa: E402
     parse_greenhouse_url,
 )
 
-# Explicit test home region: a set of home cities + the country name.
+# Explicit test home region: the illustrative example set from
+# config/geo.example.yaml (home cities + the country name).
 _TEST_HOME = GeoConfig(
     home_tokens=(
-        "germany",
-        "deutschland",
-        "frankfurt",
-        "berlin",
-        "munich",
-        "münchen",
-        "muenchen",
-        "hamburg",
-        "cologne",
-        "köln",
-        "stuttgart",
-        "düsseldorf",
-        "dusseldorf",
+        "ireland",
+        "dublin",
+        "cork",
+        "galway",
+        "limerick",
     ),
     allow_pan_region_remote=True,
     extra_foreign_tokens=(),
@@ -56,11 +51,11 @@ def _pin_home_region(monkeypatch):
     monkeypatch.setattr(batch_probe, "_CONFIG", _TEST_HOME)
 
 
-# --- verdict token is "home" (renamed from the old "de") -------------------
+# --- verdict token is "home" (renamed from the old country-specific token) --
 
 
 def test_classify_token_home_verdict():
-    assert _classify_token("Munich, Germany") == "home"
+    assert _classify_token("Cork, Ireland") == "home"
     assert _classify_token("Remote - EMEA") == "eu_remote"
     assert _classify_token("Paris, France") == "foreign"
     assert _classify_token("Somewhereville") == "unknown"
@@ -69,19 +64,19 @@ def test_classify_token_home_verdict():
 # --- core eligibility rule (required by task) ------------------------------
 
 
-def test_munich_onsite_keep():
-    assert geo_classify("Munich, Germany") == "home"
+def test_home_city_onsite_keep():
+    assert geo_classify("Dublin, Ireland") == "home"
 
 
-def test_frankfurt_keep():
-    assert geo_classify("Frankfurt") == "home"
+def test_home_city_bare_keep():
+    assert geo_classify("Galway") == "home"
 
 
 def test_foreign_office_overrides_home_list_drop():
-    # Failure #2a: list string lied "Berlin, Germany; Munich" but the REAL
+    # Failure #2a: list string lied "Dublin, Ireland; Cork" but the REAL
     # office is Paris. With authoritative offices the home string is ignored.
     assert (
-        geo_classify("Berlin, Germany; Munich", offices=["Paris, France"], is_remote=False) is None
+        geo_classify("Dublin, Ireland; Cork", offices=["Paris, France"], is_remote=False) is None
     )
 
 
@@ -114,7 +109,7 @@ def test_bare_remote_keep():
 
 
 def test_remote_home_country_keep():
-    assert geo_classify("Germany (Remote)") == "home"
+    assert geo_classify("Ireland (Remote)") == "home"
 
 
 def test_remote_europe_keep():
@@ -146,7 +141,14 @@ def test_us_not_matching_austria():
 
 def test_home_wins_over_foreign_in_multilist():
     # A home-anchored role that also offers a foreign office is still eligible.
-    assert geo_classify("Berlin", offices=["Berlin, Germany", "Paris, France"]) == "home"
+    assert geo_classify("Dublin", offices=["Dublin, Ireland", "Paris, France"]) == "home"
+
+
+def test_home_token_wins_over_builtin_foreign_list():
+    # "dublin"/"ireland" are ALSO in the built-in public foreign-geography list;
+    # the configured home token must take precedence (documented behavior).
+    assert _classify_token("Dublin") == "home"
+    assert _classify_token("Ireland") == "home"
 
 
 def test_is_remote_never_rescues_foreign_office():
@@ -160,7 +162,7 @@ def test_pan_region_remote_can_be_disabled():
     batch_probe._CONFIG = strict
     try:
         assert geo_classify("Remote - EMEA") is None
-        assert geo_classify("Munich, Germany") == "home"
+        assert geo_classify("Dublin, Ireland") == "home"
     finally:
         batch_probe._CONFIG = original
 
@@ -180,7 +182,7 @@ def test_extra_foreign_tokens_drop():
 
 
 def test_geo_ok_wrapper():
-    assert geo_ok("Munich, Germany") is True
+    assert geo_ok("Dublin, Ireland") is True
     assert geo_ok("Remote - Sweden") is False
 
 
@@ -195,8 +197,8 @@ def test_ashby_secondary_home_rescues_foreign_primary():
         "address": {"postalAddress": {"addressCountry": "France", "addressLocality": "Paris"}},
         "secondaryLocations": [
             {
-                "location": "Germany (remote)",
-                "address": {"postalAddress": {"addressCountry": "Germany"}},
+                "location": "Ireland (remote)",
+                "address": {"postalAddress": {"addressCountry": "Ireland"}},
             },
             {
                 "location": "Spain (remote)",
@@ -224,8 +226,8 @@ def test_ashby_bare_remote_with_foreign_hq_keep():
 
 def test_ashby_home_city_keep():
     posting = {
-        "location": "Berlin",
-        "address": {"postalAddress": {"addressCountry": "Germany", "addressLocality": "Berlin"}},
+        "location": "Dublin",
+        "address": {"postalAddress": {"addressCountry": "Ireland", "addressLocality": "Dublin"}},
         "secondaryLocations": [],
     }
     candidates, primary, is_remote = _ashby_candidates_from_posting(posting)

@@ -23,7 +23,7 @@ def _pin_home_region(monkeypatch):
     monkeypatch.setattr(
         batch_probe,
         "_CONFIG",
-        GeoConfig(home_tokens=("germany", "berlin", "munich", "frankfurt")),
+        GeoConfig(home_tokens=("ireland", "dublin", "cork", "galway")),
     )
 
 
@@ -31,7 +31,7 @@ def _pin_home_region(monkeypatch):
 
 
 def test_geo_eligibility_home():
-    assert job_scorer.geo_eligibility("Munich, Germany") == "home"
+    assert job_scorer.geo_eligibility("Cork, Ireland") == "home"
 
 
 def test_geo_eligibility_eligible_remote():
@@ -47,7 +47,7 @@ def test_geo_eligibility_unknown():
 
 
 def test_geo_eligibility_offices_override_list():
-    assert job_scorer.geo_eligibility("Berlin, Germany", offices=["Paris, France"]) == "foreign"
+    assert job_scorer.geo_eligibility("Dublin, Ireland", offices=["Paris, France"]) == "foreign"
 
 
 def test_geo_eligibility_remote_flag_only():

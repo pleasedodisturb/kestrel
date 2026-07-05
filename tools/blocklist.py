@@ -15,8 +15,11 @@ failure modes of a naive ``if blocked in company_lower`` loop:
 
 If the YAML is missing or unreadable we fall back to the embedded
 :data:`FLOOR_BLOCKED` / :data:`FLOOR_SOFT_FLAG` so the live list can never silently
-empty. ``tools/tests/test_blocklist.py`` additionally fails CI if any floor entry
-stops being blocked -- a non-shrink guard so the list can never regress.
+empty. ``tools/tests/test_blocklist.py`` enforces the non-shrink PATTERN: every
+:data:`FLOOR_BLOCKED` entry must stay loaded and blocked. In this repo the personal
+``config/blocklist.yaml`` is gitignored, so CI only exercises the floor itself; the
+guard bites for real once you track a config (e.g. in a private fork) -- that config
+must then stay a superset of the floor or the suite goes red.
 
 The floor entries here are OBVIOUSLY-FICTIONAL examples. Replace them (and the
 example YAML) with your own values-based blocklist.
@@ -33,8 +36,8 @@ import yaml
 _CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "blocklist.yaml"
 
 # Embedded floor -- fictional example entries. Doubles as (a) the runtime fallback
-# if the YAML is unreadable and (b) the CI floor that tests/test_blocklist.py
-# asserts is always blocked so the live list can never silently shrink.
+# if the YAML is unreadable and (b) the floor that tests/test_blocklist.py asserts
+# is always loaded + blocked (the non-shrink pattern; see module docstring).
 FLOOR_BLOCKED: tuple[str, ...] = (
     # Fictional surveillance / values-mismatch examples -- swap for your own.
     "acme spyware",

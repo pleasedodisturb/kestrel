@@ -6,9 +6,12 @@ Covers the two failure modes a substring matcher has:
   * false-positive: a short token (e.g. "orbix") must NOT match inside an
     unrelated word ("Orbixual Systems").
 
-The floor tests are the CI guard: if config/blocklist.yaml ever drops a
-values-based entry, this suite goes red so the live list can never silently
-shrink. All fixtures use the FICTIONAL floor entries shipped with the repo.
+The floor tests enforce the non-shrink PATTERN: every FLOOR_BLOCKED entry must
+stay loaded and blocked. In this repo the personal config/blocklist.yaml is
+gitignored, so CI only exercises the embedded floor; the guard bites for real
+once a tracked config exists (e.g. in a private fork) -- that config must then
+stay a superset of the floor or this suite goes red. All fixtures use the
+FICTIONAL floor entries shipped with the repo.
 """
 
 import sys
@@ -80,7 +83,7 @@ def test_blocks_real_blocked_company(company):
     [
         "Orbixual Systems",  # contains "orbix" but is not Orbix (word boundary)
         "Acmethyst",  # contains "acme" but no whole-word "acme spyware"
-        "Databricks",
+        "Brightlake Analytics",
         "Metabase",
         "Texas Instruments",
         "Corbixture Ltd",  # contains "orbix" mid-word
