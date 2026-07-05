@@ -4,7 +4,6 @@ Validates that the config files introduced for automated dependency
 tracking are well-formed and follow project conventions.
 """
 
-import json
 from pathlib import Path
 
 import pytest
@@ -14,55 +13,72 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 # ---------------------------------------------------------------------------
-# G-247: Renovate Bot configuration
+# G-1277: Dependabot is the single update bot (Renovate removed — the app
+# was never installed, so renovate.json was dead config)
 # ---------------------------------------------------------------------------
 
 
-class TestRenovateConfig:
-    """Validate renovate.json structure and policy."""
+class TestDependabotConfig:
+    """Validate .github/dependabot.yml structure and policy."""
 
     @pytest.fixture()
     def config(self):
-        with open(PROJECT_ROOT / "renovate.json") as f:
-            return json.load(f)
+        with open(PROJECT_ROOT / ".github" / "dependabot.yml") as f:
+            return yaml.safe_load(f)
 
-    def test_renovate_json_is_valid_json(self):
-        """renovate.json parses without error."""
-        with open(PROJECT_ROOT / "renovate.json") as f:
-            json.load(f)
-
-    def test_extends_recommended(self, config):
-        assert "config:recommended" in config.get("extends", [])
-
-    def test_has_schedule(self, config):
-        assert "schedule" in config
-        assert len(config["schedule"]) > 0
-
-    def test_has_timezone(self, config):
-        assert config.get("timezone") == "Europe/Berlin"
-
-    def test_has_package_rules(self, config):
-        rules = config.get("packageRules", [])
-        assert len(rules) >= 2, "Need at least Python and Node rules"
-
-    def test_major_updates_not_automerged(self, config):
-        """Major version bumps must require manual review."""
-        major_rules = [
-            r for r in config.get("packageRules", []) if "major" in r.get("matchUpdateTypes", [])
-        ]
-        assert len(major_rules) > 0, "No rule for major updates"
-        for rule in major_rules:
-            assert rule.get("automerge") is False, "Major updates must not automerge"
-
-    def test_pr_concurrent_limit(self, config):
-        limit = config.get("prConcurrentLimit", 999)
-        assert limit <= 10, "PR flood protection: limit should be reasonable"
-
-    def test_ignores_legacy_requirements_txt(self, config):
-        ignored = config.get("ignorePaths", [])
-        assert "requirements.txt" in ignored, (
-            "requirements.txt is legacy — Renovate should ignore it"
+    def test_renovate_config_is_gone(self):
+        """renovate.json must not resurface — Dependabot is the single bot."""
+        assert not (PROJECT_ROOT / "renovate.json").exists(), (
+            "renovate.json found — removed in G-1277 because the Renovate app "
+            "was never installed; keep Dependabot as the single update bot"
         )
+
+    def test_dependabot_yml_is_valid_yaml(self):
+        with open(PROJECT_ROOT / ".github" / "dependabot.yml") as f:
+            yaml.safe_load(f)
+
+    def test_covers_all_ecosystems(self, config):
+        """pip, npm, github-actions and docker must all get update PRs."""
+        ecosystems = {u["package-ecosystem"] for u in config["updates"]}
+        assert {"pip", "npm", "github-actions", "docker"} <= ecosystems
+
+    def test_pr_flood_protection(self, config):
+        for update in config["updates"]:
+            limit = update.get("open-pull-requests-limit", 5)
+            assert limit <= 10, f"{update['package-ecosystem']}: PR limit {limit} too high"
+
+
+class TestAutomergeWorkflow:
+    """Validate the Dependabot automerge workflow policy (G-1277)."""
+
+    @pytest.fixture()
+    def content(self):
+        path = PROJECT_ROOT / ".github" / "workflows" / "dependabot-automerge.yml"
+        return path.read_text()
+
+    @pytest.fixture()
+    def config(self):
+        path = PROJECT_ROOT / ".github" / "workflows" / "dependabot-automerge.yml"
+        with open(path) as f:
+            return yaml.safe_load(f)
+
+    def test_gates_on_pr_author_not_actor(self, config):
+        """Must gate on the PR author (event payload), not spoofable actor."""
+        condition = config["jobs"]["automerge"]["if"]
+        assert "github.event.pull_request.user.login" in condition
+        assert "github.actor" not in condition, (
+            "github.actor reflects the run trigger (spoofable) — zizmor bot-conditions"
+        )
+
+    def test_only_patch_and_minor_automerge(self, content):
+        """Major version bumps must never be auto-merged."""
+        assert "semver-patch" in content
+        assert "semver-minor" in content
+        assert "semver-major" not in content, "Major bumps must stay manual — most likely to break"
+
+    def test_uses_auto_flag_so_ci_gates_merge(self, content):
+        """--auto defers the merge until required status checks pass."""
+        assert "--auto" in content
 
 
 # ---------------------------------------------------------------------------
