@@ -24,6 +24,10 @@ User-facing explanations and how-tos.
 - [How CI/CD Works](guides/how-cicd-works.md) — The automated pipeline from code push to deployment
 - [How Observability Works](guides/how-observability-works.md) — Monitoring AI calls, costs, and debugging
 - [How Token Optimization Works](guides/how-token-optimization-works.md) — Keeping AI costs under $5/month with 8 stacked techniques
+- [Writing Without the AI Tells](guides/anti-slop-writing.md) — The ranked checklist and editing protocol for prose that doesn't read as AI
+- [Building a Voice Corpus](guides/voice-corpus-architecture.md) — A three-layer system for capturing your real writing voice
+- [Writing Cover Letters That Don't Read as AI](guides/cover-letter-writing.md) — The 14-category taxonomy, pre-send checklist, and why CVs are different
+- [Optimizing a LinkedIn Profile](guides/linkedin-profile-optimization.md) — Headline, About arc, keyword seeding, and skills for recruiter search
 - [Writing Guide](guides/WRITING-GUIDE.md) — How to write documentation for this project
 
 ## Reference

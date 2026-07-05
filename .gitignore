@@ -42,6 +42,8 @@ credentials.json
 
 # Personal config (generated from examples)
 config/personal.yaml
+# Voice corpus (raw personal writing — never commit)
+config/voice-corpus.md
 
 # Cursor / agent internals
 .cursor/
