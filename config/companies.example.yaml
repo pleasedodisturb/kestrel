@@ -1,0 +1,35 @@
+# Kestrel target-company lists for the ATS board scrapers.
+# Copy to config/companies.yaml (gitignored) and replace the fictional example
+# slugs with the real ATS account slugs you want to track:
+#
+#   cp config/companies.example.yaml config/companies.yaml
+#
+# The slug is the account identifier on each ATS:
+#   Greenhouse: boards.greenhouse.io/<slug>
+#   Lever:      jobs.lever.co/<slug>
+#   Ashby:      jobs.ashbyhq.com/<slug>  (sometimes case-sensitive)
+#
+# All slugs below are OBVIOUSLY-FICTIONAL placeholders. If this file is absent
+# the scrapers fall back to the same fictional defaults, so they run cleanly
+# (returning no real jobs) until you supply a real list here.
+
+# tools/scrape_new_sources.py — per-ATS company lists.
+greenhouse:
+  - example-greenhouse-co
+  - meridianlabs
+
+lever:
+  - example-lever-co
+  - nimbusworks
+
+ashby:
+  - example-ashby-co
+  - novadynamics
+
+# tools/tier0_ats_poller.py — direct-ATS "dream company" poller.
+#   name: [ats_type, slug]   (ats_type is greenhouse | lever | ashby)
+tier0:
+  example-co: [greenhouse, example-greenhouse-co]
+  meridianlabs: [greenhouse, meridianlabs]
+  nimbusworks: [lever, nimbusworks]
+  novadynamics: [ashby, novadynamics]

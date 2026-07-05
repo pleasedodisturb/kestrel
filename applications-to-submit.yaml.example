@@ -8,8 +8,8 @@ personal:
   phone: "+1 555 000 0000"
   linkedin: https://linkedin.com/in/janedoe
   github: https://github.com/janedoe
-  location: Berlin, Germany
-  work_authorization: "REDACTED"
+  location: Example City, Country
+  work_authorization: "Authorized to work / No sponsorship needed"
 
 applications:
   - company: Acme Corp

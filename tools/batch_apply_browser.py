@@ -9,9 +9,9 @@ Usage:
     .venv/bin/python tools/batch_apply_browser.py --platform greenhouse
     .venv/bin/python tools/batch_apply_browser.py --platform ashby
     .venv/bin/python tools/batch_apply_browser.py --all
-    .venv/bin/python tools/batch_apply_browser.py --only mistral
+    .venv/bin/python tools/batch_apply_browser.py --only nimbusworks
     .venv/bin/python tools/batch_apply_browser.py --dry-run
-    .venv/bin/python tools/batch_apply_browser.py --test-url https://jobs.lever.co/mistral/abc123
+    .venv/bin/python tools/batch_apply_browser.py --test-url https://jobs.lever.co/nimbusworks/abc123
 """
 
 import argparse
@@ -28,8 +28,19 @@ from urllib.parse import urlparse
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SCREENSHOTS_DIR = PROJECT_ROOT / "screenshots" / "batch-2026-03-27"
+SCREENSHOTS_DIR = PROJECT_ROOT / "screenshots" / "batch"
 CV_PATH = PROJECT_ROOT / "cv" / os.getenv("CV_FILENAME", "cv.pdf")
+
+DEFAULT_BATCH_YAML = "batch-apply.yaml"
+
+
+def _read_personal_yaml() -> dict:
+    """Read config/personal.yaml as a raw dict, or {} when it is absent."""
+    config_path = PROJECT_ROOT / "config" / "personal.yaml"
+    if not config_path.exists():
+        return {}
+    with open(config_path) as f:
+        return yaml.safe_load(f) or {}
 
 
 def _load_personal_config():
@@ -415,101 +426,160 @@ async def fill_ashby(page, app: dict, dry_run: bool) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Company-specific custom question handlers
-# ---------------------------------------------------------------------------
-
-ANTHROPIC_WHY = (
-    "I use Claude Code every day. REDACTED "
-    "Ghostty, sometimes REDACTED "
-    "instances running in parallel. I've built an entire platform this way. So "
-    "REDACTED.\n\n"
-    "But the honest reason is values. Anthropic REDACTED "
-    "REDACTED, you're making hard decisions "
-    "responsibly when you could just maximize for money at your scale. Every "
-    "REDACTED. But you also have real "
-    "signals that you're thinking about what this technology does to people, "
-    "not just what it does for revenue.\n\n"
-    "I'm not naive about AI - it's neither the all-consuming thing fearmongers "
-    "say, nor something you can ignore. The question I keep coming back to is: "
-    "how do we use REDACTED? I "
-    "want to work with people who are REDACTED "
-    "avoiding it. REDACTED "
-    "Anthropic in REDACTED "
-    "unsolvable ones."
-)
-
-ANTHROPIC_AI_POLICY = (
-    "REDACTED. "
-    "REDACTED."
-)
-
-ANTHROPIC_CLAUDE_CODE_EXP = (
-    "Yes - REDACTED "
-    "Mac mini, cloud instances. REDACTED."
-)
-
-N8N_WHY = (
-    "REDACTED "
-    "find really interesting. REDACTED "
-    "became - it's an enablement platform. You have decision trees, building "
-    "blocks, and real logic, but with a graphical interface that makes it "
-    "accessible. REDACTED "
-    "was ridiculously easy. Everything I do now in code talking to Claude Code, "
-    "n8n does with a visual layer on top. REDACTED "
-    "REDACTED."
-)
-
-# ---------------------------------------------------------------------------
-# Per-role Greenhouse qualifying-question overlays (G-627 / issue #347)
+# Config-driven custom-question mechanism
 # ---------------------------------------------------------------------------
 #
-# Anthropic Greenhouse postings ask role-specific Yes/No qualifying questions
-# in addition to the shared baseline (Country, visa, Why Anthropic, etc.).
-# These questions vary per role and are often the actual gating filter, so
-# leaving them blank causes silent auto-rejects.
-#
-# `GH_FIELDS_BY_SLUG` maps an application's `slug` (lowercased) to extra
-# `(label_text, value, exact_match)` tuples that get *appended* to the shared
-# baseline at form-fill time via `_get_gh_fields_for_slug()`. Slug lookups are
-# substring matches so minor slug-suffix variations between scrapes
-# (e.g. `anthropic-technical-deployment-lead-paris`) still resolve.
-#
-# TODO(G-627): the values below are conservative placeholders aligned with
-# the maintainer's profile but have NOT been verified field-by-field against
-# any `cv/applications/<slug>/form-answers.md`. Verify with user before live
-# submission. Dry-run is safe.
+# Company-specific form answers (essays, per-role qualifying questions, and
+# salary/visa/location answers) are NOT hardcoded. They load from
+# config/personal.yaml (gitignored). The embedded floors below are
+# OBVIOUSLY-FICTIONAL examples that (a) act as a runtime fallback and (b) keep
+# the fill/overlay mechanisms testable in CI without any real PII. See
+# config/personal.yaml.example for the full schema and how to add your own.
 
-# Anthropic — Technical Deployment Lead (Paris)
-# Source: GitHub issue #347 body, "TDL Paris asks:" section
-_GH_ANTHROPIC_TDL_PARIS: list[tuple[str, str, bool]] = [
-    ("REDACTED", "Yes", False),
-    ("REDACTED", "No", False),  # TODO: verify with user before submit
-    ("REDACTED", "Yes", False),
-    ("REDACTED", "Yes", False),
-]
-
-# Anthropic — Manager, Forward Deployed Engineering (London)
-# Source: GitHub issue #347 body, "Mgr FDE London asks:" section
-_GH_ANTHROPIC_MGR_FDE_LONDON: list[tuple[str, str, bool]] = [
-    ("directly managed engineering teams", "Yes", False),
-    ("REDACTED", "Yes", False),
-    ("REDACTED", "Yes", False),
-]
-
-# Anthropic — Applied AI Architect (Munich)
-# Source: GitHub issue #347 body, "Applied AI Architect Munich asks:" section
-_GH_ANTHROPIC_ARCHITECT_MUNICH: list[tuple[str, str, bool]] = [
-    ("REDACTED", "Yes", False),  # TODO: verify with user before submit
-    ("REDACTED", "Yes", False),
-    ("REDACTED", "Yes", False),
-    ("REDACTED", "No", False),  # TODO: verify with user before submit
-]
-
-GH_FIELDS_BY_SLUG: dict[str, list[tuple[str, str, bool]]] = {
-    "anthropic-technical-deployment-lead": _GH_ANTHROPIC_TDL_PARIS,
-    "anthropic-manager-fde-applied-ai": _GH_ANTHROPIC_MGR_FDE_LONDON,
-    "anthropic-solutions-architect": _GH_ANTHROPIC_ARCHITECT_MUNICH,
+# Answer bank: reusable long-form answers, referenced from custom_questions and
+# role_overlays with an "@key" pointer (e.g. value: "@why_company").
+_FLOOR_ANSWERS: dict[str, str] = {
+    "why_company": (
+        "Fictional example — replace via config/personal.yaml `answers:`. "
+        "Explain, in your own words, what draws you to this company."
+    ),
+    "ai_policy": (
+        "Fictional example — I use AI to structure and organise my own writing, "
+        "not to generate answers."
+    ),
+    "tools_experience": "Fictional example — daily user of modern AI developer tooling.",
+    "product_experience": "Fictional example — shipped B2B and B2C products end to end.",
+    "notice_period": "Fictional example — available within a few weeks of an offer.",
+    "expected_salary": "Fictional example — open to a market-rate range.",
 }
+
+# Per-role Greenhouse qualifying-question overlays, keyed by slug substring.
+# Each entry is a list of (label_text, value, exact_match) tuples appended to a
+# company baseline via `_get_gh_fields_for_slug()`. Slug lookups are substring
+# matches so minor slug-suffix variations between scrapes still resolve. All
+# entries below use FICTIONAL company/role slugs — replace via
+# config/personal.yaml `role_overlays:`.
+_FLOOR_ROLE_OVERLAYS: dict[str, list[tuple[str, str, bool]]] = {
+    "meridianlabs-senior-engineer": [
+        ("owned end-to-end delivery of technical programmes", "Yes", False),
+        ("native or C1-level in the local language", "No", False),
+        ("delivered AI/ML into production", "Yes", False),
+    ],
+    "meridianlabs-engineering-manager": [
+        ("directly managed engineering teams", "Yes", False),
+        ("built or led technical delivery teams", "Yes", False),
+        ("navigated regulated industries", "Yes", False),
+    ],
+    "meridianlabs-solutions-architect": [
+        ("7+ years in a pre-sales technical role", "Yes", False),
+        ("hands-on AI/ML in a customer-facing role", "Yes", False),
+        ("professional fluency in a second language", "No", False),
+    ],
+}
+
+# Company-specific custom-question rules, matched by platform + slug/url
+# substring. Each rule lists `text_fields` (filled via label, with a dropdown
+# fallback) and `radio_fields` (radio/select answers). Greenhouse rules can set
+# `react_fallback: true` to also run the React dynamic-form JS filler. All
+# entries below use FICTIONAL companies — replace via config/personal.yaml
+# `custom_questions:`.
+_FLOOR_CUSTOM_QUESTIONS: list[dict] = [
+    {
+        "match": {"platform": "greenhouse", "slug_or_url": "meridianlabs"},
+        "react_fallback": True,
+        "text_fields": [
+            {"label": "Country", "value": "Country"},
+            {"label": "open to working in-person 25%", "value": "Yes"},
+            {"label": "Why Meridian", "value": "@why_company"},
+            {"label": "AI Policy", "value": "@ai_policy"},
+            {"label": "Earliest start", "value": "@notice_period"},
+            {"label": "Require visa sponsorship", "value": "No"},
+            {"label": "experience with modern AI tooling", "value": "@tools_experience"},
+            {"label": "Working address", "value": "@location"},
+        ],
+    },
+    {
+        "match": {"platform": "lever", "slug_or_url": "nimbusworks"},
+        "text_fields": [
+            {"label": "Current location", "value": "@location"},
+            {"label": "Product experience", "value": "@product_experience"},
+        ],
+        "radio_fields": [
+            {"question": "right to work", "answer": "Yes"},
+        ],
+    },
+    {
+        "match": {"platform": "ashby", "slug_or_url": "novadynamics"},
+        "text_fields": [
+            {"label": "Expected yearly salary", "value": "@expected_salary"},
+            {"label": "What about the role caught your attention", "value": "@why_company"},
+            {"label": "Notice period", "value": "@notice_period"},
+        ],
+        "radio_fields": [
+            {"question": "worked in a PE/VC backed startup", "answer": "Yes"},
+            {"question": "how often do you code", "answer": "I code weekly"},
+        ],
+    },
+]
+
+
+def _load_answers() -> dict[str, str]:
+    """Build the answer bank: fictional floor + PERSONAL fields + config overrides."""
+    answers = dict(_FLOOR_ANSWERS)
+    # Expose location so rules can reference "@location".
+    answers["location"] = PERSONAL["location"]
+    try:
+        cfg = _read_personal_yaml()
+        for key, val in (cfg.get("answers") or {}).items():
+            answers[str(key)] = str(val)
+    except (OSError, yaml.YAMLError):
+        pass
+    return answers
+
+
+def _load_role_overlays() -> dict[str, list[tuple[str, str, bool]]]:
+    """Merge the fictional overlay floor with any config `role_overlays` (config wins per-slug)."""
+    overlays = {k: [tuple(t) for t in v] for k, v in _FLOOR_ROLE_OVERLAYS.items()}
+    try:
+        cfg = _read_personal_yaml()
+        for slug, fields in (cfg.get("role_overlays") or {}).items():
+            overlays[str(slug).lower()] = [tuple(f) for f in fields]
+    except (OSError, yaml.YAMLError):
+        pass
+    return overlays
+
+
+def _load_custom_questions() -> list[dict]:
+    """Merge the fictional custom-question floor with config `custom_questions`.
+
+    Rules are de-duplicated by (platform, slug_or_url) so a config rule replaces
+    a floor rule with the same match, while new config rules are appended.
+    """
+
+    def _key(entry: dict) -> tuple[str, str]:
+        m = entry.get("match", {})
+        return (m.get("platform", ""), (m.get("slug_or_url", "") or "").lower())
+
+    merged: dict[tuple[str, str], dict] = {_key(e): e for e in _FLOOR_CUSTOM_QUESTIONS}
+    try:
+        cfg = _read_personal_yaml()
+        for entry in cfg.get("custom_questions") or []:
+            merged[_key(entry)] = entry
+    except (OSError, yaml.YAMLError):
+        pass
+    return list(merged.values())
+
+
+ANSWERS: dict[str, str] = _load_answers()
+GH_FIELDS_BY_SLUG: dict[str, list[tuple[str, str, bool]]] = _load_role_overlays()
+CUSTOM_QUESTIONS: list[dict] = _load_custom_questions()
+
+
+def _resolve_answer(value):
+    """Dereference an "@key" pointer into the answer bank; pass literals through."""
+    if isinstance(value, str) and value.startswith("@"):
+        return ANSWERS.get(value[1:], "")
+    return value
 
 
 def _get_gh_fields_for_slug(
@@ -528,7 +598,7 @@ def _get_gh_fields_for_slug(
         baseline + extras for the first overlay key found as a substring of slug.
         If a question label is defined in both baseline and overlay, the baseline
         entry wins (de-duped by exact label string) so role-specific values can't
-        accidentally override shared answers like "Why Anthropic".
+        accidentally override shared answers like "Why {company}".
     """
     if overlay is None:
         overlay = GH_FIELDS_BY_SLUG
@@ -581,7 +651,7 @@ async def _fill_field_by_label(page, label_text: str, value: str, exact: bool = 
                     await sibling.first.fill(value)
                 return True
 
-        # Portaled React combobox fallback (Anthropic Greenhouse pattern):
+        # Portaled React combobox fallback (portaled-menu Greenhouse pattern):
         # the labeled control is a <button role="combobox"> whose menu is
         # rendered into document.body, so the sibling lookup above misses it.
         if await _select_portaled_combobox(page, label_text, value):
@@ -672,7 +742,7 @@ async def _select_dropdown_option(page, label_text: str, option_text: str) -> bo
     1. Native ``<select>`` — use Playwright's ``select_option``.
     2. Inline custom dropdown (Ashby-style) — click the sibling trigger, then
        click a ``[role="option"]`` rendered in-place.
-    3. Portaled React combobox (Anthropic-style Greenhouse) — click the
+    3. Portaled React combobox (portaled-menu Greenhouse) — click the
        ``<button>`` trigger (often ``aria-haspopup="listbox"`` or
        ``role="combobox"``), wait for a ``[role="listbox"]`` that may be
        portaled to ``document.body``, then click a ``[role="option"]``
@@ -728,7 +798,7 @@ async def _click_portaled_option(page, option_text: str) -> bool:
     """Click a ``[role="option"]`` rendered anywhere in the document.
 
     Used after the listbox has been opened — handles React libraries that
-    portal the menu into ``document.body`` (Anthropic Greenhouse pattern).
+    portal the menu into ``document.body`` (portaled-menu Greenhouse pattern).
     Dispatches a synthetic ``mousedown`` in addition to ``click`` because
     some libraries (e.g. react-select) commit the selection on mousedown.
 
@@ -795,177 +865,38 @@ async def _select_portaled_combobox(page, label_text: str, option_text: str) -> 
 
 
 async def fill_custom_questions(page, app: dict) -> None:
-    """Fill company-specific custom form questions based on URL/slug.
+    """Fill company-specific custom form questions from config-driven rules.
+
+    Rules load from ``config/personal.yaml`` ``custom_questions`` (with fictional
+    embedded fallbacks in :data:`CUSTOM_QUESTIONS`). Each rule matches on platform
+    + slug/url substring and lists ``text_fields`` (filled via label, with a
+    dropdown fallback) and ``radio_fields`` (radio/select answers). Greenhouse-style
+    rules can set ``react_fallback: true`` to also run the React dynamic-form JS
+    filler, and every rule's text fields get the per-role qualifying-question
+    overlay appended via :func:`_get_gh_fields_for_slug`.
 
     Each field fill is wrapped in try/except so missing fields are silently skipped.
     """
     url = app.get("url", "")
     slug = app.get("slug", app.get("company", "")).lower()
+    platform = detect_platform(url)
 
-    # ---- Lever: Mistral ----
-    if "lever.co" in url and "mistral" in url.lower():
-        # Fill "Current location" field
-        try:
-            await _fill_field_by_label(page, "Current location", PERSONAL["location"])
-        except Exception as e:
-            print(f"    [custom] Lever/Mistral: could not fill 'Current location': {e}")
+    for rule in CUSTOM_QUESTIONS:
+        match = rule.get("match", {})
+        want_platform = match.get("platform")
+        if want_platform and want_platform != platform:
+            continue
+        needle = (match.get("slug_or_url") or "").lower()
+        if needle and needle not in slug and needle not in url.lower():
+            continue
 
-        # Fill custom textareas by scanning all textareas on the page
-        # and matching by nearby text content
-        product_exp = (
-            "REDACTED - "
-            "REDACTED. "
-            "B2B internal tooling, enterprise-grade, "
-            "REDACTED.\n\n"
-            "REDACTED "
-            "sensor research to high-volume production. REDACTED, "
-            "full hardware/ML/firmware/software stack.\n\n"
-            "Currently building Kestrel - a full-stack career operations platform "
-            "(Python/FastAPI backend, React frontend, multi-agent AI scoring pipelines, "
-            "CI/CD, automated job scraping). Solo-built with AI coding tools."
-        )
-        try:
-            # Use JavaScript to find textareas and check nearby text
-            await page.evaluate("""() => {
-                // Tag textareas AND selects by walking up to find their section context
-                const fields = document.querySelectorAll('textarea, select');
-                for (const field of fields) {
-                    let el = field;
-                    let sectionText = '';
-                    while (el && el !== document.body) {
-                        el = el.parentElement;
-                        if (el) sectionText = el.textContent.substring(0, 200).toUpperCase();
-                        if (sectionText.includes('LOCATION') && (sectionText.includes('PARIS') || sectionText.includes('LONDON'))) {
-                            field.setAttribute('data-field-type', 'location');
-                            break;
-                        }
-                        if (sectionText.includes('PRODUCT EXPERIENCE')) {
-                            field.setAttribute('data-field-type', 'product-experience');
-                            break;
-                        }
-                        if (sectionText.includes('DEV REL') && sectionText.includes('INFLUENCE')) {
-                            field.setAttribute('data-field-type', 'devrel-influence');
-                            break;
-                        }
-                    }
-                }
-            }""")
-
-            # Location may be a textarea OR a select dropdown
-            loc_select = page.locator('select[data-field-type="location"]')
-            loc_ta = page.locator('textarea[data-field-type="location"]')
-            if await loc_select.count() > 0:
-                # Try selecting "London" option by label (partial match)
-                try:
-                    await loc_select.first.select_option(label="London")
-                    print("    [custom] Selected Location dropdown: London")
-                except Exception:
-                    # Fallback: try option value containing "london"
-                    options = await loc_select.first.evaluate(
-                        """sel => Array.from(sel.options).map(o => ({value: o.value, text: o.text}))"""
-                    )
-                    london_opt = next(
-                        (o for o in options if "london" in o["text"].lower()),
-                        None,
-                    )
-                    if london_opt:
-                        await loc_select.first.select_option(value=london_opt["value"])
-                        print(f"    [custom] Selected Location dropdown: {london_opt['text']}")
-                    else:
-                        print(
-                            f"    [custom] Location dropdown options: {options} - no London match"
-                        )
-            elif await loc_ta.count() > 0:
-                await loc_ta.first.fill("REDACTED")
-                print("    [custom] Filled Location textarea: REDACTED")
-
-            prod_ta = page.locator('textarea[data-field-type="product-experience"]')
-            if await prod_ta.count() > 0:
-                await prod_ta.first.fill(product_exp)
-                print(f"    [custom] Filled Product Experience ({len(product_exp)} chars)")
-
-            # DEV REL - INFLUENCE (required on DevRel role)
-            devrel_ta = page.locator('textarea[data-field-type="devrel-influence"]')
-            if await devrel_ta.count() > 0:
-                devrel_text = (
-                    "REDACTED "
-                    "frontend, multi-agent AI scoring, CI/CD pipeline, automated job scraping "
-                    "REDACTED "
-                    "push notifications. REDACTED, "
-                    "and I wanted to show what one person can ship with AI-native workflows. "
-                    "REDACTED."
-                )
-                await devrel_ta.first.fill(devrel_text)
-                print(f"    [custom] Filled DevRel Influence ({len(devrel_text)} chars)")
-
-        except Exception as e:
-            print(f"    [custom] Lever/Mistral: textarea fill error: {e}")
-
-        # Fill right-to-work question if present (Yes/No radio on some Mistral roles)
-        # IMPORTANT: only click "Yes" near the right-to-work question, not any random "Yes"
-        try:
-            clicked = await page.evaluate("""() => {
-                const keywords = ['right to work', 'authorized to work', 'eligible to work',
-                                  'legally authorized', 'work permit', 'work authorisation',
-                                  'legally eligible', 'right to live and work'];
-                // Find all elements containing right-to-work text
-                const allEls = document.querySelectorAll('label, span, div, p, li');
-                for (const el of allEls) {
-                    const text = el.textContent.toLowerCase();
-                    const isMatch = keywords.some(kw => text.includes(kw));
-                    if (!isMatch) continue;
-                    // Found the question section - now find "Yes" radio/label nearby
-                    const parent = el.closest('.application-question, .custom-question, div');
-                    if (!parent) continue;
-                    // Look for radio input with "Yes" label inside same container
-                    const labels = parent.querySelectorAll('label');
-                    for (const lbl of labels) {
-                        if (lbl.textContent.trim() === 'Yes' || lbl.textContent.trim() === 'yes') {
-                            const radio = lbl.querySelector('input[type="radio"]') ||
-                                          document.getElementById(lbl.getAttribute('for'));
-                            if (radio) { radio.click(); return true; }
-                            lbl.click();
-                            return true;
-                        }
-                    }
-                    // Also try radio buttons with value "Yes"
-                    const radios = parent.querySelectorAll('input[type="radio"]');
-                    for (const r of radios) {
-                        if (r.value.toLowerCase() === 'yes') {
-                            r.click();
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }""")
-            if clicked:
-                print("    [custom] Clicked 'Yes' for right-to-work question")
-            else:
-                print("    [custom] No right-to-work question found (skipped)")
-        except Exception as e:
-            print(f"    [custom] Right-to-work radio error: {e}")
-
-    # ---- Greenhouse: Anthropic ----
-    from career_os.utils.url_validation import url_has_domain
-
-    if url_has_domain(url, "greenhouse.io") and ("anthropic" in slug or "anthropic" in url.lower()):
-        gh_fields_baseline: list[tuple[str, str, bool]] = [
-            # (label_text, value, exact_match)
-            ("Country", "United Kingdom", False),
-            ("open to working in-person 25%", "Yes", False),
-            ("Why Anthropic", ANTHROPIC_WHY, False),
-            ("AI Policy", ANTHROPIC_AI_POLICY, False),
-            ("Earliest start", "2-3 weeks from offer", False),
-            ("Require visa sponsorship", "No", False),
-            ("Will you require sponsorship", "No", False),
-            ("interviewed at Anthropic before", "No", False),
-            ("experience with Claude Code", ANTHROPIC_CLAUDE_CODE_EXP, False),
-            ("Working address", PERSONAL["location"], False),
+        # Build the text-field baseline (resolving "@answer" refs), then append
+        # any per-role qualifying-question overlay keyed by slug.
+        baseline: list[tuple[str, str, bool]] = [
+            (f["label"], _resolve_answer(f.get("value", "")), bool(f.get("exact", False)))
+            for f in rule.get("text_fields", [])
         ]
-        # Append any per-role qualifying-question overlay (G-627). Non-Anthropic
-        # Greenhouse roles fall through with baseline only — no regression.
-        gh_fields = _get_gh_fields_for_slug(gh_fields_baseline, slug)
+        gh_fields = _get_gh_fields_for_slug(baseline, slug)
         for label, value, exact in gh_fields:
             try:
                 filled = await _fill_field_by_label(page, label, value, exact=exact)
@@ -975,109 +906,64 @@ async def fill_custom_questions(page, app: dict) -> None:
                 # Small delay between fields to avoid overwhelming the form
                 await page.wait_for_timeout(300)
             except Exception as e:
-                print(f"    [custom] Greenhouse/Anthropic: could not fill '{label}': {e}")
+                print(f"    [custom] {slug}: could not fill '{label}': {e}")
 
-        # Greenhouse React dynamic forms fallback: Greenhouse (especially Anthropic)
-        # uses React-based forms with dynamically generated IDs. The label-based
-        # approach above may miss fields because inputs are not direct siblings of
-        # labels. This JS fallback finds fields by their question text within
-        # Greenhouse's <div class="field"> blocks.
-        try:
-            field_data = [(label, value) for label, value, exact in gh_fields]
-            await page.evaluate(
-                """(fieldData) => {
-                const fields = document.querySelectorAll('.field, [class*="field"]');
-                for (const field of fields) {
-                    const text = field.textContent;
-                    for (const [searchText, value] of fieldData) {
-                        if (text.includes(searchText)) {
-                            const input = field.querySelector(
-                                'textarea, input:not([type="file"]):not([type="hidden"]), select'
-                            );
-                            if (input) {
-                                if (input.tagName === 'SELECT') {
-                                    for (const opt of input.options) {
-                                        if (opt.text.includes(value)) {
-                                            input.value = opt.value;
-                                            input.dispatchEvent(new Event('change', { bubbles: true }));
-                                            break;
+        # React dynamic-form JS fallback (Greenhouse-style forms use dynamically
+        # generated IDs, so inputs are not direct siblings of labels). Finds
+        # fields by their question text within <div class="field"> blocks.
+        if rule.get("react_fallback"):
+            try:
+                field_data = [(label, value) for label, value, _exact in gh_fields]
+                await page.evaluate(
+                    """(fieldData) => {
+                    const fields = document.querySelectorAll('.field, [class*="field"]');
+                    for (const field of fields) {
+                        const text = field.textContent;
+                        for (const [searchText, value] of fieldData) {
+                            if (text.includes(searchText)) {
+                                const input = field.querySelector(
+                                    'textarea, input:not([type="file"]):not([type="hidden"]), select'
+                                );
+                                if (input) {
+                                    if (input.tagName === 'SELECT') {
+                                        for (const opt of input.options) {
+                                            if (opt.text.includes(value)) {
+                                                input.value = opt.value;
+                                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                                                break;
+                                            }
                                         }
+                                    } else {
+                                        // Use the correct prototype setter based on element type.
+                                        // HTMLInputElement.prototype.value.set throws "Illegal
+                                        // invocation" when called on a textarea, so dispatch by
+                                        // tagName rather than relying on a ||-fallback (the input
+                                        // descriptor always exists, so the fallback never fired).
+                                        const proto = input.tagName === 'TEXTAREA'
+                                            ? window.HTMLTextAreaElement.prototype
+                                            : window.HTMLInputElement.prototype;
+                                        const setter = Object.getOwnPropertyDescriptor(
+                                            proto, 'value'
+                                        ).set;
+                                        setter.call(input, value);
+                                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                                        input.dispatchEvent(new Event('change', { bubbles: true }));
                                     }
-                                } else {
-                                    // Use the correct prototype setter based on element type.
-                                    // HTMLInputElement.prototype.value.set throws "Illegal
-                                    // invocation" when called on a textarea, so dispatch by
-                                    // tagName rather than relying on a ||-fallback (the input
-                                    // descriptor always exists, so the fallback never fired).
-                                    const proto = input.tagName === 'TEXTAREA'
-                                        ? window.HTMLTextAreaElement.prototype
-                                        : window.HTMLInputElement.prototype;
-                                    const setter = Object.getOwnPropertyDescriptor(
-                                        proto, 'value'
-                                    ).set;
-                                    setter.call(input, value);
-                                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                                    input.dispatchEvent(new Event('change', { bubbles: true }));
                                 }
                             }
                         }
                     }
-                }
-            }""",
-                field_data,
-            )
-            print("    [custom] Greenhouse/Anthropic: JS fallback applied for React dynamic fields")
-        except Exception as e:
-            print(f"    [custom] Greenhouse/Anthropic: JS fallback error: {e}")
-
-        # Leave "Additional Information" empty (cover letter is attached as PDF)
-        # No action needed - just skip it
-
-    # ---- Ashby: n8n Head of DevRel ----
-    elif url_has_domain(url, "ashbyhq.com") and (
-        "n8n" in slug or "n8n" in url.lower() or "a8aea5b5" in url
-    ):
-        ashby_fields = [
-            # Text/textarea fields: (label_text, value)
-            ("Expected yearly salary", "REDACTED"),
-            ("What about n8n caught your attention", N8N_WHY),
-            ("Notice period", "REDACTED"),
-        ]
-        for label, value in ashby_fields:
-            try:
-                await _fill_field_by_label(page, label, value)
-                await page.wait_for_timeout(300)
-            except Exception as e:
-                print(f"    [custom] Ashby/n8n: could not fill '{label}': {e}")
-
-        # Location dropdown/radio
-        try:
-            ok = await _click_radio_by_label(
-                page, "REDACTED"
-            )
-            if not ok:
-                await _select_dropdown_option(
-                    page, "Location", "REDACTED"
+                }""",
+                    field_data,
                 )
-            await page.wait_for_timeout(300)
-        except Exception as e:
-            print(f"    [custom] Ashby/n8n: could not fill Location: {e}")
+                print(f"    [custom] {slug}: React dynamic-form JS fallback applied")
+            except Exception as e:
+                print(f"    [custom] {slug}: React JS fallback error: {e}")
 
-        # Radio/select style questions: (question_label, answer_label)
-        ashby_radio_fields = [
-            ("worked in PE/VC backed startup", "Yes"),
-            ("n8n experience", "REDACTED"),
-            ("Coding", "I code weekly"),
-            ("On-camera", "Very active (monthly or more)"),
-            ("ICs managed", "9+"),
-            ("Functions managed", "None of the above"),
-            ("Video program", "I contributed but did not own it"),
-            (
-                "Technical demos",
-                "Advanced (multi-step orchestration, agents/tools, evals, repos with tests/templates)",
-            ),
-        ]
-        for question, answer in ashby_radio_fields:
+        # Radio/select-style questions: click the answer label, dropdown fallback.
+        for rf in rule.get("radio_fields", []):
+            question = rf.get("question", "")
+            answer = _resolve_answer(rf.get("answer", ""))
             try:
                 ok = await _click_radio_by_label(page, answer)
                 if not ok:
@@ -1085,17 +971,7 @@ async def fill_custom_questions(page, app: dict) -> None:
                     await _select_dropdown_option(page, question, answer)
                 await page.wait_for_timeout(300)
             except Exception as e:
-                print(f"    [custom] Ashby/n8n: could not fill '{question}': {e}")
-
-    # ---- Ashby: Cohere (IDs 108, 109) ----
-    # Scraper found 0 custom questions for Cohere on Ashby.
-    # Standard Ashby fill (name, email, phone, linkedin, resume) handles these.
-    # No custom question handler needed.
-
-    # ---- Ashby: Ashby self (ID 44) ----
-    # Scraper found 0 custom questions for Ashby's own job postings.
-    # Standard Ashby fill (name, email, phone, linkedin, resume) handles these.
-    # No custom question handler needed.
+                print(f"    [custom] {slug}: could not fill '{question}': {e}")
 
 
 FILLERS = {
@@ -1315,7 +1191,7 @@ async def main():
     parser.add_argument(
         "--test-url", help="Test form filling on a single URL (no submit, no YAML needed)"
     )
-    parser.add_argument("yaml_file", nargs="?", default="batch-apply-2026-03-27.yaml")
+    parser.add_argument("yaml_file", nargs="?", default=DEFAULT_BATCH_YAML)
     args = parser.parse_args()
 
     # --test-url mode: open one URL, fill, screenshot, exit (no submission)

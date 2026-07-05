@@ -7,7 +7,7 @@ and outputs a structured report for human review.
 Usage:
     .venv/bin/python tools/scrape_form_questions.py
     .venv/bin/python tools/scrape_form_questions.py --platform lever
-    .venv/bin/python tools/scrape_form_questions.py --only mistral
+    .venv/bin/python tools/scrape_form_questions.py --only nimbusworks
 """
 
 import argparse
@@ -267,7 +267,7 @@ async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--platform", help="Only scrape this platform")
     parser.add_argument("--only", help="Only scrape matching company/role")
-    parser.add_argument("yaml_file", nargs="?", default="batch-apply-2026-03-27.yaml")
+    parser.add_argument("yaml_file", nargs="?", default="batch-apply.yaml")
     args = parser.parse_args()
 
     config = yaml.safe_load((PROJECT_ROOT / args.yaml_file).read_text())

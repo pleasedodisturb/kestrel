@@ -1,5 +1,5 @@
 """
-New German/EMEA job market scrapers.
+Additional job-board scrapers.
 
 Covers sources not in the original pipeline:
 - Himalayas (free JSON API, remote jobs, no auth)
@@ -8,7 +8,7 @@ Covers sources not in the original pipeline:
 - Ashby Job Board API (public, per-company, no auth)
 - Workable Job Board API (public v3, per-company, no auth)
 - startup.jobs (Algolia-backed search)
-- TheHub.io (Berlin/Nordic startup ecosystem, HTML scraping)
+- TheHub.io (Nordic startup ecosystem, HTML scraping)
 
 All scrapers return list[ScrapedJob] and gracefully return [] on failure.
 """
@@ -22,6 +22,8 @@ import sys
 from datetime import datetime
 from html import unescape
 from pathlib import Path
+
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -39,81 +41,51 @@ logger = logging.getLogger("scrape_new_sources")
 
 # ---------------------------------------------------------------------------
 # Target company lists for ATS board scrapers (Greenhouse, Lever, Ashby)
-# These are REDACTED
-# REDACTED.
 # ---------------------------------------------------------------------------
+#
+# The slugs are the account identifiers on each ATS (the {slug} in
+# boards.greenhouse.io/{slug}, jobs.lever.co/{slug}, and the Ashby job-board
+# URL). The embedded defaults below are OBVIOUSLY-FICTIONAL examples; the real
+# lists load from ``config/companies.yaml`` (gitignored — copy
+# ``config/companies.example.yaml``). This mirrors the example-slug pattern used
+# by the other per-company scrapers lower in this module: ship a curated list
+# without hardcoding anyone's personal target set into the public repo.
 
-# Greenhouse companies: slug is from their careers URL
-# e.g. https://boards.greenhouse.io/{slug}
-GREENHOUSE_COMPANIES: list[str] = [
-    "mistral",  # Mistral AI
-    "huggingface",  # Hugging Face
-    "cohere",  # Cohere
-    "anthropic",  # Anthropic
-    "deepmind",  # Google DeepMind
-    "figma",  # Figma
-    "linear",  # Linear
-    "vercel",  # Vercel
-    "notion",  # Notion
-    "airtable",  # Airtable
-    "hashicorp",  # HashiCorp
-    "grafana",  # Grafana Labs
-    "postman",  # Postman
-    "snyk",  # Snyk
-    "miro",  # Miro
-    "contentful",  # Contentful (Berlin)
-    "datadog",  # Datadog
-    "sourcegraph",  # Sourcegraph
-    "gitlabinc",  # GitLab
-    "anyscale",  # Anyscale (Ray)
-    "replit",  # Replit
-    "together",  # Together AI
-    "modal",  # Modal
-    "weights-and-biases",  # Weights & Biases
-    "deepl",  # DeepL (Cologne)
-    "celonis",  # Celonis (Munich)
-    "personio",  # Personio (Munich)
-    "scalableai",  # Scalable Capital
-    "tldraw",  # tldraw
-    "sentry",  # Sentry
-    "supabase",  # Supabase
-]
+_COMPANIES_CONFIG = Path(__file__).resolve().parent.parent / "config" / "companies.yaml"
 
-# Lever companies: slug from https://jobs.lever.co/{slug}
-LEVER_COMPANIES: list[str] = [
-    "proton",  # Proton (privacy, Switzerland)
-    "tuta",  # Tuta (Tutanota, Germany)
-    "lovable",  # Lovable (AI coding)
-    "oxide",  # Oxide Computer
-    "fly",  # Fly.io
-    "railway",  # Railway
-    "retool",  # Retool
-    "render",  # Render
-    "webflow",  # Webflow
-    "cal-com",  # Cal.com
-    "descript",  # Descript
-    "livekit",  # LiveKit
-    "langchain",  # LangChain
-    "prefect",  # Prefect
-    "zed-industries",  # Zed
-    "netlify",  # Netlify
-    "prisma",  # Prisma (Berlin)
-    "commercetools",  # commercetools (Munich)
-]
+# Fictional example slugs — replace via config/companies.yaml.
+_FLOOR_GREENHOUSE_COMPANIES: list[str] = ["example-greenhouse-co", "meridianlabs"]
+_FLOOR_LEVER_COMPANIES: list[str] = ["example-lever-co", "nimbusworks"]
+_FLOOR_ASHBY_COMPANIES: list[str] = ["example-ashby-co", "novadynamics"]
 
-# Ashby companies: slug from their job board URL
-ASHBY_COMPANIES: list[str] = [
-    "linear",  # Linear
-    "vercel",  # Vercel
-    "resend",  # Resend
-    "clerk",  # Clerk
-    "deno",  # Deno
-    "neon",  # Neon (serverless Postgres)
-    "turso",  # Turso
-    "unkey",  # Unkey
-    "inngest",  # Inngest
-    "val-town",  # Val Town
-]
+
+def _load_company_lists() -> dict[str, list[str]]:
+    """Load ATS company lists from config/companies.yaml, falling back to the floor.
+
+    Each key (``greenhouse``/``lever``/``ashby``) is optional; a missing or empty
+    list keeps the fictional floor so the scrapers still run (returning noise-free
+    empty results against the example slugs) without exposing a real target set.
+    """
+    defaults = {
+        "greenhouse": list(_FLOOR_GREENHOUSE_COMPANIES),
+        "lever": list(_FLOOR_LEVER_COMPANIES),
+        "ashby": list(_FLOOR_ASHBY_COMPANIES),
+    }
+    try:
+        data = yaml.safe_load(_COMPANIES_CONFIG.read_text(encoding="utf-8")) or {}
+        for key in defaults:
+            vals = data.get(key)
+            if isinstance(vals, list) and vals:
+                defaults[key] = [str(v).strip() for v in vals if str(v).strip()]
+    except (OSError, yaml.YAMLError):
+        pass
+    return defaults
+
+
+_COMPANY_LISTS = _load_company_lists()
+GREENHOUSE_COMPANIES: list[str] = _COMPANY_LISTS["greenhouse"]
+LEVER_COMPANIES: list[str] = _COMPANY_LISTS["lever"]
+ASHBY_COMPANIES: list[str] = _COMPANY_LISTS["ashby"]
 
 
 # ---------------------------------------------------------------------------
@@ -897,11 +869,7 @@ def scrape_remotely_de(
             continue
 
         org = posting.get("hiringOrganization", {})
-        company = (
-            org.get("name", "")
-            if isinstance(org, dict)
-            else str(org)
-        )
+        company = org.get("name", "") if isinstance(org, dict) else str(org)
 
         loc_obj = posting.get("jobLocation", {})
         location = ""
