@@ -5,26 +5,26 @@
   macOS launchd agent for daily job scanning.
 
   Install:
-    cp automation/com.REDACTED.daily-scan.plist ~/Library/LaunchAgents/
-    launchctl load ~/Library/LaunchAgents/com.REDACTED.daily-scan.plist
+    cp automation/com.kestrel.daily-scan.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.kestrel.daily-scan.plist
 
   Uninstall:
-    launchctl unload ~/Library/LaunchAgents/com.REDACTED.daily-scan.plist
-    rm ~/Library/LaunchAgents/com.REDACTED.daily-scan.plist
+    launchctl unload ~/Library/LaunchAgents/com.kestrel.daily-scan.plist
+    rm ~/Library/LaunchAgents/com.kestrel.daily-scan.plist
 
   Check status:
-    launchctl list | grep REDACTED
+    launchctl list | grep kestrel
 
   IMPORTANT: Update the paths below to match your setup.
 -->
 <dict>
     <key>Label</key>
-    <string>com.REDACTED.daily-scan</string>
+    <string>com.kestrel.daily-scan</string>
 
     <key>ProgramArguments</key>
     <array>
         <!-- UPDATE THIS PATH -->
-        <string>/Users/YOU/REDACTED/automation/cron_runner.sh</string>
+        <string>/Users/YOU/kestrel/automation/cron_runner.sh</string>
     </array>
 
     <key>StartCalendarInterval</key>
@@ -37,11 +37,11 @@
 
     <key>StandardOutPath</key>
     <!-- UPDATE THIS PATH -->
-    <string>/Users/YOU/REDACTED/logs/launchd-stdout.log</string>
+    <string>/Users/YOU/kestrel/logs/launchd-stdout.log</string>
 
     <key>StandardErrorPath</key>
     <!-- UPDATE THIS PATH -->
-    <string>/Users/YOU/REDACTED/logs/launchd-stderr.log</string>
+    <string>/Users/YOU/kestrel/logs/launchd-stderr.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>
