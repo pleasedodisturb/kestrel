@@ -16,11 +16,12 @@ if (fs.existsSync(envPath)) {
 const { LinearClient } = require("@linear/sdk");
 
 const LINEAR_API_KEY = process.env.LINEAR_API_KEY;
-const PROJECT_ID = "REDACTED";
+// Set LINEAR_PROJECT_ID to your own Linear project UUID (no personal default).
+const PROJECT_ID = process.env.LINEAR_PROJECT_ID;
 
 async function fetchLinearData() {
-  if (!LINEAR_API_KEY) {
-    console.warn("LINEAR_API_KEY not set -- using placeholder data");
+  if (!LINEAR_API_KEY || !PROJECT_ID) {
+    console.warn("LINEAR_API_KEY / LINEAR_PROJECT_ID not set -- using placeholder data");
     return generatePlaceholder();
   }
 
@@ -95,7 +96,7 @@ function generatePlaceholder() {
     project: {
       name: "Job Search HQ",
       summary: "Searching for the right role",
-      url: "https://linear.app/REDACTED/project/REDACTED",
+      url: process.env.LINEAR_PROJECT_URL || "https://linear.app/your-workspace/project/your-project",
       state: "started",
     },
     milestones: [

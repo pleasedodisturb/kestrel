@@ -71,14 +71,18 @@ def _load_company_lists() -> dict[str, list[str]]:
         "lever": list(_FLOOR_LEVER_COMPANIES),
         "ashby": list(_FLOOR_ASHBY_COMPANIES),
     }
+    # Absent config is the normal case (users run on the fictional floor) — stay
+    # silent. Only a present-but-unreadable/malformed file warrants a warning.
+    if not _COMPANIES_CONFIG.exists():
+        return defaults
     try:
         data = yaml.safe_load(_COMPANIES_CONFIG.read_text(encoding="utf-8")) or {}
         for key in defaults:
             vals = data.get(key)
             if isinstance(vals, list) and vals:
                 defaults[key] = [str(v).strip() for v in vals if str(v).strip()]
-    except (OSError, yaml.YAMLError):
-        pass
+    except (OSError, yaml.YAMLError) as exc:
+        logger.warning("config/companies.yaml unreadable (%s); using example floor", exc)
     return defaults
 
 

@@ -7,7 +7,7 @@
 # by FastAPI from a single container on port 8100.
 
 services:
-  careeros:
+  kestrel:
     build:
       context: .
       dockerfile: Dockerfile

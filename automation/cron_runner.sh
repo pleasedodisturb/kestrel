@@ -14,7 +14,7 @@
 #   PIPELINE_MODE       — api-only (default) | api-plus | all
 #   PIPELINE_MIN_SCORE  — minimum score threshold (default: 5)
 #   PIPELINE_HOURS_OLD  — max posting age in hours (default: 24)
-#   PIPELINE_LOCATION   — search location (default: Berlin)
+#   PIPELINE_LOCATION   — search location (default: Dublin)
 
 set -euo pipefail
 

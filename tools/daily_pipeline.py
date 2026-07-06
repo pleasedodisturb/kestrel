@@ -28,7 +28,7 @@ Environment variables:
   PIPELINE_MODE           — api-only | api-plus | all (default: api-only)
   PIPELINE_MIN_SCORE      — Minimum score to include in digest (default: 5)
   PIPELINE_HOURS_OLD      — Max posting age in hours (default: 24)
-  PIPELINE_LOCATION       — Search location (default: Berlin)
+  PIPELINE_LOCATION       — Search location (default: Dublin)
   PIPELINE_DRY_RUN        — Set to "1" to skip CSV writes (default: 0)
   GITHUB_STEP_SUMMARY     — GitHub Actions summary file (auto-set in Actions)
 
@@ -71,7 +71,7 @@ class PipelineConfig:
         self.mode = os.getenv("PIPELINE_MODE", "api-only")
         self.min_score = int(os.getenv("PIPELINE_MIN_SCORE", "5"))
         self.hours_old = int(os.getenv("PIPELINE_HOURS_OLD", "24"))
-        self.location = os.getenv("PIPELINE_LOCATION", "Berlin")
+        self.location = os.getenv("PIPELINE_LOCATION", "Dublin")
         self.dry_run = os.getenv("PIPELINE_DRY_RUN", "0") == "1"
         self.openai_key = os.getenv("OPENAI_API_KEY", "")
         self.date = datetime.now().strftime("%Y-%m-%d")
@@ -467,7 +467,7 @@ def _fallback_score(jobs: list[dict]) -> list[dict]:
 
 
 def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
-    """Remove jobs that are already tracked in CareerOS DB."""
+    """Remove jobs that are already tracked in the Kestrel DB."""
     logger.info("=" * 60)
     logger.info("STEP 3: DEDUP AGAINST TRACKING")
     logger.info("=" * 60)
@@ -479,7 +479,7 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
 
     tracked_keys: set[tuple[str, str]] = set()
 
-    # Check CareerOS DB (primary)
+    # Check Kestrel DB (primary)
     try:
         sys.path.insert(0, str(PROJECT_ROOT / "src"))
         from career_os.database import SessionLocal
@@ -490,9 +490,9 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
         for app in apps:
             tracked_keys.add(job_key(app.company, app.role))
         db.close()
-        logger.info(f"Loaded {len(tracked_keys)} tracked jobs from CareerOS DB")
+        logger.info(f"Loaded {len(tracked_keys)} tracked jobs from Kestrel DB")
     except Exception as e:
-        logger.warning(f"Could not read CareerOS DB: {e}")
+        logger.warning(f"Could not read Kestrel DB: {e}")
 
         # Fallback to CSV
         if config.csv_path.exists():
