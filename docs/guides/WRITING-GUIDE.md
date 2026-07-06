@@ -187,7 +187,7 @@ Links between docs use relative paths based on the file's location:
 2. **Check cross-references** when moving or renaming a doc. Grep for the old filename.
 3. **Add archive headers** when superseding a doc. Never delete docs — archive them.
 4. **Fix stale content in place** per D-07. If >50% of a doc is stale, rewrite entirely rather than patching.
-5. **Replace "CareerOS" with "Kestrel"** in prose. Keep `career_os` in code references (Python package name).
+5. **Replace the legacy brand name with "Kestrel"** in prose. Keep `career_os` in code references (Python package name).
 6. **Preserve Jekyll frontmatter** (`permalink`, `layout`, `title`) unchanged when moving files.
 
 ---
@@ -199,5 +199,5 @@ Links between docs use relative paths based on the file's location:
 - [ ] Has at least one Mermaid diagram (guides only)
 - [ ] All cross-references use correct relative paths
 - [ ] Added to `docs/index.md`
-- [ ] No "CareerOS" brand references in prose
+- [ ] No legacy brand references in prose
 - [ ] Tone matches the directory (warm for guides, technical for reference)

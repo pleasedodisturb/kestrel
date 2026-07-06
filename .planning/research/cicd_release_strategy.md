@@ -212,7 +212,7 @@ release-please generates CHANGELOG.md entries from conventional commits:
 ### Features
 
 * **G-295:** expand golden set with finance and design categories ([4eed038](https://github.com/...))
-* **G-300:** sync CareerOS features to Kestrel platform ([abc1234](https://github.com/...))
+* **G-300:** sync legacy features to Kestrel platform ([abc1234](https://github.com/...))
 
 ### Bug Fixes
 

@@ -467,7 +467,7 @@ def _fallback_score(jobs: list[dict]) -> list[dict]:
 
 
 def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> list[dict]:
-    """Remove jobs that are already tracked in CareerOS DB."""
+    """Remove jobs that are already tracked in the Kestrel DB."""
     logger.info("=" * 60)
     logger.info("STEP 3: DEDUP AGAINST TRACKING")
     logger.info("=" * 60)
@@ -479,7 +479,7 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
 
     tracked_keys: set[tuple[str, str]] = set()
 
-    # Check CareerOS DB (primary)
+    # Check Kestrel DB (primary)
     try:
         sys.path.insert(0, str(PROJECT_ROOT / "src"))
         from career_os.database import SessionLocal
@@ -490,9 +490,9 @@ def step_dedup_against_tracking(config: PipelineConfig, jobs: list[dict]) -> lis
         for app in apps:
             tracked_keys.add(job_key(app.company, app.role))
         db.close()
-        logger.info(f"Loaded {len(tracked_keys)} tracked jobs from CareerOS DB")
+        logger.info(f"Loaded {len(tracked_keys)} tracked jobs from Kestrel DB")
     except Exception as e:
-        logger.warning(f"Could not read CareerOS DB: {e}")
+        logger.warning(f"Could not read Kestrel DB: {e}")
 
         # Fallback to CSV
         if config.csv_path.exists():
