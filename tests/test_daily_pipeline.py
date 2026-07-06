@@ -23,7 +23,7 @@ class TestPipelineConfig:
         assert config.mode == "api-only"
         assert config.min_score == 5
         assert config.hours_old == 24
-        assert config.location == "Berlin"
+        assert config.location == "Dublin"
         assert config.dry_run is False
         assert config.openai_key == ""
 
