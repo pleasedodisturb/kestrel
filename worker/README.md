@@ -33,7 +33,7 @@ npx wrangler secret put CF_PAGES_DEPLOY_HOOK
 
 1. Go to Linear > Settings > API > Webhooks
 2. Create webhook:
-   - **URL:** `https://job-search-sync.<your-account>.workers.dev/webhook/linear`
+   - **URL:** `https://kestrel-linear-sync.<your-account>.workers.dev/webhook/linear`
    - **Events:** Issue updates
    - **Secret:** Same value you set for `LINEAR_WEBHOOK_SECRET`
 

@@ -1,5 +1,5 @@
 {
-  "name": "job-search-sync-worker",
+  "name": "kestrel-linear-sync-worker",
   "version": "1.0.0",
   "private": true,
   "scripts": {

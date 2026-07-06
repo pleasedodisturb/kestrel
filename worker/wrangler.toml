@@ -1,13 +1,15 @@
-name = "job-search-sync"
+name = "kestrel-linear-sync"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 [triggers]
 crons = ["*/15 * * * *"]
 
+# Replace the placeholders with your own Linear workspace IDs — either edit
+# here, set them as dashboard vars, or use `wrangler secret put <NAME>`.
 [vars]
-LINEAR_TEAM_ID = "d7d390bc-196d-45cc-bbc3-beaf69e342a6"
-LINEAR_PROJECT_ID = "164962c6-01b3-4e8e-99a5-9df574cd4529"
+LINEAR_TEAM_ID = "your-linear-team-id"
+LINEAR_PROJECT_ID = "your-linear-project-id"
 
 # Secrets (set via `wrangler secret put <NAME>`):
 # LINEAR_API_KEY
