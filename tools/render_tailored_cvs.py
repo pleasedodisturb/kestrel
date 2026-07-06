@@ -1,194 +1,100 @@
 #!/usr/bin/env python3
-"""Generate 5 tailored CV PDFs from cv.yaml using RenderCV.
+"""Generate tailored CV PDFs from cv.yaml using RenderCV.
 
 Creates a temporary YAML variant per role with a tailored summary,
 renders it, and copies the PDF to the application folder.
+
+Persona summaries are NOT hardcoded: they load from config/personal.yaml
+(gitignored) under a ``cv_personas:`` key. The embedded floor below is an
+OBVIOUSLY-FICTIONAL example set that keeps the rendering mechanism testable in
+CI without any real CV content. See config/personal.yaml.example for the schema.
 """
 
 import copy
+import logging
 import shutil
 import subprocess
 from pathlib import Path
 
 import yaml
 
-BASE_DIR = Path(__file__).resolve().parent.parent / "cv"
-APP_DIR = BASE_DIR / "applications"
-RENDERCV = str(Path(__file__).resolve().parent.parent / ".venv" / "bin" / "rendercv")
+logger = logging.getLogger("render_tailored_cvs")
 
-# Tailored summaries per role
-ROLES = {
-    "example-ai-deployment-strategist": {
-        "filename": "user-ai-strategist-cv",
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+BASE_DIR = PROJECT_ROOT / "cv"
+APP_DIR = BASE_DIR / "applications"
+RENDERCV = str(PROJECT_ROOT / ".venv" / "bin" / "rendercv")
+PERSONAL_CONFIG = PROJECT_ROOT / "config" / "personal.yaml"
+
+# Fictional floor personas — an invented person ("Alex Example") with generic,
+# obviously-made-up summaries. They (a) keep the render mechanism runnable and
+# testable in CI without real CV content and (b) document the expected shape.
+# Replace via config/personal.yaml `cv_personas:` (see personal.yaml.example).
+_FLOOR_CV_PERSONAS: dict[str, dict] = {
+    "example-platform-engineer": {
+        "filename": "example-platform-engineer-cv",
         "summary": (
-            "10+ years shipping complex technical programs across AI/ML, IoT, and hardware -- "
-            "now focused on bringing AI from prototype to production. Built an AI-augmented "
-            "program system integrating multiple LLMs with enterprise APIs. Ran ML model "
-            "deployment across 3 continents. Shipped consumer hardware product to "
-            "high volume across 10+ teams. Conducted 200+ live AI product "
-            "demos to executives, driving $1M+ contracts. Based in Berlin. "
-            "The pattern: take the ambiguous, cross-functional, hard-to-own problem and find "
-            "the path through it. Builder first, operator by method."
+            "Fictional example — replace via config/personal.yaml `cv_personas:`. "
+            "Platform engineer who enjoys turning flaky build pipelines into boring, "
+            "reliable ones. Comfortable across infrastructure and application code."
         ),
     },
-    "example-sr-product-engineer-ai": {
-        "filename": "user-product-eng-cv",
+    "example-product-manager": {
+        "filename": "example-product-manager-cv",
         "summary": (
-            "Builder who lives at the intersection of AI systems and product thinking. "
-            "Built an AI agent operating system -- 6 LLMs orchestrated through 4 "
-            "enterprise APIs, persistent context, RAG-adjacent document registry indexing "
-            "1,000+ files, AI provenance tracking, write guardrails. Ran ML model deployment "
-            "pipelines at scale. Shipped consumer hardware from sensor research "
-            "to high volume. 15+ production Python tools, real API integration experience, "
-            "end-to-end ownership instinct. The gap is the title -- the muscle is engineering-adjacent "
-            "product building under real constraints."
+            "Fictional example — replace via config/personal.yaml `cv_personas:`. "
+            "Product manager who prototypes before writing specs and prefers small, "
+            "shippable increments over big-bang launches."
         ),
     },
-    "example-pm-developer-tools": {
-        "filename": "user-devtools-pm-cv",
+    "example-developer-advocate": {
+        "filename": "example-developer-advocate-cv",
         "summary": (
-            "Built an AI-powered workflow system -- 4 API keys, a code editor, and a repo "
-            "that became a giant story about the program. Still fighting the context problem daily: "
-            "multi-generation memory architecture, 4 layers, 2 laptops, still not solved. That's the "
-            "product intuition developer tools need -- not from market research, from being the frustrated "
-            "user every day. Shipped consumer hardware from sensor research to high volume. "
-            "Built demo fleet from scratch -- 200+ live demos, $1M+ contracts. Titles are ephemeral. The work is what matters."
-        ),
-    },
-    "example-sr-developer-advocate": {
-        "filename": "user-devrel-cv",
-        "summary": (
-            "I connect people and build things -- usually at the same time. 10 years bridging "
-            "developers, scientists, and business teams across three continents. Built 15+ "
-            "automation pipelines, ran 200+ live demos of automotive AI "
-            "(messy, honest ones -- they worked 5x better than slide decks). I care about open "
-            "source, honest documentation, and keeping engineering work at least 30% fun. "
-            "CliftonStrengths #1: Communication. Working in Europe since 2016, "
-            "currently in Berlin."
-        ),
-    },
-    "example-technical-project-manager": {
-        "filename": "user-tpm-cv",
-        "summary": (
-            "10+ years shipping enterprise-scale technical programs. Not a human calendar -- "
-            "I build tools, automate mechanical work, and ship. Led Salesforce CRM amid "
-            "M&A acquisition chaos, audit logging, SOX compliance, zero "
-            "critical bugs. Split monolithic AWS account into 25 certified services, 30 weeks "
-            "ahead of schedule. Shipped hardware product across 10+ teams in 5 countries. "
-            "ML deployment across 3 continents. I care about sustainable teams and long-term "
-            "relationships. Berlin, available for customer travel."
-        ),
-    },
-    "example-ai-native-tpm": {
-        "filename": "user-ai-tpm-cv",
-        "summary": (
-            "AI-native builder -- four terminal panels, AI coding assistant, voice input, barely touching "
-            "the keyboard. Built an AI-augmented program system from scratch: 6 LLMs, "
-            "4 enterprise APIs, persistent context, 1,000+ documents indexed. No ticket, no budget "
-            "-- just saw the problem and built the solution. Shipped consumer hardware from "
-            "sensor research to high volume. Worked on a continuous-learning "
-            "ML framework that became obsolete when LLMs arrived. I don't speculate about AI disruption; "
-            "I've been disrupted. Not a cultist, not a Luddite -- I build with AI every day because "
-            "it works. Zero-to-one is where I'm best. Working across Europe "
-            "since 2016, currently in Berlin."
-        ),
-    },
-    "example-ai-native-pm": {
-        "filename": "user-ai-pm-cv",
-        "summary": (
-            "Same person, different hat. Also applied for the AI-Native TPM role -- writing "
-            "separately because PM and TPM in a team like this are the same problem-solving "
-            "persona on different days. 10+ years shipping across AI/ML, IoT, and hardware. "
-            "Built AI agent system from scratch, drove 200+ live demos, "
-            "shipped consumer hardware to high volume. I learn tools, frameworks, and measurement "
-            "systems on the fly. The work is the same. Berlin-based, immediately available."
-        ),
-    },
-    "example-sr-technical-pm-ai": {
-        "filename": "user-sr-tpm-ai-cv",
-        "summary": (
-            "I sit between research teams that want to experiment forever and engineering teams "
-            "that need to ship yesterday. Ran ASR deployment across 3 continents -- "
-            "cut release SLA from multi-day to 1 business day. Worked on a continuous-learning "
-            "ML framework made obsolete when LLMs arrived. I don't speculate "
-            "about AI disruption; I've been disrupted. Built AI-augmented program system "
-            "from scratch -- 6 LLMs, 4 enterprise APIs, no ticket, no budget. Shipped consumer "
-            "hardware to high volume. I care about European AI sovereignty -- not as a slogan, "
-            "but as genuine conviction. Working across Europe since 2016, currently "
-            "in Berlin."
-        ),
-    },
-    "example-sr-swe-product-eng": {
-        "filename": "user-swe-product-cv",
-        "summary": (
-            "Builder crossing from TPM into product engineering via AI tools. Built an AI agent "
-            "operating system -- 15+ Python scripts, 6 LLMs, 4 enterprise APIs, persistent "
-            "context, custom enterprise search CLI, AI provenance tracking. End-to-end ownership: "
-            "I research, spec, wireframe, build, and ship. Shipped hardware across 10+ teams in "
-            "5 countries. Built demo fleet from nothing -- 200+ live demos. "
-            "High ownership, minimal process, product thinking built from a decade of shipping."
-        ),
-    },
-    "example-product-engineer": {
-        "filename": "user-product-eng-crm-cv",
-        "summary": (
-            "CRM data platform owner. Led Pipedrive-to-Salesforce migration amid M&A "
-            "acquisition -- custom objects, permissions models, SOX-compliant connectors, "
-            "audit logging. 12+ stakeholders, 3 merging companies, hundreds of millions in revenue "
-            "running blind without proper infrastructure. Built AI agent system in parallel -- 6 LLMs, "
-            "enterprise APIs, 1,000+-file document registry. I think about data models instinctively "
-            "because I've had to build them. Founder mentality. Germany remote."
-        ),
-    },
-    "example-tpm-science-ops": {
-        "filename": "user-tpm-science-cv",
-        "summary": (
-            "Execution engine builder for research-to-production pipelines. Ran ML model "
-            "deployment across 3 continents -- bridging Science and Engineering, cutting "
-            "release SLA from multi-day to 1 business day. Split monolithic AWS account "
-            "into 25 independently certified services -- 30 weeks ahead of schedule, zero downtime. "
-            "Built AI-augmented program system with persistent context, automated synthesis, "
-            "and retrospective-ready data capture. The pattern: structure ambiguity into coordinated "
-            "execution without killing the science."
-        ),
-    },
-    "example-tpm-engineering": {
-        "filename": "user-tpm-eng-cv",
-        "summary": (
-            "10+ years driving cross-functional technical delivery at scale. 7 years at BigTech: "
-            "shipped consumer hardware to high volume across 10+ teams in 5 countries, "
-            "split monolithic AWS account into 25 certified services 30 weeks ahead of schedule, "
-            "ran ML model deployment across 3 continents. Led Salesforce "
-            "CRM migration with 12+ stakeholders, built AI-augmented program system from scratch. "
-            "Development and deployment process ownership. Technical depth to sit in architecture "
-            "reviews and add value."
-        ),
-    },
-    "example-sr-tpm-remote": {
-        "filename": "user-sr-tpm-remote-cv",
-        "summary": (
-            "Async-first TPM who writes documentation because it's how organizations remember "
-            "what they decided and why. 10+ years running cross-functional programs across "
-            "Engineering, Product, Finance, and Legal. Led CRM transformation amid "
-            "M&A acquisition, 12+ stakeholders, built AI system with 1,000+-file "
-            "document registry as a living handbook. Split monolithic AWS into 25 certified "
-            "services, 30 weeks ahead. ML deployment across 3 continents. I build tools, "
-            "automate mechanical work, and care about sustainable teams. Berlin, remote-ready."
-        ),
-    },
-    "example-ai-ml-pm": {
-        "filename": "user-ai-ml-pm-cv",
-        "summary": (
-            "Drove $1M+ partner deals by building things, not slide decks. 5 demo "
-            "cars, 200+ live drives to OEM executives across 3 continents, 5x sales engagement. "
-            "CRM transformation across 3 merging companies, 12+ stakeholders. ML "
-            "deployment across multiple continents. I care about open-source AI and "
-            "European sovereignty -- not as a slogan, as genuine conviction. "
-            "15+ Python tools, AI agent systems, API integrations. I sit in the room with the "
-            "partner's ML team and add value. Berlin, EMEA remote."
+            "Fictional example — replace via config/personal.yaml `cv_personas:`. "
+            "Developer advocate who writes runnable tutorials and treats documentation "
+            "as a first-class product surface."
         ),
     },
 }
+
+
+def _load_cv_personas() -> dict[str, dict]:
+    """Load CV personas from config/personal.yaml, falling back to the floor.
+
+    A valid, non-empty ``cv_personas:`` mapping fully REPLACES the fictional
+    floor (rendering floor personas alongside real ones would only produce
+    junk PDFs). Entries must be mappings with string ``filename`` and
+    ``summary`` keys; invalid entries are skipped. Absent config is the normal
+    case and stays silent; a present-but-malformed file logs a warning.
+    """
+    personas = {k: dict(v) for k, v in _FLOOR_CV_PERSONAS.items()}
+    if not PERSONAL_CONFIG.exists():
+        return personas
+    try:
+        data = yaml.safe_load(PERSONAL_CONFIG.read_text(encoding="utf-8")) or {}
+        cfg = data.get("cv_personas")
+        if isinstance(cfg, dict) and cfg:
+            parsed: dict[str, dict] = {}
+            for slug, spec in cfg.items():
+                if (
+                    isinstance(spec, dict)
+                    and isinstance(spec.get("filename"), str)
+                    and spec["filename"].strip()
+                    and isinstance(spec.get("summary"), str)
+                    and spec["summary"].strip()
+                ):
+                    parsed[str(slug)] = {
+                        "filename": spec["filename"],
+                        "summary": spec["summary"],
+                    }
+            if parsed:
+                personas = parsed
+    except (OSError, yaml.YAMLError) as exc:
+        logger.warning("config/personal.yaml cv_personas unreadable (%s); using floor", exc)
+    return personas
+
+
+ROLES: dict[str, dict] = _load_cv_personas()
 
 
 def load_base_yaml():
