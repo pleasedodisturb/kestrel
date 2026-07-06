@@ -69,6 +69,10 @@ _FLOOR_TIER_0_COMPANIES: dict[str, tuple[str, str]] = {
 def _load_tier0_companies() -> dict[str, tuple[str, str]]:
     """Load the Tier-0 map from config/companies.yaml, falling back to the floor."""
     companies = dict(_FLOOR_TIER_0_COMPANIES)
+    # Absent config is the normal case (poller runs on the fictional floor) — stay
+    # silent. Only a present-but-unreadable/malformed file warrants a warning.
+    if not COMPANIES_CONFIG.exists():
+        return companies
     try:
         data = yaml.safe_load(COMPANIES_CONFIG.read_text(encoding="utf-8")) or {}
         tier0 = data.get("tier0")
@@ -79,8 +83,8 @@ def _load_tier0_companies() -> dict[str, tuple[str, str]]:
                     parsed[str(name)] = (str(spec[0]), str(spec[1]))
             if parsed:
                 companies = parsed
-    except (OSError, yaml.YAMLError):
-        pass
+    except (OSError, yaml.YAMLError) as exc:
+        logger.warning("config/companies.yaml tier0 unreadable (%s); using example floor", exc)
     return companies
 
 

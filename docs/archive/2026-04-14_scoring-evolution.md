@@ -18,9 +18,9 @@ title: Scoring Evolution
 - Synthesized research into `private/research-scoring-deep-dive-2026-04-14.md`
 - Designed 11-epic roadmap across 5 phases in `docs/scoring-evolution-epics.md`
 - Created 12 Linear tickets (G-268 master + G-269 through G-279)
-- REDACTED (3 sessions Day 1, 2 sessions Day 2)
+- Orchestrated 11 agent executions via tmux (3 sessions Day 1, 2 sessions Day 2)
 - Reviewed all 7 Day 1 branches with parallel review agents
-- Fixed G-274 calibration injection gap (agent on Mac Mini)
+- Fixed G-274 calibration injection gap (agent execution)
 - Resolved Alembic migration conflicts across 4 branches (revision chain + ID collisions)
 - Merged all 11 PRs (#177-#187) to main
 - Closed all 12 Linear tickets as Done
@@ -41,7 +41,7 @@ title: Scoring Evolution
 
 ## Decisions made
 - Opus for judgment-heavy epics (rubric, embeddings, dual-score, Bayesian), Sonnet for execution
-- Mac Mini + tmux + `--dangerously-skip-permissions` for agent execution
+- Local host + tmux + `--dangerously-skip-permissions` for agent execution
 - Option B (AI-generated) as default desire_score method, Option A (derived) as fallback
 - No sqlite-vec C extension — pure Python cosine similarity for now
 - Feedback calibration gated behind feature flag, requires ≥10 corrections
@@ -52,7 +52,7 @@ title: Scoring Evolution
 - G-283: Consolidate dual Alembic migration directories
 - G-284: Fix pre-existing test_md_to_pdf.py failures
 - Integration testing across all 11 features combined
-- REDACTED `REDACTED`
+- Phase 4 session prompt still tracked locally (outside the public repo)
 
 ## PRs merged
 - #175: docs(G-268): scoring evolution epic specs

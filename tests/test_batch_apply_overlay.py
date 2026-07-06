@@ -43,9 +43,9 @@ from tools.batch_apply_browser import (  # noqa: E402
 # Greenhouse baseline. Decoupled from production strings so test breaks signal
 # real merge-logic regressions, not copy edits.
 BASELINE: list[tuple[str, str, bool]] = [
-    ("Country", "United Kingdom", False),
+    ("Country", "Ireland", False),
     ("Why Meridian", "baseline-why", False),
-    ("Working address", "London", False),
+    ("Working address", "Dublin", False),
 ]
 
 
@@ -158,7 +158,7 @@ class TestNoCollision:
         # Exactly one Country entry, and it's the baseline value.
         countries = [t for t in result if t[0] == "Country"]
         assert len(countries) == 1
-        assert countries[0] == ("Country", "United Kingdom", False)
+        assert countries[0] == ("Country", "Ireland", False)
         # The non-colliding overlay extra still gets appended.
         assert ("Language C1", "No", False) in result
 

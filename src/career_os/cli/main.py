@@ -1280,7 +1280,7 @@ def _fetch_url_content(url: str) -> str | None:
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "Mozilla/5.0 (compatible; CareerOS/1.0)",
+                "User-Agent": "Mozilla/5.0 (compatible; Kestrel/1.0)",
                 "Accept": "text/html,application/xhtml+xml,text/plain",
             },
         )

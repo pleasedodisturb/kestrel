@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate the CareerOS Google Sheet after update.
+Validate the Kestrel pipeline Google Sheet after update.
 
 Checks: row count vs DB, headers, statuses, scores, sort order, daily log.
 Returns exit code 0 on pass, 1 on failure.
@@ -24,7 +24,8 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SHEET_ID = os.getenv("SHEET_ID", "REDACTED")
+# Target spreadsheet is per-user config — no personal default is committed.
+SHEET_ID = os.getenv("SHEET_ID")
 DB_PATH = PROJECT_ROOT / "data" / "career_os.db"
 
 EXPECTED_HEADERS = [
@@ -89,6 +90,10 @@ def get_client():
 def validate():
     errors = []
     warnings = []
+
+    if not SHEET_ID:
+        print("SHEET_ID env var is required (your own Google Sheet ID).")
+        return 1
 
     client = get_client()
     sh = client.open_by_key(SHEET_ID)

@@ -1,5 +1,5 @@
 # =============================================================================
-# CareerOS — Multi-stage Dockerfile
+# Kestrel — Multi-stage Dockerfile
 # Single container: serves both FastAPI API and React frontend on one port.
 # =============================================================================
 

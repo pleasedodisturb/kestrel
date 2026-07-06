@@ -1,11 +1,24 @@
-"""Tests for tools/render_tailored_cvs.py."""
+"""Tests for tools/render_tailored_cvs.py.
+
+ROLES loads from config/personal.yaml `cv_personas:` (gitignored) and falls
+back to an embedded fictional floor, so structural tests here assert shape,
+not contents or count. Loader behaviour (absent/present/malformed/validation)
+is covered in TestLoadCvPersonas; TestFloorHygiene pins the floor as fictional.
+"""
 
 import copy
+import logging
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 import yaml
-from render_tailored_cvs import ROLES, load_base_yaml, render_variant
+from render_tailored_cvs import (
+    _FLOOR_CV_PERSONAS,
+    ROLES,
+    _load_cv_personas,
+    load_base_yaml,
+    render_variant,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -39,7 +52,9 @@ def base_data():
 
 class TestRolesDict:
     def test_roles_has_entries(self):
-        assert len(ROLES) == 14
+        # Count depends on config/personal.yaml (or the floor) — assert non-empty,
+        # not a hardcoded number.
+        assert len(ROLES) >= 1
 
     def test_all_entries_have_required_keys(self):
         for key, cfg in ROLES.items():
@@ -263,3 +278,130 @@ class TestRenderVariant:
         _result, _ = self._run_render(tmp_path, base_data)
         dst_dir = tmp_path / "applications" / self.ROLE_KEY
         assert dst_dir.is_dir()
+
+
+# ---------------------------------------------------------------------------
+# _load_cv_personas — gitignored-config loader (G-1306)
+# ---------------------------------------------------------------------------
+
+
+class TestLoadCvPersonas:
+    """Loader merges/falls back per the G-1303 gitignored-config pattern."""
+
+    def test_absent_uses_floor_silently(self, tmp_path, monkeypatch, caplog):
+        import render_tailored_cvs as mod
+
+        monkeypatch.setattr(mod, "PERSONAL_CONFIG", tmp_path / "personal.yaml")
+        with caplog.at_level(logging.WARNING, logger="render_tailored_cvs"):
+            personas = _load_cv_personas()
+        assert personas == _FLOOR_CV_PERSONAS
+        assert not caplog.records  # absent config is the normal case
+
+    def test_present_replaces_floor(self, tmp_path, monkeypatch):
+        import render_tailored_cvs as mod
+
+        cfg = tmp_path / "personal.yaml"
+        cfg.write_text(
+            "cv_personas:\n  my-role:\n    filename: my-role-cv\n    summary: My own summary.\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(mod, "PERSONAL_CONFIG", cfg)
+        personas = _load_cv_personas()
+        assert personas == {"my-role": {"filename": "my-role-cv", "summary": "My own summary."}}
+        # Config fully replaces the floor — no fictional personas rendered.
+        assert "example-platform-engineer" not in personas
+
+    def test_invalid_entries_skipped(self, tmp_path, monkeypatch):
+        import render_tailored_cvs as mod
+
+        cfg = tmp_path / "personal.yaml"
+        cfg.write_text(
+            "cv_personas:\n"
+            "  good:\n"
+            "    filename: good-cv\n"
+            "    summary: Fine.\n"
+            "  no-summary:\n"
+            "    filename: broken-cv\n"
+            "  not-a-mapping: just a string\n"
+            "  blank-filename:\n"
+            "    filename: '  '\n"
+            "    summary: Text.\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(mod, "PERSONAL_CONFIG", cfg)
+        personas = _load_cv_personas()
+        assert personas == {"good": {"filename": "good-cv", "summary": "Fine."}}
+
+    def test_all_entries_invalid_keeps_floor(self, tmp_path, monkeypatch):
+        import render_tailored_cvs as mod
+
+        cfg = tmp_path / "personal.yaml"
+        cfg.write_text("cv_personas:\n  broken: just a string\n", encoding="utf-8")
+        monkeypatch.setattr(mod, "PERSONAL_CONFIG", cfg)
+        assert _load_cv_personas() == _FLOOR_CV_PERSONAS
+
+    def test_missing_key_keeps_floor(self, tmp_path, monkeypatch):
+        import render_tailored_cvs as mod
+
+        cfg = tmp_path / "personal.yaml"
+        cfg.write_text("answers:\n  why_company: hello\n", encoding="utf-8")
+        monkeypatch.setattr(mod, "PERSONAL_CONFIG", cfg)
+        assert _load_cv_personas() == _FLOOR_CV_PERSONAS
+
+    def test_malformed_falls_back_with_warning(self, tmp_path, monkeypatch, caplog):
+        import render_tailored_cvs as mod
+
+        cfg = tmp_path / "personal.yaml"
+        cfg.write_text("cv_personas: [unterminated\n", encoding="utf-8")
+        monkeypatch.setattr(mod, "PERSONAL_CONFIG", cfg)
+        with caplog.at_level(logging.WARNING, logger="render_tailored_cvs"):
+            personas = _load_cv_personas()
+        assert personas == _FLOOR_CV_PERSONAS
+        assert any("cv_personas" in r.message for r in caplog.records)
+
+    def test_floor_copy_is_not_shared(self, tmp_path, monkeypatch):
+        # Mutating the returned dict must not leak into the floor constant.
+        import render_tailored_cvs as mod
+
+        monkeypatch.setattr(mod, "PERSONAL_CONFIG", tmp_path / "personal.yaml")
+        personas = _load_cv_personas()
+        first = next(iter(personas))
+        personas[first]["summary"] = "mutated"
+        assert _FLOOR_CV_PERSONAS[first]["summary"] != "mutated"
+
+
+# ---------------------------------------------------------------------------
+# Floor hygiene — the embedded defaults must stay fictional (G-1306)
+# ---------------------------------------------------------------------------
+
+
+class TestFloorHygiene:
+    """The committed floor must never carry the maintainer's real CV markers."""
+
+    # Personal-narrative markers from the pre-G-1306 hardcoded summaries.
+    REAL_MARKERS = [
+        "berlin",
+        "clifton",
+        "since 2016",
+        "$1m",
+        "1m+",
+        "sovereignty",
+        "salesforce",
+        "pipedrive",
+        "200+ live",
+        "bigtech",
+        "3 continents",
+    ]
+
+    def test_floor_summaries_carry_no_real_markers(self):
+        blob = " ".join(
+            f"{slug} {cfg['filename']} {cfg['summary']}" for slug, cfg in _FLOOR_CV_PERSONAS.items()
+        ).lower()
+        for marker in self.REAL_MARKERS:
+            assert marker not in blob, f"real personal marker '{marker}' found in floor"
+
+    def test_floor_summaries_are_marked_fictional(self):
+        for slug, cfg in _FLOOR_CV_PERSONAS.items():
+            assert "fictional example" in cfg["summary"].lower(), (
+                f"floor persona '{slug}' must self-identify as fictional"
+            )

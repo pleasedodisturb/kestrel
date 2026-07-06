@@ -86,3 +86,20 @@ role_overlays:
     - ["owned end-to-end delivery of technical programmes", "Yes", false]
     - ["native or C1-level in the local language", "No", false]
     - ["delivered AI/ML into production", "Yes", false]
+
+# Tailored CV persona summaries used by tools/render_tailored_cvs.py.
+# Each key is a role slug; `filename` is the output PDF/HTML basename and
+# `summary` replaces the cv.yaml summary section for that variant.
+# A non-empty cv_personas mapping fully REPLACES the embedded fictional floor.
+# The examples below describe an INVENTED person — replace with your own.
+cv_personas:
+  example-platform-engineer:
+    filename: example-platform-engineer-cv
+    summary: >
+      Platform engineer who enjoys turning flaky build pipelines into boring,
+      reliable ones. Comfortable across infrastructure and application code.
+  example-product-manager:
+    filename: example-product-manager-cv
+    summary: >
+      Product manager who prototypes before writing specs and prefers small,
+      shippable increments over big-bang launches.

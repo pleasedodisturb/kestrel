@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Update the CareerOS Google Sheet with pipeline data and daily scan log.
+Update the Kestrel pipeline Google Sheet with pipeline data and daily scan log.
 
 Usage:
     # From CI (uses GOOGLE_SERVICE_ACCOUNT_JSON env var):
@@ -15,7 +15,7 @@ Usage:
 Environment:
     GOOGLE_SERVICE_ACCOUNT_JSON  - JSON string of service account creds (CI)
     GOOGLE_SA_FILE               - Path to service account JSON file (local)
-    SHEET_ID                     - Google Sheet ID (default: CareerOS Pipeline)
+    SHEET_ID                     - Google Sheet ID (required; your own spreadsheet)
     CI_RUN_URL                   - GitHub Actions run URL for daily log
 """
 
@@ -35,7 +35,8 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SHEET_ID = os.getenv("SHEET_ID", "REDACTED")
+# Target spreadsheet is per-user config — no personal default is committed.
+SHEET_ID = os.getenv("SHEET_ID")
 DB_PATH = PROJECT_ROOT / "data" / "career_os.db"
 
 
@@ -271,12 +272,16 @@ def update_review_queue(sh, scored_path: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Update CareerOS Google Sheet")
+    parser = argparse.ArgumentParser(description="Update Kestrel pipeline Google Sheet")
     parser.add_argument("--log-entry", help="JSON string with daily log data")
     parser.add_argument("--scored-json", help="Path to scored JSON for review queue")
     parser.add_argument("--pipeline-only", action="store_true", help="Only update pipeline tab")
     parser.add_argument("--log-only", action="store_true", help="Only append daily log")
     args = parser.parse_args()
+
+    if not SHEET_ID:
+        print("SHEET_ID env var is required (your own Google Sheet ID).")
+        sys.exit(1)
 
     client = get_client()
     sh = client.open_by_key(SHEET_ID)

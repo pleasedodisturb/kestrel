@@ -148,7 +148,7 @@ For a single-server, single-container app like Kestrel:
 3. Removes old containers
 
 **Requirements:**
-- Cannot use `container_name` in compose file (Kestrel's prod compose uses `careeros` -- needs removal)
+- Cannot use `container_name` in compose file (Kestrel's prod compose uses the `kestrel` service -- needs removal)
 - Cannot use `ports` directly (need a reverse proxy like Caddy/Traefik)
 - Health checks must be defined (Kestrel already has `/health`)
 
