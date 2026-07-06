@@ -28,7 +28,7 @@ Environment variables:
   PIPELINE_MODE           — api-only | api-plus | all (default: api-only)
   PIPELINE_MIN_SCORE      — Minimum score to include in digest (default: 5)
   PIPELINE_HOURS_OLD      — Max posting age in hours (default: 24)
-  PIPELINE_LOCATION       — Search location (default: Berlin)
+  PIPELINE_LOCATION       — Search location (default: Dublin)
   PIPELINE_DRY_RUN        — Set to "1" to skip CSV writes (default: 0)
   GITHUB_STEP_SUMMARY     — GitHub Actions summary file (auto-set in Actions)
 
@@ -71,7 +71,7 @@ class PipelineConfig:
         self.mode = os.getenv("PIPELINE_MODE", "api-only")
         self.min_score = int(os.getenv("PIPELINE_MIN_SCORE", "5"))
         self.hours_old = int(os.getenv("PIPELINE_HOURS_OLD", "24"))
-        self.location = os.getenv("PIPELINE_LOCATION", "Berlin")
+        self.location = os.getenv("PIPELINE_LOCATION", "Dublin")
         self.dry_run = os.getenv("PIPELINE_DRY_RUN", "0") == "1"
         self.openai_key = os.getenv("OPENAI_API_KEY", "")
         self.date = datetime.now().strftime("%Y-%m-%d")

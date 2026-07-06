@@ -97,7 +97,7 @@ All config via environment variables:
 | `PIPELINE_MODE` | `api-only` | `api-only` / `api-plus` / `all` |
 | `PIPELINE_MIN_SCORE` | `5` | Minimum fit score to include in digest |
 | `PIPELINE_HOURS_OLD` | `24` | Max posting age in hours |
-| `PIPELINE_LOCATION` | `Berlin` | Primary search location |
+| `PIPELINE_LOCATION` | `Dublin` | Primary search location |
 | `PIPELINE_DRY_RUN` | `0` | Set to `1` to skip CSV writes |
 
 ### Scraping Modes

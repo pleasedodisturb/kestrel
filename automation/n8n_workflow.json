@@ -116,7 +116,7 @@
   },
   "settings": {
     "executionOrder": "v1",
-    "timezone": "Europe/Berlin"
+    "timezone": "Europe/Dublin"
   },
   "_comment": "Import this into n8n via Settings > Import Workflow. Update all paths and credentials before enabling."
 }
