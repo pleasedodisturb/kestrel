@@ -16,7 +16,7 @@ npm run dev
 ## Cloudflare Pages Deployment
 
 1. Go to [Cloudflare Dashboard > Pages](https://dash.cloudflare.com/?to=/:account/pages)
-2. Create a project > Connect to Git > Select `job-search-hq` repo
+2. Create a project > Connect to Git > Select your Kestrel repo
 3. Build settings:
    - **Build command:** `cd dashboard && npm install && npm run build`
    - **Build output directory:** `dashboard`

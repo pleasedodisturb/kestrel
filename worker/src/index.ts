@@ -296,7 +296,7 @@ async function handleCalendarFeed(env: Env): Promise<Response> {
       const status = issue.state?.type === "completed" ? "COMPLETED" : "NEEDS-ACTION";
 
       lines.push("BEGIN:VTODO");
-      lines.push(`UID:${issue.id}@job-search-hq`);
+      lines.push(`UID:${issue.id}@kestrel`);
       lines.push(`DTSTAMP:${dtStamp}`);
       if (due) lines.push(`DUE;VALUE=DATE:${due}`);
       lines.push(`SUMMARY:${escapeICS(summary)}`);
@@ -312,7 +312,7 @@ async function handleCalendarFeed(env: Env): Promise<Response> {
     return new Response(lines.join("\r\n"), {
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="job-search-hq.ics"',
+        "Content-Disposition": 'attachment; filename="kestrel.ics"',
         "Cache-Control": "public, max-age=900",
       },
     });
