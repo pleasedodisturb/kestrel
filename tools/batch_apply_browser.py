@@ -17,6 +17,7 @@ Usage:
 import argparse
 import asyncio
 import contextlib
+import logging
 import os
 import re
 import sqlite3
@@ -26,6 +27,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import yaml
+
+logger = logging.getLogger("batch_apply_browser")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCREENSHOTS_DIR = PROJECT_ROOT / "screenshots" / "batch"
@@ -532,8 +535,8 @@ def _load_answers() -> dict[str, str]:
         cfg = _read_personal_yaml()
         for key, val in (cfg.get("answers") or {}).items():
             answers[str(key)] = str(val)
-    except (OSError, yaml.YAMLError):
-        pass
+    except (OSError, yaml.YAMLError) as exc:
+        logger.warning("config/personal.yaml answers unreadable (%s); using floor", exc)
     return answers
 
 
@@ -544,8 +547,8 @@ def _load_role_overlays() -> dict[str, list[tuple[str, str, bool]]]:
         cfg = _read_personal_yaml()
         for slug, fields in (cfg.get("role_overlays") or {}).items():
             overlays[str(slug).lower()] = [tuple(f) for f in fields]
-    except (OSError, yaml.YAMLError):
-        pass
+    except (OSError, yaml.YAMLError) as exc:
+        logger.warning("config/personal.yaml role_overlays unreadable (%s); using floor", exc)
     return overlays
 
 
@@ -565,8 +568,8 @@ def _load_custom_questions() -> list[dict]:
         cfg = _read_personal_yaml()
         for entry in cfg.get("custom_questions") or []:
             merged[_key(entry)] = entry
-    except (OSError, yaml.YAMLError):
-        pass
+    except (OSError, yaml.YAMLError) as exc:
+        logger.warning("config/personal.yaml custom_questions unreadable (%s); using floor", exc)
     return list(merged.values())
 
 
