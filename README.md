@@ -285,6 +285,7 @@ Fully isolated — nothing touches your system Python. Requires [OrbStack](https
 | Guide | What you'll learn |
 |-------|-------------------|
 | [How Kestrel Uses AI](docs/guides/ai-providers-guide.md) | The electricity analogy — what AI providers are, what they cost, and which to pick |
+| [AI Costs and Privacy](docs/guides/cost-optimization.md) | What it costs, the tiers, the optimizations — and how to order your provider fallback so a dry-quota day doesn't bill premium |
 | [AI Provider Setup](docs/reference/AI-PROVIDERS.md) | Technical details — API keys, privacy policies, provider comparison tables |
 | [LLM Landscape Research](docs/research/llms-tokens-privacy.md) | Deep dive — 2026 pricing, privacy audits, GDPR, EU sovereignty (for the curious) |
 
@@ -330,6 +331,8 @@ Kestrel works out of the box in Demo Mode — free, offline, no account needed. 
 > | Claude Sonnet (OpenRouter) | $0.02 | $30.00 | **$900** |
 >
 > Kestrel defaults to free-tier models for bulk scanning. Premium models like Claude Sonnet are best reserved for deep analysis of shortlisted roles, not bulk filtering. The optimizations below help keep costs in check regardless of which model you use.
+>
+> **Order your fallback chain cheap-first.** If you chain providers (`AI_PROVIDER_FALLBACK`), whatever sits at the *end* is what you pay when the cheaper ones run out of quota. Put free/cheap models first and premium last — otherwise a busy or exhausted-quota day can bill an entire scan at premium rates (that $900 row, not the $0 one), often 20-50× the norm. [The rule + a worked example →](docs/guides/cost-optimization.md#fallback-chain-ordering-avoids-surprise-bills)
 
 **Quickest path:** Go to Settings → click "Connect to OpenRouter" → log in → done. No API keys to copy. Free-tier models like Llama 3.3 70B handle job scoring at zero cost — add $10 of credits to unlock 1,000 requests/day.
 
@@ -346,7 +349,7 @@ AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get exp
 | **Token-efficient tool use** | When Kestrel calls AI tools, it uses a compact format that cuts output size. | [70% off output tokens](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/token-efficient-tool-use) |
 | **Smart model selection** | Not every task needs the biggest brain. Simple classification uses a smaller model. Deep analysis uses the full thing. | [60-95% on simple tasks](https://github.com/lm-sys/RouteLLM) |
 | **Batch scoring** | Scoring a big backlog overnight? Batch APIs give a flat 50% discount for non-urgent work. | [50% off everything](https://docs.anthropic.com/en/api/creating-message-batches) |
-| **Provider fallback** | If one provider's quota runs out, Kestrel automatically tries the next one. No failed scores, no wasted retries. | Resilience (not cost) |
+| **Provider fallback** | If one provider's quota runs out, Kestrel automatically tries the next one. No failed scores, no wasted retries. **Order matters:** cheap-first, premium-last (see note above). | Resilience — and cost, ordered right |
 
 **Benchmarked on a real profile + real job posting:** Naive approach = ≈$16/month. With all optimizations = **≈$1-5/month** for the same results. [How it works →](docs/guides/how-token-optimization-works.md)
 
