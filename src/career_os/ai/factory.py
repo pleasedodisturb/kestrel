@@ -78,11 +78,11 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "demo": lambda: MockProvider(),
     "openrouter": lambda: OpenRouterProvider(
         api_key=_resolve_api_key("OPENROUTER_API_KEY", "openrouter_api_key"),
-        model=os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4"),
+        model=os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-5"),
     ),
     "anthropic": lambda: AnthropicProvider(
         api_key=_resolve_api_key("ANTHROPIC_API_KEY", "anthropic_api_key"),
-        model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
+        model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5"),
     ),
     "ollama": lambda: OllamaProvider(
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),

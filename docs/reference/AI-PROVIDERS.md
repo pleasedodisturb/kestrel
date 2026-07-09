@@ -82,14 +82,14 @@ You can set a spending limit on OpenRouter so you never get surprised.
 Set this in your settings file:
 
 ```
-OPENROUTER_MODEL=anthropic/claude-sonnet-4
+OPENROUTER_MODEL=anthropic/claude-sonnet-5
 ```
 
 **Recommended models (good quality, reasonable cost):**
 
 | Model | Cost (per 1M tokens) | Quality | Speed | Notes |
 |-------|---------------------|---------|-------|-------|
-| `anthropic/claude-sonnet-4` | $3 in / $15 out | Excellent | Fast | Default. Best balance of quality and cost. |
+| `anthropic/claude-sonnet-5` | $3 in / $15 out | Excellent | Fast | Default. Best balance of quality and cost. |
 | `openai/gpt-5` | $1.25 in / $10 out | Excellent | Fast | Cheaper than Claude, 400K context. |
 | `google/gemini-2.5-flash-lite` | $0.10 in / $0.40 out | Very good | Very fast | Absurdly cheap. Best budget option. |
 | `mistral/mistral-large` | $2 in / $6 out | Very good | Fast | EU-based provider (data stays in France). |

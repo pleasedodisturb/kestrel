@@ -66,7 +66,7 @@ PRESETS: dict[str, CostPreset] = {
         ),
         estimated_cost="$5-25/mo",
         provider="openrouter",
-        model="anthropic/claude-sonnet-4",
+        model="anthropic/claude-sonnet-5",
         prefilter_strategy="moderate",
         batch_size=15,
     ),

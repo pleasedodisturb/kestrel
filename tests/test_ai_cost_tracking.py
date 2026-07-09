@@ -23,7 +23,7 @@ class TestAIUsageLogModel:
         """Can create and query an AIUsageLog row."""
         log = AIUsageLog(
             provider="anthropic",
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5",
             feature="score",
             input_tokens=500,
             output_tokens=200,
@@ -36,7 +36,7 @@ class TestAIUsageLogModel:
 
         result = db_session.execute(select(AIUsageLog)).scalar_one()
         assert result.provider == "anthropic"
-        assert result.model == "claude-sonnet-4-20250514"
+        assert result.model == "claude-sonnet-5"
         assert result.feature == "score"
         assert result.input_tokens == 500
         assert result.output_tokens == 200
@@ -67,25 +67,25 @@ class TestCostEstimation:
 
     def test_sonnet_pricing(self) -> None:
         """Sonnet: $3/MTok input, $15/MTok output."""
-        cost = _estimate_cost("claude-sonnet-4-20250514", 1000, 500)
+        cost = _estimate_cost("claude-sonnet-5", 1000, 500)
         expected = (1000 * 3.0 + 500 * 15.0) / 1_000_000
         assert cost == pytest.approx(expected)
 
     def test_haiku_pricing(self) -> None:
         """Haiku is cheaper than Sonnet."""
         haiku_cost = _estimate_cost("claude-haiku-4-5-20251001", 1000, 500)
-        sonnet_cost = _estimate_cost("claude-sonnet-4-20250514", 1000, 500)
+        sonnet_cost = _estimate_cost("claude-sonnet-5", 1000, 500)
         assert haiku_cost < sonnet_cost
 
     def test_unknown_model_uses_default(self) -> None:
         """Unknown model falls back to Sonnet-class pricing."""
         cost = _estimate_cost("unknown-model-v99", 1000, 500)
-        default_cost = _estimate_cost("claude-sonnet-4-20250514", 1000, 500)
+        default_cost = _estimate_cost("claude-sonnet-5", 1000, 500)
         assert cost == pytest.approx(default_cost)
 
     def test_zero_tokens_zero_cost(self) -> None:
         """Zero tokens = zero cost."""
-        assert _estimate_cost("claude-sonnet-4-20250514", 0, 0) == 0.0
+        assert _estimate_cost("claude-sonnet-5", 0, 0) == 0.0
 
 
 class TestLogUsage:
@@ -95,7 +95,7 @@ class TestLogUsage:
         """Cache hits pass usage=None — should not write to DB."""
         log_usage(
             provider="anthropic",
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5",
             feature=AIFeature.score,
             usage=None,
         )
@@ -113,7 +113,7 @@ class TestLogUsage:
         # Should not raise even if DB is unavailable (uses try/except internally)
         log_usage(
             provider="openrouter",
-            model="anthropic/claude-sonnet-4",
+            model="anthropic/claude-sonnet-5",
             feature=AIFeature.score,
             usage=usage,
         )

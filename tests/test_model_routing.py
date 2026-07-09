@@ -64,15 +64,15 @@ class TestAnthropicProviderRouting:
 
     def test_standard_tier(self):
         provider = self._make_provider()
-        assert provider._resolve_model(ComplexityTier.STANDARD) == "claude-sonnet-4-20250514"
+        assert provider._resolve_model(ComplexityTier.STANDARD) == "claude-sonnet-5"
 
     def test_complex_tier(self):
         provider = self._make_provider()
-        assert provider._resolve_model(ComplexityTier.COMPLEX) == "claude-opus-4-20250514"
+        assert provider._resolve_model(ComplexityTier.COMPLEX) == "claude-opus-4-8"
 
     def test_none_defaults_to_standard(self):
         provider = self._make_provider()
-        assert provider._resolve_model(None) == "claude-sonnet-4-20250514"
+        assert provider._resolve_model(None) == "claude-sonnet-5"
 
     def test_env_var_override_wins(self):
         """When an explicit model is set (not the default), tier is ignored."""
@@ -105,15 +105,15 @@ class TestOpenRouterProviderRouting:
 
     def test_standard_tier(self):
         provider = self._make_provider()
-        assert provider._resolve_model(ComplexityTier.STANDARD) == "anthropic/claude-sonnet-4"
+        assert provider._resolve_model(ComplexityTier.STANDARD) == "anthropic/claude-sonnet-5"
 
     def test_complex_tier(self):
         provider = self._make_provider()
-        assert provider._resolve_model(ComplexityTier.COMPLEX) == "anthropic/claude-opus-4"
+        assert provider._resolve_model(ComplexityTier.COMPLEX) == "anthropic/claude-opus-4.8"
 
     def test_none_defaults_to_standard(self):
         provider = self._make_provider()
-        assert provider._resolve_model(None) == "anthropic/claude-sonnet-4"
+        assert provider._resolve_model(None) == "anthropic/claude-sonnet-5"
 
     def test_env_var_override_wins(self):
         """When an explicit model is set (not the default), tier is ignored."""
