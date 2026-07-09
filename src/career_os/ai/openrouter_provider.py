@@ -29,7 +29,7 @@ from career_os.schemas.ai import (
 logger = logging.getLogger(__name__)
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "anthropic/claude-sonnet-4"
+DEFAULT_MODEL = "anthropic/claude-sonnet-5"
 
 
 class CreditsExhaustedError(ProviderQuotaError):
@@ -64,8 +64,8 @@ def _extract_error_detail(response: httpx.Response) -> str:
 
 _TIER_MODELS: dict[ComplexityTier, str] = {
     ComplexityTier.SIMPLE: "anthropic/claude-haiku-4-5",
-    ComplexityTier.STANDARD: "anthropic/claude-sonnet-4",
-    ComplexityTier.COMPLEX: "anthropic/claude-opus-4",
+    ComplexityTier.STANDARD: "anthropic/claude-sonnet-5",
+    ComplexityTier.COMPLEX: "anthropic/claude-opus-4.8",
 }
 
 
@@ -77,7 +77,7 @@ class OpenRouterProvider(AIProvider):
 
         Args:
             api_key: OpenRouter API key.
-            model: Model identifier (default: anthropic/claude-sonnet-4).
+            model: Model identifier (default: anthropic/claude-sonnet-5).
         """
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY is required for OpenRouterProvider")

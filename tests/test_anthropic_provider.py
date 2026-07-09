@@ -51,11 +51,11 @@ class TestAnthropicProviderInit:
 
     def test_default_model(self) -> None:
         provider = AnthropicProvider(api_key=_TEST_CREDENTIAL)
-        assert provider._model == "claude-sonnet-4-20250514"
+        assert provider._model == "claude-sonnet-5"
 
     def test_custom_model(self) -> None:
-        provider = AnthropicProvider(api_key=_TEST_CREDENTIAL, model="claude-opus-4-20250514")
-        assert provider._model == "claude-opus-4-20250514"
+        provider = AnthropicProvider(api_key=_TEST_CREDENTIAL, model="claude-opus-4-8")
+        assert provider._model == "claude-opus-4-8"
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +116,7 @@ class TestPromptCaching:
                 200,
                 json={
                     "content": [{"type": "text", "text": "test response"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 10, "output_tokens": 5},
                 },
                 request=httpx.Request("POST", url),
@@ -145,7 +145,7 @@ class TestPromptCaching:
                 200,
                 json={
                     "content": [{"type": "text", "text": "hello"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 5, "output_tokens": 3},
                 },
                 request=httpx.Request("POST", url),
@@ -179,7 +179,7 @@ class TestAnthropicRequestFormat:
                 200,
                 json={
                     "content": [{"type": "text", "text": "ok"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 5, "output_tokens": 2},
                 },
                 request=httpx.Request("POST", url),
@@ -203,7 +203,7 @@ class TestAnthropicRequestFormat:
                 200,
                 json={
                     "content": [{"type": "text", "text": "result"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 5, "output_tokens": 3},
                 },
                 request=httpx.Request("POST", url),
@@ -212,7 +212,7 @@ class TestAnthropicRequestFormat:
         with patch("httpx.AsyncClient.post", side_effect=mock_post):
             await provider.complete("hello world")
 
-        assert captured_payload["model"] == "claude-sonnet-4-20250514"
+        assert captured_payload["model"] == "claude-sonnet-5"
         assert captured_payload["max_tokens"] == 4096
         assert captured_payload["messages"] == [{"role": "user", "content": "hello world"}]
 
@@ -229,7 +229,7 @@ class TestAnthropicRequestFormat:
                         {"type": "text", "text": "Hello "},
                         {"type": "text", "text": "world"},
                     ],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 5, "output_tokens": 3},
                 },
                 request=httpx.Request("POST", url),
@@ -241,7 +241,7 @@ class TestAnthropicRequestFormat:
         assert isinstance(result, AIResponse)
         assert result.content == "Hello world"
         assert result.provider == "anthropic"
-        assert result.model == "claude-sonnet-4-20250514"
+        assert result.model == "claude-sonnet-5"
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +346,7 @@ class TestAnthropicScore:
                 200,
                 json={
                     "content": [{"type": "text", "text": score_json}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 100, "output_tokens": 50},
                 },
                 request=httpx.Request("POST", url),
@@ -391,7 +391,7 @@ class TestAnthropicScore:
                 200,
                 json={
                     "content": [{"type": "text", "text": score_json}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 100, "output_tokens": 50},
                 },
                 request=httpx.Request("POST", url),
@@ -442,7 +442,7 @@ class TestAnthropicScore:
                 200,
                 json={
                     "content": [{"type": "text", "text": score_json}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 50, "output_tokens": 30},
                 },
                 request=httpx.Request("POST", url),
@@ -474,7 +474,7 @@ class TestTokenUsageTracking:
                 200,
                 json={
                     "content": [{"type": "text", "text": "cached response"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {
                         "input_tokens": 150,
                         "output_tokens": 40,
@@ -504,7 +504,7 @@ class TestTokenUsageTracking:
                 200,
                 json={
                     "content": [{"type": "text", "text": "from cache"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {
                         "input_tokens": 50,
                         "output_tokens": 30,
@@ -550,7 +550,7 @@ class TestTokenUsageTracking:
                 200,
                 json={
                     "content": [{"type": "text", "text": score_json}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {
                         "input_tokens": 200,
                         "output_tokens": 80,
@@ -691,7 +691,7 @@ class TestBatchResultsUrlValidation:
                     "type": "succeeded",
                     "message": {
                         "content": [{"type": "text", "text": "ok"}],
-                        "model": "claude-sonnet-4-20250514",
+                        "model": "claude-sonnet-5",
                         "usage": {"input_tokens": 1, "output_tokens": 1},
                     },
                 },

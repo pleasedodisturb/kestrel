@@ -25,14 +25,14 @@ logger = logging.getLogger(__name__)
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_BATCH_API_URL = "https://api.anthropic.com/v1/messages/batches"
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
+DEFAULT_MODEL = "claude-sonnet-5"
 ANTHROPIC_VERSION = "2023-06-01"
 
 
 _TIER_MODELS: dict[ComplexityTier, str] = {
     ComplexityTier.SIMPLE: "claude-haiku-4-5-20251001",
-    ComplexityTier.STANDARD: "claude-sonnet-4-20250514",
-    ComplexityTier.COMPLEX: "claude-opus-4-20250514",
+    ComplexityTier.STANDARD: "claude-sonnet-5",
+    ComplexityTier.COMPLEX: "claude-opus-4-8",
 }
 
 
@@ -44,7 +44,7 @@ class AnthropicProvider(AIProvider):
 
         Args:
             api_key: Anthropic API key (should start with sk-ant-).
-            model: Model identifier (default: claude-sonnet-4-20250514).
+            model: Model identifier (default: claude-sonnet-5).
         """
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY is required for AnthropicProvider")

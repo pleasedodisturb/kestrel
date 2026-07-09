@@ -443,7 +443,7 @@ cp .env.example .env
 |:---|:---|:---|
 | `AI_PROVIDER` | `mock` | AI backend - `mock` works fully offline, no key needed |
 | `OPENROUTER_API_KEY` | (empty) | Required when `AI_PROVIDER=openrouter` |
-| `OPENROUTER_MODEL` | `anthropic/claude-sonnet-4` | Which model to use via OpenRouter |
+| `OPENROUTER_MODEL` | `anthropic/claude-sonnet-5` | Which model to use via OpenRouter |
 | `DATABASE_URL` | `sqlite:///data/career_os.db` | SQLite database path |
 | `HOST` | `0.0.0.0` | API server bind address |
 | `PORT` | `8100` | API server port |

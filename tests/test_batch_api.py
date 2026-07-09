@@ -246,7 +246,7 @@ class TestGetBatchResults:
                             "type": "succeeded",
                             "message": {
                                 "content": [{"type": "text", "text": _SCORE_JSON}],
-                                "model": "claude-sonnet-4-20250514",
+                                "model": "claude-sonnet-5",
                             },
                         },
                     }
@@ -258,7 +258,7 @@ class TestGetBatchResults:
                             "type": "succeeded",
                             "message": {
                                 "content": [{"type": "text", "text": _SCORE_JSON}],
-                                "model": "claude-sonnet-4-20250514",
+                                "model": "claude-sonnet-5",
                             },
                         },
                     }
@@ -321,7 +321,7 @@ class TestGetBatchResults:
                             "type": "succeeded",
                             "message": {
                                 "content": [{"type": "text", "text": _SCORE_JSON}],
-                                "model": "claude-sonnet-4-20250514",
+                                "model": "claude-sonnet-5",
                             },
                         },
                     }
