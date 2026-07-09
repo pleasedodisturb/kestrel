@@ -206,6 +206,19 @@ For nightly discovery scoring (not time-sensitive), Kestrel can use Anthropic's 
 
 Not every question needs the smartest model. "Is this job relevant?" is a simple yes/no — a small, fast model handles it perfectly. "Write a compelling cover letter for this specific role" benefits from a larger model that understands nuance. Kestrel matches the model to the task automatically.
 
+**For bulk scoring, cheap and well-calibrated beats big.** We benchmarked 6 models on the same real jobs, using premium Claude Opus as the reference judge ([full results](../research/model-scoring-benchmark.md)). The takeaway is counterintuitive: a *bigger* model isn't automatically better at scoring, and premium models buy almost nothing for filtering.
+
+| Model | Agreement with premium Opus | Cost / 1,000 jobs |
+|---|---|---|
+| **Mistral Small** | **best** | **~$0.20** |
+| Llama 3.1 8B | close | ~$0.05 |
+| Claude Haiku 4.5 | close | ~$3.64 |
+| Claude Sonnet 4.6 | close | ~$9.63 |
+| Claude Opus (reference) | — | ~$46.87 |
+| Llama 3.3 70B | **worst — inflated + noisy** | ~$0.27 |
+
+Mistral Small agreed with premium Opus more closely than *any* other model — including the pricier Claudes — at a bottom-tier price. Meanwhile the mid-size Llama 3.3 70B was the *worst*: it systematically over-scored (rating most jobs a 5 when the calibrated models said ~2-3), which inflates your top tier with false positives. That's why Kestrel defaults its Mistral provider to **Mistral Small** for scoring — you can set `MISTRAL_MODEL=mistral-large-latest` if you want the flagship for deeper analysis. Reserve premium models (Claude) for the handful of shortlisted roles, not the 1,000-job funnel.
+
 ### Fallback Chain Ordering (Avoids Surprise Bills)
 
 Kestrel can chain providers so that if one is down or out of quota, scoring automatically falls through to the next. You set this with `AI_PROVIDER_FALLBACK`, a comma-separated list:
