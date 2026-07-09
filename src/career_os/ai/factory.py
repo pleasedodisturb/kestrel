@@ -106,7 +106,11 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     ),
     "mistral": lambda: MistralProvider(
         api_key=_resolve_api_key("MISTRAL_API_KEY", "mistral_api_key"),
-        model=os.getenv("MISTRAL_MODEL", "mistral-large-latest"),
+        # Mistral Small (not Large) is the default: a 2026-07 cost/quality
+        # benchmark found Small the best-value scorer for bulk job filtering —
+        # closest to premium Claude Opus at a fraction of the cost. Set
+        # MISTRAL_MODEL=mistral-large-latest to opt into the flagship for deep work.
+        model=os.getenv("MISTRAL_MODEL", "mistral-small-latest"),
     ),
     "huggingface": lambda: HuggingFaceProvider(
         api_key=_resolve_api_key("HF_API_KEY", "hf_api_key")
