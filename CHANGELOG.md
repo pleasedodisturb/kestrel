@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/pleasedodisturb/kestrel/compare/v0.19.0...v0.20.0) (2026-07-09)
+
+
+### Features
+
+* **G-1315:** default Mistral provider to Small (benchmark-driven scoring) ([#448](https://github.com/pleasedodisturb/kestrel/issues/448)) ([0489a9d](https://github.com/pleasedodisturb/kestrel/commit/0489a9d7af8e421a9d3fdcacade53f3bd58c600f))
+
 ## [0.19.0](https://github.com/pleasedodisturb/kestrel/compare/v0.18.0...v0.19.0) (2026-07-09)
 
 
