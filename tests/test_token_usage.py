@@ -127,7 +127,7 @@ class TestAnthropicUsageExtraction:
                 200,
                 json={
                     "content": [{"type": "text", "text": "hello"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {
                         "input_tokens": 100,
                         "output_tokens": 50,
@@ -157,7 +157,7 @@ class TestAnthropicUsageExtraction:
                 200,
                 json={
                     "content": [{"type": "text", "text": "hello"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                     "usage": {"input_tokens": 10, "output_tokens": 5},
                 },
                 request=httpx.Request("POST", url),
@@ -182,7 +182,7 @@ class TestAnthropicUsageExtraction:
                 200,
                 json={
                     "content": [{"type": "text", "text": "hello"}],
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-5",
                 },
                 request=httpx.Request("POST", url),
             )
@@ -212,7 +212,7 @@ class TestOpenRouterUsageExtraction:
                 200,
                 json={
                     "choices": [{"message": {"content": "hello"}}],
-                    "model": "anthropic/claude-sonnet-4",
+                    "model": "anthropic/claude-sonnet-5",
                     "usage": {
                         "prompt_tokens": 75,
                         "completion_tokens": 30,
@@ -240,7 +240,7 @@ class TestOpenRouterUsageExtraction:
                 200,
                 json={
                     "choices": [{"message": {"content": "hello"}}],
-                    "model": "anthropic/claude-sonnet-4",
+                    "model": "anthropic/claude-sonnet-5",
                 },
                 request=httpx.Request("POST", url),
             )

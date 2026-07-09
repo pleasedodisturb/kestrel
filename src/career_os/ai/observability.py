@@ -205,12 +205,12 @@ def flush() -> None:
 # Used for cost estimation only — not billing.
 _MODEL_PRICING: dict[str, tuple[float, float]] = {
     # (input $/MTok, output $/MTok)
-    "claude-opus-4-20250514": (15.0, 75.0),
-    "claude-sonnet-4-20250514": (3.0, 15.0),
-    "claude-haiku-4-5-20251001": (0.80, 4.0),
-    "anthropic/claude-opus-4": (15.0, 75.0),
-    "anthropic/claude-sonnet-4": (3.0, 15.0),
-    "anthropic/claude-haiku-4-5": (0.80, 4.0),
+    "claude-opus-4-8": (5.0, 25.0),
+    "claude-sonnet-5": (3.0, 15.0),
+    "claude-haiku-4-5-20251001": (1.0, 5.0),
+    "anthropic/claude-opus-4.8": (5.0, 25.0),
+    "anthropic/claude-sonnet-5": (3.0, 15.0),
+    "anthropic/claude-haiku-4-5": (1.0, 5.0),
     "meta-llama/Llama-3.3-70B-Instruct-Turbo": (0.88, 0.88),
 }
 _DEFAULT_PRICING = (3.0, 15.0)  # Sonnet-class fallback

@@ -79,7 +79,7 @@ def _make_ai_response(structured: ScoreResult | None = None) -> AIResponse:
         provider="anthropic",
         feature=AIFeature.score,
         structured=structured,
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5",
     )
 
 
