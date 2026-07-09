@@ -105,6 +105,9 @@ jobs:
           # variable to enable cross-vendor fallback. Per-provider keys
           # below are read by career_os.ai.factory; missing ones are
           # silently skipped from the chain.
+          # COST: order the chain cheapest-capable first, premium LAST — whatever
+          # sits at the end is what you pay when everything before it is exhausted.
+          # See docs/guides/cost-optimization.md "Fallback Chain Ordering".
           AI_PROVIDER_FALLBACK: ${{ vars.AI_PROVIDER_FALLBACK }}
           AI_PROVIDER: ${{ vars.AI_PROVIDER }}
           SCORING_MAX_FAILURE_RATE: ${{ vars.SCORING_MAX_FAILURE_RATE || '0.50' }}

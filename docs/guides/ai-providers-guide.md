@@ -64,6 +64,8 @@ OpenRouter is like a phone plan for AI. You load credits, Kestrel uses them when
 
 **Setup:** Click "Connect to OpenRouter" in Settings → log in → done. No copying API keys.
 
+**Cheap or premium — your choice.** OpenRouter can serve a free/cheap open model (like Llama 3.3 70B) *or* a premium one (like Claude), and which you get depends entirely on the `OPENROUTER_MODEL` setting. If you're using OpenRouter as an inexpensive catch in a fallback chain, point it at a cheap model; if it's your premium tier, point it at a premium one — and place it in the chain accordingly (see [Fallback Chain Ordering](cost-optimization.md#fallback-chain-ordering-avoids-surprise-bills)).
+
 *Best for:* Most users who want quality AI without complexity.
 
 ### 3. Direct Anthropic (Claude) — Best for Power Users
@@ -169,6 +171,10 @@ AI pricing is measured in "tokens" (roughly 4 characters = 1 token), but you don
 For context: a single coffee costs more than a month of AI-powered job searching.
 
 With prompt caching enabled, discovery sweeps (scoring 50+ jobs at once) cost 88% less because Kestrel reuses your cached profile instead of re-sending it each time.
+
+### Where you put providers changes the bill
+
+If you chain providers with `AI_PROVIDER_FALLBACK`, the *order* decides which one does the work — and which one you pay when the cheaper ones run out of quota. Put cheap and free providers first and a premium one last; whatever sits at the end of the chain is what a busy or exhausted day bills to. Get this backwards and a single day of scoring can cost 20-50× what it should. See [Fallback Chain Ordering](cost-optimization.md#fallback-chain-ordering-avoids-surprise-bills) for the rule and a worked example.
 
 ---
 

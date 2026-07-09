@@ -206,6 +206,29 @@ For nightly discovery scoring (not time-sensitive), Kestrel can use Anthropic's 
 
 Not every question needs the smartest model. "Is this job relevant?" is a simple yes/no — a small, fast model handles it perfectly. "Write a compelling cover letter for this specific role" benefits from a larger model that understands nuance. Kestrel matches the model to the task automatically.
 
+### Fallback Chain Ordering (Avoids Surprise Bills)
+
+Kestrel can chain providers so that if one is down or out of quota, scoring automatically falls through to the next. You set this with `AI_PROVIDER_FALLBACK`, a comma-separated list:
+
+```
+AI_PROVIDER_FALLBACK=groq,cerebras,sambanova,openrouter,anthropic
+```
+
+The order is the whole game, and there's one rule worth burning into memory: **whatever sits at the end of your chain is what you pay when everything before it runs out.** A chain tries each provider in turn and stops at the first one that answers. So on a normal day the cheapest provider at the front does all the work. But the day your free providers hit their daily limit, every request marches down the chain to the last entry — and if that last entry is a premium model, you can wake up to a bill for a full day of scoring at premium rates instead of the ~$0 you expected.
+
+The fix is simply to order the chain **cheapest-capable first, premium last** — and to make the premium tail-end a deliberate choice, not an accident:
+
+- **Front of the chain:** the free providers (Groq, Cerebras, SambaNova) or a cheap paid model. This does the everyday work.
+- **Middle:** a cheap paid catch (for example, OpenRouter pointed at an inexpensive open model like Llama 3.3 70B via `OPENROUTER_MODEL`) so an exhausted free tier lands somewhere cheap, not somewhere expensive.
+- **End:** a premium provider (Anthropic direct, or OpenRouter with a premium model) as a genuine last resort. It should fire rarely — only when everything cheaper has failed.
+
+> A worked example of getting this wrong: if your chain is `mistral,together,anthropic` and Mistral and Together both run dry, **100% of that day's scoring bills on premium Claude** — often 20-50× what a cheap model would have cost. Adding one cheap provider before the premium tail (`mistral,together,openrouter,anthropic`, with `OPENROUTER_MODEL` set to a cheap Llama) turns that same failure day from dollars into cents.
+
+Two settings make the tail-end intentional rather than accidental:
+
+- `OPENROUTER_MODEL` — OpenRouter is an aggregator that can serve both cheap open models and premium ones. Set this explicitly. If you want OpenRouter as a *cheap* catch, point it at something like `meta-llama/llama-3.3-70b-instruct`; if you want it as your *premium* unlock, point it at a premium model and put it at the end of the chain.
+- Provider position — the position in `AI_PROVIDER_FALLBACK` decides when each provider is reached, so a premium provider belongs last.
+
 ### All Together
 
 These optimizations stack. Applied together, they reduce the baseline cost of scoring 600 jobs/day from ~$99/month to ~$5.40/month — a 94.5% reduction. On the free tier, the cost is $0.
