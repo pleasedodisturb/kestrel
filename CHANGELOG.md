@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.19.0](https://github.com/pleasedodisturb/kestrel/compare/v0.18.0...v0.19.0) (2026-07-09)
+
+
+### Features
+
+* **G-1282:** port tiered application model + SmartRecruiters/Personio scrapers (PII-stripped) ([#439](https://github.com/pleasedodisturb/kestrel/issues/439)) ([3804900](https://github.com/pleasedodisturb/kestrel/commit/38049007a7e48c358ab6d5c30600c55149b21b59))
+
+
+### Bug Fixes
+
+* **G-1295:** correct npm-package README license from MIT to AGPL-3.0-or-later ([#440](https://github.com/pleasedodisturb/kestrel/issues/440)) ([b5f746b](https://github.com/pleasedodisturb/kestrel/commit/b5f746b54243fe0984d9e042e5ffb143ddc79262))
+
+
+### Documentation
+
+* **G-1305:** add COE for the initial-commit PII exposure ([#445](https://github.com/pleasedodisturb/kestrel/issues/445)) ([e766c04](https://github.com/pleasedodisturb/kestrel/commit/e766c0413510fd028008667cf1648f6370a06349))
+* **G-1315:** explain cost-optimal fallback-chain ordering ([#446](https://github.com/pleasedodisturb/kestrel/issues/446)) ([dea0d6a](https://github.com/pleasedodisturb/kestrel/commit/dea0d6ac60b4098bc7163dd53ff19c90b3a9cbcb))
+
 ## [0.18.0](https://github.com/pleasedodisturb/kestrel/compare/v0.17.1...v0.18.0) (2026-07-05)
 
 
