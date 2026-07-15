@@ -129,6 +129,11 @@ from career_os.cli.warn import warn_app  # noqa: E402
 
 app.add_typer(warn_app, name="warn")
 
+# Scoring diagnostics subcommand group (Scoring Engine v2 / G-1336)
+from career_os.cli.scoring import scoring_app  # noqa: E402
+
+app.add_typer(scoring_app, name="scoring")
+
 
 # ---------------------------------------------------------------------------
 # Database helpers

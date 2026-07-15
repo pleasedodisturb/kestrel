@@ -1,0 +1,36 @@
+{
+  "metrics": {
+    "scoring_golden_set.json": {
+      "kappa": -0.0442,
+      "n": 20,
+      "ndcg@5": 0.6312
+    },
+    "scoring_golden_set_design.json": {
+      "kappa": -0.036,
+      "n": 20,
+      "ndcg@5": 0.44
+    },
+    "scoring_golden_set_finance.json": {
+      "kappa": 0.0244,
+      "n": 20,
+      "ndcg@5": 0.6514
+    },
+    "scoring_golden_set_healthcare.json": {
+      "kappa": -0.0385,
+      "n": 20,
+      "ndcg@5": 0.413
+    },
+    "scoring_golden_set_legal.json": {
+      "kappa": -0.0843,
+      "n": 20,
+      "ndcg@5": 0.3304
+    },
+    "scoring_golden_set_product.json": {
+      "kappa": -0.1765,
+      "n": 20,
+      "ndcg@5": 0.5095
+    }
+  },
+  "note": "Baseline \u03ba/NDCG@5 from the real score_job over the MockProvider. Deltas gate the eval; regenerate deliberately when scoring changes.",
+  "provider": "mock"
+}

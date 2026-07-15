@@ -144,6 +144,62 @@ class ScoredJob(Base):
         )
 
 
+class ShadowScore(Base):
+    """A candidate-variant score logged in parallel with the live scorer.
+
+    Scoring Engine v2 (G-1336, finding I): when ``SCORING_SHADOW_VARIANT`` is
+    set, every production scoring call ALSO scores the job with a candidate
+    rubric/model and records the result here. Shadow scores are **never**
+    surfaced to the user — they exist only to compare a candidate change against
+    the live scorer on real production jobs before promotion. Mirrors the G-272
+    embedding-shadow pattern ("measure on production, not a proxy").
+
+    ``primary_fit_score`` snapshots the live score at the same instant so the
+    prod-vs-shadow delta needs no join back to ``scored_jobs``.
+    """
+
+    __tablename__ = "shadow_scores"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    profile_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+    )
+    # Nullable + ondelete SET NULL so pruning a live score never drops the
+    # shadow audit trail, and so a shadow can be logged even when the primary
+    # score is not persisted (e.g. offline comparator runs).
+    scored_job_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("scored_jobs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    discovered_job_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("discovered_jobs.id"), nullable=True, index=True
+    )
+
+    # Free-form variant label (e.g. "0to5-scale", "mistral-large", "rubric-v2").
+    variant: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+
+    # Candidate-variant scores.
+    fit_score: Mapped[float] = mapped_column(Float, nullable=False)
+    desire_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quadrant: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # Snapshot of the live score at logging time (for a join-free prod-vs-shadow diff).
+    primary_fit_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Full candidate breakdown + reasoning (JSON / text) for later inspection.
+    dimensional_scores: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ShadowScore(id={self.id}, variant='{self.variant}', "
+            f"fit_score={self.fit_score}, profile_id={self.profile_id})>"
+        )
+
+
 class ScoringFeedback(Base):
     """User feedback on an AI-generated score.
 
