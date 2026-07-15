@@ -1,0 +1,107 @@
+{
+  "fixture": "scoring_golden_set_legal.json",
+  "label_source": "interim-model-derived",
+  "labels": {
+    "lg-01": {
+      "input_hash": "sha256:e18d6a563b70dce14fa9d0eed1d16c1ac05735fd0daa426f7e50a064b77a118e",
+      "relevance": 2,
+      "tier": "strong"
+    },
+    "lg-02": {
+      "input_hash": "sha256:6eec907f9768471935343cc04945e8e4fdb009125bb3d35981b676b5459eadd9",
+      "relevance": 1,
+      "tier": "mediocre"
+    },
+    "lg-03": {
+      "input_hash": "sha256:4f2db4ee911398706a12c317141819152a5804a7bd3e0d156bc8585607b5cb8f",
+      "relevance": 3,
+      "tier": "dream"
+    },
+    "lg-04": {
+      "input_hash": "sha256:30a46d085778bf52748d761f9b450e1d85b7b3f5221be09fc63b003d8b29a50a",
+      "relevance": 3,
+      "tier": "dream"
+    },
+    "lg-05": {
+      "input_hash": "sha256:71787b467e82ca3621fc1e38454e2e872cb60b81ec43bcc8187532a73c4dde18",
+      "relevance": 3,
+      "tier": "dream"
+    },
+    "lg-06": {
+      "input_hash": "sha256:5b810c50b8f3409b948879ae08b0018684daa4088decf32e810069c9aae4a756",
+      "relevance": 3,
+      "tier": "dream"
+    },
+    "lg-07": {
+      "input_hash": "sha256:e771a9e2efbe409c70c7d35a75d15cf3f74eac40995e1bf975c8b4423e9edd65",
+      "relevance": 3,
+      "tier": "dream"
+    },
+    "lg-08": {
+      "input_hash": "sha256:efe3d3b6cb017ec31c770cb388fb1cdd07e8d39c989c19a1b12fdcba53580fae",
+      "relevance": 3,
+      "tier": "dream"
+    },
+    "lg-09": {
+      "input_hash": "sha256:0a288551f6f9996593cb7c5d458feff05df46865ad0b45b23c8df06927c4cc8e",
+      "relevance": 1,
+      "tier": "mediocre"
+    },
+    "lg-10": {
+      "input_hash": "sha256:591a38beaf3253dbd45de2912e30e4578663414fdc8db977f2e6631cb92535b7",
+      "relevance": 2,
+      "tier": "strong"
+    },
+    "lg-11": {
+      "input_hash": "sha256:2b55eedd0e530ca43ff9b727df4cbb1a88468dd3a1603f0cb06bd9f98e993b71",
+      "relevance": 0,
+      "tier": "reject"
+    },
+    "lg-12": {
+      "input_hash": "sha256:575b666c9c5d6e5e93ab3892846a07ca42a303e58cf846fa035a78c8703af7ba",
+      "relevance": 0,
+      "tier": "reject"
+    },
+    "lg-13": {
+      "input_hash": "sha256:1d96a544ac817136742595d10d3aa13cdd30640f0a52ce3d372bcbd82149805a",
+      "relevance": 1,
+      "tier": "mediocre"
+    },
+    "lg-14": {
+      "input_hash": "sha256:c8275885b939d48209bf820071c1b2a039ba443bc7981b373f4796f780e6f195",
+      "relevance": 1,
+      "tier": "mediocre"
+    },
+    "lg-15": {
+      "input_hash": "sha256:cbc4e70e460f1948edc8a4a1bf8dea87fcd2172ee1c373f66792604a85a531a6",
+      "relevance": 1,
+      "tier": "mediocre"
+    },
+    "lg-16": {
+      "input_hash": "sha256:ed064aa33d98e6e5ae52ca915f6e0a85a10d5c82244ffd6d594f727983486c75",
+      "relevance": 2,
+      "tier": "strong"
+    },
+    "lg-17": {
+      "input_hash": "sha256:63aa3ce0057223a9c863d51f2cd532ffd118e188fc0a535f415565e2d93fd97d",
+      "relevance": 3,
+      "tier": "dream"
+    },
+    "lg-18": {
+      "input_hash": "sha256:3e4ebe07f12d8ee62366306625e46c89c7e96817d8b82224c96d55e456901a6a",
+      "relevance": 1,
+      "tier": "mediocre"
+    },
+    "lg-19": {
+      "input_hash": "sha256:0f6997e8ca1d5fb0509600d45c5e08e8678cf8544351269a45659cef1e8d49ca",
+      "relevance": 0,
+      "tier": "reject"
+    },
+    "lg-20": {
+      "input_hash": "sha256:fc40ea2cce821c5d15181b03a7152e4a460083a213a803695b05a13a0011f724",
+      "relevance": 1,
+      "tier": "mediocre"
+    }
+  },
+  "note": "INTERIM labels seeded from the golden-set `category` field (LLM-authored). NOT human ground truth. Replace `tier`/`relevance` with human rank/quadrant judgments to make the \u03ba/NDCG gate meaningful (G-1336 follow-up)."
+}
