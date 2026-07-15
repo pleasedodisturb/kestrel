@@ -1,10 +1,15 @@
-"""Unit tests for scoring shadow-mode (G-1336, finding I)."""
+"""Unit tests for scoring shadow-mode (G-1336, finding I).
+
+Covers real variant resolution (distinct provider, model override, self-compare
++ unknown → no-op), the fire-and-forget background worker on its own session,
+the score_job wiring, and the comparator.
+"""
 
 from __future__ import annotations
 
 import pytest
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from career_os.ai.base import AIProvider
 from career_os.ai.mock_provider import MockProvider
@@ -13,9 +18,11 @@ from career_os.database import Base
 from career_os.models.models import Profile
 from career_os.models.scoring import ShadowScore
 from career_os.services.scoring_shadow import (
+    build_shadow_provider,
     compare_primary_vs_shadow,
-    maybe_record_shadow_score,
     record_shadow_score,
+    run_shadow_score,
+    schedule_shadow_score,
 )
 
 
@@ -54,48 +61,42 @@ class _BoomProvider(AIProvider):
         return [0.0] * 768
 
 
-@pytest.mark.asyncio
-async def test_maybe_shadow_noop_when_unset(db_session, monkeypatch):
-    monkeypatch.setattr(settings, "scoring_shadow_variant", "")
-    result = await maybe_record_shadow_score(
-        db_session, profile_id=1, prompt="p", profile_data={"weights": {}}, primary_fit_score=7.0
-    )
-    assert result is None
-    assert db_session.query(ShadowScore).count() == 0
+# ---------------------------------------------------------------------------
+# build_shadow_provider — real, distinct variant resolution
+# ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_maybe_shadow_logs_when_set(db_session, monkeypatch):
-    monkeypatch.setattr(settings, "scoring_shadow_variant", "rubric-v2")
-    result = await maybe_record_shadow_score(
-        db_session,
-        profile_id=1,
-        prompt="Senior TPM at Acme",
-        profile_data={"weights": {}},
-        primary_fit_score=6.5,
-        provider=MockProvider(),
-    )
-    assert result is not None
-    row = db_session.query(ShadowScore).one()
-    assert row.variant == "rubric-v2"
-    assert row.primary_fit_score == 6.5
-    assert 0.0 <= row.fit_score <= 10.0
+def test_build_shadow_provider_distinct():
+    prov = build_shadow_provider("mock", live_provider_name="anthropic")
+    assert prov is not None
+    assert prov.name == "mock"
 
 
-@pytest.mark.asyncio
-async def test_shadow_is_defensive_on_provider_failure(db_session, monkeypatch):
-    monkeypatch.setattr(settings, "scoring_shadow_variant", "bad")
-    # Must not raise, must not persist a partial row.
-    result = await maybe_record_shadow_score(
-        db_session,
-        profile_id=1,
-        prompt="p",
-        profile_data={"weights": {}},
-        primary_fit_score=5.0,
-        provider=_BoomProvider(),
-    )
-    assert result is None
-    assert db_session.query(ShadowScore).count() == 0
+def test_build_shadow_provider_self_compare_noops():
+    # Same provider, no model override → nothing to learn → None.
+    assert build_shadow_provider("mock", live_provider_name="mock") is None
+
+
+def test_build_shadow_provider_model_override_allows_same_provider():
+    # Same provider but a DIFFERENT model is a legit comparison → resolves, and
+    # the override is applied to the provider's model (stored as `_model`).
+    prov = build_shadow_provider("ollama:llama-custom", live_provider_name="ollama")
+    assert prov is not None
+    assert prov._model == "llama-custom"
+
+
+def test_build_shadow_provider_unknown_noops():
+    assert build_shadow_provider("nonexistent-provider") is None
+
+
+def test_build_shadow_provider_empty_noops():
+    assert build_shadow_provider("") is None
+    assert build_shadow_provider("   ") is None
+
+
+# ---------------------------------------------------------------------------
+# record_shadow_score / run_shadow_score
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -111,15 +112,123 @@ async def test_record_shadow_score_persists_fields(db_session):
     )
     assert row.id is not None
     assert row.variant == "mistral-large"
+    assert row.primary_fit_score == 4.2
     assert row.reasoning  # MockProvider always returns reasoning
 
 
 @pytest.mark.asyncio
-async def test_shadow_hook_fires_inside_score_job(db_session, monkeypatch):
-    """score_job logs a shadow row linked to the persisted primary score."""
+async def test_run_shadow_score_uses_own_session(db_session):
+    factory = lambda: Session(bind=db_session.get_bind())  # noqa: E731
+    row = await run_shadow_score(
+        profile_id=1,
+        variant="rubric-v2",
+        prompt="Senior TPM at Acme",
+        profile_data={"weights": {}},
+        primary_fit_score=6.5,
+        provider=MockProvider(),
+        session_factory=factory,
+    )
+    assert row is not None
+    # Written via a separate session, visible from the test session (shared engine).
+    persisted = db_session.query(ShadowScore).one()
+    assert persisted.variant == "rubric-v2"
+    assert persisted.primary_fit_score == 6.5
+
+
+@pytest.mark.asyncio
+async def test_run_shadow_score_is_defensive(db_session):
+    factory = lambda: Session(bind=db_session.get_bind())  # noqa: E731
+    row = await run_shadow_score(
+        profile_id=1,
+        variant="bad",
+        prompt="p",
+        profile_data={"weights": {}},
+        primary_fit_score=5.0,
+        provider=_BoomProvider(),
+        session_factory=factory,
+    )
+    assert row is None
+    assert db_session.query(ShadowScore).count() == 0
+
+
+# ---------------------------------------------------------------------------
+# schedule_shadow_score — fire-and-forget gating
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_schedule_noop_when_unset(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "scoring_shadow_variant", "")
+    task = schedule_shadow_score(
+        profile_id=1, prompt="p", profile_data={"weights": {}}, primary_fit_score=7.0
+    )
+    assert task is None
+
+
+@pytest.mark.asyncio
+async def test_schedule_noop_when_sample_zero(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "scoring_shadow_variant", "mock")
+    monkeypatch.setattr(settings, "scoring_shadow_sample", 0.0)
+    task = schedule_shadow_score(
+        profile_id=1, prompt="p", profile_data={"weights": {}}, primary_fit_score=7.0
+    )
+    assert task is None
+
+
+@pytest.mark.asyncio
+async def test_schedule_noop_on_self_compare(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "scoring_shadow_variant", "mock")
+    monkeypatch.setattr(settings, "scoring_shadow_sample", 1.0)
+    task = schedule_shadow_score(
+        profile_id=1,
+        prompt="p",
+        profile_data={"weights": {}},
+        primary_fit_score=7.0,
+        live_provider_name="mock",  # same as variant → self-compare → no-op
+    )
+    assert task is None
+
+
+@pytest.mark.asyncio
+async def test_schedule_returns_task_and_writes(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "scoring_shadow_variant", "mock")
+    monkeypatch.setattr(settings, "scoring_shadow_sample", 1.0)
+    factory = lambda: Session(bind=db_session.get_bind())  # noqa: E731
+    task = schedule_shadow_score(
+        profile_id=1,
+        prompt="Senior TPM",
+        profile_data={"weights": {}},
+        primary_fit_score=6.0,
+        scored_job_id=None,
+        live_provider_name="anthropic",  # distinct from "mock" → runs
+        session_factory=factory,
+    )
+    assert task is not None
+    await task  # fire-and-forget task; drive it to completion in the test
+    row = db_session.query(ShadowScore).one()
+    assert row.variant == "mock"
+    assert row.primary_fit_score == 6.0
+
+
+# ---------------------------------------------------------------------------
+# score_job wiring — schedules (does not await) the shadow
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_score_job_schedules_shadow_without_blocking(db_session, monkeypatch):
+    from career_os.services import scoring_shadow
     from career_os.services.scoring import score_job
 
-    monkeypatch.setattr(settings, "scoring_shadow_variant", "0to5-scale")
+    calls: list[dict] = []
+
+    def _spy(**kwargs):
+        calls.append(kwargs)
+        return None  # simulate fire-and-forget; return without awaiting anything
+
+    monkeypatch.setattr(settings, "scoring_shadow_variant", "mistral")
+    monkeypatch.setattr(scoring_shadow, "schedule_shadow_score", _spy)
+
     scored = await score_job(
         db_session,
         1,
@@ -127,10 +236,28 @@ async def test_shadow_hook_fires_inside_score_job(db_session, monkeypatch):
         job_title="Technical Program Manager",
         job_company="Acme",
     )
-    shadow = db_session.query(ShadowScore).one()
-    assert shadow.variant == "0to5-scale"
-    assert shadow.scored_job_id == scored.id
-    assert shadow.primary_fit_score == scored.fit_score
+    assert len(calls) == 1
+    assert calls[0]["scored_job_id"] == scored.id
+    assert calls[0]["primary_fit_score"] == scored.fit_score
+    assert calls[0]["live_provider_name"] == "mock"
+
+
+@pytest.mark.asyncio
+async def test_score_job_does_not_schedule_when_unset(db_session, monkeypatch):
+    from career_os.services import scoring_shadow
+    from career_os.services.scoring import score_job
+
+    calls: list[dict] = []
+    monkeypatch.setattr(settings, "scoring_shadow_variant", "")
+    monkeypatch.setattr(scoring_shadow, "schedule_shadow_score", lambda **k: calls.append(k))
+
+    await score_job(db_session, 1, "Some role", job_title="X", job_company="Y")
+    assert calls == []
+
+
+# ---------------------------------------------------------------------------
+# comparator
+# ---------------------------------------------------------------------------
 
 
 def test_compare_primary_vs_shadow_bundle():

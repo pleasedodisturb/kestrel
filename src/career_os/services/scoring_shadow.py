@@ -1,40 +1,95 @@
 """Scoring shadow-mode — log a candidate variant beside the live scorer.
 
 Scoring Engine v2 (G-1336, finding I). When ``SCORING_SHADOW_VARIANT`` is set,
-:func:`maybe_record_shadow_score` runs a *second*, candidate scoring pass on
-each real production job and writes it to the ``shadow_scores`` table. The
-shadow result is **never** surfaced to the user — it exists only so a candidate
-rubric/model can be measured against the live scorer on production traffic
-before promotion. This makes "measure on production, not a proxy" structurally
-unskippable and mirrors the G-272 embedding-shadow pattern.
+`score_job` *schedules* a second, candidate scoring pass on the same production
+job and writes it to the ``shadow_scores`` table. The shadow result is **never**
+surfaced to the user — it exists only so a candidate model/rubric can be measured
+against the live scorer on production traffic before promotion. Mirrors the G-272
+embedding-shadow pattern ("measure on production, not a proxy").
 
-The comparator (:func:`compare_primary_vs_shadow`) scores prod-vs-shadow
-agreement against a labeled reference (the golden set) using the shared
-:mod:`career_os.services.scoring_eval` primitives.
+Two properties the review demanded and this module guarantees:
 
-Design notes:
-* The hook is defensively wrapped — a shadow failure must never break the live
-  scoring path (it is a diagnostic side-channel).
-* By default the shadow reuses the active provider (a deterministic mock in
-  tests, so the eval stays free). A caller may inject a variant provider to
-  compare a different model/rubric; the variant label is recorded verbatim.
+* **A real, distinct variant.** ``SCORING_SHADOW_VARIANT`` selects an actual
+  provider (``"mistral"``) or provider+model (``"mistral:mistral-large-latest"``)
+  via the AI factory. If it resolves to the *same* provider+model as the live
+  scorer (a self-comparison) or cannot be built, it **no-ops cleanly** — it never
+  compares the live model to itself.
+* **Zero added live latency.** The shadow runs **fire-and-forget** on its own
+  asyncio task with its own DB session, so enabling it never slows the live
+  score. It DOES cost an extra (background) LLM call per sampled job — bound the
+  spend with ``SCORING_SHADOW_SAMPLE`` (fraction 0–1). Off by default.
+
+Every entry point is fully defensive: a shadow failure is logged and swallowed.
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import logging
+import random
 
 from sqlalchemy.orm import Session
 
 from career_os.ai.base import AIProvider
 from career_os.ai.factory import get_ai_provider
 from career_os.config import settings
+from career_os.database import SessionLocal
 from career_os.models.scoring import ShadowScore
 from career_os.schemas.ai import ScoreResult
 from career_os.schemas.scoring import classify_quadrant
 
 logger = logging.getLogger(__name__)
+
+
+def build_shadow_provider(
+    variant: str,
+    *,
+    live_provider_name: str | None = None,
+) -> AIProvider | None:
+    """Resolve ``SCORING_SHADOW_VARIANT`` to a REAL, distinct provider.
+
+    ``variant`` is ``"<provider>"`` or ``"<provider>:<model>"`` (e.g.
+    ``"mistral"``, ``"anthropic:claude-opus-4"``). Returns the built provider, or
+    ``None`` when the variant is empty, names an unknown provider, fails to build
+    (e.g. missing API key), or would merely compare the live scorer to itself
+    (same provider name + no model override). ``None`` means "no shadow" — the
+    caller no-ops.
+    """
+    variant = (variant or "").strip()
+    if not variant:
+        return None
+
+    name, _, model = variant.partition(":")
+    name = name.strip().lower()
+    model = model.strip() or None
+
+    # Self-comparison guard: same provider and no model override → nothing to learn.
+    if live_provider_name and name == live_provider_name.strip().lower() and model is None:
+        logger.info(
+            "Shadow variant %r matches the live provider with no model override — skipping "
+            "(it would compare the model to itself)",
+            variant,
+        )
+        return None
+
+    try:
+        provider = get_ai_provider(name)
+    except Exception:
+        logger.warning("Shadow variant %r could not be resolved to a provider — skipping", variant)
+        return None
+
+    # Providers store the chat model as the private ``_model`` attribute (a
+    # shared convention across all provider classes); fall back to a public
+    # ``model`` for any that expose one.
+    if model is not None:
+        if hasattr(provider, "_model"):
+            provider._model = model
+        elif hasattr(provider, "model"):
+            provider.model = model  # type: ignore[attr-defined]
+
+    return provider
 
 
 async def record_shadow_score(
@@ -45,18 +100,16 @@ async def record_shadow_score(
     prompt: str,
     profile_data: dict,
     primary_fit_score: float | None,
+    provider: AIProvider,
     scored_job_id: int | None = None,
     discovered_job_id: int | None = None,
-    provider: AIProvider | None = None,
 ) -> ShadowScore | None:
-    """Score a job with a candidate variant and persist it to ``shadow_scores``.
+    """Score a job with a candidate ``provider`` and persist it to ``shadow_scores``.
 
     Returns the persisted :class:`ShadowScore`, or ``None`` if the variant
-    provider did not return a usable structured result. Raises nothing that the
-    live path should care about — the caller wraps this defensively.
+    provider did not return a usable structured result.
     """
-    prov = provider if provider is not None else get_ai_provider()
-    response = await prov.score(job_description=prompt, profile_data=profile_data)
+    response = await provider.score(job_description=prompt, profile_data=profile_data)
 
     if not (response.structured and isinstance(response.structured, ScoreResult)):
         logger.warning("Shadow variant %s returned no structured score — skipping log", variant)
@@ -94,25 +147,24 @@ async def record_shadow_score(
     return shadow
 
 
-async def maybe_record_shadow_score(
-    db: Session,
+async def run_shadow_score(
     *,
     profile_id: int,
+    variant: str,
     prompt: str,
     profile_data: dict,
-    primary_fit_score: float,
+    primary_fit_score: float | None,
+    provider: AIProvider,
     scored_job_id: int | None = None,
     discovered_job_id: int | None = None,
-    provider: AIProvider | None = None,
+    session_factory=SessionLocal,
 ) -> ShadowScore | None:
-    """Log a shadow score iff ``SCORING_SHADOW_VARIANT`` is configured.
+    """Background body: score + log a shadow on a fresh, independent DB session.
 
-    Fully defensive: any failure is logged and swallowed so shadow-mode can
-    never break live scoring. No-op (returns ``None``) when the setting is empty.
+    Runs off the live request path (its own session), so it never touches the
+    caller's transaction. Fully defensive — any failure is logged and swallowed.
     """
-    variant = settings.scoring_shadow_variant.strip()
-    if not variant:
-        return None
+    db = session_factory()
     try:
         return await record_shadow_score(
             db,
@@ -121,16 +173,69 @@ async def maybe_record_shadow_score(
             prompt=prompt,
             profile_data=profile_data,
             primary_fit_score=primary_fit_score,
+            provider=provider,
             scored_job_id=scored_job_id,
             discovered_job_id=discovered_job_id,
-            provider=provider,
         )
     except Exception:
-        db.rollback()
-        logger.warning(
-            "Shadow scoring failed (variant=%s) — live score unaffected", variant, exc_info=True
-        )
+        with contextlib.suppress(Exception):
+            db.rollback()
+        logger.warning("Background shadow scoring failed (variant=%s)", variant, exc_info=True)
         return None
+    finally:
+        db.close()
+
+
+def schedule_shadow_score(
+    *,
+    profile_id: int,
+    prompt: str,
+    profile_data: dict,
+    primary_fit_score: float,
+    scored_job_id: int | None = None,
+    discovered_job_id: int | None = None,
+    live_provider_name: str | None = None,
+    session_factory=SessionLocal,
+) -> asyncio.Task | None:
+    """Fire-and-forget a shadow score iff configured. Adds NO latency to the caller.
+
+    Gates on ``SCORING_SHADOW_VARIANT`` (must resolve to a distinct provider) and
+    ``SCORING_SHADOW_SAMPLE`` (fraction of jobs to shadow), then spawns an
+    asyncio task and returns immediately. Returns the scheduled task, or ``None``
+    when shadow-mode is off, this job is not sampled, the variant can't resolve,
+    or there is no running event loop.
+    """
+    variant = settings.scoring_shadow_variant.strip()
+    if not variant:
+        return None
+
+    sample = settings.scoring_shadow_sample
+    if sample < 1.0 and random.random() >= max(sample, 0.0):
+        return None
+
+    provider = build_shadow_provider(variant, live_provider_name=live_provider_name)
+    if provider is None:
+        return None
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        logger.debug("No running event loop — skipping shadow score for variant %s", variant)
+        return None
+
+    return loop.create_task(
+        run_shadow_score(
+            profile_id=profile_id,
+            variant=variant,
+            prompt=prompt,
+            profile_data=profile_data,
+            primary_fit_score=primary_fit_score,
+            provider=provider,
+            scored_job_id=scored_job_id,
+            discovered_job_id=discovered_job_id,
+            session_factory=session_factory,
+        )
+    )
 
 
 def compare_primary_vs_shadow(

@@ -83,16 +83,22 @@ class Settings(BaseSettings):
     borderline_low_threshold: float = 4.0
     borderline_high_threshold: float = 6.5
 
-    # Scoring shadow-mode (Scoring Engine v2 / G-1336, finding I) — when set to a
-    # non-empty variant label, every production scoring call ALSO scores the job
-    # with a candidate rubric/model in parallel and logs the result to the
-    # ``shadow_scores`` table. Shadow scores are NEVER surfaced to the user; they
-    # exist only to compare a candidate change against the live scorer on real
-    # production jobs before promotion. Mirrors the G-272 embedding-shadow pattern.
-    # Opt-in and empty by default (a live shadow variant means an extra paid LLM
-    # call per job — see the COST guardrail). The variant string is free-form and
-    # recorded verbatim (e.g. "0to5-scale", "mistral-large", "rubric-v2").
+    # Scoring shadow-mode (Scoring Engine v2 / G-1336, finding I) — when set,
+    # production scoring ALSO scores the job with a DISTINCT candidate provider
+    # and logs it to the ``shadow_scores`` table (never surfaced), so a candidate
+    # can be measured against the live scorer on real jobs before promotion.
+    # Format: "<provider>" or "<provider>:<model>" (e.g. "mistral",
+    # "anthropic:claude-opus-4"); it must resolve to a provider DIFFERENT from the
+    # live one (a self-comparison no-ops). The shadow runs fire-and-forget on its
+    # own task/session, so it adds NO latency to the live score — but it DOES cost
+    # an extra background LLM call per sampled job (see the COST guardrail). Empty
+    # (off) by default; bound the spend with SCORING_SHADOW_SAMPLE.
     scoring_shadow_variant: str = ""
+
+    # Fraction (0.0–1.0) of scored jobs to shadow when scoring_shadow_variant is
+    # set. 1.0 = every job (default), 0.1 = ~10% — the lever that bounds shadow
+    # cost on high-volume runs.
+    scoring_shadow_sample: float = 1.0
 
     # Drift canary (Scoring Engine v2 / G-1336, finding J) — nightly-style check
     # that computes PSI of the score distribution vs a rolling baseline and

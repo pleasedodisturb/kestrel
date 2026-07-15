@@ -3497,19 +3497,21 @@ async def score_job(
     db.refresh(scored_job)
 
     # Shadow-mode (G-1336, finding I): when SCORING_SHADOW_VARIANT is set, score
-    # this same job with a candidate variant and log it beside the live score —
-    # never surfaced, fully defensive (a shadow failure never breaks live scoring).
+    # this same job with a DISTINCT candidate provider/model and log it beside the
+    # live score — never surfaced. Fire-and-forget (its own task + DB session) so
+    # it adds no latency to the live score, and fully defensive (a shadow failure
+    # never breaks live scoring). No-ops cleanly if the variant can't resolve.
     if settings.scoring_shadow_variant.strip():
-        from career_os.services.scoring_shadow import maybe_record_shadow_score
+        from career_os.services.scoring_shadow import schedule_shadow_score
 
-        await maybe_record_shadow_score(
-            db,
+        schedule_shadow_score(
             profile_id=profile_id,
             prompt=prompt,
             profile_data=profile_data,
             primary_fit_score=score_data.fit_score,
             scored_job_id=scored_job.id,
             discovered_job_id=discovered_job_id,
+            live_provider_name=provider.name,
         )
 
     return scored_job
