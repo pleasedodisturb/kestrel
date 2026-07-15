@@ -13,7 +13,12 @@ from urllib.parse import urlparse
 
 import httpx
 
-from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
+from career_os.ai.base import (
+    ROLE_FIT_GATE_PROMPT,
+    AIProvider,
+    ComplexityTier,
+    ProviderQuotaError,
+)
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
     _system_prompt_for_feature,
@@ -218,7 +223,7 @@ class AnthropicProvider(AIProvider):
 
         # -- user message: only the job description (changes per call) --------
         user_content = (
-            "Score this job against the candidate profile. "
+            ROLE_FIT_GATE_PROMPT + "Score this job against the candidate profile. "
             "Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
             "estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
             "readiness_score (0-100), career_alignment (0-10), "
@@ -332,7 +337,7 @@ class AnthropicProvider(AIProvider):
         requests: list[dict] = []
         for job in jobs:
             prompt = (
-                "Score this job against the candidate profile. "
+                ROLE_FIT_GATE_PROMPT + "Score this job against the candidate profile. "
                 "Return a JSON object with: fit_score (0-10), reasoning "
                 "(detailed, >=100 chars), "
                 "estimated_salary (string), effort_flag (low/medium/high), "

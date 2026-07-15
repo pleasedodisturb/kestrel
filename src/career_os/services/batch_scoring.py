@@ -17,7 +17,7 @@ import random
 import re
 
 from career_os.ai.base import AIProvider
-from career_os.schemas.ai import AIFeature, AIResponse, ScoreResult
+from career_os.schemas.ai import AIFeature, AIResponse, ScoreResult, apply_role_fit_gate
 
 logger = logging.getLogger(__name__)
 
@@ -100,10 +100,19 @@ def build_batch_prompt(
     jobs_section = "\n\n".join(job_blocks)
 
     prompt = (
-        f"Score each of the following {len(shuffled)} jobs against the candidate profile. "
+        f"Score each of the following {len(shuffled)} jobs against the candidate profile.\n"
+        f"Company prestige and a hot domain must NEVER substitute for role fit: a famous "
+        f"company hiring for the WRONG role family (e.g. a SWE/SRE/designer role for a "
+        f"PM/TPM candidate) is a poor FIT even if the candidate would love to work there. "
+        f"Reason before scoring, and list reasons to reject before reasons to hire.\n"
         f"Return a JSON ARRAY where each element is an object with:\n"
         f"- job_id (string matching the ID in the job header)\n"
-        f"- fit_score (0-10)\n"
+        f"- role_match (object: is_same_role_family (bool, true only if the job's role is the "
+        f"same family as the candidate's target job family), evidence (string)) — emit FIRST\n"
+        f"- disqualifiers (array of strings: missing mandatory license/clearance/visa, hard "
+        f"location conflict, or seniority off by >1 level; empty array if none)\n"
+        f"- fit_score (0-10; will be capped at 3 in code if role_match.is_same_role_family is "
+        f"false or disqualifiers is non-empty — score accordingly, do not inflate)\n"
         f"- reasoning (detailed, >=100 chars)\n"
         f"- estimated_salary (string)\n"
         f"- effort_flag (low/medium/high)\n"
@@ -217,7 +226,9 @@ def parse_batch_response(
             # and no job_id fields, map by position
             continue
         try:
-            score_result = ScoreResult.model_validate(item)
+            # Role-fit hard gate (G-1335): cap fit_score post-parse so company
+            # prestige can't substitute for role fit in the daily-scan batch path.
+            score_result = apply_role_fit_gate(ScoreResult.model_validate(item))
             results[job_id] = score_result
         except Exception as exc:
             logger.warning(
@@ -234,7 +245,7 @@ def parse_batch_response(
             if not isinstance(item, dict):
                 continue
             try:
-                score_result = ScoreResult.model_validate(item)
+                score_result = apply_role_fit_gate(ScoreResult.model_validate(item))
                 results[ordered_ids[idx]] = score_result
             except Exception as exc:
                 logger.warning(
@@ -340,7 +351,7 @@ async def batch_score_jobs(
                     profile_data=profile_data,
                 )
                 if response.structured and isinstance(response.structured, ScoreResult):
-                    all_results[str(job["id"])] = response.structured
+                    all_results[str(job["id"])] = apply_role_fit_gate(response.structured)
                 else:
                     logger.warning(
                         "Individual fallback for job %s did not return ScoreResult",
