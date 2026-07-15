@@ -63,7 +63,9 @@ jobs:
           alembic upgrade head
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short --cov=src/career_os --cov-report=xml
+        # Exclude the scoring golden-set eval (marker: eval) — it runs as a
+        # separate nightly gate (nightly.yml) so the fast unit run stays lean.
+        run: pytest tests/ -v --tb=short -m "not eval" --cov=src/career_os --cov-report=xml
 
       - name: Run tool-script tests
         # tools/ is dev tooling, not the shipped package, so these run as a

@@ -83,6 +83,30 @@ class Settings(BaseSettings):
     borderline_low_threshold: float = 4.0
     borderline_high_threshold: float = 6.5
 
+    # Scoring shadow-mode (Scoring Engine v2 / G-1336, finding I) — when set,
+    # production scoring ALSO scores the job with a DISTINCT candidate provider
+    # and logs it to the ``shadow_scores`` table (never surfaced), so a candidate
+    # can be measured against the live scorer on real jobs before promotion.
+    # Format: "<provider>" or "<provider>:<model>" (e.g. "mistral",
+    # "anthropic:claude-opus-4"); it must resolve to a provider DIFFERENT from the
+    # live one (a self-comparison no-ops). The shadow runs fire-and-forget on its
+    # own task/session, so it adds NO latency to the live score — but it DOES cost
+    # an extra background LLM call per sampled job (see the COST guardrail). Empty
+    # (off) by default; bound the spend with SCORING_SHADOW_SAMPLE.
+    scoring_shadow_variant: str = ""
+
+    # Fraction (0.0–1.0) of scored jobs to shadow when scoring_shadow_variant is
+    # set. 1.0 = every job (default), 0.1 = ~10% — the lever that bounds shadow
+    # cost on high-volume runs.
+    scoring_shadow_sample: float = 1.0
+
+    # Drift canary (Scoring Engine v2 / G-1336, finding J) — nightly-style check
+    # that computes PSI of the score distribution vs a rolling baseline and
+    # re-scores the frozen golden set, alerting via Pushover ONLY on the joint
+    # condition (PSI drift AND a κ/NDCG agreement drop). Opt-in because re-scoring
+    # the golden set with the live provider is a (small) paid op — off by default.
+    drift_canary_enabled: bool = False
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).

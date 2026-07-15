@@ -940,6 +940,51 @@ def send_credits_exhausted_alert(
 
 
 # ---------------------------------------------------------------------------
+# Alert: scoring drift canary (G-1336, finding J)
+# ---------------------------------------------------------------------------
+
+
+def send_drift_alert(
+    db: Session,
+    *,
+    profile_id: int,
+    psi: float,
+    kappa: float,
+    ndcg: float,
+    reason: str,
+) -> dict:
+    """Send a high-priority alert when the scoring drift canary trips.
+
+    Fired only on the joint condition (distribution drift AND an agreement drop)
+    so a benign shift in job mix does not page. Gracefully no-ops when Pushover
+    is not configured.
+    """
+    try:
+        client = _get_pushover_client(db)
+    except PushoverNotConfiguredError:
+        return {"status": "skipped", "reason": "pushover not configured"}
+
+    title = "⚠️ Scoring Drift Detected"
+    message = (
+        f"The scoring drift canary tripped.\n"
+        f"PSI: {psi:.3f} (distribution shift)\n"
+        f"Weighted κ: {kappa:.3f} · NDCG@5: {ndcg:.3f}\n"
+        f"{reason}\n\n"
+        f"A model/rubric change may have rotted scores — review before trusting new scores."
+    )
+
+    return _send_and_log(
+        db,
+        client,
+        profile_id=profile_id,
+        category="scoring",
+        title=title,
+        message=message,
+        priority=PRIORITY_HIGH,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Test Pushover connection (with actual API call)
 # ---------------------------------------------------------------------------
 
