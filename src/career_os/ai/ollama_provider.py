@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from career_os.ai.base import AIProvider, ComplexityTier
+from career_os.ai.base import ROLE_FIT_GATE_PROMPT, AIProvider, ComplexityTier
 from career_os.ai.openrouter_provider import _system_prompt_for_feature, _try_parse_structured
 from career_os.schemas.ai import AIFeature, AIResponse, TokenUsage
 
@@ -218,7 +218,7 @@ class OllamaProvider(AIProvider):
     ) -> AIResponse:
         """Score a job against a profile via Ollama."""
         prompt = (
-            f"Score this job against the candidate profile. "
+            ROLE_FIT_GATE_PROMPT + f"Score this job against the candidate profile. "
             f"Return a JSON object with: fit_score (0-10), reasoning (detailed, ≥100 chars), "
             f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
             f"readiness_score (0-100), career_alignment (0-10), "
