@@ -16,7 +16,7 @@ import logging
 from enum import StrEnum
 
 from career_os.ai.base import AIProvider
-from career_os.schemas.ai import ScoreResult
+from career_os.schemas.ai import ScoreResult, apply_role_fit_gate
 
 logger = logging.getLogger(__name__)
 
@@ -186,13 +186,15 @@ async def retrieve_batch_results(
             parsed.append(entry)
             continue
 
-        # structured is already a ScoreResult (parsed by the provider)
+        # structured is already a ScoreResult (parsed by the provider).
+        # Role-fit hard gate (G-1335): cap fit_score post-parse on the async
+        # Batch API path too, so prestige can't substitute for role fit there.
         if isinstance(structured, ScoreResult):
-            entry["score_result"] = structured
+            entry["score_result"] = apply_role_fit_gate(structured)
         else:
             # Try to coerce dict → ScoreResult
             try:
-                entry["score_result"] = ScoreResult(**structured)
+                entry["score_result"] = apply_role_fit_gate(ScoreResult(**structured))
             except Exception as exc:
                 entry["error"] = f"Failed to parse score result: {exc}"
 
