@@ -83,6 +83,24 @@ class Settings(BaseSettings):
     borderline_low_threshold: float = 4.0
     borderline_high_threshold: float = 6.5
 
+    # Scoring shadow-mode (Scoring Engine v2 / G-1336, finding I) — when set to a
+    # non-empty variant label, every production scoring call ALSO scores the job
+    # with a candidate rubric/model in parallel and logs the result to the
+    # ``shadow_scores`` table. Shadow scores are NEVER surfaced to the user; they
+    # exist only to compare a candidate change against the live scorer on real
+    # production jobs before promotion. Mirrors the G-272 embedding-shadow pattern.
+    # Opt-in and empty by default (a live shadow variant means an extra paid LLM
+    # call per job — see the COST guardrail). The variant string is free-form and
+    # recorded verbatim (e.g. "0to5-scale", "mistral-large", "rubric-v2").
+    scoring_shadow_variant: str = ""
+
+    # Drift canary (Scoring Engine v2 / G-1336, finding J) — nightly-style check
+    # that computes PSI of the score distribution vs a rolling baseline and
+    # re-scores the frozen golden set, alerting via Pushover ONLY on the joint
+    # condition (PSI drift AND a κ/NDCG agreement drop). Opt-in because re-scoring
+    # the golden set with the live provider is a (small) paid op — off by default.
+    drift_canary_enabled: bool = False
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     # Per-provider API key requirements: provider → (settings_attr, expected_prefix).

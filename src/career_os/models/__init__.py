@@ -27,6 +27,7 @@ from career_os.models.pushover import NotificationLog, NotificationPreference
 from career_os.models.scoring import (
     ScoredJob,
     ScoringWeights,
+    ShadowScore,
 )
 from career_os.models.skills import (
     CoachingSuggestion,
@@ -68,6 +69,7 @@ __all__ = [
     "Profile",
     "ScoredJob",
     "ScoringWeights",
+    "ShadowScore",
     "SearchProfile",
     "Skill",
     "SkillHistory",
