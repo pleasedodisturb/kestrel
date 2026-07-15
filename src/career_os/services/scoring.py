@@ -3496,6 +3496,22 @@ async def score_job(
     db.commit()
     db.refresh(scored_job)
 
+    # Shadow-mode (G-1336, finding I): when SCORING_SHADOW_VARIANT is set, score
+    # this same job with a candidate variant and log it beside the live score —
+    # never surfaced, fully defensive (a shadow failure never breaks live scoring).
+    if settings.scoring_shadow_variant.strip():
+        from career_os.services.scoring_shadow import maybe_record_shadow_score
+
+        await maybe_record_shadow_score(
+            db,
+            profile_id=profile_id,
+            prompt=prompt,
+            profile_data=profile_data,
+            primary_fit_score=score_data.fit_score,
+            scored_job_id=scored_job.id,
+            discovered_job_id=discovered_job_id,
+        )
+
     return scored_job
 
 
