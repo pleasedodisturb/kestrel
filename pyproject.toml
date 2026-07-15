@@ -61,6 +61,12 @@ dev = [
     "pandas>=2.2.0,<4",
     "python-jobspy>=1.1.82,<1.2",
     "fpdf2>=2.8.0",
+    # Dev-only oracle for the scoring eval harness (G-1336): the production
+    # metric math (weighted κ, NDCG, PSI) is pure-Python in
+    # career_os.services.scoring_eval — scikit-learn is used ONLY in
+    # tests/eval to cross-check those implementations against a reference.
+    # Not a runtime dependency; the shipped package never imports it.
+    "scikit-learn>=1.4",
 ]
 
 [project.scripts]
@@ -106,6 +112,12 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 30
+markers = [
+    "eval: scoring golden-set agreement eval (G-1336) — runs nightly, excluded from the fast unit run",
+    "regression: golden-set fit-score band regression tests",
+    "property: property-based tests",
+    "fuzz: fuzzing tests",
+]
 
 [tool.coverage.run]
 # relative_files = true makes pytest-cov emit project-relative source paths in
