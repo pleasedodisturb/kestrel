@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.21.0](https://github.com/pleasedodisturb/kestrel/compare/v0.20.0...v0.21.0) (2026-07-15)
+
+
+### Features
+
+* **G-1335:** role-fit hard gate + company-prestige cap (halo fix) ([#452](https://github.com/pleasedodisturb/kestrel/issues/452)) ([bdd664a](https://github.com/pleasedodisturb/kestrel/commit/bdd664a099484736de2d2475c682ec86e7e62fba))
+* **G-1336:** scoring eval infrastructure — golden-set κ/NDCG + shadow-mode + drift canary ([#454](https://github.com/pleasedodisturb/kestrel/issues/454)) ([a23bd80](https://github.com/pleasedodisturb/kestrel/commit/a23bd80993ca6b17821f84c72013961e627da0b4))
+
+
+### Bug Fixes
+
+* **G-1349:** bump setuptools to &gt;=83.0.0 (PYSEC-2026-3447) ([#453](https://github.com/pleasedodisturb/kestrel/issues/453)) ([07c9640](https://github.com/pleasedodisturb/kestrel/commit/07c96400af21f08acc600f89dde91d24f3859083))
+
+
+### Documentation
+
+* **G-1335:** add 2026-07 scoring-technique audit (7-agent research sweep) ([#450](https://github.com/pleasedodisturb/kestrel/issues/450)) ([e24e05a](https://github.com/pleasedodisturb/kestrel/commit/e24e05a1e3e2d09a933b0ccb938479a293c79900))
+
 ## [0.20.0](https://github.com/pleasedodisturb/kestrel/compare/v0.19.0...v0.20.0) (2026-07-09)
 
 
