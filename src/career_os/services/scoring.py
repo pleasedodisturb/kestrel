@@ -21,7 +21,13 @@ from career_os.models.discovery import DiscoveredJob
 from career_os.models.models import Application, Profile
 from career_os.models.scoring import ScoredJob, ScoringFeedback, ScoringWeights
 from career_os.models.skills import Goal, Skill
-from career_os.schemas.ai import ScoreResult
+from career_os.schemas.ai import (
+    ROLE_FIT_GATE_CEILING,
+    RoleMatch,
+    ScoreResult,
+    apply_role_fit_gate,
+    role_fit_gate_failed,
+)
 from career_os.services.red_flags import detect_data_driven_red_flags, detect_red_flags
 
 logger = logging.getLogger(__name__)
@@ -3135,6 +3141,28 @@ def _build_dim_columns(dim) -> dict[str, float | None]:
 # ---------------------------------------------------------------------------
 
 
+def _apply_role_fit_gate(score_data: ScoreResult) -> ScoreResult:
+    """Enforce the role-fit hard gate (G-1335), logging when it fires.
+
+    Thin logging wrapper over :func:`apply_role_fit_gate` so the service records
+    a cap event. The actual cap logic is a pure schema-layer function shared with
+    the multi-job batch path.
+    """
+    if role_fit_gate_failed(score_data) and score_data.fit_score > ROLE_FIT_GATE_CEILING:
+        reasons: list[str] = []
+        if score_data.role_match is not None and not score_data.role_match.is_same_role_family:
+            reasons.append("role-family mismatch")
+        if score_data.disqualifiers:
+            reasons.append(f"disqualifiers={score_data.disqualifiers}")
+        logger.info(
+            "Role-fit gate: capping fit_score %.2f → %.1f (%s)",
+            score_data.fit_score,
+            ROLE_FIT_GATE_CEILING,
+            ", ".join(reasons),
+        )
+    return apply_role_fit_gate(score_data)
+
+
 def _average_score_results(a: ScoreResult, b: ScoreResult) -> ScoreResult:
     """Average two ScoreResult objects to reduce borderline scoring variance.
 
@@ -3203,7 +3231,28 @@ def _average_score_results(a: ScoreResult, b: ScoreResult) -> ScoreResult:
     else:
         desire_score = primary.desire_score
 
+    # Carry forward the role-fit gate fields (G-1335), failing closed: if either
+    # pass flagged a role mismatch or any disqualifier, the merged result
+    # inherits it so the code-enforced cap still fires after averaging.
+    role_mismatch = any(
+        r.role_match is not None and not r.role_match.is_same_role_family for r in (a, b)
+    )
+    merged_role_match: RoleMatch | None = None
+    if a.role_match is not None or b.role_match is not None:
+        evidence = next(
+            (
+                r.role_match.evidence
+                for r in (primary, secondary)
+                if r.role_match is not None and r.role_match.evidence
+            ),
+            "",
+        )
+        merged_role_match = RoleMatch(is_same_role_family=not role_mismatch, evidence=evidence)
+    merged_disqualifiers = list(dict.fromkeys([*a.disqualifiers, *b.disqualifiers]))
+
     return ScoreResult(
+        role_match=merged_role_match,
+        disqualifiers=merged_disqualifiers,
         fit_score=avg_fit,
         readiness_score=avg_readiness,
         career_alignment=avg_career_alignment,
@@ -3296,6 +3345,11 @@ async def score_job(
     else:
         raise ScoringError("AI provider did not return a valid ScoreResult")
 
+    # Role-fit hard gate (G-1335): cap fit_score in code so company prestige +
+    # domain can never substitute for role fit. Applied before the borderline
+    # check so a gated (≤3) job also skips the extra second-pass AI call.
+    score_data = _apply_role_fit_gate(score_data)
+
     # Borderline 2-pass scoring (Epic 5 / G-273)
     # When the first-pass score falls in the borderline zone, run a second pass
     # and average the results to reduce variance (~50% reduction per research).
@@ -3339,6 +3393,11 @@ async def score_job(
                 exc,
                 score_data.fit_score,
             )
+
+    # Re-apply the role-fit gate after averaging — the merged result fails closed
+    # (inherits a mismatch/disqualifier flagged by either pass), so a borderline
+    # job that a second pass reveals as a role mismatch still gets capped.
+    score_data = _apply_role_fit_gate(score_data)
 
     # Serialize score_breakdown to JSON for storage
     breakdown_json = (
@@ -3527,6 +3586,11 @@ def _build_scoring_prompt(
 
     # Scoring rubric with calibration examples (G-269)
     parts.append(f"\n{SCORING_RUBRIC}")
+    # NB: the role-fit / anti-halo guardrails (G-1335) live in the provider
+    # score preamble (ai/base.ROLE_FIT_GATE_PROMPT), NOT here. Keeping them out
+    # of _build_scoring_prompt keeps the deterministic golden-set snapshot
+    # (which hashes this prompt) stable, while real providers still receive the
+    # guard via their own preamble.
     job_family = profile_data.get("job_family")
     family_modifiers = _build_job_family_modifiers(job_family)
     if family_modifiers:

@@ -12,7 +12,12 @@ import logging
 
 import httpx
 
-from career_os.ai.base import AIProvider, ProviderQuotaError, ProviderUnavailableError
+from career_os.ai.base import (
+    ROLE_FIT_GATE_PROMPT,
+    AIProvider,
+    ProviderQuotaError,
+    ProviderUnavailableError,
+)
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
     _system_prompt_for_feature,
@@ -159,7 +164,7 @@ class GeminiProvider(AIProvider):
     ) -> AIResponse:
         """Score a job against a profile via the Gemini API."""
         prompt = (
-            f"Score this job against the candidate profile. "
+            ROLE_FIT_GATE_PROMPT + f"Score this job against the candidate profile. "
             f"Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
             f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
             f"readiness_score (0-100), career_alignment (0-10), "

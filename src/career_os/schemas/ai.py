@@ -131,6 +131,32 @@ class DimensionalScores(BaseModel):
     company_fit: float = Field(..., ge=0, le=10)
 
 
+class RoleMatch(BaseModel):
+    """Explicit role-family match verdict (G-1335 halo fix).
+
+    Emitted *before* the ``fit_score`` so the model commits to a role-family
+    judgment with JD-grounded evidence first, rather than rationalizing a
+    holistic number after the fact. Used as a hard gate: a ``False`` verdict
+    caps ``fit_score`` in code, regardless of any dimensional scores or company
+    prestige.
+    """
+
+    is_same_role_family: bool = Field(
+        default=True,
+        description=(
+            "True only if the job's role/occupation is the same family as the candidate's "
+            "target job family (e.g. PM/TPM ≠ SWE/SRE/designer). Company prestige is irrelevant."
+        ),
+    )
+    evidence: str = Field(
+        default="",
+        description=(
+            "JD-grounded evidence for the verdict — the job's title and core responsibilities "
+            "compared against the candidate's target role."
+        ),
+    )
+
+
 ATSKeywordCategory = Literal["technical", "soft_skill", "tool", "certification", "domain"]
 
 
@@ -150,6 +176,25 @@ class ATSKeyword(BaseModel):
 
 class ScoreResult(BaseModel):
     """Structured scoring response."""
+
+    # Role-fit hard gate (G-1335). Declared first so a reason-before-score
+    # provider emits the role-family verdict + disqualifiers before the number.
+    # Both are optional/back-compat: legacy cached rows, the mock provider, and
+    # models that don't emit them leave the gate a no-op (treated as a pass).
+    role_match: RoleMatch | None = Field(
+        default=None,
+        description=(
+            "Explicit role-family gate verdict. None for legacy/cached responses "
+            "(treated as a pass — no cap applied)."
+        ),
+    )
+    disqualifiers: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Hard disqualifiers grounded in the JD: missing mandatory license/clearance/visa, "
+            "hard location conflict, or seniority off by >1 level. A non-empty list caps fit_score."
+        ),
+    )
 
     fit_score: float = Field(..., ge=0, le=10, description="Overall fit score 0-10")
     reasoning: str = Field(..., description="Detailed scoring explanation")
@@ -182,6 +227,42 @@ class ScoreResult(BaseModel):
         default=None,
         description="Reasoning for the desire score (what makes this job desirable/undesirable)",
     )
+
+
+# ---------------------------------------------------------------------------
+# Role-fit hard gate (G-1335) — the halo fix, enforced in code post-parse
+# ---------------------------------------------------------------------------
+
+# A role-family mismatch or a hard disqualifier caps the fit_score at this
+# ceiling *after parsing*, so the model cannot rationalize past it with a high
+# holistic number or a prestigious company. Chosen so gated jobs land in the
+# "D / poor fit" band (3.0-3.9) and can never be a "safe_bet"/"dream_job"
+# (quadrant threshold 5.0).
+ROLE_FIT_GATE_CEILING = 3.0
+
+
+def role_fit_gate_failed(result: ScoreResult) -> bool:
+    """Return True when the role-fit gate should fire for this result.
+
+    Fires when the model flagged a different role family, or reported any hard
+    disqualifier. Back-compat: ``role_match=None`` (legacy/cached/mock) is a
+    pass, and an empty ``disqualifiers`` list is a pass.
+    """
+    role_mismatch = result.role_match is not None and not result.role_match.is_same_role_family
+    return role_mismatch or bool(result.disqualifiers)
+
+
+def apply_role_fit_gate(result: ScoreResult) -> ScoreResult:
+    """Cap ``fit_score`` at :data:`ROLE_FIT_GATE_CEILING` when the gate fails.
+
+    Pure and idempotent: returns the input unchanged when the gate passes or the
+    score already sits at/below the ceiling; otherwise returns a copy with the
+    capped ``fit_score``. Only ``fit_score`` is touched — dimensional scores and
+    the desire axis are deliberately left intact (prestige belongs on desire).
+    """
+    if role_fit_gate_failed(result) and result.fit_score > ROLE_FIT_GATE_CEILING:
+        return result.model_copy(update={"fit_score": ROLE_FIT_GATE_CEILING})
+    return result
 
 
 class GapAnalysisResult(BaseModel):

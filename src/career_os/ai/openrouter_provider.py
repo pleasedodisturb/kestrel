@@ -10,7 +10,12 @@ import re
 
 import httpx
 
-from career_os.ai.base import AIProvider, ComplexityTier, ProviderQuotaError
+from career_os.ai.base import (
+    ROLE_FIT_GATE_PROMPT,
+    AIProvider,
+    ComplexityTier,
+    ProviderQuotaError,
+)
 from career_os.schemas.ai import (
     AIFeature,
     AIResponse,
@@ -204,7 +209,7 @@ class OpenRouterProvider(AIProvider):
     ) -> AIResponse:
         """Score a job against a profile via OpenRouter."""
         prompt = (
-            f"Score this job against the candidate profile. "
+            ROLE_FIT_GATE_PROMPT + f"Score this job against the candidate profile. "
             f"Return a JSON object with: fit_score (0-10), reasoning (detailed, ≥100 chars), "
             f"estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
             f"readiness_score (0-100), career_alignment (0-10), "
