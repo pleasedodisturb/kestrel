@@ -8,12 +8,14 @@ import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
+from career_os.config import settings
 from career_os.database import Base
 from career_os.models.models import Profile
 from career_os.models.scoring import ScoredJob
 from career_os.services import drift_canary
 from career_os.services.drift_canary import (
     compute_score_psi,
+    drift_canary_check,
     evaluate_drift,
     run_drift_canary,
 )
@@ -169,3 +171,57 @@ def test_run_canary_alert_without_notify(db_session):
     )
     assert r["alert"] is True
     assert r["notified"] is False
+
+
+# ---------------------------------------------------------------------------
+# drift_canary_check — the flag-gated entrypoint (DRIFT_CANARY_ENABLED)
+# ---------------------------------------------------------------------------
+
+
+def test_drift_canary_check_disabled_is_noop(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "drift_canary_enabled", False)
+    called = []
+
+    def _agreement():
+        called.append(1)
+        return (0.30, 0.60, 0.62, 0.75)
+
+    result = drift_canary_check(db_session, 1, agreement_fn=_agreement, notify=False)
+    assert result["status"] == "disabled"
+    # The golden re-score (a potential paid op) must NOT run when disabled.
+    assert called == []
+
+
+def test_drift_canary_check_enabled_runs_and_alerts(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "drift_canary_enabled", True)
+
+    now = datetime.now(UTC)
+    _add_scores(db_session, [1.0] * 22, now - timedelta(days=10))  # baseline: low
+    _add_scores(db_session, [9.0] * 22, now - timedelta(hours=2))  # recent: high → PSI high
+
+    called = []
+
+    def _agreement():
+        called.append(1)
+        return (0.30, 0.60, 0.62, 0.75)  # κ dropped vs baseline
+
+    result = drift_canary_check(db_session, 1, agreement_fn=_agreement, notify=False)
+    assert result["status"] == "ran"
+    assert called == [1]
+    assert result["alert"] is True
+    assert result["notified"] is False
+
+
+def test_drift_canary_check_enabled_stable_no_alert(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "drift_canary_enabled", True)
+
+    now = datetime.now(UTC)
+    _add_scores(db_session, [1.0] * 22, now - timedelta(days=10))
+    _add_scores(db_session, [9.0] * 22, now - timedelta(hours=2))  # PSI high
+
+    def _agreement():
+        return (0.63, 0.76, 0.62, 0.75)  # agreement held → no joint trip
+
+    result = drift_canary_check(db_session, 1, agreement_fn=_agreement, notify=False)
+    assert result["status"] == "ran"
+    assert result["alert"] is False

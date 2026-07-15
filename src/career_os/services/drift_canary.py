@@ -22,10 +22,12 @@ is a small but real paid op, so it is never triggered implicitly.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from career_os.config import settings
 from career_os.models.scoring import ScoredJob
 from career_os.services.scoring_eval import (
     DEFAULT_SCORE_BINS,
@@ -204,4 +206,44 @@ def run_drift_canary(
         logger.warning("Drift canary ALERT for profile %d: %s", profile_id, result["reason"])
 
     result["notified"] = notified
+    return result
+
+
+# Returns (kappa, ndcg, baseline_kappa, baseline_ndcg) — the fresh golden-set
+# agreement plus its stored baseline. Injected so this service never imports the
+# eval harness (which lives under tests/); the CLI supplies the real function.
+AgreementFn = Callable[[], tuple[float, float, float, float]]
+
+
+def drift_canary_check(
+    db: Session,
+    profile_id: int = 1,
+    *,
+    agreement_fn: AgreementFn,
+    notify: bool = True,
+) -> dict:
+    """Flag-gated entrypoint for the nightly/CLI drift canary.
+
+    Returns ``{"status": "disabled", ...}`` and does NO work (``agreement_fn`` is
+    never called → no re-score, no paid op) unless ``DRIFT_CANARY_ENABLED`` is
+    set. When enabled it measures the golden-set agreement via ``agreement_fn``
+    and runs :func:`run_drift_canary`, alerting on a joint trip.
+    """
+    if not settings.drift_canary_enabled:
+        return {
+            "status": "disabled",
+            "reason": "DRIFT_CANARY_ENABLED is false — set it to run the canary",
+        }
+
+    kappa, ndcg, baseline_kappa, baseline_ndcg = agreement_fn()
+    result = run_drift_canary(
+        db,
+        profile_id,
+        kappa=kappa,
+        ndcg=ndcg,
+        baseline_kappa=baseline_kappa,
+        baseline_ndcg=baseline_ndcg,
+        notify=notify,
+    )
+    result["status"] = "ran"
     return result
