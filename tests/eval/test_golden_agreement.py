@@ -45,6 +45,10 @@ NDCG_TOLERANCE = 0.15
 # Spread (finding F): std-dev may drift this far from baseline before we call it
 # a distribution shift. Wider than κ/NDCG because std-dev is a coarser statistic.
 SPREAD_STDDEV_TOLERANCE = 1.0
+# The chosen-vs-rejected gap (good jobs minus bad jobs) is the headline spread
+# signal — it must not DEGRADE past this floor below baseline, so the scorer
+# ranking good below bad any worse than today fails the gate.
+CHOSEN_REJECTED_GAP_TOLERANCE = 1.0
 
 
 @pytest.fixture()
@@ -124,6 +128,16 @@ async def test_spread_not_collapsed_and_within_baseline(fixture_name, db_session
         f"{fixture_name}: score std-dev drifted {stddev_delta:.3f} from baseline "
         f"{base_spread['stddev']:.3f} (now {spread['stddev']:.3f}, tolerance "
         f"{SPREAD_STDDEV_TOLERANCE}). If intentional, regenerate the baseline."
+    )
+
+    # Headline-metric guard: the chosen-vs-rejected gap must not degrade past a
+    # floor below baseline (good jobs must not sink further beneath bad jobs).
+    gap = spread["chosen_rejected_gap"]
+    base_gap = base_spread["chosen_rejected_gap"]
+    assert gap >= base_gap - CHOSEN_REJECTED_GAP_TOLERANCE, (
+        f"{fixture_name}: chosen-vs-rejected gap degraded to {gap:.3f} from baseline "
+        f"{base_gap:.3f} (floor {base_gap - CHOSEN_REJECTED_GAP_TOLERANCE:.3f}). The scorer "
+        f"is ranking good jobs further below bad jobs. If intentional, regenerate the baseline."
     )
 
 

@@ -32,6 +32,7 @@ scoring service calls.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
@@ -86,7 +87,14 @@ class IsotonicCalibrator:
 
 
 def _clamp(value: float) -> float:
-    """Clamp a score into the ``[SCORE_MIN, SCORE_MAX]`` display axis."""
+    """Clamp a score into the ``[SCORE_MIN, SCORE_MAX]`` display axis.
+
+    A ``NaN`` input (unreachable via the current fit paths, but hardened here)
+    collapses to :data:`SCORE_MIN` rather than silently passing through the
+    ``max``/``min`` ordering as 10.0.
+    """
+    if math.isnan(value):
+        return SCORE_MIN
     return max(SCORE_MIN, min(SCORE_MAX, value))
 
 

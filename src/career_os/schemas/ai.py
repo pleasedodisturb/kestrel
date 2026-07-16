@@ -152,6 +152,14 @@ DIMENSION_DISPLAY_MAX = 10.0
 #: Multiplier applied on parse to lift a 0–5 emission onto the 0–10 axis.
 DIMENSION_SCALE_FACTOR = DIMENSION_DISPLAY_MAX / DIMENSION_EMIT_MAX  # 2.0
 
+#: How many dimensions must exceed :data:`DIMENSION_EMIT_MAX` before the whole
+#: set is treated as a legacy/non-compliant 0–10 emission. Requiring ≥2 signals
+#: (not just any 1) makes the detector robust to a single sloppy outlier: one
+#: dimension emitted as 5.1 or 6 can no longer flip the other five to
+#: half-scale. Every prompt path now asks for 0–5, so the default assumption is
+#: "0–5, scale it"; only strong evidence (multiple out-of-range dims) overrides.
+DIMENSION_LEGACY_TEN_SCALE_MIN_SIGNALS = 2
+
 _DIMENSION_FIELDS = (
     "technical_fit",
     "seniority_alignment",
@@ -170,27 +178,36 @@ def _clamp(value: float, low: float, high: float) -> float:
 def scale_dimensions_to_display(dims: DimensionalScores) -> DimensionalScores:
     """Lift model-emitted 0–5 dimensional scores onto the 0–10 storage scale.
 
-    The model is asked to score each dimension 0–5 (finding E); this multiplies
-    every dimension by :data:`DIMENSION_SCALE_FACTOR` (×2) and clamps to
-    ``[0, 10]``.
+    Every prompt path (single scorer + batch) now asks the model to score each
+    dimension 0–5 (finding E), so the default behavior is to **clamp each
+    dimension into ``[0, 5]`` and multiply by** :data:`DIMENSION_SCALE_FACTOR`
+    (×2), landing on ``[0, 10]``. Per-dimension clamping means a lone sloppy
+    value (e.g. 5.1) is pinned to 5 and scaled with the rest, rather than
+    corrupting the set.
 
-    **Defensive back-compat:** if ANY dimension exceeds
-    :data:`DIMENSION_EMIT_MAX` (5.0) the provider is assumed to have ignored the
-    0–5 instruction and emitted on the legacy 0–10 axis (a genuine 0–5 emission
-    cannot exceed 5), so the set is clamped-but-NOT-scaled — a defensive path
-    that keeps a non-compliant model's output in range rather than doubling an
-    already-0–10 value. Pure and idempotent-safe on already-scaled input only in
-    the sense that a value >5 is never re-doubled.
+    **Defensive back-compat:** only when at least
+    :data:`DIMENSION_LEGACY_TEN_SCALE_MIN_SIGNALS` dimensions exceed
+    :data:`DIMENSION_EMIT_MAX` (i.e. the emission clearly looks 0–10, not a
+    single outlier) is the set treated as a legacy/non-compliant 0–10 response
+    and clamped-but-NOT-scaled. This can never be reached by cached rows (cache
+    reads bypass this function entirely — see
+    :func:`scale_score_result_dimensions`).
+
+    NOT idempotent: applying it twice to a genuine 0–5 emission scales ×4. It is
+    called exactly once, at the live-provider parse boundary. Pure (no mutation
+    of the input).
     """
     values = {name: getattr(dims, name) for name in _DIMENSION_FIELDS}
-    emitted_on_ten_scale = any(v > DIMENSION_EMIT_MAX for v in values.values())
-    if emitted_on_ten_scale:
+    over_max = sum(1 for v in values.values() if v > DIMENSION_EMIT_MAX)
+    if over_max >= DIMENSION_LEGACY_TEN_SCALE_MIN_SIGNALS:
+        # Clearly a 0–10 emission — keep values as-is, just clamp into range.
         return DimensionalScores(
             **{name: _clamp(v, 0.0, DIMENSION_DISPLAY_MAX) for name, v in values.items()}
         )
+    # 0–5 emission (the norm): clamp each into [0, 5] then scale ×2 to [0, 10].
     return DimensionalScores(
         **{
-            name: _clamp(v * DIMENSION_SCALE_FACTOR, 0.0, DIMENSION_DISPLAY_MAX)
+            name: _clamp(v, 0.0, DIMENSION_EMIT_MAX) * DIMENSION_SCALE_FACTOR
             for name, v in values.items()
         }
     )
