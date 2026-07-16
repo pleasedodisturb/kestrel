@@ -46,9 +46,14 @@ def build_distillation_signals(
     scorer produced or consumed — dimensional sub-scores, the role-fit gate
     verdict + disqualifiers, readiness/career-alignment, effort, the weights
     snapshot, and job family. ``extra`` merges in caller-supplied signals (e.g.
-    the ESCO skills-overlap / title-occupation features from finding L, or a
-    red-flag count). No PII beyond what already lives in ``profile_data`` is
-    recorded — only the ``job_family`` string and weights are pulled from it.
+    the ESCO skills-overlap feature from finding L, or a red-flag count).
+
+    **Not purely numeric:** two fields carry short LLM free-text —
+    ``role_match.evidence`` and ``disqualifiers`` — which can contain role/company
+    fragments quoted from the JD. They are kept deliberately (high-value training
+    signal for the future distillation model), but callers should treat the
+    ``signals`` blob as text-bearing, not a pure feature vector. No profile PII
+    beyond ``job_family`` + weights is pulled from ``profile_data``.
     """
     profile_data = profile_data or {}
 
@@ -135,6 +140,7 @@ def record_distillation_feedback(
     db: Session,
     *,
     scored_job_id: int,
+    profile_id: int,
     direction: str,
     user_score: float | None = None,
 ) -> int:
@@ -143,7 +149,8 @@ def record_distillation_feedback(
     Called opportunistically after a user submits (explicit or implicit)
     feedback, so the training tuple gains its label correction. No-op unless the
     flag is on. Returns the number of samples updated (0 on no-op or failure).
-    Never raises.
+    Never raises. The query is scoped by both ``scored_job_id`` and
+    ``profile_id`` for belt-and-suspenders multi-profile isolation.
     """
     if not settings.distillation_logging_enabled:
         return 0
@@ -151,7 +158,10 @@ def record_distillation_feedback(
     try:
         samples = (
             db.query(DistillationSample)
-            .filter(DistillationSample.scored_job_id == scored_job_id)
+            .filter(
+                DistillationSample.scored_job_id == scored_job_id,
+                DistillationSample.profile_id == profile_id,
+            )
             .all()
         )
         if not samples:

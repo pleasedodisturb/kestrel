@@ -1,27 +1,38 @@
-"""Unit tests for ESCO quantitative scoring features (G-1338, finding L).
+"""Unit + integration tests for ESCO skills-overlap features (G-1338, finding L).
 
 Covers the pure weighted skills-overlap math (known values, empty/missing,
-all/none matched), the DB wrappers, and the title→occupation axis (same URI,
-same ISCO group, no match, empty titles) — all deterministic, no LLM calls.
+all/none matched), the DB wrappers, defensive behavior, and — critically — the
+REAL caller path through ``score_job`` so the signal cannot pass while being
+inert in production. All deterministic, no LLM calls.
 """
 
 from __future__ import annotations
+
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
+from career_os.config import settings
 from career_os.database import Base
-from career_os.models.esco import ESCOSkill
 from career_os.models.models import Application, Profile
+from career_os.models.scoring import DistillationSample
 from career_os.models.skills import JobRequirement, Skill
+from career_os.schemas.ai import (
+    ATSKeyword,
+    DimensionalScores,
+    ScoreBreakdownFactor,
+    ScoreResult,
+)
 from career_os.services.esco_features import (
     compute_esco_features,
     compute_job_skills_overlap,
     compute_skills_overlap,
     get_candidate_skill_uris,
-    title_occupation_axis,
 )
+from career_os.services.scoring import score_job
 
 
 @pytest.fixture
@@ -37,16 +48,23 @@ def db_session() -> Session:
     Base.metadata.create_all(bind=engine)
     connection = engine.connect()
     session = sessionmaker(bind=connection, autocommit=False, autoflush=False)()
-    session.add(
-        Profile(
-            id=1, name="U", email="u@example.com", location="Berlin", job_family="Product Manager"
-        )
-    )
+    session.add(Profile(id=1, name="U", email="u@example.com", location="Berlin", job_family="TPM"))
     session.commit()
     yield session
     session.close()
     connection.close()
     engine.dispose()
+
+
+def _skill(name, uri):
+    return Skill(
+        profile_id=1,
+        name=name,
+        category="technical",
+        proficiency="advanced",
+        esco_uri=uri,
+        evidence_source="manual",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -68,36 +86,32 @@ def test_overlap_weighted_known_values():
     assert out["total"] == 3
     assert out["matched_weight"] == 1.25
     assert out["total_weight"] == 1.75
-    # 1.25 / 1.75 = 0.7143
     assert out["overlap_score"] == pytest.approx(0.7143, abs=1e-4)
     assert set(out["matched_uris"]) == {"uri:python", "uri:docker"}
     assert out["missing_uris"] == ["uri:k8s"]
 
 
 def test_overlap_all_matched_is_one():
-    required = [("uri:a", "critical"), ("uri:b", "bonus")]
-    out = compute_skills_overlap(required, {"uri:a", "uri:b"})
+    out = compute_skills_overlap([("uri:a", "critical"), ("uri:b", "bonus")], {"uri:a", "uri:b"})
     assert out["overlap_score"] == 1.0
     assert out["matched"] == 2
 
 
-def test_overlap_none_matched_is_zero():
-    required = [("uri:a", "critical")]
-    out = compute_skills_overlap(required, {"uri:x"})
+def test_overlap_none_matched_is_zero_with_total():
+    out = compute_skills_overlap([("uri:a", "critical")], {"uri:x"})
     assert out["overlap_score"] == 0.0
     assert out["matched"] == 0
-    assert out["total"] == 1
+    assert out["total"] == 1  # total>0 disambiguates "matched nothing" from "no data"
 
 
-def test_overlap_empty_requirements_is_zero_not_error():
+def test_overlap_empty_requirements_is_zero_no_data():
     out = compute_skills_overlap([], {"uri:a"})
     assert out["overlap_score"] == 0.0
-    assert out["total"] == 0
+    assert out["total"] == 0  # total==0 → no ESCO data (vs matched-nothing above)
     assert out["total_weight"] == 0.0
 
 
 def test_overlap_ignores_unnormalized_requirements():
-    # Requirements without an esco_uri are not counted.
     required = [("uri:a", "critical"), (None, "critical"), ("", "nice-to-have")]
     out = compute_skills_overlap(required, {"uri:a"})
     assert out["total"] == 1
@@ -105,8 +119,7 @@ def test_overlap_ignores_unnormalized_requirements():
 
 
 def test_overlap_unknown_severity_uses_default_weight():
-    required = [("uri:a", "weird-label")]
-    out = compute_skills_overlap(required, set())
+    out = compute_skills_overlap([("uri:a", "weird-label")], set())
     assert out["total_weight"] == 0.5  # default nice-to-have weight
 
 
@@ -118,30 +131,9 @@ def test_overlap_unknown_severity_uses_default_weight():
 def test_get_candidate_skill_uris(db_session):
     db_session.add_all(
         [
-            Skill(
-                profile_id=1,
-                name="Python",
-                category="technical",
-                proficiency="advanced",
-                esco_uri="uri:python",
-                evidence_source="manual",
-            ),
-            Skill(
-                profile_id=1,
-                name="Docker",
-                category="technical",
-                proficiency="intermediate",
-                esco_uri="uri:docker",
-                evidence_source="manual",
-            ),
-            Skill(
-                profile_id=1,
-                name="Unmapped",
-                category="technical",
-                proficiency="beginner",
-                esco_uri=None,
-                evidence_source="manual",
-            ),
+            _skill("Python", "uri:python"),
+            _skill("Docker", "uri:docker"),
+            _skill("Unmapped", None),
         ]
     )
     db_session.commit()
@@ -151,16 +143,7 @@ def test_get_candidate_skill_uris(db_session):
 def test_compute_job_skills_overlap_db(db_session):
     app = Application(profile_id=1, company="Acme", role="PM", status="discovered")
     db_session.add(app)
-    db_session.add(
-        Skill(
-            profile_id=1,
-            name="Python",
-            category="technical",
-            proficiency="advanced",
-            esco_uri="uri:python",
-            evidence_source="manual",
-        )
-    )
+    db_session.add(_skill("Python", "uri:python"))
     db_session.commit()
     db_session.add_all(
         [
@@ -185,58 +168,7 @@ def test_compute_job_skills_overlap_db(db_session):
     out = compute_job_skills_overlap(db_session, application_id=app.id, profile_id=1)
     assert out["matched"] == 1
     assert out["total"] == 2
-    assert out["overlap_score"] == 0.5  # 1.0 / 2.0
-
-
-# ---------------------------------------------------------------------------
-# title_occupation_axis
-# ---------------------------------------------------------------------------
-
-
-def _seed_occupations(db_session):
-    db_session.add_all(
-        [
-            ESCOSkill(concept_uri="uri:pm", preferred_label="Product Manager", isco_group="1213"),
-            ESCOSkill(concept_uri="uri:pgm", preferred_label="Program Manager", isco_group="1213"),
-            ESCOSkill(
-                concept_uri="uri:swe", preferred_label="Software Engineer", isco_group="2512"
-            ),
-        ]
-    )
-    db_session.commit()
-
-
-def test_title_axis_same_occupation(db_session):
-    _seed_occupations(db_session)
-    out = title_occupation_axis(db_session, "Product Manager", "Product Manager")
-    assert out["match_score"] == 1.0
-    assert out["same_occupation"] is True
-    assert out["same_isco_group"] is True
-
-
-def test_title_axis_same_isco_group_different_role(db_session):
-    _seed_occupations(db_session)
-    out = title_occupation_axis(db_session, "Program Manager", "Product Manager")
-    assert out["match_score"] == 0.7
-    assert out["same_occupation"] is False
-    assert out["same_isco_group"] is True
-    assert out["jd_occupation"]["isco_group"] == "1213"
-
-
-def test_title_axis_no_match_different_family(db_session):
-    _seed_occupations(db_session)
-    out = title_occupation_axis(db_session, "Software Engineer", "Product Manager")
-    assert out["match_score"] == 0.0
-    assert out["same_occupation"] is False
-    assert out["same_isco_group"] is False
-
-
-def test_title_axis_empty_titles(db_session):
-    _seed_occupations(db_session)
-    out = title_occupation_axis(db_session, "", None)
-    assert out["match_score"] == 0.0
-    assert out["jd_occupation"] is None
-    assert out["candidate_occupation"] is None
+    assert out["overlap_score"] == 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -244,20 +176,15 @@ def test_title_axis_empty_titles(db_session):
 # ---------------------------------------------------------------------------
 
 
+def test_compute_esco_features_no_application_returns_none(db_session):
+    # Skills-overlap is undefined without a job's parsed requirements.
+    assert compute_esco_features(db_session, profile_id=1) is None
+
+
 def test_compute_esco_features_bundle(db_session):
-    _seed_occupations(db_session)
     app = Application(profile_id=1, company="Acme", role="PM", status="discovered")
     db_session.add(app)
-    db_session.add(
-        Skill(
-            profile_id=1,
-            name="Python",
-            category="technical",
-            proficiency="advanced",
-            esco_uri="uri:python",
-            evidence_source="manual",
-        )
-    )
+    db_session.add(_skill("Python", "uri:python"))
     db_session.commit()
     db_session.add(
         JobRequirement(
@@ -270,32 +197,114 @@ def test_compute_esco_features_bundle(db_session):
     )
     db_session.commit()
 
-    out = compute_esco_features(
-        db_session,
-        profile_id=1,
-        application_id=app.id,
-        jd_title="Product Manager",
-        candidate_role="Product Manager",
-    )
+    out = compute_esco_features(db_session, profile_id=1, application_id=app.id)
     assert out is not None
     assert out["skills_overlap"]["overlap_score"] == 1.0
-    assert out["title_occupation"]["match_score"] == 1.0
 
 
-def test_compute_esco_features_no_application_skips_overlap(db_session):
-    _seed_occupations(db_session)
-    out = compute_esco_features(
-        db_session, profile_id=1, jd_title="Product Manager", candidate_role="Product Manager"
-    )
-    assert out is not None
-    assert "skills_overlap" not in out
-    assert out["title_occupation"]["match_score"] == 1.0
+def test_compute_esco_features_defensive_rolls_back_and_returns_none(db_session, monkeypatch):
+    """Any internal failure is swallowed → None, and the session is rolled back."""
+    rolled_back = {"count": 0}
+    real_rollback = db_session.rollback
 
+    def _spy_rollback():
+        rolled_back["count"] += 1
+        return real_rollback()
 
-def test_compute_esco_features_defensive_returns_none(db_session, monkeypatch):
-    """Any internal failure is swallowed → None (best-effort signal)."""
+    monkeypatch.setattr(db_session, "rollback", _spy_rollback)
     monkeypatch.setattr(
-        "career_os.services.esco_features.title_occupation_axis",
+        "career_os.services.esco_features.compute_job_skills_overlap",
         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")),
     )
-    assert compute_esco_features(db_session, profile_id=1, jd_title="X", candidate_role="Y") is None
+    assert compute_esco_features(db_session, profile_id=1, application_id=99) is None
+    assert rolled_back["count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# REAL caller path — score_job feeds ESCO skills-overlap into the distillation log
+# ---------------------------------------------------------------------------
+
+
+def _mock_provider():
+    result = ScoreResult(
+        fit_score=8.0,
+        readiness_score=70.0,
+        career_alignment=7.0,
+        reasoning="r",
+        estimated_salary="$100k",
+        effort_flag="medium",
+        prep_level="moderate",
+        prep_notes="p",
+        score_breakdown=[
+            ScoreBreakdownFactor(factor="a", contribution=1.0, description="d"),
+            ScoreBreakdownFactor(factor="b", contribution=1.0, description="d"),
+            ScoreBreakdownFactor(factor="c", contribution=1.0, description="d"),
+        ],
+        dimensional_scores=DimensionalScores(
+            technical_fit=8,
+            seniority_alignment=8,
+            compensation_fit=8,
+            location_fit=8,
+            career_trajectory=8,
+            company_fit=8,
+        ),
+        ats_keywords=[ATSKeyword(keyword="Python", category="technical", matched=True)],
+        desire_score=6.0,
+        desire_reasoning="d",
+    )
+    resp = MagicMock()
+    resp.structured = result
+    provider = AsyncMock()
+    provider.score.return_value = resp
+    provider.name = "mock"
+    return provider
+
+
+@pytest.mark.asyncio
+async def test_score_job_records_real_esco_overlap(db_session, monkeypatch):
+    """The signal must flow through the ACTUAL score_job caller path (application_id),
+    not an injected occupation world — so it fails if the feature is inert."""
+    monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
+    monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
+    monkeypatch.setattr(settings, "distillation_logging_enabled", True)
+
+    app = Application(profile_id=1, company="Acme", role="TPM", status="discovered")
+    db_session.add(app)
+    db_session.add_all([_skill("Python", "uri:python"), _skill("Docker", "uri:docker")])
+    db_session.commit()
+    db_session.add_all(
+        [
+            JobRequirement(
+                application_id=app.id,
+                profile_id=1,
+                skill_name="Python",
+                esco_uri="uri:python",
+                severity="critical",
+            ),
+            JobRequirement(
+                application_id=app.id,
+                profile_id=1,
+                skill_name="Kubernetes",
+                esco_uri="uri:k8s",
+                severity="critical",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    with patch("career_os.services.scoring.get_ai_provider", return_value=_mock_provider()):
+        await score_job(
+            db_session,
+            profile_id=1,
+            job_description="TPM role",
+            job_title="TPM",
+            application_id=app.id,
+        )
+
+    sample = db_session.query(DistillationSample).one()
+    signals = json.loads(sample.signals)
+    overlap = signals["esco"]["skills_overlap"]
+    # Python matched (critical 1.0), Kubernetes missing (critical 1.0) → 1.0 / 2.0
+    assert overlap["overlap_score"] == 0.5
+    assert overlap["total"] == 2
+    assert overlap["matched"] == 1

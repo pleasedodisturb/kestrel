@@ -1,22 +1,26 @@
-"""ESCO quantitative scoring features (G-1338, finding L).
+"""ESCO quantitative scoring features (G-1338, finding L — part 1).
 
 Upgrades the G-276 ESCO integration from *normalization* (mapping free-text
-skills to canonical URIs) to *quantitative signals* the scorer and the future
+skills to canonical URIs) to a *quantitative signal* the scorer and the future
 confidence-routed cascade (Phase 4b / finding K) can consume:
 
-1. **Skills-overlap score** — weighted coverage of the JD's required ESCO skills
-   that are present in the candidate profile. Severity-weighted so a missing
-   *critical* skill hurts more than a missing *bonus* one. Gives free, non-LLM
-   explainability ("6/8 required skills matched").
-2. **Title→occupation axis** — normalizes the JD title and the candidate's target
-   role to ESCO/ISCO occupations *separately from content*, so a wrong-role
-   dream-company job scores low on this axis even when its JD body overlaps the
-   candidate's skills. Directly complements the G-1335 role-fit gate.
+**Skills-overlap score** — severity-weighted coverage of the JD's required ESCO
+skills that are present in the candidate profile. A missing *critical* skill
+hurts more than a missing *bonus* one. Gives free, non-LLM explainability
+("6/8 required skills matched").
 
-Everything here is a **pure, additive computation** — it does NOT change existing
-ESCO normalization, the scoring prompt, or what is sent to the LLM. The numbers
-are surfaced as structured signals (e.g. into the distillation log, finding M)
-and are the routing features Phase 4b's cascade will gate on.
+This is a **pure, additive computation** — it does NOT change existing ESCO
+normalization, the scoring prompt, or what is sent to the LLM. The number is
+surfaced as a structured signal (into the distillation log, finding M) and is a
+routing feature Phase 4b's cascade will gate on.
+
+**Scoped out of this PR:** the "title→occupation axis" from finding L's second
+half. It requires a real ESCO/ISCO or O*NET **occupations** taxonomy, which this
+repo does not have (the `esco_skills` cache is a ~14K-row *skills/competence*
+table, not occupations) — and the production caller only knows a job-family
+*code* ("TPM"/"SWE"), not a JD title/role string to normalize. Shipping it here
+would be an inert, always-0.0 signal. Tracked as a follow-up (needs an
+occupations taxonomy first); Phase 4b's cascade can consume it once that lands.
 """
 
 from __future__ import annotations
@@ -25,9 +29,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from career_os.models.esco import ESCOSkill
 from career_os.models.skills import JobRequirement, Skill
-from career_os.services.skill_normalizer import normalize_skill
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +42,6 @@ SEVERITY_WEIGHTS: dict[str, float] = {
     "bonus": 0.25,
 }
 _DEFAULT_SEVERITY_WEIGHT = 0.5
-
-# Title→occupation match scores.
-_TITLE_EXACT_MATCH = 1.0  # same ESCO occupation/skill URI
-_TITLE_ISCO_MATCH = 0.7  # same ISCO-08 group (adjacent occupation)
-_TITLE_NO_MATCH = 0.0
 
 
 def _severity_weight(severity: str | None) -> float:
@@ -78,7 +75,10 @@ def compute_skills_overlap(
         }
 
     ``overlap_score`` is ``0.0`` when there are no ESCO-grounded requirements
-    (nothing to cover), keeping the signal well-defined and JSON-safe.
+    (nothing to cover), keeping the signal well-defined and JSON-safe. NOTE this
+    means ``overlap_score == 0.0`` conflates two cases — *no ESCO data at all* and
+    *matched nothing*; a consumer must inspect ``total`` to disambiguate
+    (``total == 0`` → no data, ``total > 0`` → genuinely zero coverage).
     """
     matched_uris: list[str] = []
     missing_uris: list[str] = []
@@ -142,86 +142,29 @@ def compute_job_skills_overlap(db: Session, *, application_id: int, profile_id: 
     return compute_skills_overlap(required, candidate)
 
 
-def _esco_occupation_for_title(db: Session, title: str | None) -> dict | None:
-    """Normalize a job/role title to an ESCO entry with its ISCO group.
-
-    Returns ``{"esco_uri", "label", "isco_group"}`` or ``None`` when the title is
-    empty or has no ESCO match. Reuses the existing (cached) ``normalize_skill``
-    pipeline — this is the "compute separately from content" title axis.
-    """
-    if not title or not title.strip():
-        return None
-    match = normalize_skill(db, title.strip())
-    if match is None:
-        return None
-    esco = db.query(ESCOSkill).filter(ESCOSkill.concept_uri == match.esco_uri).first()
-    return {
-        "esco_uri": match.esco_uri,
-        "label": match.preferred_label or (esco.preferred_label if esco else None),
-        "isco_group": esco.isco_group if esco else None,
-    }
-
-
-def title_occupation_axis(db: Session, jd_title: str | None, candidate_role: str | None) -> dict:
-    """Occupation-level match between a JD title and the candidate's target role.
-
-    Computed from the *titles only* (not JD content), so it is an independent
-    axis from the skills-overlap and dimensional scores. Match scale:
-
-    * ``1.0`` — same ESCO occupation URI
-    * ``0.7`` — same ISCO-08 group (adjacent occupation)
-    * ``0.0`` — different / unresolved
-
-    Returns a dict with the resolved occupations, ISCO groups, the numeric
-    ``match_score`` and the ``same_occupation`` / ``same_isco_group`` booleans.
-    """
-    jd = _esco_occupation_for_title(db, jd_title)
-    cand = _esco_occupation_for_title(db, candidate_role)
-
-    same_occupation = bool(jd and cand and jd["esco_uri"] == cand["esco_uri"])
-    same_isco_group = bool(
-        jd and cand and jd["isco_group"] is not None and jd["isco_group"] == cand["isco_group"]
-    )
-
-    if same_occupation:
-        match_score = _TITLE_EXACT_MATCH
-    elif same_isco_group:
-        match_score = _TITLE_ISCO_MATCH
-    else:
-        match_score = _TITLE_NO_MATCH
-
-    return {
-        "match_score": match_score,
-        "same_occupation": same_occupation,
-        "same_isco_group": same_isco_group,
-        "jd_occupation": jd,
-        "candidate_occupation": cand,
-    }
-
-
 def compute_esco_features(
     db: Session,
     *,
     profile_id: int,
     application_id: int | None = None,
-    jd_title: str | None = None,
-    candidate_role: str | None = None,
 ) -> dict | None:
-    """Compute both ESCO features as one structured-signals bundle.
+    """Compute the ESCO skills-overlap feature as a structured-signals bundle.
 
     Convenience entry point for the distillation log (finding M) and Phase 4b's
-    cascade router. Fully defensive: returns ``None`` on any failure so a caller
-    can treat ESCO features as best-effort. Skills-overlap is only computed when
-    an ``application_id`` (which owns the parsed JobRequirements) is supplied.
+    cascade router. Skills-overlap is only defined against a job's parsed
+    ``JobRequirement`` rows, so this returns ``None`` when no ``application_id``
+    is supplied (nothing to compute). Fully defensive: returns ``None`` and rolls
+    the session back on any failure, so a caller can treat ESCO features as
+    best-effort without inheriting a poisoned transaction.
     """
+    if application_id is None:
+        return None
     try:
-        features: dict = {}
-        if application_id is not None:
-            features["skills_overlap"] = compute_job_skills_overlap(
+        return {
+            "skills_overlap": compute_job_skills_overlap(
                 db, application_id=application_id, profile_id=profile_id
             )
-        features["title_occupation"] = title_occupation_axis(db, jd_title, candidate_role)
-        return features
+        }
     except Exception:
         logger.warning(
             "compute_esco_features failed for profile=%s application=%s (swallowed)",
@@ -229,4 +172,8 @@ def compute_esco_features(
             application_id,
             exc_info=True,
         )
+        try:
+            db.rollback()
+        except Exception:
+            logger.debug("compute_esco_features rollback also failed", exc_info=True)
         return None

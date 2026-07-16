@@ -3542,16 +3542,15 @@ async def score_job(
         from career_os.services.distillation import log_distillation_sample
         from career_os.services.esco_features import compute_esco_features
 
-        # ESCO quantitative features (G-1338, finding L) — non-LLM structured
-        # signals (skills-overlap + title→occupation axis). Best-effort and
-        # additive: never changes what was sent to the LLM, only enriches the
-        # (off-by-default) training tuple.
+        # ESCO quantitative features (G-1338, finding L) — a non-LLM structured
+        # signal (severity-weighted skills-overlap). Best-effort and additive:
+        # never changes what was sent to the LLM, only enriches the
+        # (off-by-default) training tuple. Only defined when the job has parsed
+        # requirements (application_id present); None otherwise.
         esco = compute_esco_features(
             db,
             profile_id=profile_id,
             application_id=application_id,
-            jd_title=job_title,
-            candidate_role=profile_data.get("job_family"),
         )
         log_distillation_sample(
             db,
@@ -4250,7 +4249,11 @@ def submit_feedback(
     from career_os.services.distillation import record_distillation_feedback
 
     record_distillation_feedback(
-        db, scored_job_id=scored_job_id, direction=direction, user_score=user_score
+        db,
+        scored_job_id=scored_job_id,
+        profile_id=profile_id,
+        direction=direction,
+        user_score=user_score,
     )
 
     return feedback
@@ -4312,7 +4315,9 @@ def record_implicit_feedback(
         # correction onto the training tuple(s). No-op unless the flag is on.
         from career_os.services.distillation import record_distillation_feedback
 
-        record_distillation_feedback(db, scored_job_id=scored_job_id, direction=direction)
+        record_distillation_feedback(
+            db, scored_job_id=scored_job_id, profile_id=profile_id, direction=direction
+        )
 
         return feedback
     except Exception:

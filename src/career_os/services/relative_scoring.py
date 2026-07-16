@@ -31,11 +31,14 @@ _RELATIVE_TIER_EDGES: tuple[tuple[int, str], ...] = (
 
 
 def relative_tier_from_percentile(percentile: int) -> str:
-    """Bucket a within-batch percentile (0–100) into an ordinal relative tier."""
+    """Bucket a within-batch percentile (0–100) into an ordinal relative tier.
+
+    The final edge is ``(0, "bottom")`` and any percentile is ``>= 0``, so the
+    loop always returns — there is no fall-through case.
+    """
     for edge, name in _RELATIVE_TIER_EDGES:
         if percentile >= edge:
             return name
-    return "bottom"
 
 
 def relativize_scores(scores: list[float]) -> list[dict]:
@@ -54,6 +57,11 @@ def relativize_scores(scores: list[float]) -> list[dict]:
     ``compute_score_context`` (G-271) so the two stay consistent. Empty input
     returns ``[]``. A single-element batch is degenerate (percentile 0, rank 1,
     tier "bottom") — relative tiering is only meaningful across several jobs.
+
+    Ordinal artifact to be aware of: an **all-equal batch** (every job scored the
+    same) gives every job ``below == 0`` → percentile 0 → tier "bottom" and rank
+    1. That is the correct "no separation" answer for a strict-below percentile,
+    but it means "bottom" here reads as "not above anyone", not "worst".
     """
     n = len(scores)
     if n == 0:

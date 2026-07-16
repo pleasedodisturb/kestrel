@@ -219,7 +219,12 @@ def test_log_defensive_on_failure_returns_none(db_session, enable_distillation):
 
 
 def test_feedback_backfill_off_is_noop(db_session):
-    assert record_distillation_feedback(db_session, scored_job_id=1, direction="too_high") == 0
+    assert (
+        record_distillation_feedback(
+            db_session, scored_job_id=1, profile_id=1, direction="too_high"
+        )
+        == 0
+    )
 
 
 def test_feedback_backfill_updates_sample(db_session, enable_distillation):
@@ -236,12 +241,34 @@ def test_feedback_backfill_updates_sample(db_session, enable_distillation):
     sample = db_session.query(DistillationSample).one()
 
     updated = record_distillation_feedback(
-        db_session, scored_job_id=scored.id, direction="too_low", user_score=4.0
+        db_session, scored_job_id=scored.id, profile_id=1, direction="too_low", user_score=4.0
     )
     assert updated == 1
     db_session.refresh(sample)
     assert sample.feedback_direction == "too_low"
     assert sample.feedback_user_score == 4.0
+
+
+def test_feedback_backfill_scoped_by_profile(db_session, enable_distillation):
+    """A mismatched profile_id must not touch another profile's sample."""
+    db_session.add(Profile(id=2, name="V", email="v@example.com", location="X", job_family="TPM"))
+    scored = ScoredJob(profile_id=1, fit_score=8.0, reasoning="r")
+    db_session.add(scored)
+    db_session.commit()
+    log_distillation_sample(
+        db_session,
+        profile_id=1,
+        score_result=_make_score_result(),
+        profile_data={},
+        scored_job_id=scored.id,
+    )
+    # Wrong profile → no rows match → 0 updated, sample untouched.
+    updated = record_distillation_feedback(
+        db_session, scored_job_id=scored.id, profile_id=2, direction="too_low"
+    )
+    assert updated == 0
+    sample = db_session.query(DistillationSample).one()
+    assert sample.feedback_direction is None
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +309,32 @@ async def test_score_job_logs_sample_when_enabled(db_session, monkeypatch, enabl
     assert samples[0].scored_job_id == scored.id
     assert samples[0].fit_score == scored.fit_score
     assert samples[0].rubric_version == "v1.1"
+
+
+@pytest.mark.asyncio
+async def test_score_job_survives_mid_path_logging_failure(
+    db_session, monkeypatch, enable_distillation
+):
+    """With logging ENABLED, if the sample write FAILS during score_job, the
+    returned + persisted ScoredJob score must be intact (in-path guarantee)."""
+    from sqlalchemy import text
+
+    monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
+    monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
+    # Break the distillation write mid-path: drop the table so the INSERT fails.
+    db_session.execute(text("DROP TABLE distillation_samples"))
+    db_session.commit()
+
+    with patch("career_os.services.scoring.get_ai_provider", return_value=_patch_provider(8.0)):
+        scored = await score_job(
+            db_session, profile_id=1, job_description="TPM role", job_title="TPM"
+        )
+
+    # Score returned intact despite the logging failure...
+    assert scored.fit_score == 8.0
+    # ...and it is actually persisted (survives the defensive rollback).
+    persisted = db_session.query(ScoredJob).filter_by(id=scored.id).one()
+    assert persisted.fit_score == 8.0
 
 
 @pytest.mark.asyncio

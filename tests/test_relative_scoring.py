@@ -73,6 +73,15 @@ def test_relativize_ties_share_rank_and_percentile():
     assert out[2]["batch_percentile"] == 66
 
 
+def test_relativize_all_equal_batch_all_bottom():
+    """Documented ordinal artifact: an all-equal batch → every job pct 0, rank 1,
+    tier 'bottom' (no separation; 'not above anyone', not 'worst')."""
+    out = relativize_scores([5.0, 5.0, 5.0])
+    assert [e["batch_percentile"] for e in out] == [0, 0, 0]
+    assert [e["relative_rank"] for e in out] == [1, 1, 1]
+    assert {e["relative_tier"] for e in out} == {"bottom"}
+
+
 def test_relativize_empty():
     assert relativize_scores([]) == []
 
