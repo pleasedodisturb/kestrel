@@ -3514,6 +3514,24 @@ async def score_job(
             live_provider_name=provider.name,
         )
 
+    # Distillation-label logging (G-1338, finding M): opportunistically record the
+    # (structured signals, LLM score) training tuple for a future small local
+    # feature model. No LLM cost — records what already happened. Off by default
+    # (DISTILLATION_LOGGING_ENABLED) and fully defensive: a logging failure never
+    # affects the already-committed score above.
+    if settings.distillation_logging_enabled:
+        from career_os.services.distillation import log_distillation_sample
+
+        log_distillation_sample(
+            db,
+            profile_id=profile_id,
+            score_result=score_data,
+            profile_data=profile_data,
+            scored_job_id=scored_job.id,
+            discovered_job_id=discovered_job_id,
+            rubric_version=RUBRIC_VERSION,
+        )
+
     return scored_job
 
 
@@ -4181,6 +4199,16 @@ def submit_feedback(
     db.add(feedback)
     db.commit()
     db.refresh(feedback)
+
+    # Distillation-label logging (G-1338, finding M): backfill the correction onto
+    # the training tuple(s) for this scored job. No-op unless the flag is on;
+    # never raises.
+    from career_os.services.distillation import record_distillation_feedback
+
+    record_distillation_feedback(
+        db, scored_job_id=scored_job_id, direction=direction, user_score=user_score
+    )
+
     return feedback
 
 
@@ -4235,6 +4263,13 @@ def record_implicit_feedback(
         db.add(feedback)
         db.commit()
         db.refresh(feedback)
+
+        # Distillation-label logging (G-1338, finding M): backfill the implicit
+        # correction onto the training tuple(s). No-op unless the flag is on.
+        from career_os.services.distillation import record_distillation_feedback
+
+        record_distillation_feedback(db, scored_job_id=scored_job_id, direction=direction)
+
         return feedback
     except Exception:
         logger.warning(
