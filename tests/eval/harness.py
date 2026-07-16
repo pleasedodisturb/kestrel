@@ -17,6 +17,7 @@ from __future__ import annotations
 from career_os.services.scoring_eval import (
     kappa_from_tiers,
     ndcg_at_k,
+    spread_metrics,
     tier_from_fit_score,
     tier_index,
 )
@@ -61,12 +62,16 @@ def compute_agreement(fixture_name: str, scored: dict[str, float]) -> dict:
 
     kappa = kappa_from_tiers(true_tiers, pred_tiers)
     ndcg = ndcg_at_k(relevances, fit_scores, k=5)
+    # Spread (finding F): does the judge still discriminate? The gap uses the
+    # *true* tiers so it measures whether labeled-good jobs outscore labeled-bad.
+    spread = spread_metrics(fit_scores, tiers=true_tiers)
 
     return {
         "fixture": fixture_name,
         "n": len(job_ids),
         "kappa": kappa,
         "ndcg@5": ndcg,
+        "spread": spread,
     }
 
 

@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pytest
 
+from career_os.services.scoring_eval import spread_collapsed
 from tests.eval.harness import check_label_freshness, compute_agreement
 from tests.eval.run_scoring import make_memory_session, score_fixture
 
@@ -41,6 +42,9 @@ BASELINE = json.loads((Path(__file__).resolve().parent / "baseline_metrics.json"
 # Tolerance bands for the delta-vs-baseline gate.
 KAPPA_TOLERANCE = 0.15
 NDCG_TOLERANCE = 0.15
+# Spread (finding F): std-dev may drift this far from baseline before we call it
+# a distribution shift. Wider than κ/NDCG because std-dev is a coarser statistic.
+SPREAD_STDDEV_TOLERANCE = 1.0
 
 
 @pytest.fixture()
@@ -86,6 +90,40 @@ async def test_agreement_within_baseline_band(fixture_name, db_session):
         f"{fixture_name}: NDCG@5 drifted {ndcg_delta:.3f} from baseline "
         f"{base['ndcg@5']:.3f} (now {agreement['ndcg@5']:.3f}, tolerance {NDCG_TOLERANCE}). "
         f"If intentional, regenerate with `python -m tests.eval.generate_baseline`."
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fixture_name", FIXTURE_NAMES)
+async def test_spread_not_collapsed_and_within_baseline(fixture_name, db_session):
+    """Score spread stays healthy (finding F): not collapsed + std-dev near baseline.
+
+    A judge whose distribution flattens/clusters has stopped discriminating.
+    We gate two ways: an absolute anti-collapse guard (std-dev floor / mode-share
+    ceiling) that fails a genuinely degenerate distribution, and a delta-vs-baseline
+    guard on std-dev that catches a silent narrowing before it fully collapses.
+    """
+    scored = await score_fixture(db_session, fixture_name)
+    spread = compute_agreement(fixture_name, scored)["spread"]
+
+    # Well-formed spread metrics.
+    assert spread["stddev"] >= 0.0
+    assert spread["entropy"] >= 0.0
+    assert 0.0 <= spread["mode_share"] <= 1.0
+
+    # Absolute anti-collapse guard.
+    assert not spread_collapsed(spread), (
+        f"{fixture_name}: score distribution collapsed — stddev={spread['stddev']:.3f}, "
+        f"mode_share={spread['mode_share']:.3f}. The judge stopped discriminating."
+    )
+
+    # Delta-vs-baseline guard on std-dev.
+    base_spread = BASELINE["metrics"][fixture_name]["spread"]
+    stddev_delta = abs(spread["stddev"] - base_spread["stddev"])
+    assert stddev_delta <= SPREAD_STDDEV_TOLERANCE, (
+        f"{fixture_name}: score std-dev drifted {stddev_delta:.3f} from baseline "
+        f"{base_spread['stddev']:.3f} (now {spread['stddev']:.3f}, tolerance "
+        f"{SPREAD_STDDEV_TOLERANCE}). If intentional, regenerate the baseline."
     )
 
 
