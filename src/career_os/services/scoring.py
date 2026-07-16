@@ -3818,13 +3818,25 @@ async def batch_score_discovery(
 
     total_time = time.monotonic() - start_time
 
-    return {
+    result = {
         "scored_count": len(scores),
         "total_time_seconds": round(total_time, 2),
         "scores": scores,
         "errors": errors,
         "credits_exhausted": credits_exhausted,
     }
+
+    # Relative/percentile batch scoring (G-1338, finding N): opt-in, off by
+    # default. When enabled, attach a within-batch percentile/tier view derived
+    # from the raw scores (raw fit_scores are never mutated). Strict identity when
+    # off — no "relative" key is added, so default behavior is byte-for-byte
+    # unchanged.
+    if settings.relative_batch_scoring_enabled and scores:
+        from career_os.services.relative_scoring import build_relative_view
+
+        result["relative"] = build_relative_view(scores)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
