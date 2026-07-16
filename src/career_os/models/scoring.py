@@ -200,6 +200,67 @@ class ShadowScore(Base):
         )
 
 
+class DistillationSample(Base):
+    """A per-scored-job training tuple for future model distillation (finding M).
+
+    Scoring Engine v2 (G-1338, finding M). When ``DISTILLATION_LOGGING_ENABLED``
+    is set, every production scoring call opportunistically records the tuple
+    ``(structured signals, LLM score, user correction)`` here. The audit's point:
+    "every unlogged day is training data lost" — we already generate thousands of
+    labeled scores daily, so we start accumulating the distillation dataset NOW,
+    long before the small local feature model that consumes it is built.
+
+    This table is **write-only from the scoring path** — nothing in the live
+    product reads it, and a logging failure never breaks scoring (fully
+    defensive). ``signals`` is the JSON feature vector (dimensional scores,
+    role-fit verdict, weights, readiness, red-flag count, ESCO overlap when
+    available, …); ``fit_score``/``desire_score``/``quadrant`` are the LLM labels;
+    ``feedback_*`` are backfilled if/when the user later corrects the score.
+    """
+
+    __tablename__ = "distillation_samples"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    profile_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+    )
+    # SET NULL so pruning a live score never drops the training tuple.
+    scored_job_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("scored_jobs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    discovered_job_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("discovered_jobs.id"), nullable=True, index=True
+    )
+
+    # LLM labels (the values being distilled toward).
+    fit_score: Mapped[float] = mapped_column(Float, nullable=False)
+    desire_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quadrant: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # Structured feature vector used at scoring time (JSON).
+    signals: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Rubric/prompt version so a distillation run can filter by scoring regime.
+    rubric_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # User correction — backfilled from ScoringFeedback when available.
+    # "too_high" / "too_low" / "correct" / implicit_* (mirrors ScoringFeedback).
+    feedback_direction: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    feedback_user_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<DistillationSample(id={self.id}, scored_job_id={self.scored_job_id}, "
+            f"fit_score={self.fit_score})>"
+        )
+
+
 class ScoringFeedback(Base):
     """User feedback on an AI-generated score.
 
