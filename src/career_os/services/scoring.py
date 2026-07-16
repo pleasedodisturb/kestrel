@@ -3521,7 +3521,19 @@ async def score_job(
     # affects the already-committed score above.
     if settings.distillation_logging_enabled:
         from career_os.services.distillation import log_distillation_sample
+        from career_os.services.esco_features import compute_esco_features
 
+        # ESCO quantitative features (G-1338, finding L) — non-LLM structured
+        # signals (skills-overlap + title→occupation axis). Best-effort and
+        # additive: never changes what was sent to the LLM, only enriches the
+        # (off-by-default) training tuple.
+        esco = compute_esco_features(
+            db,
+            profile_id=profile_id,
+            application_id=application_id,
+            jd_title=job_title,
+            candidate_role=profile_data.get("job_family"),
+        )
         log_distillation_sample(
             db,
             profile_id=profile_id,
@@ -3530,6 +3542,7 @@ async def score_job(
             scored_job_id=scored_job.id,
             discovered_job_id=discovered_job_id,
             rubric_version=RUBRIC_VERSION,
+            extra_signals={"esco": esco} if esco else None,
         )
 
     return scored_job
