@@ -29,6 +29,7 @@ from career_os.schemas.ai import (
     LearningRecommendationsResult,
     ScoreResult,
     TokenUsage,
+    scale_score_result_dimensions,
 )
 
 logger = logging.getLogger(__name__)
@@ -215,7 +216,8 @@ class OpenRouterProvider(AIProvider):
             f"readiness_score (0-100), career_alignment (0-10), "
             f"score_breakdown (array of ≥3 objects, each with: factor (string), "
             f"contribution (positive or negative float), description (string)), "
-            f"dimensional_scores (object with 6 floats 0-10: technical_fit, "
+            f"dimensional_scores (object with 6 floats on a 0-5 scale, NOT 0-10 "
+            "(0=no fit, 5=perfect): technical_fit, "
             f"seniority_alignment, compensation_fit, location_fit, career_trajectory, "
             f"company_fit), "
             f"ats_keywords (array of 10-15 objects, each with: keyword (string), "
@@ -243,7 +245,9 @@ def _system_prompt_for_feature(feature: AIFeature) -> str | None:
             "score_breakdown (REQUIRED array of ≥3 objects, each with: "
             "factor (string), contribution (positive or negative float), "
             "description (string explaining impact)), "
-            "dimensional_scores (REQUIRED object with 6 floats (0-10): "
+            "dimensional_scores (REQUIRED object with 6 floats, each on a 0-5 scale "
+            "NOT 0-10, where 0=no fit and 5=perfect — the top-level fit_score and "
+            "desire_score stay 0-10, ONLY these six dimensions are 0-5: "
             "technical_fit, seniority_alignment, compensation_fit, location_fit, "
             "career_trajectory, company_fit), "
             "ats_keywords (REQUIRED array of 10-15 objects, each with: "
@@ -398,7 +402,15 @@ def _try_parse_structured(
 
         schema_cls = _SCHEMA_MAP.get(feature)
         if schema_cls:
-            return schema_cls.model_validate(data)
+            parsed = schema_cls.model_validate(data)
+            # Finding E (G-1337): the model emits dimensional scores on a 0–5
+            # axis; lift them onto the 0–10 storage/display axis here, at the
+            # single live-provider parse boundary. Cache reads bypass this path
+            # (AIResponse.model_validate_json), so already-0–10 cached rows are
+            # never re-scaled.
+            if isinstance(parsed, ScoreResult):
+                return scale_score_result_dimensions(parsed)
+            return parsed
     except Exception as exc:
         logger.warning(
             "Could not parse structured response for %s: %s | raw (first 200 chars): %.200s",

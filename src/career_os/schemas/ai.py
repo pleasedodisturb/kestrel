@@ -111,7 +111,17 @@ class ScoreBreakdownFactor(BaseModel):
 
 
 class DimensionalScores(BaseModel):
-    """Six dimensional sub-scores for a job fit (0-10 each).
+    """Six dimensional sub-scores for a job fit.
+
+    **Scale (G-1337, finding E):** these values are STORED and DISPLAYED on a
+    0–10 axis (unchanged for back-compat — no data migration), but the model is
+    now asked to EMIT each dimension on a 0–5 axis (best human–LLM alignment per
+    the 2026 grading-scale study; 0–10 clustered worst). The 0–5→0–10 scaling
+    happens exactly once, at the live-provider parse boundary
+    (:func:`scale_score_result_dimensions`, called from
+    ``ai.openrouter_provider._try_parse_structured``) — never in a schema
+    validator, so cached 0–10 responses re-read via ``model_validate_json`` are
+    NOT re-scaled. The field bounds therefore stay 0–10.
 
     Maps to the scoring weight factors on a per-dimension basis:
 
@@ -129,6 +139,78 @@ class DimensionalScores(BaseModel):
     location_fit: float = Field(..., ge=0, le=10)
     career_trajectory: float = Field(..., ge=0, le=10)
     company_fit: float = Field(..., ge=0, le=10)
+
+
+# ---------------------------------------------------------------------------
+# Dimensional scale bridge (G-1337, finding E) — model emits 0–5, we store 0–10
+# ---------------------------------------------------------------------------
+
+#: The scale the model is *asked to emit* each dimension on.
+DIMENSION_EMIT_MAX = 5.0
+#: The scale dimensions are *stored and displayed* on (UI + DB, unchanged).
+DIMENSION_DISPLAY_MAX = 10.0
+#: Multiplier applied on parse to lift a 0–5 emission onto the 0–10 axis.
+DIMENSION_SCALE_FACTOR = DIMENSION_DISPLAY_MAX / DIMENSION_EMIT_MAX  # 2.0
+
+#: How many dimensions must exceed :data:`DIMENSION_EMIT_MAX` before the whole
+#: set is treated as a legacy/non-compliant 0–10 emission. Requiring ≥2 signals
+#: (not just any 1) makes the detector robust to a single sloppy outlier: one
+#: dimension emitted as 5.1 or 6 can no longer flip the other five to
+#: half-scale. Every prompt path now asks for 0–5, so the default assumption is
+#: "0–5, scale it"; only strong evidence (multiple out-of-range dims) overrides.
+DIMENSION_LEGACY_TEN_SCALE_MIN_SIGNALS = 2
+
+_DIMENSION_FIELDS = (
+    "technical_fit",
+    "seniority_alignment",
+    "compensation_fit",
+    "location_fit",
+    "career_trajectory",
+    "company_fit",
+)
+
+
+def _clamp(value: float, low: float, high: float) -> float:
+    """Clamp ``value`` into the inclusive ``[low, high]`` range."""
+    return max(low, min(high, value))
+
+
+def scale_dimensions_to_display(dims: DimensionalScores) -> DimensionalScores:
+    """Lift model-emitted 0–5 dimensional scores onto the 0–10 storage scale.
+
+    Every prompt path (single scorer + batch) now asks the model to score each
+    dimension 0–5 (finding E), so the default behavior is to **clamp each
+    dimension into ``[0, 5]`` and multiply by** :data:`DIMENSION_SCALE_FACTOR`
+    (×2), landing on ``[0, 10]``. Per-dimension clamping means a lone sloppy
+    value (e.g. 5.1) is pinned to 5 and scaled with the rest, rather than
+    corrupting the set.
+
+    **Defensive back-compat:** only when at least
+    :data:`DIMENSION_LEGACY_TEN_SCALE_MIN_SIGNALS` dimensions exceed
+    :data:`DIMENSION_EMIT_MAX` (i.e. the emission clearly looks 0–10, not a
+    single outlier) is the set treated as a legacy/non-compliant 0–10 response
+    and clamped-but-NOT-scaled. This can never be reached by cached rows (cache
+    reads bypass this function entirely — see
+    :func:`scale_score_result_dimensions`).
+
+    NOT idempotent: applying it twice to a genuine 0–5 emission scales ×4. It is
+    called exactly once, at the live-provider parse boundary. Pure (no mutation
+    of the input).
+    """
+    values = {name: getattr(dims, name) for name in _DIMENSION_FIELDS}
+    over_max = sum(1 for v in values.values() if v > DIMENSION_EMIT_MAX)
+    if over_max >= DIMENSION_LEGACY_TEN_SCALE_MIN_SIGNALS:
+        # Clearly a 0–10 emission — keep values as-is, just clamp into range.
+        return DimensionalScores(
+            **{name: _clamp(v, 0.0, DIMENSION_DISPLAY_MAX) for name, v in values.items()}
+        )
+    # 0–5 emission (the norm): clamp each into [0, 5] then scale ×2 to [0, 10].
+    return DimensionalScores(
+        **{
+            name: _clamp(v, 0.0, DIMENSION_EMIT_MAX) * DIMENSION_SCALE_FACTOR
+            for name, v in values.items()
+        }
+    )
 
 
 class RoleMatch(BaseModel):
@@ -263,6 +345,24 @@ def apply_role_fit_gate(result: ScoreResult) -> ScoreResult:
     if role_fit_gate_failed(result) and result.fit_score > ROLE_FIT_GATE_CEILING:
         return result.model_copy(update={"fit_score": ROLE_FIT_GATE_CEILING})
     return result
+
+
+def scale_score_result_dimensions(result: ScoreResult) -> ScoreResult:
+    """Return ``result`` with its dimensional scores lifted from 0–5 to 0–10.
+
+    The 0–5→0–10 bridge for finding E (see :func:`scale_dimensions_to_display`).
+    A no-op (returns the input unchanged) when ``dimensional_scores`` is None.
+    Only ``dimensional_scores`` is touched — the top-level ``fit_score`` /
+    ``desire_score`` stay on their native 0–10 axis (finding E does not rescale
+    them). Called exactly once, at the real-provider parse boundary
+    (``ai.openrouter_provider._try_parse_structured``); the mock/deterministic
+    providers construct final display-scale results and never traverse it.
+    """
+    if result.dimensional_scores is None:
+        return result
+    return result.model_copy(
+        update={"dimensional_scores": scale_dimensions_to_display(result.dimensional_scores)}
+    )
 
 
 class GapAnalysisResult(BaseModel):
