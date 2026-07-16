@@ -3394,9 +3394,28 @@ async def score_job(
                 score_data.fit_score,
             )
 
-    # Re-apply the role-fit gate after averaging — the merged result fails closed
-    # (inherits a mismatch/disqualifier flagged by either pass), so a borderline
-    # job that a second pass reveals as a role mismatch still gets capped.
+    # Per-provider post-hoc calibration (G-1337, finding G). Off by default and a
+    # strict no-op unless SCORING_CALIBRATION_ENABLED is set AND a calibrator has
+    # been fit + registered for this provider. Applied BEFORE the final role-fit
+    # gate below so the hard cap always has the last word — calibration can never
+    # lift a role-mismatched job back over a quadrant boundary.
+    if settings.scoring_calibration_enabled:
+        from career_os.services.scoring_calibration import apply_provider_calibration
+
+        calibrated = apply_provider_calibration(provider.name, score_data.fit_score, enabled=True)
+        if calibrated != score_data.fit_score:
+            logger.info(
+                "Calibrated fit_score for provider %s: %.2f → %.2f",
+                provider.name,
+                score_data.fit_score,
+                calibrated,
+            )
+            score_data = score_data.model_copy(update={"fit_score": calibrated})
+
+    # Re-apply the role-fit gate after averaging + calibration — the merged result
+    # fails closed (inherits a mismatch/disqualifier flagged by either pass), so a
+    # borderline job that a second pass reveals as a role mismatch still gets capped,
+    # and calibration can never lift a gated score over the ceiling.
     score_data = _apply_role_fit_gate(score_data)
 
     # Serialize score_breakdown to JSON for storage

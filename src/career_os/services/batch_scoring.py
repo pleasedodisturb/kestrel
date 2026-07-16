@@ -17,7 +17,13 @@ import random
 import re
 
 from career_os.ai.base import AIProvider
-from career_os.schemas.ai import AIFeature, AIResponse, ScoreResult, apply_role_fit_gate
+from career_os.schemas.ai import (
+    AIFeature,
+    AIResponse,
+    ScoreResult,
+    apply_role_fit_gate,
+    scale_score_result_dimensions,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +127,15 @@ def build_batch_prompt(
         f"- readiness_score (0-100)\n"
         f"- career_alignment (0-10)\n"
         f"- score_breakdown (array of >=3 objects with factor, contribution, description)\n"
-        f"- dimensional_scores (object with 6 floats 0-10: technical_fit, "
-        f"seniority_alignment, compensation_fit, location_fit, career_trajectory, "
-        f"company_fit)\n"
+        # Dimensional scale (G-1337, finding E): the model emits these six on a
+        # 0-5 axis; parse_batch_response scales them ×2 to the 0-10 storage axis
+        # via scale_score_result_dimensions — SAME bridge as the single-scorer
+        # parse path. Keep this instruction and that scaling in lockstep: if one
+        # says 0-5 the other MUST scale, or dims are silently halved/doubled.
+        f"- dimensional_scores (object with 6 floats on a 0-5 scale, NOT 0-10 "
+        f"(0=no fit, 5=perfect); the top-level fit_score/desire_score stay 0-10: "
+        f"technical_fit, seniority_alignment, compensation_fit, location_fit, "
+        f"career_trajectory, company_fit)\n"
         f"- ats_keywords (array of 10-15 objects with keyword, category, matched)\n"
         f"- desire_score (0-10)\n"
         f"- desire_reasoning (string)\n\n"
@@ -228,7 +240,12 @@ def parse_batch_response(
         try:
             # Role-fit hard gate (G-1335): cap fit_score post-parse so company
             # prestige can't substitute for role fit in the daily-scan batch path.
-            score_result = apply_role_fit_gate(ScoreResult.model_validate(item))
+            # Scale dims 0-5 → 0-10 (finding E) BEFORE the gate, mirroring the
+            # single-scorer parse path; the gate only touches fit_score so order
+            # among them is immaterial.
+            score_result = apply_role_fit_gate(
+                scale_score_result_dimensions(ScoreResult.model_validate(item))
+            )
             results[job_id] = score_result
         except Exception as exc:
             logger.warning(
@@ -245,7 +262,11 @@ def parse_batch_response(
             if not isinstance(item, dict):
                 continue
             try:
-                score_result = apply_role_fit_gate(ScoreResult.model_validate(item))
+                # Scale dims 0-5 → 0-10 (finding E) BEFORE the gate, mirroring
+                # the single-scorer parse path.
+                score_result = apply_role_fit_gate(
+                    scale_score_result_dimensions(ScoreResult.model_validate(item))
+                )
                 results[ordered_ids[idx]] = score_result
             except Exception as exc:
                 logger.warning(
