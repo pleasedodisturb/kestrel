@@ -239,3 +239,123 @@ def psi_from_scores(
         bin_counts(baseline_scores, edges),
         bin_counts(current_scores, edges),
     )
+
+
+# ---------------------------------------------------------------------------
+# Spread metrics (G-1337, finding F) — is the judge still discriminating?
+# ---------------------------------------------------------------------------
+# A judge whose score distribution flattens/clusters has stopped discriminating
+# — the failure mode we caught by luck before. These make spread a first-class,
+# standing gate: std-dev + score-entropy + mode-share describe the shape of the
+# distribution, and the chosen-vs-rejected gap measures whether the good jobs
+# actually outscore the bad ones. All pure-Python (``math`` only).
+
+# Anti-collapse gate thresholds (absolute, generous — they fail only a genuinely
+# degenerate distribution, not normal variation). On the 0–10 fit axis.
+SPREAD_STDDEV_FLOOR = 0.5  # below this the scores are effectively one value
+SPREAD_MODE_SHARE_CEILING = 0.90  # above this ~everything landed in one bin
+
+
+def score_stddev(scores: list[float]) -> float:
+    """Population standard deviation of a score list (0.0 for <2 values)."""
+    n = len(scores)
+    if n < 2:
+        return 0.0
+    mean = sum(scores) / n
+    variance = sum((s - mean) ** 2 for s in scores) / n
+    return math.sqrt(variance)
+
+
+def score_entropy(
+    scores: list[float],
+    *,
+    edges: tuple[float, ...] = DEFAULT_SCORE_BINS,
+) -> float:
+    """Shannon entropy (bits, base-2) of the binned score distribution.
+
+    Higher = scores spread across more bins (healthy discrimination); ``0.0``
+    when every score falls in a single bin (fully collapsed). Empty bins
+    contribute nothing (``0·log0 ≡ 0``). Bins are :data:`DEFAULT_SCORE_BINS`.
+    """
+    counts = bin_counts(scores, edges)
+    total = sum(counts)
+    if total == 0:
+        return 0.0
+    entropy = 0.0
+    for c in counts:
+        if c == 0:
+            continue
+        p = c / total
+        entropy -= p * math.log2(p)
+    return entropy
+
+
+def mode_share(
+    scores: list[float],
+    *,
+    edges: tuple[float, ...] = DEFAULT_SCORE_BINS,
+) -> float:
+    """Fraction of scores that fall in the single most-populated bin (0–1).
+
+    ``1.0`` = every score in one bin (collapsed); low values = well spread.
+    ``0.0`` for an empty input.
+    """
+    counts = bin_counts(scores, edges)
+    total = sum(counts)
+    if total == 0:
+        return 0.0
+    return max(counts) / total
+
+
+def chosen_rejected_gap(scores: list[float], tiers: list[str]) -> float:
+    """Mean score of *chosen* jobs minus mean score of *rejected* jobs.
+
+    "Chosen" = tiers ``strong``/``dream``; "rejected" = tier ``reject`` (the
+    ``mediocre`` middle is excluded so the gap measures the clear ends). A
+    positive gap means the scorer ranks the good jobs above the bad ones — the
+    single most important spread signal. Returns ``0.0`` when either side is
+    empty (no discrimination measurable). Raises ``ValueError`` on length
+    mismatch.
+    """
+    if len(scores) != len(tiers):
+        raise ValueError("scores and tiers must have equal length")
+    chosen = [s for s, t in zip(scores, tiers, strict=True) if t in ("strong", "dream")]
+    rejected = [s for s, t in zip(scores, tiers, strict=True) if t == "reject"]
+    if not chosen or not rejected:
+        return 0.0
+    return sum(chosen) / len(chosen) - sum(rejected) / len(rejected)
+
+
+def spread_metrics(
+    scores: list[float],
+    *,
+    tiers: list[str] | None = None,
+    edges: tuple[float, ...] = DEFAULT_SCORE_BINS,
+) -> dict:
+    """Bundle the finding-F spread metrics for a score population.
+
+    Returns std-dev, score-entropy (bits), mode-share, and — when ``tiers`` are
+    supplied — the chosen-vs-rejected gap. Used by the golden-set eval harness
+    to gate against a flattening/clustering judge.
+    """
+    metrics: dict[str, float] = {
+        "stddev": score_stddev(scores),
+        "entropy": score_entropy(scores, edges=edges),
+        "mode_share": mode_share(scores, edges=edges),
+    }
+    if tiers is not None:
+        metrics["chosen_rejected_gap"] = chosen_rejected_gap(scores, tiers)
+    return metrics
+
+
+def spread_collapsed(metrics: dict) -> bool:
+    """Return True when a spread-metric bundle indicates a collapsed distribution.
+
+    The anti-collapse gate: fires when std-dev falls below
+    :data:`SPREAD_STDDEV_FLOOR` OR mode-share exceeds
+    :data:`SPREAD_MODE_SHARE_CEILING` — i.e. the judge has effectively stopped
+    discriminating. Generous by design so it flags only genuine degeneracy.
+    """
+    return (
+        metrics["stddev"] < SPREAD_STDDEV_FLOOR or metrics["mode_share"] > SPREAD_MODE_SHARE_CEILING
+    )

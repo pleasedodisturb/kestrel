@@ -40,10 +40,17 @@ async def _run() -> dict:
         finally:
             db.close()
         agreement = compute_agreement(fixture_name, scored)
+        spread = agreement["spread"]
         metrics[fixture_name] = {
             "n": agreement["n"],
             "kappa": round(agreement["kappa"], 4),
             "ndcg@5": round(agreement["ndcg@5"], 4),
+            "spread": {
+                "stddev": round(spread["stddev"], 4),
+                "entropy": round(spread["entropy"], 4),
+                "mode_share": round(spread["mode_share"], 4),
+                "chosen_rejected_gap": round(spread["chosen_rejected_gap"], 4),
+            },
         }
     return {
         "note": (

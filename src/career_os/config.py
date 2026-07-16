@@ -100,6 +100,14 @@ class Settings(BaseSettings):
     # cost on high-volume runs.
     scoring_shadow_sample: float = 1.0
 
+    # Per-provider score calibration (Scoring Engine v2 / G-1337, finding G) —
+    # when enabled, the production fit_score is passed through a per-provider
+    # isotonic raw→calibrated map so cheap-model scores are comparable across
+    # runs/providers. Off by default and a strict no-op unless a calibrator has
+    # been fit + registered for the live provider (see services.scoring_calibration).
+    # The map is fit from STORED labels (user corrections / golden set) — no paid ops.
+    scoring_calibration_enabled: bool = False
+
     # Drift canary (Scoring Engine v2 / G-1336, finding J) — nightly-style check
     # that computes PSI of the score distribution vs a rolling baseline and
     # re-scores the frozen golden set, alerting via Pushover ONLY on the joint

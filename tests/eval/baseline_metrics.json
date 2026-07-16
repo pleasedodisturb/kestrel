@@ -3,32 +3,68 @@
     "scoring_golden_set.json": {
       "kappa": -0.0442,
       "n": 20,
-      "ndcg@5": 0.6312
+      "ndcg@5": 0.6312,
+      "spread": {
+        "chosen_rejected_gap": 1.0,
+        "entropy": 2.4282,
+        "mode_share": 0.3,
+        "stddev": 2.4501
+      }
     },
     "scoring_golden_set_design.json": {
       "kappa": -0.036,
       "n": 20,
-      "ndcg@5": 0.44
+      "ndcg@5": 0.44,
+      "spread": {
+        "chosen_rejected_gap": 0.47,
+        "entropy": 2.4232,
+        "mode_share": 0.25,
+        "stddev": 2.0276
+      }
     },
     "scoring_golden_set_finance.json": {
       "kappa": 0.0244,
       "n": 20,
-      "ndcg@5": 0.6514
+      "ndcg@5": 0.6514,
+      "spread": {
+        "chosen_rejected_gap": -0.12,
+        "entropy": 2.22,
+        "mode_share": 0.45,
+        "stddev": 2.221
+      }
     },
     "scoring_golden_set_healthcare.json": {
       "kappa": -0.0385,
       "n": 20,
-      "ndcg@5": 0.413
+      "ndcg@5": 0.413,
+      "spread": {
+        "chosen_rejected_gap": 1.2327,
+        "entropy": 2.0414,
+        "mode_share": 0.4,
+        "stddev": 2.4215
+      }
     },
     "scoring_golden_set_legal.json": {
       "kappa": -0.0843,
       "n": 20,
-      "ndcg@5": 0.3304
+      "ndcg@5": 0.3304,
+      "spread": {
+        "chosen_rejected_gap": -1.2867,
+        "entropy": 2.2261,
+        "mode_share": 0.35,
+        "stddev": 2.4904
+      }
     },
     "scoring_golden_set_product.json": {
       "kappa": -0.1765,
       "n": 20,
-      "ndcg@5": 0.5095
+      "ndcg@5": 0.5095,
+      "spread": {
+        "chosen_rejected_gap": -0.5233,
+        "entropy": 2.3282,
+        "mode_share": 0.3,
+        "stddev": 2.0829
+      }
     }
   },
   "note": "Baseline \u03ba/NDCG@5 from the real score_job over the MockProvider. Deltas gate the eval; regenerate deliberately when scoring changes.",
