@@ -108,6 +108,24 @@ class Settings(BaseSettings):
     # The map is fit from STORED labels (user corrections / golden set) — no paid ops.
     scoring_calibration_enabled: bool = False
 
+    # Distillation logging (Scoring Engine v2 / G-1338, finding M) — when set,
+    # every production scoring call opportunistically records the training tuple
+    # ``(structured signals, LLM score, user correction)`` to the
+    # ``distillation_samples`` table so a future small local feature model has a
+    # dataset to distill from ("every unlogged day is training data lost"). It
+    # makes NO LLM calls — it only records what already happened. Fully defensive
+    # (a logging failure never breaks scoring). Off by default; opt-in to start
+    # accumulating data.
+    distillation_logging_enabled: bool = False
+
+    # Relative/percentile batch scoring (Scoring Engine v2 / G-1338, finding N) —
+    # when set, a discovery batch's raw fit scores are additionally normalized to
+    # within-batch percentiles/tiers (relative ranking is more stable than
+    # absolute calibration). Opt-in and non-destructive: raw fit_scores are never
+    # mutated; the relative view is exposed alongside them. Off by default (strict
+    # identity: default behavior is unchanged).
+    relative_batch_scoring_enabled: bool = False
+
     # Drift canary (Scoring Engine v2 / G-1336, finding J) — nightly-style check
     # that computes PSI of the score distribution vs a rolling baseline and
     # re-scores the frozen golden set, alerting via Pushover ONLY on the joint

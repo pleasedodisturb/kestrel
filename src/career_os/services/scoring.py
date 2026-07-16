@@ -3533,6 +3533,36 @@ async def score_job(
             live_provider_name=provider.name,
         )
 
+    # Distillation-label logging (G-1338, finding M): opportunistically record the
+    # (structured signals, LLM score) training tuple for a future small local
+    # feature model. No LLM cost — records what already happened. Off by default
+    # (DISTILLATION_LOGGING_ENABLED) and fully defensive: a logging failure never
+    # affects the already-committed score above.
+    if settings.distillation_logging_enabled:
+        from career_os.services.distillation import log_distillation_sample
+        from career_os.services.esco_features import compute_esco_features
+
+        # ESCO quantitative features (G-1338, finding L) — a non-LLM structured
+        # signal (severity-weighted skills-overlap). Best-effort and additive:
+        # never changes what was sent to the LLM, only enriches the
+        # (off-by-default) training tuple. Only defined when the job has parsed
+        # requirements (application_id present); None otherwise.
+        esco = compute_esco_features(
+            db,
+            profile_id=profile_id,
+            application_id=application_id,
+        )
+        log_distillation_sample(
+            db,
+            profile_id=profile_id,
+            score_result=score_data,
+            profile_data=profile_data,
+            scored_job_id=scored_job.id,
+            discovered_job_id=discovered_job_id,
+            rubric_version=RUBRIC_VERSION,
+            extra_signals={"esco": esco} if esco else None,
+        )
+
     return scored_job
 
 
@@ -3806,13 +3836,25 @@ async def batch_score_discovery(
 
     total_time = time.monotonic() - start_time
 
-    return {
+    result = {
         "scored_count": len(scores),
         "total_time_seconds": round(total_time, 2),
         "scores": scores,
         "errors": errors,
         "credits_exhausted": credits_exhausted,
     }
+
+    # Relative/percentile batch scoring (G-1338, finding N): opt-in, off by
+    # default. When enabled, attach a within-batch percentile/tier view derived
+    # from the raw scores (raw fit_scores are never mutated). Strict identity when
+    # off — no "relative" key is added, so default behavior is byte-for-byte
+    # unchanged.
+    if settings.relative_batch_scoring_enabled and scores:
+        from career_os.services.relative_scoring import build_relative_view
+
+        result["relative"] = build_relative_view(scores)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -4200,6 +4242,20 @@ def submit_feedback(
     db.add(feedback)
     db.commit()
     db.refresh(feedback)
+
+    # Distillation-label logging (G-1338, finding M): backfill the correction onto
+    # the training tuple(s) for this scored job. No-op unless the flag is on;
+    # never raises.
+    from career_os.services.distillation import record_distillation_feedback
+
+    record_distillation_feedback(
+        db,
+        scored_job_id=scored_job_id,
+        profile_id=profile_id,
+        direction=direction,
+        user_score=user_score,
+    )
+
     return feedback
 
 
@@ -4254,6 +4310,15 @@ def record_implicit_feedback(
         db.add(feedback)
         db.commit()
         db.refresh(feedback)
+
+        # Distillation-label logging (G-1338, finding M): backfill the implicit
+        # correction onto the training tuple(s). No-op unless the flag is on.
+        from career_os.services.distillation import record_distillation_feedback
+
+        record_distillation_feedback(
+            db, scored_job_id=scored_job_id, profile_id=profile_id, direction=direction
+        )
+
         return feedback
     except Exception:
         logger.warning(
