@@ -331,6 +331,18 @@ def test_esco_signal_abstains_without_application(db_session):
     assert v.available is False
 
 
+def test_esco_signal_abstains_when_candidate_has_no_esco_uris(db_session):
+    """An un-normalized profile (no ESCO URIs) vs an ESCO-tagged JD → abstain,
+    NOT reject — absence of candidate data is not evidence of non-fit."""
+    _seed_candidate_skills(db_session, ["Python"], esco_uris=[None])  # not normalized
+    app = _seed_application(db_session)
+    _seed_requirements(db_session, app.id, [("Welding", "critical", _ESCO_B)])
+    v = esco_signal(db_session, profile_id=1, application_id=app.id)
+    assert v.available is False
+    assert v.votes_reject is False
+    assert v.detail["reason"] == "candidate_has_no_esco_uris"
+
+
 # ---------------------------------------------------------------------------
 # route_job — THE critical safety assertion
 # ---------------------------------------------------------------------------

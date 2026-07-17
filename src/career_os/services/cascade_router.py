@@ -60,7 +60,10 @@ from career_os.models.scoring import CascadeDecision as CascadeDecisionRow
 from career_os.models.scoring import ScoredJob
 from career_os.models.skills import JobRequirement, Skill
 from career_os.schemas.scoring import classify_quadrant
-from career_os.services.esco_features import compute_job_skills_overlap
+from career_os.services.esco_features import (
+    compute_job_skills_overlap,
+    get_candidate_skill_uris,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -340,6 +343,12 @@ def esco_signal(
     esco_features docstring warns ``overlap_score == 0.0`` conflates "no data" and
     "zero coverage", so we key availability on ``total``). Votes to reject only
     when there IS data and the weighted coverage is at/below the (zero) threshold.
+
+    **Also abstains when the CANDIDATE has zero ESCO-normalized skills.** In that
+    case the overlap is structurally 0 no matter how good the job is — that is
+    absence of candidate data, NOT evidence of non-fit, so it must not push a good
+    job toward a wrongful skip. This closes the sharpest "good job skipped" path:
+    an un-normalized profile against an ESCO-tagged JD.
     """
     threshold = (
         settings.cascade_esco_reject_threshold if reject_threshold is None else reject_threshold
@@ -347,6 +356,15 @@ def esco_signal(
     if application_id is None:
         return SignalVote(
             name="esco", available=False, value=None, votes_reject=False, detail={"total": 0}
+        )
+    if not get_candidate_skill_uris(db, profile_id):
+        # Candidate has no ESCO-normalized skills → no data to judge coverage.
+        return SignalVote(
+            name="esco",
+            available=False,
+            value=None,
+            votes_reject=False,
+            detail={"reason": "candidate_has_no_esco_uris"},
         )
     overlap = compute_job_skills_overlap(db, application_id=application_id, profile_id=profile_id)
     total = overlap.get("total", 0)
