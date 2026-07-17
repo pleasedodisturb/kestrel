@@ -25,6 +25,7 @@ from career_os.models.models import (
 from career_os.models.onboarding import OnboardingState
 from career_os.models.pushover import NotificationLog, NotificationPreference
 from career_os.models.scoring import (
+    CascadeDecision,
     DistillationSample,
     ScoredJob,
     ScoringWeights,
@@ -53,6 +54,7 @@ __all__ = [
     "ContactApplication",
     "ContactInteraction",
     "ApplicationPackage",
+    "CascadeDecision",
     "CoachingSuggestion",
     "DistillationSample",
     "Embedding",
