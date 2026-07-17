@@ -33,9 +33,14 @@ from __future__ import annotations
 
 import logging
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from career_os.schemas.ai import ScoreResult
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +199,54 @@ def apply_provider_calibration(
     if calibrator is None:
         return raw_score
     return calibrator.predict(raw_score)
+
+
+def apply_calibration_and_gate(
+    score_result: ScoreResult,
+    provider_name: str,
+    *,
+    calibration_enabled: bool | None = None,
+    gate: Callable[[ScoreResult], ScoreResult] | None = None,
+    log: bool = False,
+) -> ScoreResult:
+    """Shared scoring post-processing tail: calibrate ``fit_score`` then re-apply the gate.
+
+    The single place every scoring path (single-scorer, async Batch API, and the
+    multi-job-per-prompt batch) runs its calibrate→gate tail, so a provider's
+    calibration map (G-1337) and the G-1335 role-fit hard gate are applied
+    *identically* everywhere. Calibration runs first and the gate always runs last,
+    so calibration can never lift a role-mismatched job back over the ceiling.
+
+    Off by default and order-preserving: when calibration is disabled (or no
+    calibrator is registered for ``provider_name``) this is exactly the gate applied
+    once — ``fit_score`` is untouched for a non-gated job. ``calibration_enabled``
+    defaults to ``settings.scoring_calibration_enabled``; pass an explicit value in
+    tests. ``gate`` defaults to the pure schema-layer :func:`apply_role_fit_gate`;
+    the single-scorer path passes its logging wrapper so cap events are still logged.
+    """
+    from career_os.schemas.ai import apply_role_fit_gate
+
+    if gate is None:
+        gate = apply_role_fit_gate
+
+    if calibration_enabled is None:
+        from career_os.config import settings
+
+        calibration_enabled = settings.scoring_calibration_enabled
+
+    if calibration_enabled:
+        calibrated = apply_provider_calibration(provider_name, score_result.fit_score, enabled=True)
+        if calibrated != score_result.fit_score:
+            if log:
+                logger.info(
+                    "Calibrated fit_score for provider %s: %.2f → %.2f",
+                    provider_name,
+                    score_result.fit_score,
+                    calibrated,
+                )
+            score_result = score_result.model_copy(update={"fit_score": calibrated})
+
+    return gate(score_result)
 
 
 # ---------------------------------------------------------------------------

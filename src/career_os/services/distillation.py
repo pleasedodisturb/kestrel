@@ -95,6 +95,7 @@ def log_distillation_sample(
     discovered_job_id: int | None = None,
     rubric_version: str | None = None,
     extra_signals: dict | None = None,
+    persisted_desire_score: float | None = None,
 ) -> DistillationSample | None:
     """Persist one training tuple. No-op unless the flag is on. Never raises.
 
@@ -102,19 +103,31 @@ def log_distillation_sample(
     been committed. Uses the caller's session but is fully defensive: on any
     failure it rolls back the (uncommitted) sample and returns ``None`` — the
     already-committed :class:`ScoredJob` is never affected.
+
+    ``persisted_desire_score`` is the desire value actually written to
+    :class:`ScoredJob` (which may be *derived* when the model omitted
+    ``desire_score``). When provided it is stored on the training tuple — and drives
+    the quadrant — instead of ``score_result.desire_score``, so the logged tuple
+    reflects the PERSISTED score rather than ``None`` for derived-desire jobs
+    (WR-02). Defaults to ``score_result.desire_score`` when not supplied.
     """
     if not settings.distillation_logging_enabled:
         return None
 
     try:
         signals = build_distillation_signals(score_result, profile_data, extra=extra_signals)
-        quadrant = classify_quadrant(score_result.fit_score, score_result.desire_score)
+        desire_score = (
+            persisted_desire_score
+            if persisted_desire_score is not None
+            else score_result.desire_score
+        )
+        quadrant = classify_quadrant(score_result.fit_score, desire_score)
         sample = DistillationSample(
             profile_id=profile_id,
             scored_job_id=scored_job_id,
             discovered_job_id=discovered_job_id,
             fit_score=score_result.fit_score,
-            desire_score=score_result.desire_score,
+            desire_score=desire_score,
             quadrant=quadrant,
             signals=json.dumps(signals),
             rubric_version=rubric_version,

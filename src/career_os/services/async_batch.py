@@ -16,7 +16,8 @@ import logging
 from enum import StrEnum
 
 from career_os.ai.base import AIProvider
-from career_os.schemas.ai import ScoreResult, apply_role_fit_gate
+from career_os.schemas.ai import ScoreResult
+from career_os.services.scoring_calibration import apply_calibration_and_gate
 
 logger = logging.getLogger(__name__)
 
@@ -186,15 +187,26 @@ async def retrieve_batch_results(
             parsed.append(entry)
             continue
 
-        # structured is already a ScoreResult (parsed by the provider).
-        # Role-fit hard gate (G-1335): cap fit_score post-parse on the async
-        # Batch API path too, so prestige can't substitute for role fit there.
+        # structured is already a ScoreResult (parsed + dim-scaled by the provider).
+        # Run the SAME calibrate→gate tail as the single-scorer path (G-1337 finding
+        # G + G-1335), so the async Batch API path no longer silently skips
+        # calibration: prestige can't substitute for role fit AND cheap-model scores
+        # line up with the reference scale here too. Both are off by default.
+        #
+        # Distillation logging (G-1338 finding M) is deliberately NOT wired here: this
+        # path has no per-job DB session or persisted ScoredJob (the results endpoint
+        # returns dicts and the batch results are never written to `scored_jobs` in
+        # this service), so there is no scored_job_id to key a training tuple on.
+        # Known gap — a follow-up ticket tracks wiring distillation into a persisting
+        # async-batch consumer; see the PR body for the rationale.
         if isinstance(structured, ScoreResult):
-            entry["score_result"] = apply_role_fit_gate(structured)
+            entry["score_result"] = apply_calibration_and_gate(structured, provider.name)
         else:
             # Try to coerce dict → ScoreResult
             try:
-                entry["score_result"] = apply_role_fit_gate(ScoreResult(**structured))
+                entry["score_result"] = apply_calibration_and_gate(
+                    ScoreResult(**structured), provider.name
+                )
             except Exception as exc:
                 entry["error"] = f"Failed to parse score result: {exc}"
 

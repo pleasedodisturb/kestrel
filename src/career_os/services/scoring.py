@@ -3373,12 +3373,16 @@ async def score_job(
             )
             if response2.structured and isinstance(response2.structured, ScoreResult):
                 score_data2 = response2.structured
+                # Capture the true first-pass fit_score BEFORE averaging overwrites
+                # score_data, so the log reports pass1 (this) and pass2 (score_data2)
+                # distinctly rather than pass2 twice.
+                pass1_fit_score = score_data.fit_score
                 score_data = _average_score_results(score_data, score_data2)
                 scoring_passes = 2
                 logger.info(
                     "Averaged borderline scores: pass1=%.2f pass2=%.2f → avg=%.2f",
-                    score_data2.fit_score,  # original first-pass stored before averaging
-                    response2.structured.fit_score,
+                    pass1_fit_score,
+                    score_data2.fit_score,
                     score_data.fit_score,
                 )
             else:
@@ -3394,29 +3398,25 @@ async def score_job(
                 score_data.fit_score,
             )
 
-    # Per-provider post-hoc calibration (G-1337, finding G). Off by default and a
-    # strict no-op unless SCORING_CALIBRATION_ENABLED is set AND a calibrator has
-    # been fit + registered for this provider. Applied BEFORE the final role-fit
-    # gate below so the hard cap always has the last word — calibration can never
-    # lift a role-mismatched job back over a quadrant boundary.
-    if settings.scoring_calibration_enabled:
-        from career_os.services.scoring_calibration import apply_provider_calibration
+    # Per-provider post-hoc calibration (G-1337, finding G) THEN the final role-fit
+    # gate (G-1335), via the shared calibrate→gate tail so this path, the async
+    # Batch API path, and the multi-job batch path all post-process identically.
+    # Calibration is off by default and a strict no-op unless SCORING_CALIBRATION_
+    # ENABLED is set AND a calibrator is registered for this provider. It runs BEFORE
+    # the gate so the hard cap always has the last word — calibration can never lift
+    # a role-mismatched job back over a quadrant boundary. The gate re-fires after
+    # averaging too: a merged borderline result fails closed (inherits a mismatch /
+    # disqualifier flagged by either pass), so a job a second pass reveals as a role
+    # mismatch still gets capped. ``_apply_role_fit_gate`` is passed so cap events log.
+    from career_os.services.scoring_calibration import apply_calibration_and_gate
 
-        calibrated = apply_provider_calibration(provider.name, score_data.fit_score, enabled=True)
-        if calibrated != score_data.fit_score:
-            logger.info(
-                "Calibrated fit_score for provider %s: %.2f → %.2f",
-                provider.name,
-                score_data.fit_score,
-                calibrated,
-            )
-            score_data = score_data.model_copy(update={"fit_score": calibrated})
-
-    # Re-apply the role-fit gate after averaging + calibration — the merged result
-    # fails closed (inherits a mismatch/disqualifier flagged by either pass), so a
-    # borderline job that a second pass reveals as a role mismatch still gets capped,
-    # and calibration can never lift a gated score over the ceiling.
-    score_data = _apply_role_fit_gate(score_data)
+    score_data = apply_calibration_and_gate(
+        score_data,
+        provider.name,
+        calibration_enabled=settings.scoring_calibration_enabled,
+        gate=_apply_role_fit_gate,
+        log=True,
+    )
 
     # Serialize score_breakdown to JSON for storage
     breakdown_json = (
@@ -3561,6 +3561,10 @@ async def score_job(
             discovered_job_id=discovered_job_id,
             rubric_version=RUBRIC_VERSION,
             extra_signals={"esco": esco} if esco else None,
+            # WR-02: log the desire actually persisted to ScoredJob — which may be
+            # *derived* when the model omitted desire_score — so the training tuple's
+            # desire_score + quadrant match the stored row instead of being None.
+            persisted_desire_score=desire_score,
         )
 
     return scored_job

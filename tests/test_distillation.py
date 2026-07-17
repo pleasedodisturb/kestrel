@@ -202,6 +202,36 @@ def test_log_records_the_right_tuple(db_session, enable_distillation):
     assert db_session.query(DistillationSample).count() == 1
 
 
+def test_log_prefers_persisted_desire_over_result(db_session, enable_distillation):
+    """WR-02: when the model omits desire_score, the derived value persisted to
+    ScoredJob is what gets logged (and drives the quadrant), not None."""
+    from career_os.schemas.scoring import classify_quadrant
+
+    result = _make_score_result(fit_score=8.0, desire_score=None)  # model omitted desire
+    assert result.desire_score is None
+
+    sample = log_distillation_sample(
+        db_session,
+        profile_id=1,
+        score_result=result,
+        profile_data={},
+        persisted_desire_score=6.5,  # the value derived + persisted to ScoredJob
+    )
+    assert sample is not None
+    assert sample.desire_score == 6.5  # persisted value, not the result's None
+    # Quadrant reflects the persisted desire (fit 8 + desire 6.5), not None.
+    assert sample.quadrant == classify_quadrant(8.0, 6.5)
+    assert sample.quadrant is not None
+
+
+def test_log_falls_back_to_result_desire_when_no_override(db_session, enable_distillation):
+    """Back-compat: absent an override, the result's own desire_score is used."""
+    result = _make_score_result(fit_score=8.0, desire_score=6.0)
+    sample = log_distillation_sample(db_session, profile_id=1, score_result=result, profile_data={})
+    assert sample is not None
+    assert sample.desire_score == 6.0
+
+
 def test_log_defensive_on_failure_returns_none(db_session, enable_distillation):
     """A DB failure (bad FK) is swallowed — returns None, never raises."""
     # profile_id 99999 does not exist → FK violation on commit (PRAGMA FK=ON).
@@ -309,6 +339,43 @@ async def test_score_job_logs_sample_when_enabled(db_session, monkeypatch, enabl
     assert samples[0].scored_job_id == scored.id
     assert samples[0].fit_score == scored.fit_score
     assert samples[0].rubric_version == "v1.1"
+
+
+@pytest.mark.asyncio
+async def test_score_job_logs_derived_desire_matching_persisted(
+    db_session, monkeypatch, enable_distillation
+):
+    """WR-02 end-to-end: when the model OMITS desire_score, score_job derives it,
+    persists it to ScoredJob, and the distillation tuple logs that SAME non-None
+    desire + quadrant — not None."""
+    from career_os.schemas.scoring import classify_quadrant
+
+    monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
+    monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
+
+    # Provider returns a result with desire_score=None but dims present → derived.
+    result = _make_score_result(fit_score=8.0, desire_score=None, dims=True)
+    assert result.desire_score is None
+    resp = MagicMock()
+    resp.structured = result
+    provider = AsyncMock()
+    provider.score.return_value = resp
+    provider.name = "mock"
+
+    with patch("career_os.services.scoring.get_ai_provider", return_value=provider):
+        scored = await score_job(
+            db_session, profile_id=1, job_description="TPM role", job_title="TPM"
+        )
+
+    # Desire was derived + persisted (non-None) on the ScoredJob.
+    assert scored.desire_score is not None
+    assert scored.desire_score_method == "derived"
+
+    sample = db_session.query(DistillationSample).filter_by(scored_job_id=scored.id).one()
+    # The training tuple must reflect the PERSISTED derived desire, not None.
+    assert sample.desire_score == scored.desire_score
+    assert sample.desire_score is not None
+    assert sample.quadrant == classify_quadrant(scored.fit_score, scored.desire_score)
 
 
 @pytest.mark.asyncio

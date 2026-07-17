@@ -27,6 +27,7 @@ from career_os.services.scoring import score_job
 from career_os.services.scoring_calibration import (
     MIN_CALIBRATION_SAMPLES,
     IsotonicCalibrator,
+    apply_calibration_and_gate,
     apply_provider_calibration,
     clear_calibrators,
     fit_from_feedback,
@@ -155,6 +156,64 @@ def test_empty_calibrator_is_identity_clamped():
     cal = IsotonicCalibrator(knot_x=(), knot_y=())
     assert cal.predict(6.0) == pytest.approx(6.0)
     assert cal.predict(12.0) == 10.0
+
+
+# ---------------------------------------------------------------------------
+# apply_calibration_and_gate — the shared post-processing tail (WR-04)
+# ---------------------------------------------------------------------------
+
+
+def _gate_result(fit_score: float, *, mismatch: bool = False) -> ScoreResult:
+    role_match = RoleMatch(is_same_role_family=False, evidence="x") if mismatch else None
+    return ScoreResult(
+        role_match=role_match,
+        fit_score=fit_score,
+        reasoning="A" * 120,
+        estimated_salary="$150k",
+        effort_flag="medium",
+        prep_level="moderate",
+        prep_notes="p",
+        readiness_score=80.0,
+        career_alignment=8.0,
+        score_breakdown=[
+            ScoreBreakdownFactor(factor="a", contribution=1.0, description="d"),
+            ScoreBreakdownFactor(factor="b", contribution=1.0, description="d"),
+            ScoreBreakdownFactor(factor="c", contribution=1.0, description="d"),
+        ],
+    )
+
+
+def test_helper_calibrates_then_gates():
+    """Calibration is applied, then the gate — for a non-mismatch it's just the map."""
+    register_calibrator("mock", IsotonicCalibrator(knot_x=(0.0, 10.0), knot_y=(0.0, 5.0)))
+    out = apply_calibration_and_gate(_gate_result(8.0), "mock", calibration_enabled=True)
+    assert out.fit_score == pytest.approx(4.0)
+
+
+def test_helper_disabled_is_identity():
+    """Calibration disabled → only the (idempotent) gate runs; fit untouched."""
+    register_calibrator("mock", IsotonicCalibrator(knot_x=(0.0, 10.0), knot_y=(0.0, 5.0)))
+    out = apply_calibration_and_gate(_gate_result(8.0), "mock", calibration_enabled=False)
+    assert out.fit_score == pytest.approx(8.0)
+
+
+def test_helper_gate_wins_over_calibration():
+    """A calibrator that inflates a role-mismatched score can't beat the gate."""
+    register_calibrator("mock", IsotonicCalibrator(knot_x=(0.0, 10.0), knot_y=(9.0, 10.0)))
+    out = apply_calibration_and_gate(
+        _gate_result(8.0, mismatch=True), "mock", calibration_enabled=True
+    )
+    assert out.fit_score == pytest.approx(3.0)
+
+
+def test_helper_defaults_enabled_from_settings(monkeypatch):
+    """calibration_enabled defaults to settings.scoring_calibration_enabled."""
+    from career_os.config import settings
+
+    register_calibrator("mock", IsotonicCalibrator(knot_x=(0.0, 10.0), knot_y=(0.0, 5.0)))
+    monkeypatch.setattr(settings, "scoring_calibration_enabled", True)
+    out = apply_calibration_and_gate(_gate_result(8.0), "mock")
+    assert out.fit_score == pytest.approx(4.0)
 
 
 # ---------------------------------------------------------------------------

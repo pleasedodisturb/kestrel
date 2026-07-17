@@ -37,7 +37,7 @@ from career_os.ai.factory import get_ai_provider
 from career_os.config import settings
 from career_os.database import SessionLocal
 from career_os.models.scoring import ShadowScore
-from career_os.schemas.ai import ScoreResult
+from career_os.schemas.ai import ScoreResult, apply_role_fit_gate
 from career_os.schemas.scoring import classify_quadrant
 
 logger = logging.getLogger(__name__)
@@ -115,7 +115,14 @@ async def record_shadow_score(
         logger.warning("Shadow variant %s returned no structured score — skipping log", variant)
         return None
 
-    candidate: ScoreResult = response.structured
+    # Apply the SAME role-fit hard gate (G-1335) the live scorer applies to its
+    # primary fit_score, BEFORE persisting/comparing. ``primary_fit_score`` here is
+    # already post-gate (it comes from ``score_job`` after the gate), so gating the
+    # candidate too keeps the comparison apples-to-apples: for a role-mismatched job
+    # (live capped ≤3) the candidate is capped ≤3 as well, instead of leaving it at
+    # an un-gated 8 and making a good candidate model look worse on exactly the jobs
+    # the gate exists to fix (κ/NDCG in ``compare_primary_vs_shadow``).
+    candidate: ScoreResult = apply_role_fit_gate(response.structured)
     dims_json = (
         json.dumps(candidate.dimensional_scores.model_dump())
         if candidate.dimensional_scores is not None

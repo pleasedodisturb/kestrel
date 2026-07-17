@@ -470,6 +470,45 @@ class TestBorderlineScoring:
             )
 
     @pytest.mark.asyncio
+    async def test_averaging_log_reports_distinct_passes(self, db_session: Session, caplog):
+        """WR-03: the averaging log reports the TRUE pass-1 value and pass-2 value
+        distinctly — not pass-2 twice (the pre-fix bug logged the average as pass1)."""
+        import logging
+
+        # Distinct pass-1 (5.0) and pass-2 (6.0) → average 5.5.
+        pass1 = _make_score_result(fit_score=5.0)
+        pass2 = _make_score_result(fit_score=6.0)
+
+        mock_provider = AsyncMock()
+        mock_provider.score.side_effect = [_make_ai_response(pass1), _make_ai_response(pass2)]
+
+        with (
+            patch("career_os.services.scoring.get_ai_provider", return_value=mock_provider),
+            patch("career_os.services.scoring.settings") as mock_settings,
+            caplog.at_level(logging.INFO, logger="career_os.services.scoring"),
+        ):
+            mock_settings.feedback_calibration_enabled = False
+            mock_settings.borderline_scoring_enabled = True
+            mock_settings.borderline_low_threshold = 4.0
+            mock_settings.borderline_high_threshold = 6.5
+
+            await score_job(
+                db_session,
+                profile_id=1,
+                job_description="Borderline TPM role",
+                job_title="TPM",
+                job_company="Datadog",
+            )
+
+        avg_logs = [
+            r.getMessage() for r in caplog.records if "Averaged borderline" in r.getMessage()
+        ]
+        assert len(avg_logs) == 1
+        # True pass-1 (5.00) and pass-2 (6.00) are distinct; average is 5.50.
+        assert "pass1=5.00 pass2=6.00" in avg_logs[0]
+        assert "avg=5.50" in avg_logs[0]
+
+    @pytest.mark.asyncio
     async def test_second_pass_invalid_response_uses_fallback(self, db_session: Session):
         """If second pass returns non-ScoreResult, original score is used."""
         borderline_result = _make_score_result(fit_score=5.0)
