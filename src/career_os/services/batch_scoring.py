@@ -24,6 +24,7 @@ from career_os.schemas.ai import (
     apply_role_fit_gate,
     scale_score_result_dimensions,
 )
+from career_os.services.scoring_calibration import apply_calibration_and_gate
 
 logger = logging.getLogger(__name__)
 
@@ -333,6 +334,18 @@ async def batch_score_jobs(
             )
             batch_results = parse_batch_response(response.content, ordered_ids)
 
+            # parse_batch_response already scales dims + applies the role-fit gate.
+            # Run the shared calibrate→gate tail so this multi-job path also picks up
+            # per-provider calibration (G-1337) — the same post-processing the single
+            # scorer and async Batch API paths use. Off by default; the gate re-fires
+            # last. (Distillation is not wired here: this path returns ScoreResults to
+            # its caller and creates no ScoredJob, so there is no per-job DB context —
+            # same known gap as the async path, tracked as a follow-up.)
+            batch_results = {
+                job_id: apply_calibration_and_gate(sr, provider.name)
+                for job_id, sr in batch_results.items()
+            }
+
             if batch_results:
                 all_results.update(batch_results)
                 logger.info(
@@ -372,7 +385,9 @@ async def batch_score_jobs(
                     profile_data=profile_data,
                 )
                 if response.structured and isinstance(response.structured, ScoreResult):
-                    all_results[str(job["id"])] = apply_role_fit_gate(response.structured)
+                    all_results[str(job["id"])] = apply_calibration_and_gate(
+                        response.structured, provider.name
+                    )
                 else:
                     logger.warning(
                         "Individual fallback for job %s did not return ScoreResult",

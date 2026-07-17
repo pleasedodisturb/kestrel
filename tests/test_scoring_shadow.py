@@ -61,6 +61,56 @@ class _BoomProvider(AIProvider):
         return [0.0] * 768
 
 
+class _RoleMismatchProvider(AIProvider):
+    """Candidate provider that returns a role-mismatched but high fit_score.
+
+    Models a strong-looking holistic score on a job the candidate's role family
+    does NOT match — exactly what the G-1335 gate exists to cap.
+    """
+
+    @property
+    def name(self):
+        return "candidate"
+
+    async def complete(self, prompt, **kwargs):  # noqa: ANN001
+        raise NotImplementedError
+
+    async def score(self, job_description, profile_data, **kwargs):  # noqa: ANN001
+        from career_os.schemas.ai import (
+            AIFeature,
+            AIResponse,
+            RoleMatch,
+            ScoreBreakdownFactor,
+            ScoreResult,
+        )
+
+        return AIResponse(
+            content="",
+            provider="candidate",
+            feature=AIFeature.score,
+            structured=ScoreResult(
+                role_match=RoleMatch(is_same_role_family=False, evidence="SWE role, not TPM"),
+                fit_score=8.0,
+                desire_score=7.0,
+                reasoning="x" * 120,
+                estimated_salary="$150k",
+                effort_flag="medium",
+                prep_level="moderate",
+                prep_notes="p",
+                readiness_score=80.0,
+                career_alignment=8.0,
+                score_breakdown=[
+                    ScoreBreakdownFactor(factor="a", contribution=1.0, description="d"),
+                    ScoreBreakdownFactor(factor="b", contribution=1.0, description="d"),
+                    ScoreBreakdownFactor(factor="c", contribution=1.0, description="d"),
+                ],
+            ),
+        )
+
+    async def embed(self, text, **kwargs):  # noqa: ANN001
+        return [0.0] * 768
+
+
 # ---------------------------------------------------------------------------
 # build_shadow_provider — real, distinct variant resolution
 # ---------------------------------------------------------------------------
@@ -114,6 +164,33 @@ async def test_record_shadow_score_persists_fields(db_session):
     assert row.variant == "mistral-large"
     assert row.primary_fit_score == 4.2
     assert row.reasoning  # MockProvider always returns reasoning
+
+
+@pytest.mark.asyncio
+async def test_record_shadow_score_gates_role_mismatch_candidate(db_session):
+    """WR-01: a role-mismatched candidate is stored capped ≤ ROLE_FIT_GATE_CEILING.
+
+    The primary passed in is already post-gate (≤3 for a mismatch). Gating the
+    candidate before persisting keeps the shadow comparison apples-to-apples so a
+    good candidate model isn't penalized on exactly the jobs the gate exists to fix.
+    """
+    from career_os.schemas.ai import ROLE_FIT_GATE_CEILING
+
+    row = await record_shadow_score(
+        db_session,
+        profile_id=1,
+        variant="candidate",
+        prompt="Senior Software Engineer at Acme",
+        profile_data={"weights": {}},
+        primary_fit_score=3.0,  # how the live scorer stores this mismatch
+        provider=_RoleMismatchProvider(),
+    )
+    assert row is not None
+    # Candidate returned 8.0 but the gate must cap it to match the primary's regime.
+    assert row.fit_score <= ROLE_FIT_GATE_CEILING
+    assert row.fit_score == ROLE_FIT_GATE_CEILING
+    # Desire axis is deliberately left intact by the gate (prestige belongs there).
+    assert row.desire_score == 7.0
 
 
 @pytest.mark.asyncio
