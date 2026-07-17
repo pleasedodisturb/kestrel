@@ -488,6 +488,12 @@ def persist_cascade_reject(
     its cached ``fit_score`` is propagated to the linked DiscoveredJob/Application
     (mirroring ``_update_linked_scores``) so it renders as a normal (low) score in
     the UI. Commits and returns the persisted row.
+
+    By design a cascade-skipped job has ``desire_score=None`` (no LLM ran to
+    produce one), so ``classify_quadrant`` returns ``None`` and the row is
+    *unclassified* in quadrant-filtered views. This is intentional — the router
+    only ever asserts a fit REJECT, never a desire, so it must not fabricate a
+    quadrant. The job stays visible via its (low) ``fit_score``.
     """
     score = settings.cascade_reject_fit_score if reject_fit_score is None else reject_fit_score
     reasons = ", ".join(decision.reject_reasons()) or "all three signals below threshold"

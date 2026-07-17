@@ -419,6 +419,31 @@ def test_route_scores_when_only_embedding_rejects(db_session):
     assert d.esco.votes_reject is False
 
 
+def test_route_scores_when_lexical_abstains_even_if_emb_and_esco_reject(db_session):
+    """Lexical abstains while embedding + ESCO both reject → SCORE.
+
+    The natural DB coupling (lexical + ESCO both derive from the same
+    JobRequirement rows) makes an "ESCO rejects while lexical abstains" state
+    unreachable through the signals' own computation — so this asserts the router
+    AGGREGATION invariant directly by forcing lexical to abstain. Any abstaining
+    signal blocks the skip, exactly like the embedding/esco abstain cases.
+    """
+    app = _seed_unanimous_reject_case(db_session)
+    abstain = SignalVote(name="lexical", available=False, value=None, votes_reject=False)
+    with patch("career_os.services.cascade_router.lexical_signal", return_value=abstain):
+        d = route_job(
+            db_session,
+            profile_id=1,
+            application_id=app.id,
+            embedding_similarity=0.05,
+            jd_text="welding forklift",
+        )
+    assert d.lexical.available is False
+    assert d.embedding.votes_reject is True
+    assert d.esco.votes_reject is True
+    assert d.action == CascadeAction.SCORE  # abstaining lexical blocks the skip
+
+
 def test_route_scores_when_esco_abstains_even_if_emb_and_lex_reject(db_session):
     """ESCO has no data (no esco_uri on requirement) → abstain → SCORE."""
     _seed_candidate_skills(db_session, ["Python"], esco_uris=[_ESCO_A])
@@ -746,3 +771,103 @@ async def test_batch_live_scores_normally_when_not_unanimous(db_session, monkeyp
     assert row.mode == "live"
     assert row.would_skip is False
     assert row.llm_fit_score == 8.0
+
+
+def _seed_reject_discovered_job(db, title: str) -> DiscoveredJob:
+    """Seed one more unanimous-reject discovered job (own app + critical req)."""
+    app = _seed_application(db)
+    _seed_requirements(db, app.id, [("Welding", "critical", _ESCO_B)])
+    dj = DiscoveredJob(
+        profile_id=1,
+        title=title,
+        company="Acme",
+        location="Berlin",
+        description="We need welding and forklift operation.",
+        title_normalized=title.lower(),
+        company_normalized="acme",
+        location_normalized="berlin",
+        application_id=app.id,
+    )
+    db.add(dj)
+    db.commit()
+    db.refresh(dj)
+    return dj
+
+
+@pytest.mark.asyncio
+async def test_batch_live_persist_failure_is_isolated_by_rollback(db_session, monkeypatch):
+    """A persist_cascade_reject failure must NOT poison the rest of the batch.
+
+    Regression guard for the missing rollback: without it, a failed
+    persist_cascade_reject commit leaves the session in PendingRollbackError and
+    every remaining job in the batch would then raise. With the rollback, each
+    would-skip job cleanly falls through to normal LLM scoring.
+    """
+    monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
+    monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
+    monkeypatch.setattr(settings, "cascade_routing_enabled", True)
+    monkeypatch.setattr(settings, "cascade_shadow_enabled", False)
+
+    # Two unanimous-reject jobs sharing the candidate profile.
+    _seed_candidate_skills(db_session, ["Python", "Roadmapping"], esco_uris=[_ESCO_A, None])
+    _seed_reject_discovered_job(db_session, "Welder One")
+    _seed_reject_discovered_job(db_session, "Welder Two")
+
+    provider = _patch_provider(8.0)
+
+    async def fake_sims(_db, _pid, jobs, _provider):
+        return {j.id: 0.05 for j in jobs}
+
+    def _failing_persist(db, **_kwargs):
+        # Realistic failure mode: a commit that violates a FK leaves the session in
+        # PendingRollbackError — exactly the poisoned state the batch-level rollback
+        # must clear before falling through to score_job.
+        db.add(ScoredJob(profile_id=999999, fit_score=1.0, reasoning="bad-fk"))
+        db.commit()  # raises IntegrityError (no such profile) → session poisoned
+
+    from career_os.services import scoring as scoring_mod
+
+    with (
+        patch("career_os.services.scoring.get_ai_provider", return_value=provider),
+        patch("career_os.services.embeddings.compute_job_similarities", side_effect=fake_sims),
+        # Every live-skip persistence poisons the session → each job must recover.
+        patch(
+            "career_os.services.cascade_router.persist_cascade_reject",
+            side_effect=_failing_persist,
+        ),
+    ):
+        result = await scoring_mod.batch_score_discovery(db_session, profile_id=1)
+
+    # The rollback let BOTH jobs score normally via the LLM — no poisoned-session
+    # cascade, no jobs stranded in errors.
+    assert result["scored_count"] == 2
+    assert result["errors"] == []
+    assert db_session.query(ScoredJob).count() == 2
+    assert all(s.fit_score == 8.0 for s in db_session.query(ScoredJob).all())
+    assert provider.score.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Config bounds — a misconfigured live threshold can't mass-skip
+# ---------------------------------------------------------------------------
+
+
+def test_reject_thresholds_are_bounded():
+    """Reject thresholds are validated to [0, 1] — a footgun guard for live mode."""
+    from pydantic import ValidationError
+
+    from career_os.config import Settings
+
+    for field in (
+        "cascade_embedding_reject_threshold",
+        "cascade_lexical_reject_threshold",
+        "cascade_esco_reject_threshold",
+    ):
+        with pytest.raises(ValidationError):
+            Settings(**{field: 1.5})
+        with pytest.raises(ValidationError):
+            Settings(**{field: -0.1})
+
+    # In-range values are accepted.
+    s = Settings(cascade_embedding_reject_threshold=0.5)
+    assert s.cascade_embedding_reject_threshold == 0.5

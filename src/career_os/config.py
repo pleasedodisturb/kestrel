@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
 # Ensure .env vars land in os.environ before anything reads them (ported from
@@ -152,14 +152,18 @@ class Settings(BaseSettings):
     #     0.65 pre-filter bar — a confident reject, not a filter).
     #   * lexical / esco: reject only when overlap is AT OR BELOW this (0.0 = the
     #     candidate shares genuinely zero must-have terms / ESCO skills with the JD).
-    cascade_embedding_reject_threshold: float = 0.35
-    cascade_lexical_reject_threshold: float = 0.0
-    cascade_esco_reject_threshold: float = 0.0
+    # Bounded [0, 1] so a misconfigured operator with the live flag on cannot set a
+    # threshold high enough to mass-skip good jobs (a high reject bar would reject
+    # almost everything). All three are similarity/overlap fractions in [0, 1].
+    cascade_embedding_reject_threshold: float = Field(default=0.35, ge=0.0, le=1.0)
+    cascade_lexical_reject_threshold: float = Field(default=0.0, ge=0.0, le=1.0)
+    cascade_esco_reject_threshold: float = Field(default=0.0, ge=0.0, le=1.0)
 
     # Deterministic low fit score persisted for a LIVE skip_reject (so the job is
     # visibly scored-but-rejected, never silently dropped). Lands in the "reject"
-    # tier (< 3.5) and below the quadrant threshold (5.0).
-    cascade_reject_fit_score: float = 1.0
+    # tier (< 3.5) and below the quadrant threshold (5.0). Bounded to the fit-score
+    # range [0, 10]; keep it low so a skipped job never masquerades as a fit.
+    cascade_reject_fit_score: float = Field(default=1.0, ge=0.0, le=10.0)
 
     # Drift canary (Scoring Engine v2 / G-1336, finding J) — nightly-style check
     # that computes PSI of the score distribution vs a rolling baseline and
