@@ -3565,6 +3565,10 @@ async def score_job(
             discovered_job_id=discovered_job_id,
             rubric_version=RUBRIC_VERSION,
             extra_signals={"esco": esco} if esco else None,
+            # WR-02: log the desire actually persisted to ScoredJob — which may be
+            # *derived* when the model omitted desire_score — so the training tuple's
+            # desire_score + quadrant match the stored row instead of being None.
+            persisted_desire_score=desire_score,
         )
 
     return scored_job
