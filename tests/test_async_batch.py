@@ -293,6 +293,56 @@ class TestRetrieveBatchResults:
         with pytest.raises(BatchResultError, match="retrieval failed"):
             await retrieve_batch_results(provider, "batch_123")
 
+    @pytest.mark.asyncio
+    async def test_retrieve_results_applies_calibration(self, monkeypatch):
+        """WR-04: the async Batch API path now runs the SAME calibration as the
+        single-scorer path — a registered map for the provider is applied."""
+        from career_os.config import settings
+        from career_os.services.scoring_calibration import (
+            IsotonicCalibrator,
+            clear_calibrators,
+            register_calibrator,
+        )
+
+        clear_calibrators()
+        # Halve the scale for provider "fake": raw 7.5 → 3.75.
+        register_calibrator("fake", IsotonicCalibrator(knot_x=(0.0, 10.0), knot_y=(0.0, 5.0)))
+        monkeypatch.setattr(settings, "scoring_calibration_enabled", True)
+        try:
+            ai_resp = _make_ai_response(structured=_make_score_result())
+            provider = FakeProvider(batch_status="ended", batch_results={"job-1": ai_resp})
+            results = await retrieve_batch_results(provider, "batch_done")
+            assert results[0]["score_result"].fit_score == pytest.approx(3.75)
+        finally:
+            clear_calibrators()
+
+    @pytest.mark.asyncio
+    async def test_retrieve_results_gate_still_wins_over_calibration(self, monkeypatch):
+        """WR-04: calibration can't lift a role-mismatched job over the gate ceiling."""
+        from career_os.config import settings
+        from career_os.schemas.ai import ROLE_FIT_GATE_CEILING, RoleMatch
+        from career_os.services.scoring_calibration import (
+            IsotonicCalibrator,
+            clear_calibrators,
+            register_calibrator,
+        )
+
+        clear_calibrators()
+        # A calibrator that would INFLATE scores — must not defeat the gate.
+        register_calibrator("fake", IsotonicCalibrator(knot_x=(0.0, 10.0), knot_y=(9.0, 10.0)))
+        monkeypatch.setattr(settings, "scoring_calibration_enabled", True)
+        try:
+            score = _make_score_result()
+            score = score.model_copy(
+                update={"role_match": RoleMatch(is_same_role_family=False, evidence="SWE≠target")}
+            )
+            ai_resp = _make_ai_response(structured=score)
+            provider = FakeProvider(batch_status="ended", batch_results={"job-1": ai_resp})
+            results = await retrieve_batch_results(provider, "batch_done")
+            assert results[0]["score_result"].fit_score == ROLE_FIT_GATE_CEILING
+        finally:
+            clear_calibrators()
+
 
 # ---------------------------------------------------------------------------
 # API endpoint tests

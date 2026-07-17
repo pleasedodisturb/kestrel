@@ -408,6 +408,74 @@ class TestBatchScoreJobs:
         provider.score.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_batch_scoring_applies_calibration(self, monkeypatch):
+        """WR-04: the multi-job batch path now runs the SAME per-provider
+        calibration as the single-scorer path."""
+        from career_os.config import settings
+        from career_os.services.scoring_calibration import (
+            IsotonicCalibrator,
+            clear_calibrators,
+            register_calibrator,
+        )
+
+        clear_calibrators()
+        # Halve the scale for provider "mock": raw 7.5 → 3.75.
+        register_calibrator("mock", IsotonicCalibrator(knot_x=(0.0, 10.0), knot_y=(0.0, 5.0)))
+        monkeypatch.setattr(settings, "scoring_calibration_enabled", True)
+        try:
+            scores = [_make_score_dict("101", 7.5)]
+            mock_response = AIResponse(
+                content=json.dumps(scores),
+                provider="mock",
+                feature=AIFeature.score,
+                structured=None,
+                model="mock-v1",
+            )
+            provider = AsyncMock()
+            provider.complete = AsyncMock(return_value=mock_response)
+            provider.name = "mock"
+
+            results = await batch_score_jobs(
+                provider, [SAMPLE_JOBS[0]], SAMPLE_PROFILE, batch_size=10
+            )
+            assert results["101"].fit_score == pytest.approx(3.75)
+        finally:
+            clear_calibrators()
+
+    @pytest.mark.asyncio
+    async def test_batch_scoring_calibration_off_is_identity(self, monkeypatch):
+        """With calibration off (default) the batch path leaves fit_score untouched."""
+        from career_os.config import settings
+        from career_os.services.scoring_calibration import (
+            IsotonicCalibrator,
+            clear_calibrators,
+            register_calibrator,
+        )
+
+        clear_calibrators()
+        register_calibrator("mock", IsotonicCalibrator(knot_x=(0.0, 10.0), knot_y=(0.0, 5.0)))
+        monkeypatch.setattr(settings, "scoring_calibration_enabled", False)
+        try:
+            scores = [_make_score_dict("101", 7.5)]
+            mock_response = AIResponse(
+                content=json.dumps(scores),
+                provider="mock",
+                feature=AIFeature.score,
+                structured=None,
+                model="mock-v1",
+            )
+            provider = AsyncMock()
+            provider.complete = AsyncMock(return_value=mock_response)
+            provider.name = "mock"
+
+            results = await batch_score_jobs(
+                provider, [SAMPLE_JOBS[0]], SAMPLE_PROFILE, batch_size=10
+            )
+            assert results["101"].fit_score == 7.5
+        finally:
+            clear_calibrators()
+
+    @pytest.mark.asyncio
     async def test_configurable_batch_size_from_env(self):
         """batch_size=None reads from environment."""
         scores = [_make_score_dict("101")]
