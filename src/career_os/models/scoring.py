@@ -261,6 +261,93 @@ class DistillationSample(Base):
         )
 
 
+class CascadeDecision(Base):
+    """A confidence-routed cascade routing decision (G-1338, finding K — Phase 4b).
+
+    The cascade is a conservative, shadow-first routing layer that decides which
+    jobs even need the expensive LLM scoring call, using three cheap signals:
+    embedding similarity, lexical must-have overlap, and ESCO skills-overlap. A
+    job is routed to ``skip_reject`` **only** when ALL THREE signals have data and
+    all three independently agree it is clearly not a fit (unanimous, conservative
+    agreement — one or two signals is never enough). Everything else is scored by
+    the LLM as usual.
+
+    Every routing decision is recorded here so the router can be measured before
+    it is ever trusted:
+
+    * In **shadow mode** (``CASCADE_SHADOW_ENABLED``) the LLM still scores every
+      job; the decision is logged with the eventual ``llm_fit_score`` so a
+      comparator can compute the **false-skip rate** (jobs the router would have
+      rejected that the LLM actually scored as a fit) BEFORE live skipping is ever
+      enabled.
+    * In **live mode** (``CASCADE_ROUTING_ENABLED``, a SEPARATE flag) a
+      ``skip_reject`` job bypasses the LLM and is persisted as a scored-but-
+      rejected job (``reject_fit_score``) — never dropped. ``llm_fit_score`` is
+      NULL for a live-skipped job because no LLM call was made.
+
+    This table is **write-only from the scoring path** — nothing in the live
+    product reads it, and a routing/logging failure never breaks or slows scoring.
+    """
+
+    __tablename__ = "cascade_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    profile_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("profiles.id"), nullable=False, index=True
+    )
+    # SET NULL so pruning a live score never drops the routing audit trail.
+    scored_job_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("scored_jobs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    discovered_job_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("discovered_jobs.id"), nullable=True, index=True
+    )
+    application_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("applications.id"), nullable=True, index=True
+    )
+
+    # "shadow" (LLM still scored everything) or "live" (skip_reject bypassed the LLM).
+    mode: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    # "skip_reject" or "score".
+    action: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    # Denormalized convenience flag (action == "skip_reject") for cheap aggregation.
+    would_skip: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # --- The three routing signals (value + availability + per-signal vote) ---
+    # ``*_available`` is False when the signal had no data to judge (e.g. no
+    # embedding, no parsed requirements, no ESCO-grounded skills). An unavailable
+    # signal can NEVER vote to reject — abstention blocks a skip.
+    embedding_similarity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    embedding_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    embedding_votes_reject: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    lexical_overlap: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lexical_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    lexical_votes_reject: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    esco_overlap: Mapped[float | None] = mapped_column(Float, nullable=True)
+    esco_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    esco_votes_reject: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # --- Outcome ---
+    # The eventual LLM fit score (shadow rows, and live rows that were scored).
+    # NULL when a live skip_reject bypassed the LLM entirely.
+    llm_fit_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    llm_quadrant: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # The deterministic low score persisted for a live skip_reject (NULL otherwise).
+    reject_fit_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CascadeDecision(id={self.id}, mode='{self.mode}', action='{self.action}', "
+            f"profile_id={self.profile_id})>"
+        )
+
+
 class ScoringFeedback(Base):
     """User feedback on an AI-generated score.
 
