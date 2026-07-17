@@ -3373,12 +3373,16 @@ async def score_job(
             )
             if response2.structured and isinstance(response2.structured, ScoreResult):
                 score_data2 = response2.structured
+                # Capture the true first-pass fit_score BEFORE averaging overwrites
+                # score_data, so the log reports pass1 (this) and pass2 (score_data2)
+                # distinctly rather than pass2 twice.
+                pass1_fit_score = score_data.fit_score
                 score_data = _average_score_results(score_data, score_data2)
                 scoring_passes = 2
                 logger.info(
                     "Averaged borderline scores: pass1=%.2f pass2=%.2f → avg=%.2f",
-                    score_data2.fit_score,  # original first-pass stored before averaging
-                    response2.structured.fit_score,
+                    pass1_fit_score,
+                    score_data2.fit_score,
                     score_data.fit_score,
                 )
             else:
