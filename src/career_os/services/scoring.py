@@ -3803,9 +3803,70 @@ async def batch_score_discovery(
     errors: list[dict[str, str]] = []
     credits_exhausted = False
 
+    # Confidence-routed cascade (G-1338, finding K — Phase 4b). Both flags OFF by
+    # default → strictly inert: `cascade_on` is False, no routing/logging runs, and
+    # every job is scored by the LLM exactly as before. Shadow logs what it WOULD
+    # skip (LLM still scores all); live actually skips unanimous-reject jobs.
+    cascade_shadow = settings.cascade_shadow_enabled
+    cascade_live = settings.cascade_routing_enabled
+    cascade_on = cascade_shadow or cascade_live
+
     for job in jobs:
+        description = job.description or f"{job.title} at {job.company} in {job.location}"
+
+        # Route the job (defensive: None on any failure → falls through to scoring).
+        decision = None
+        if cascade_on:
+            from career_os.services.cascade_router import safe_route_job
+
+            decision = safe_route_job(
+                db,
+                profile_id=profile_id,
+                application_id=job.application_id,
+                discovered_job_id=job.id,
+                embedding_similarity=similarities.get(job.id),
+                jd_text=f"{job.title or ''}\n{job.description or ''}",
+            )
+
+        # LIVE skip: a unanimous-reject job bypasses the LLM and is persisted as a
+        # scored-but-rejected job (never dropped). Only reachable when the separate
+        # CASCADE_ROUTING_ENABLED flag is on. Any failure here falls through to
+        # normal scoring — the router never drops or loses a job on error.
+        if cascade_live and decision is not None and decision.would_skip:
+            from career_os.services.cascade_router import (
+                persist_cascade_reject,
+                record_cascade_decision,
+            )
+
+            try:
+                scored = persist_cascade_reject(
+                    db,
+                    profile_id=profile_id,
+                    decision=decision,
+                    discovered_job_id=job.id,
+                    application_id=job.application_id,
+                )
+                scores.append(scored)
+                record_cascade_decision(
+                    db,
+                    profile_id=profile_id,
+                    decision=decision,
+                    mode="live",
+                    scored_job_id=scored.id,
+                    discovered_job_id=job.id,
+                    application_id=job.application_id,
+                    llm_fit_score=None,
+                    reject_fit_score=scored.fit_score,
+                )
+                continue
+            except Exception as exc:
+                logger.warning(
+                    "Cascade live-skip persistence failed for job %d (%s) — scoring normally",
+                    job.id,
+                    exc,
+                )
+
         try:
-            description = job.description or f"{job.title} at {job.company} in {job.location}"
             scored = await score_job(
                 db,
                 profile_id,
@@ -3832,6 +3893,24 @@ async def batch_score_discovery(
                     "discovered_job_id": str(job.id),
                     "error": str(exc),
                 }
+            )
+            continue
+
+        # Cascade shadow/live logging for a SCORED job: record the routing decision
+        # beside the eventual LLM score so the false-skip rate can be measured.
+        if cascade_on and decision is not None:
+            from career_os.services.cascade_router import record_cascade_decision
+
+            record_cascade_decision(
+                db,
+                profile_id=profile_id,
+                decision=decision,
+                mode="live" if cascade_live else "shadow",
+                scored_job_id=scored.id,
+                discovered_job_id=job.id,
+                application_id=job.application_id,
+                llm_fit_score=scored.fit_score,
+                llm_desire_score=scored.desire_score,
             )
 
     total_time = time.monotonic() - start_time
