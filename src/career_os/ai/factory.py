@@ -126,6 +126,47 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
 
 _SUPPORTED_PROVIDERS = set(_PROVIDER_REGISTRY.keys())
 
+# ---------------------------------------------------------------------------
+# Premium-provider fallback guard (COE 2026-07-19, G-1371)
+#
+# `anthropic` (claude-sonnet-5 / opus-4-8) bills ~10-20x the cheap providers.
+# It must NEVER be a *silent* terminal leg of a fallback chain: when the cheap
+# providers ahead of it rate-limit or run out of credits, every dropped job
+# cascades onto premium Claude with no alarm. Premium fallback is opt-in only.
+#
+# NOTE: `openrouter` is a *routing* provider whose cost depends on
+# OPENROUTER_MODEL (its registry default is a premium Claude model). Keeping it
+# cheap is enforced at the workflow/config level — see tests/test_billing_safety.py.
+# ---------------------------------------------------------------------------
+_PREMIUM_PROVIDERS = frozenset({"anthropic"})
+
+_ALLOW_PREMIUM_ENV = "AI_ALLOW_PREMIUM_FALLBACK"
+
+
+def _premium_fallback_allowed() -> bool:
+    """True only when premium providers are explicitly opted into as fallbacks."""
+    return os.getenv(_ALLOW_PREMIUM_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _filter_premium(names: list[str]) -> list[str]:
+    """Drop premium providers from a fallback chain unless explicitly opted in.
+
+    Pure function (no I/O, no provider construction) so it is trivially testable.
+    A premium provider reached as a silent fallback is a surprise-bill hazard
+    (COE 2026-07-19); set AI_ALLOW_PREMIUM_FALLBACK=1 to allow it deliberately.
+    """
+    if _premium_fallback_allowed():
+        return names
+    dropped = [n for n in names if n in _PREMIUM_PROVIDERS]
+    if dropped:
+        logger.warning(
+            "Fallback chain: dropping premium provider(s) %s — premium fallback is "
+            "opt-in only (set %s=1 to allow).",
+            dropped,
+            _ALLOW_PREMIUM_ENV,
+        )
+    return [n for n in names if n not in _PREMIUM_PROVIDERS]
+
 
 class UnsupportedProviderError(Exception):
     """Raised when AI_PROVIDER is set to an unsupported value."""
@@ -148,13 +189,16 @@ def _build_fallback_chain() -> list[AIProvider] | None:
     comma-separated env var, or None if the env var is unset or only contains
     a single provider (no chain needed).
 
-    Unknown provider names are silently skipped.
+    Unknown provider names are silently skipped. Premium providers are dropped
+    unless AI_ALLOW_PREMIUM_FALLBACK is set (see _filter_premium) — a premium
+    provider reached as a silent fallback is a surprise-bill hazard (COE
+    2026-07-19).
     """
     raw = os.getenv("AI_PROVIDER_FALLBACK", "").strip()
     if not raw:
         return None
 
-    names = [n.strip().lower() for n in raw.split(",") if n.strip()]
+    names = _filter_premium([n.strip().lower() for n in raw.split(",") if n.strip()])
     providers: list[AIProvider] = []
     for name in names:
         factory_fn = _PROVIDER_REGISTRY.get(name)
