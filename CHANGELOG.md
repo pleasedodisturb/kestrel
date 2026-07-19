@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.22.0](https://github.com/pleasedodisturb/kestrel/compare/v0.21.0...v0.22.0) (2026-07-17)
+
+
+### Features
+
+* **G-1337:** calibration hygiene — 0–5 judge scale + spread metrics + per-provider calibration ([#455](https://github.com/pleasedodisturb/kestrel/issues/455)) ([2367944](https://github.com/pleasedodisturb/kestrel/commit/23679444eab063b059f7491961599635c44e5729))
+* **G-1338:** confidence-routed cascade (conservative, shadow-first) — part 2 ([#458](https://github.com/pleasedodisturb/kestrel/issues/458)) ([9fd700d](https://github.com/pleasedodisturb/kestrel/commit/9fd700dcba8437de25a55a4da3552af61b92c82c))
+* **G-1338:** scoring features — distillation logging + ESCO overlap + relative scoring ([#457](https://github.com/pleasedodisturb/kestrel/issues/457)) ([c99709f](https://github.com/pleasedodisturb/kestrel/commit/c99709f7b923887aaea3239137e70328dad5dacd))
+
+
+### Bug Fixes
+
+* **G-1352:** scoring-v2 cross-phase cleanup (shadow gate, distillation desire, batch parity) ([#459](https://github.com/pleasedodisturb/kestrel/issues/459)) ([80a0561](https://github.com/pleasedodisturb/kestrel/commit/80a0561d79aff2b579d9f5306aba0fa353dee4e3))
+
 ## [0.21.0](https://github.com/pleasedodisturb/kestrel/compare/v0.20.0...v0.21.0) (2026-07-15)
 
 
