@@ -12,11 +12,10 @@ import logging
 
 import httpx
 
-from career_os.ai.base import AIProvider, ProviderQuotaError
+from career_os.ai.base import ROLE_FIT_GATE_PROMPT, AIProvider, ProviderQuotaError
 from career_os.ai.observability import observe, update_current_generation
 from career_os.ai.openrouter_provider import (
     _SCHEMA_MAP,
-    _scoring_user_prompt,
     _system_prompt_for_feature,
     _try_parse_structured,
 )
@@ -26,6 +25,45 @@ logger = logging.getLogger(__name__)
 
 # Compact JSON separators — eliminates whitespace tokens (~30% reduction on profile data)
 _COMPACT = (",", ":")
+
+
+def _score_user_prompt(job_description: str, profile_json: str) -> str:
+    """Build the scoring user prompt, prefixed with the anti-halo role-fit gate.
+
+    Shared by real-time ``score()`` and the Batch API path in ``batch_score()`` so
+    the two can't drift, and so both carry ROLE_FIT_GATE_PROMPT (G-1348 — openai
+    was the only real provider missing the guard).
+
+    The wording matches the canonical prompt the other providers send (see
+    ``openrouter_provider.score``). The previous batch-only literal omitted the
+    *definitions* of ``desire_score`` and ``ats_keywords.matched``, which matters
+    now that the gate tells the model to route prestige/"I'd love to work there"
+    into ``desire_score`` — a field that prompt never defined. Keeping the text
+    canonical keeps openai's scores calibrated with every other provider.
+    """
+    return (
+        ROLE_FIT_GATE_PROMPT + "Score this job against the candidate profile. "
+        "Return a JSON object with: fit_score (0-10), reasoning (detailed, >=100 chars), "
+        "estimated_salary (string), effort_flag (low/medium/high), prep_level, prep_notes, "
+        "readiness_score (0-100), career_alignment (0-10), "
+        "score_breakdown (array of >=3 objects, each with: factor (string), "
+        "contribution (positive or negative float), description (string)), "
+        "dimensional_scores (object with 6 floats on a 0-5 scale, NOT 0-10 "
+        "(0=no fit, 5=perfect): technical_fit, "
+        "seniority_alignment, compensation_fit, location_fit, career_trajectory, "
+        "company_fit), "
+        "ats_keywords (array of 10-15 objects, each with: keyword (string), "
+        "category (one of technical/soft_skill/tool/certification/domain), "
+        "matched (boolean — true if the profile demonstrates this keyword)), "
+        "desire_score (0-10, how much the candidate would WANT this job — "
+        "considering company reputation, growth potential, culture signals, "
+        "role excitement, compensation attractiveness, work-life balance), "
+        "desire_reasoning (string explaining what makes this job desirable "
+        "or undesirable from the candidate's perspective).\n\n"
+        f"Job Description:\n{job_description}\n\n"
+        f"Profile:\n{profile_json}"
+    )
+
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_BATCH_API_URL = "https://api.openai.com/v1/batches"
@@ -150,9 +188,7 @@ class OpenAIProvider(AIProvider):
         **kwargs: object,
     ) -> AIResponse:
         """Score a job against a profile via the OpenAI API."""
-        prompt = _scoring_user_prompt(
-            job_description, json.dumps(profile_data, separators=_COMPACT)
-        )
+        prompt = _score_user_prompt(job_description, json.dumps(profile_data, separators=_COMPACT))
         return await self.complete(prompt, feature=AIFeature.score)
 
     async def batch_score(
@@ -181,27 +217,7 @@ class OpenAIProvider(AIProvider):
         # Build JSONL content — one line per job
         lines: list[str] = []
         for job in jobs:
-            scoring_prompt = (
-                "Score this job against the candidate profile. "
-                "Return a JSON object with: fit_score (0-10), reasoning "
-                "(detailed, >=100 chars), "
-                "estimated_salary (string), effort_flag (low/medium/high), "
-                "prep_level, prep_notes, "
-                "readiness_score (0-100), career_alignment (0-10), "
-                "score_breakdown (array of >=3 objects, each with: factor "
-                "(string), contribution (positive or negative float), "
-                "description (string)), "
-                "dimensional_scores (object with 6 floats on a 0-5 scale, NOT 0-10 "
-                "(0=no fit, 5=perfect): technical_fit, "
-                "seniority_alignment, compensation_fit, location_fit, "
-                "career_trajectory, company_fit), "
-                "ats_keywords (array of 10-15 objects, each with: keyword "
-                "(string), category (one of technical/soft_skill/tool/"
-                "certification/domain), matched (boolean)), "
-                "desire_score (0-10), desire_reasoning (string).\n\n"
-                f"Candidate Profile:\n{profile_json}\n\n"
-                f"Job Description:\n{job['description']}"
-            )
+            scoring_prompt = _score_user_prompt(job["description"], profile_json)
 
             messages: list[dict[str, str]] = []
             if system_msg:
