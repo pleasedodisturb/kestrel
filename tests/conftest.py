@@ -70,6 +70,24 @@ def block_real_ai_calls(monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, "send", guarded_send)
 
 
+@pytest.fixture(autouse=True)
+def hermetic_db_credentials(monkeypatch):
+    """Never resolve provider API keys from the developer's real database.
+
+    `career_os.ai.factory._resolve_api_key` falls back to
+    `_read_credential_from_db`, which reads the on-disk `data/career_os.db`. On a
+    dev machine with a stored key (e.g. an `openrouter_api_key` in
+    `integration_configs`), the 'missing key' tests received a real credential and
+    failed — while CI's fresh DB had none and passed (G-1354). Force the DB lookup
+    to return empty so key resolution depends only on the env-controlled test
+    inputs. A test that needs a stored credential can re-patch this in its body.
+    """
+    monkeypatch.setattr(
+        "career_os.ai.factory._read_credential_from_db",
+        lambda credential_key: "",
+    )
+
+
 from tests.profile_data import DEFAULT_PROFILE_KWARGS, SECOND_PROFILE_KWARGS  # noqa: F401
 
 
