@@ -156,6 +156,31 @@ def test_filter_premium_keeps_premium_openrouter_when_opted_in(monkeypatch):
     assert _filter_premium(["groq", "openrouter"]) == ["groq", "openrouter"]
 
 
+@pytest.mark.parametrize(
+    ("model", "kept"),
+    [
+        ("  ANTHROPIC/Claude-Opus-4.8  ", False),  # casing + whitespace -> still dropped
+        ("  meta-llama/llama-3.3-70B-Instruct  ", True),  # cheap, messy -> kept
+    ],
+)
+def test_filter_premium_openrouter_normalizes_model(monkeypatch, model, kept):
+    """`.strip().lower()` on OPENROUTER_MODEL is load-bearing (env is user-supplied)."""
+    monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    monkeypatch.setenv("OPENROUTER_MODEL", model)
+    result = _filter_premium(["groq", "openrouter"])
+    assert ("openrouter" in result) is kept
+
+
+def test_filter_premium_keeps_non_anthropic_premium_openrouter(monkeypatch):
+    """Deliberate scope boundary (G-1378): a non-Anthropic model (even a pricey one)
+    is treated as the operator's explicit choice and kept — the codebase classifies
+    only the anthropic family as PREMIUM, and other OpenRouter models cannot be
+    cost-classified by name. See the module NOTE in factory.py."""
+    monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    monkeypatch.setenv("OPENROUTER_MODEL", "openai/o1-pro")
+    assert _filter_premium(["groq", "openrouter"]) == ["groq", "openrouter"]
+
+
 # ---------------------------------------------------------------------------
 # 4 — the chain builder never constructs a premium provider without the opt-in
 # ---------------------------------------------------------------------------
@@ -188,8 +213,11 @@ def test_build_fallback_chain_excludes_premium_by_default(monkeypatch, stub_regi
 
 def test_build_fallback_chain_excludes_unconfigured_openrouter(monkeypatch, stub_registry):
     # groq,openrouter with no OPENROUTER_MODEL -> openrouter routes premium -> dropped.
-    # Only groq survives, so len(chain) < 2 and no fallback chain is built (fails
-    # loud on the primary rather than silently billing premium via openrouter).
+    # Only groq survives (< 2), so _build_fallback_chain returns None: no premium
+    # leg is ever constructed. NB this is not a hard failure — get_ai_provider then
+    # falls through to the primary AI_PROVIDER (a warning is logged for the
+    # collapse); the billing-safety guarantee is only that no premium provider is
+    # built here.
     monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
     monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
     monkeypatch.setenv("AI_PROVIDER_FALLBACK", "groq,openrouter")

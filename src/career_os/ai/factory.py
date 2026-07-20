@@ -14,6 +14,7 @@ from career_os.ai.huggingface_provider import HuggingFaceProvider
 from career_os.ai.mistral_provider import MistralProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
+from career_os.ai.openrouter_provider import DEFAULT_MODEL as OPENROUTER_DEFAULT_MODEL
 from career_os.ai.openrouter_provider import OpenRouterProvider
 from career_os.ai.together_provider import TogetherProvider
 from career_os.ai.xai_provider import XAIProvider
@@ -78,7 +79,7 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "demo": lambda: MockProvider(),
     "openrouter": lambda: OpenRouterProvider(
         api_key=_resolve_api_key("OPENROUTER_API_KEY", "openrouter_api_key"),
-        model=os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-5"),
+        model=os.getenv("OPENROUTER_MODEL", OPENROUTER_DEFAULT_MODEL),
     ),
     "anthropic": lambda: AnthropicProvider(
         api_key=_resolve_api_key("ANTHROPIC_API_KEY", "anthropic_api_key"),
@@ -137,7 +138,15 @@ _SUPPORTED_PROVIDERS = set(_PROVIDER_REGISTRY.keys())
 # NOTE: `openrouter` is a *routing* provider whose cost depends on
 # OPENROUTER_MODEL (its registry default is a premium Claude model). It is
 # treated as premium-in-fallback whenever it would route to Anthropic — see
-# `_openrouter_routes_premium` and `_is_premium_in_fallback` below (G-1378).
+# `_openrouter_routes_anthropic` and `_is_premium_in_fallback` below (G-1378).
+#
+# SCOPE (G-1378): the codebase classifies only the `anthropic` family as PREMIUM
+# (see COST_TIER in tests/test_billing_safety.py), and the OpenRouter regression
+# this guards was the silent `anthropic/claude-sonnet-5` default. OpenRouter can
+# also route to other pricey models (e.g. `openai/o1`), but their cost cannot be
+# reliably inferred from the model name, so classifying them is out of scope:
+# pointing OPENROUTER_MODEL at a costly non-Anthropic model is treated as the
+# operator's deliberate choice (like an explicit primary `AI_PROVIDER=anthropic`).
 # ---------------------------------------------------------------------------
 _PREMIUM_PROVIDERS = frozenset({"anthropic"})
 
@@ -149,24 +158,28 @@ def _premium_fallback_allowed() -> bool:
     return os.getenv(_ALLOW_PREMIUM_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _openrouter_routes_premium() -> bool:
-    """True if `openrouter` would route to a premium (Anthropic) model.
+def _openrouter_routes_anthropic() -> bool:
+    """True if `openrouter` would route to a premium Anthropic model.
 
-    OpenRouter's cost depends on OPENROUTER_MODEL, whose factory default is a
-    premium Claude model. So it bills premium when the var is unset/empty (falls
-    to the default) or points at an ``anthropic/*`` model. Non-Anthropic models
-    (e.g. ``meta-llama/*``, ``mistralai/*``) are cheap. Keyed off the codebase's
-    single premium family so there is no fragile per-model price list (G-1378).
+    OpenRouter's model is OPENROUTER_MODEL, defaulting (when unset) to the same
+    premium Claude model the factory constructs openrouter with
+    (``OPENROUTER_DEFAULT_MODEL``). So it routes to Anthropic when the var is
+    unset/empty (falls to that default) or explicitly points at ``anthropic/*``.
+
+    Scoped to the Anthropic family on purpose (see the module NOTE above): the
+    codebase's only PREMIUM tier is anthropic, and other OpenRouter models can't
+    be cost-classified from their name. Non-Anthropic models are treated as the
+    operator's deliberate choice and kept.
     """
-    model = os.getenv("OPENROUTER_MODEL", "").strip().lower()
-    return model == "" or model.startswith("anthropic/")
+    model = os.getenv("OPENROUTER_MODEL", "").strip().lower() or OPENROUTER_DEFAULT_MODEL.lower()
+    return model.startswith("anthropic/")
 
 
 def _is_premium_in_fallback(name: str) -> bool:
     """Whether provider ``name`` is a premium surprise-bill hazard as a fallback."""
     if name in _PREMIUM_PROVIDERS:
         return True
-    return name == "openrouter" and _openrouter_routes_premium()
+    return name == "openrouter" and _openrouter_routes_anthropic()
 
 
 def _filter_premium(names: list[str]) -> list[str]:
@@ -222,7 +235,8 @@ def _build_fallback_chain() -> list[AIProvider] | None:
     if not raw:
         return None
 
-    names = _filter_premium([n.strip().lower() for n in raw.split(",") if n.strip()])
+    requested = [n.strip().lower() for n in raw.split(",") if n.strip()]
+    names = _filter_premium(requested)
     providers: list[AIProvider] = []
     for name in names:
         factory_fn = _PROVIDER_REGISTRY.get(name)
@@ -232,6 +246,20 @@ def _build_fallback_chain() -> list[AIProvider] | None:
             logger.warning("Fallback chain: skipping unknown provider '%s'", name)
 
     if len(providers) < 2:
+        # A chain needs >=2 legs; below that, get_ai_provider falls through to the
+        # primary AI_PROVIDER (which defaults to "mock"). This is NOT a hard error,
+        # so surface the degrade — especially when premium/unknown filtering
+        # collapsed a chain the operator explicitly configured.
+        if len(requested) >= 2:
+            logger.warning(
+                "Fallback chain %s collapsed to %d usable provider(s) after "
+                "premium/unknown filtering — no fallback chain will be used; the "
+                "primary AI_PROVIDER handles scoring (ensure it is a real cheap "
+                "provider, not mock; set %s=1 to keep premium legs).",
+                requested,
+                len(providers),
+                _ALLOW_PREMIUM_ENV,
+            )
         return None
     return providers
 
