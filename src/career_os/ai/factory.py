@@ -14,6 +14,7 @@ from career_os.ai.huggingface_provider import HuggingFaceProvider
 from career_os.ai.mistral_provider import MistralProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
+from career_os.ai.openai_provider import OpenAIProvider
 from career_os.ai.openrouter_provider import DEFAULT_MODEL as OPENROUTER_DEFAULT_MODEL
 from career_os.ai.openrouter_provider import OpenRouterProvider
 from career_os.ai.together_provider import TogetherProvider
@@ -88,6 +89,10 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     "ollama": lambda: OllamaProvider(
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
         model=os.getenv("OLLAMA_MODEL", "llama3.3"),
+    ),
+    "openai": lambda: OpenAIProvider(
+        api_key=_resolve_api_key("OPENAI_API_KEY", "openai_api_key"),
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
     ),
     "together": lambda: TogetherProvider(
         api_key=_resolve_api_key("TOGETHER_API_KEY", "together_api_key"),

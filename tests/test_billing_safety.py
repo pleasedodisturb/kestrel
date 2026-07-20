@@ -48,6 +48,9 @@ COST_TIER: dict[str, str] = {
     "demo": FREE,
     "ollama": FREE,
     "openrouter": ROUTING,
+    # gpt-4o-mini default is cheap; OPENAI_MODEL can point at a pricier model,
+    # but unlike openrouter the *default* is not premium, so no guard is needed.
+    "openai": CHEAP,
     "together": CHEAP,
     "groq": CHEAP,
     "xai": CHEAP,

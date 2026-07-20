@@ -20,17 +20,15 @@ import pytest
 from career_os.ai.base import AIProvider, ProviderQuotaError
 from career_os.ai.factory import _PROVIDER_REGISTRY, get_ai_provider
 
-try:
-    from career_os.ai.openai_provider import (
-        OPENAI_API_URL,
-        OpenAIProvider,
-    )
-except ImportError:
-    pytest.skip(
-        "openai_provider broken: _scoring_user_prompt removed from openrouter_provider",
-        allow_module_level=True,
-    )
-
+# NB: imported directly, NOT behind a try/except ImportError -> pytest.skip.
+# That skip (added when openai_provider imported a non-existent
+# `_scoring_user_prompt`) silently disabled this entire file, which is why CI
+# stayed green while the provider was unusable. A broken import must FAIL here.
+# See also tests/test_provider_contract.py (G-1348).
+from career_os.ai.openai_provider import (
+    OPENAI_API_URL,
+    OpenAIProvider,
+)
 from career_os.schemas.ai import AIFeature, AIResponse
 
 # Fake credentials used across all tests — not real.
