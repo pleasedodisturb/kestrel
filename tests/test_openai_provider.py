@@ -20,17 +20,15 @@ import pytest
 from career_os.ai.base import AIProvider, ProviderQuotaError
 from career_os.ai.factory import _PROVIDER_REGISTRY, get_ai_provider
 
-try:
-    from career_os.ai.openai_provider import (
-        OPENAI_API_URL,
-        OpenAIProvider,
-    )
-except ImportError:
-    pytest.skip(
-        "openai_provider broken: _scoring_user_prompt removed from openrouter_provider",
-        allow_module_level=True,
-    )
-
+# NB: imported directly, NOT behind a try/except ImportError -> pytest.skip.
+# That skip (added when openai_provider imported a non-existent
+# `_scoring_user_prompt`) silently disabled this entire file, which is why CI
+# stayed green while the provider was unusable. A broken import must FAIL here.
+# See also tests/test_provider_contract.py (G-1348).
+from career_os.ai.openai_provider import (
+    OPENAI_API_URL,
+    OpenAIProvider,
+)
 from career_os.schemas.ai import AIFeature, AIResponse
 
 # Fake credentials used across all tests — not real.
@@ -401,3 +399,63 @@ class TestOpenAIScore:
         # System message should be present (score feature has system prompt)
         messages = captured_payload["messages"]
         assert messages[0]["role"] == "system"
+
+
+# ---------------------------------------------------------------------------
+# Batch API tests (G-1348: this path was untested while the file was skipped)
+# ---------------------------------------------------------------------------
+
+
+class TestOpenAIBatchScore:
+    """Test the Batch API JSONL assembly."""
+
+    @pytest.mark.asyncio
+    async def test_batch_score_builds_one_request_per_job_with_gate(self) -> None:
+        """Each job becomes one JSONL request carrying the anti-halo role-fit gate."""
+        provider = OpenAIProvider(api_key=_TEST_CREDENTIAL)
+        uploaded: dict[str, str] = {}
+
+        async def mock_post(url, headers=None, json=None, files=None, data=None, **kwargs):
+            if files is not None:  # 1) file upload
+                uploaded["jsonl"] = files["file"][1].read().decode()
+                return httpx.Response(
+                    200, json={"id": "file-abc"}, request=httpx.Request("POST", url)
+                )
+            return httpx.Response(  # 2) batch create
+                200, json={"id": "batch-xyz"}, request=httpx.Request("POST", url)
+            )
+
+        jobs = [
+            {"id": 1, "description": "Senior Backend Engineer at Acme"},
+            {"id": 2, "description": "Staff Platform Engineer at Globex"},
+        ]
+        with patch("httpx.AsyncClient.post", side_effect=mock_post):
+            batch_id = await provider.batch_score(jobs, {"name": "Jane"})
+
+        assert batch_id == "batch-xyz"
+        lines = [json.loads(x) for x in uploaded["jsonl"].splitlines()]
+        assert len(lines) == 2, "one JSONL request per job"
+        assert [x["custom_id"] for x in lines] == ["1", "2"]
+        for line, job in zip(lines, jobs, strict=True):
+            assert line["method"] == "POST"
+            assert line["url"] == "/v1/chat/completions"
+            assert line["body"]["model"] == "gpt-4o-mini"
+            user_msg = line["body"]["messages"][-1]["content"]
+            # the batch path must carry the same gate as real-time score()
+            assert "role-fit gate (anti-halo)" in user_msg
+            assert job["description"] in user_msg
+            assert user_msg.index("role-fit gate (anti-halo)") < user_msg.index(job["description"])
+
+    @pytest.mark.asyncio
+    async def test_batch_score_raises_quota_error_on_upload_402(self) -> None:
+        """A 402 on the file upload surfaces as ProviderQuotaError, not a raw HTTP error."""
+        provider = OpenAIProvider(api_key=_TEST_CREDENTIAL)
+
+        async def mock_post(url, **kwargs):
+            return httpx.Response(
+                402, json={"error": {"message": "no credits"}}, request=httpx.Request("POST", url)
+            )
+
+        with patch("httpx.AsyncClient.post", side_effect=mock_post):
+            with pytest.raises(ProviderQuotaError):
+                await provider.batch_score([{"id": 1, "description": "x"}], {"name": "Jane"})
