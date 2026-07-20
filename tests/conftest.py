@@ -41,6 +41,7 @@ _BLOCKED_AI_DOMAINS = [
     "api.openai.com",
     "api.groq.com",
     "api.x.ai",
+    "api.mistral.ai",
     "generativelanguage.googleapis.com",
 ]
 
