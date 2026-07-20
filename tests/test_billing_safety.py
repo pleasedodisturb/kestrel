@@ -101,8 +101,15 @@ def test_premium_set_matches_classification_and_contains_anthropic():
 # ---------------------------------------------------------------------------
 # 3 — the pure premium filter
 # ---------------------------------------------------------------------------
+# A concrete non-Anthropic model openrouter can route to cheaply. Setting
+# OPENROUTER_MODEL to this keeps openrouter out of the premium-in-fallback set.
+CHEAP_OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct"
+
+
 def test_filter_premium_drops_anthropic_by_default(monkeypatch):
     monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    # openrouter pointed at a cheap model so this test isolates the anthropic drop
+    monkeypatch.setenv("OPENROUTER_MODEL", CHEAP_OPENROUTER_MODEL)
     assert _filter_premium(["mistral", "openrouter", "anthropic"]) == [
         "mistral",
         "openrouter",
@@ -122,6 +129,59 @@ def test_filter_premium_keeps_anthropic_when_opted_in(monkeypatch, optin):
 
 
 # ---------------------------------------------------------------------------
+# 3b — openrouter routing guard (G-1378): openrouter bills premium when it would
+# route to Anthropic (OPENROUTER_MODEL unset -> premium default, or anthropic/*).
+# ---------------------------------------------------------------------------
+def test_filter_premium_drops_openrouter_when_model_unset(monkeypatch):
+    monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)  # -> premium default
+    assert _filter_premium(["groq", "openrouter"]) == ["groq"]
+
+
+def test_filter_premium_drops_openrouter_when_model_is_anthropic(monkeypatch):
+    monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    monkeypatch.setenv("OPENROUTER_MODEL", "anthropic/claude-opus-4.8")
+    assert _filter_premium(["groq", "openrouter"]) == ["groq"]
+
+
+def test_filter_premium_keeps_openrouter_when_model_is_cheap(monkeypatch):
+    monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    monkeypatch.setenv("OPENROUTER_MODEL", CHEAP_OPENROUTER_MODEL)
+    assert _filter_premium(["groq", "openrouter"]) == ["groq", "openrouter"]
+
+
+def test_filter_premium_keeps_premium_openrouter_when_opted_in(monkeypatch):
+    monkeypatch.setenv(_ALLOW_PREMIUM_ENV, "1")
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)  # premium default
+    assert _filter_premium(["groq", "openrouter"]) == ["groq", "openrouter"]
+
+
+@pytest.mark.parametrize(
+    ("model", "kept"),
+    [
+        ("  ANTHROPIC/Claude-Opus-4.8  ", False),  # casing + whitespace -> still dropped
+        ("  meta-llama/llama-3.3-70B-Instruct  ", True),  # cheap, messy -> kept
+    ],
+)
+def test_filter_premium_openrouter_normalizes_model(monkeypatch, model, kept):
+    """`.strip().lower()` on OPENROUTER_MODEL is load-bearing (env is user-supplied)."""
+    monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    monkeypatch.setenv("OPENROUTER_MODEL", model)
+    result = _filter_premium(["groq", "openrouter"])
+    assert ("openrouter" in result) is kept
+
+
+def test_filter_premium_keeps_non_anthropic_premium_openrouter(monkeypatch):
+    """Deliberate scope boundary (G-1378): a non-Anthropic model (even a pricey one)
+    is treated as the operator's explicit choice and kept — the codebase classifies
+    only the anthropic family as PREMIUM, and other OpenRouter models cannot be
+    cost-classified by name. See the module NOTE in factory.py."""
+    monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    monkeypatch.setenv("OPENROUTER_MODEL", "openai/o1-pro")
+    assert _filter_premium(["groq", "openrouter"]) == ["groq", "openrouter"]
+
+
+# ---------------------------------------------------------------------------
 # 4 — the chain builder never constructs a premium provider without the opt-in
 # ---------------------------------------------------------------------------
 class _Stub:
@@ -132,7 +192,7 @@ class _Stub:
 
 
 @pytest.fixture
-def stub_registry(monkeypatch):
+def stub_registry(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
     """Replace the registry with keyless name-stamped stubs."""
     stubs = {name: (lambda n=name: _Stub(n)) for name in factory._PROVIDER_REGISTRY}
     monkeypatch.setattr(factory, "_PROVIDER_REGISTRY", stubs)
@@ -141,12 +201,27 @@ def stub_registry(monkeypatch):
 
 def test_build_fallback_chain_excludes_premium_by_default(monkeypatch, stub_registry):
     monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    # openrouter pointed at a cheap model so only anthropic is dropped here
+    monkeypatch.setenv("OPENROUTER_MODEL", CHEAP_OPENROUTER_MODEL)
     monkeypatch.setenv("AI_PROVIDER_FALLBACK", "groq,openrouter,anthropic")
     chain = factory._build_fallback_chain()
     assert chain is not None
     names = [p.name for p in chain]
     assert "anthropic" not in names, "premium anthropic must not be built silently"
     assert names == ["groq", "openrouter"]
+
+
+def test_build_fallback_chain_excludes_unconfigured_openrouter(monkeypatch, stub_registry):
+    # groq,openrouter with no OPENROUTER_MODEL -> openrouter routes premium -> dropped.
+    # Only groq survives (< 2), so _build_fallback_chain returns None: no premium
+    # leg is ever constructed. NB this is not a hard failure — get_ai_provider then
+    # falls through to the primary AI_PROVIDER (a warning is logged for the
+    # collapse); the billing-safety guarantee is only that no premium provider is
+    # built here.
+    monkeypatch.delenv(_ALLOW_PREMIUM_ENV, raising=False)
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    monkeypatch.setenv("AI_PROVIDER_FALLBACK", "groq,openrouter")
+    assert factory._build_fallback_chain() is None
 
 
 def test_build_fallback_chain_includes_premium_when_opted_in(monkeypatch, stub_registry):
@@ -173,7 +248,7 @@ def test_scheduled_chain_has_no_premium_literal_default(workflow):
         )
     premium_tiered = {name for name, tier in COST_TIER.items() if tier == PREMIUM}
     for chain in defaults:
-        providers = {p.strip() for p in chain.split(",") if p.strip()}
+        providers = {p.strip().lower() for p in chain.split(",") if p.strip()}
         hit = providers & premium_tiered
         assert not hit, (
             f"{workflow}: premium provider(s) {sorted(hit)} in default chain "
