@@ -14,6 +14,7 @@ from career_os.ai.huggingface_provider import HuggingFaceProvider
 from career_os.ai.mistral_provider import MistralProvider
 from career_os.ai.mock_provider import MockProvider
 from career_os.ai.ollama_provider import OllamaProvider
+from career_os.ai.openai_provider import DEFAULT_MODEL as OPENAI_DEFAULT_MODEL
 from career_os.ai.openai_provider import OpenAIProvider
 from career_os.ai.openrouter_provider import DEFAULT_MODEL as OPENROUTER_DEFAULT_MODEL
 from career_os.ai.openrouter_provider import OpenRouterProvider
@@ -92,7 +93,9 @@ _PROVIDER_REGISTRY: dict[str, Callable[[], AIProvider]] = {
     ),
     "openai": lambda: OpenAIProvider(
         api_key=_resolve_api_key("OPENAI_API_KEY", "openai_api_key"),
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        # `or DEFAULT` (not just getenv's default): a set-but-empty OPENAI_MODEL
+        # would otherwise send model="" and 400 every request.
+        model=os.getenv("OPENAI_MODEL", "").strip() or OPENAI_DEFAULT_MODEL,
     ),
     "together": lambda: TogetherProvider(
         api_key=_resolve_api_key("TOGETHER_API_KEY", "together_api_key"),

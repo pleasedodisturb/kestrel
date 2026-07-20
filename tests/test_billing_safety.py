@@ -61,6 +61,34 @@ COST_TIER: dict[str, str] = {
     "anthropic": PREMIUM,
 }
 
+# Registry default models for CHEAP-tier providers, pinned (G-1348 review).
+# The CHEAP classification above is only true while these defaults hold — a cost
+# decision made by quietly editing one string is exactly the G-1371 failure mode,
+# so switching e.g. openai's default to `gpt-4o`/`o1` must fail CI, not the bill.
+CHEAP_DEFAULT_MODELS: dict[str, str] = {
+    "openai": "gpt-4o-mini",
+    "groq": "llama-3.3-70b-versatile",
+    "xai": "grok-3-mini",
+    "gemini": "gemini-2.0-flash",
+    "mistral": "mistral-small-latest",
+    "together": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+    "huggingface": "meta-llama/Llama-3.3-70B-Instruct",
+    "hf": "meta-llama/Llama-3.3-70B-Instruct",
+}
+
+_MODEL_ENV_VARS = [
+    "ANTHROPIC_MODEL",
+    "GEMINI_MODEL",
+    "GROQ_MODEL",
+    "HF_MODEL",
+    "MISTRAL_MODEL",
+    "OLLAMA_MODEL",
+    "OPENAI_MODEL",
+    "OPENROUTER_MODEL",
+    "TOGETHER_MODEL",
+    "XAI_MODEL",
+]
+
 WORKFLOWS_DIR = Path(__file__).resolve().parents[1] / ".github" / "workflows"
 
 # Scheduled workflows whose runs bill on the user's own API keys. nightly.yml
@@ -90,6 +118,31 @@ def test_every_registered_provider_is_cost_classified():
         f"they can silently join a fallback chain (G-1371)."
     )
     assert not stale, f"COST_TIER classifies removed provider(s) {sorted(stale)}"
+
+
+def test_cheap_tier_defaults_are_pinned(monkeypatch):
+    """Every CHEAP provider must be pinned to its cheap default model.
+
+    The CHEAP classification is a claim about the *default* model. Nothing else in
+    the suite pins those defaults, so swapping one for a pricier model would keep
+    all billing tests green while quietly multiplying cost (G-1348 review, WR-04).
+    """
+    classified_cheap = {name for name, tier in COST_TIER.items() if tier == CHEAP}
+    assert set(CHEAP_DEFAULT_MODELS) == classified_cheap, (
+        "CHEAP_DEFAULT_MODELS and the COST_TIER CHEAP set disagree — pin a default "
+        "model for every cheap provider so its cost claim is enforced."
+    )
+    # construct straight from the registry with keys stubbed and overrides cleared
+    monkeypatch.setattr(factory, "_resolve_api_key", lambda *a, **k: "test-key")
+    for var in _MODEL_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
+    for name, expected in sorted(CHEAP_DEFAULT_MODELS.items()):
+        provider = factory._PROVIDER_REGISTRY[name]()
+        assert provider._model == expected, (
+            f"{name}: registry default model changed to {provider._model!r} "
+            f"(pinned: {expected!r}). If this is intentional, re-verify the cost "
+            f"tier in COST_TIER before updating the pin."
+        )
 
 
 def test_premium_set_matches_classification_and_contains_anthropic():
