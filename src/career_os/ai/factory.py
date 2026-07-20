@@ -135,8 +135,9 @@ _SUPPORTED_PROVIDERS = set(_PROVIDER_REGISTRY.keys())
 # cascades onto premium Claude with no alarm. Premium fallback is opt-in only.
 #
 # NOTE: `openrouter` is a *routing* provider whose cost depends on
-# OPENROUTER_MODEL (its registry default is a premium Claude model). Keeping it
-# cheap is enforced at the workflow/config level — see tests/test_billing_safety.py.
+# OPENROUTER_MODEL (its registry default is a premium Claude model). It is
+# treated as premium-in-fallback whenever it would route to Anthropic — see
+# `_openrouter_routes_premium` and `_is_premium_in_fallback` below (G-1378).
 # ---------------------------------------------------------------------------
 _PREMIUM_PROVIDERS = frozenset({"anthropic"})
 
@@ -148,24 +149,47 @@ def _premium_fallback_allowed() -> bool:
     return os.getenv(_ALLOW_PREMIUM_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _openrouter_routes_premium() -> bool:
+    """True if `openrouter` would route to a premium (Anthropic) model.
+
+    OpenRouter's cost depends on OPENROUTER_MODEL, whose factory default is a
+    premium Claude model. So it bills premium when the var is unset/empty (falls
+    to the default) or points at an ``anthropic/*`` model. Non-Anthropic models
+    (e.g. ``meta-llama/*``, ``mistralai/*``) are cheap. Keyed off the codebase's
+    single premium family so there is no fragile per-model price list (G-1378).
+    """
+    model = os.getenv("OPENROUTER_MODEL", "").strip().lower()
+    return model == "" or model.startswith("anthropic/")
+
+
+def _is_premium_in_fallback(name: str) -> bool:
+    """Whether provider ``name`` is a premium surprise-bill hazard as a fallback."""
+    if name in _PREMIUM_PROVIDERS:
+        return True
+    return name == "openrouter" and _openrouter_routes_premium()
+
+
 def _filter_premium(names: list[str]) -> list[str]:
     """Drop premium providers from a fallback chain unless explicitly opted in.
 
-    Pure function (no I/O, no provider construction) so it is trivially testable.
-    A premium provider reached as a silent fallback is a surprise-bill hazard
-    (COE 2026-07-19); set AI_ALLOW_PREMIUM_FALLBACK=1 to allow it deliberately.
+    Pure function (no I/O beyond env reads, no provider construction) so it is
+    trivially testable. A premium provider reached as a silent fallback is a
+    surprise-bill hazard (COE 2026-07-19); this also covers `openrouter` when it
+    would route to Anthropic (G-1378). Set AI_ALLOW_PREMIUM_FALLBACK=1 to allow
+    premium fallbacks deliberately.
     """
     if _premium_fallback_allowed():
         return names
-    dropped = [n for n in names if n in _PREMIUM_PROVIDERS]
+    dropped = [n for n in names if _is_premium_in_fallback(n)]
     if dropped:
         logger.warning(
             "Fallback chain: dropping premium provider(s) %s — premium fallback is "
-            "opt-in only (set %s=1 to allow).",
+            "opt-in only (set %s=1 to allow). openrouter counts as premium when "
+            "OPENROUTER_MODEL is unset or an anthropic/* model.",
             dropped,
             _ALLOW_PREMIUM_ENV,
         )
-    return [n for n in names if n not in _PREMIUM_PROVIDERS]
+    return [n for n in names if not _is_premium_in_fallback(n)]
 
 
 class UnsupportedProviderError(Exception):
