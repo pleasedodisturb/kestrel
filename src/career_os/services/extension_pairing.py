@@ -181,10 +181,14 @@ def mint_extension_token() -> str:
 
 
 def verify_extension_token(token: str | None) -> bool:
-    """Return True iff the token's signature verifies under the current secret.
+    """Return True iff the token verifies under the current secret AND is not stale.
 
     Rejects empty input, malformed/truncated strings, and tampered signatures.
-    No expiry check in Phase 0 (documented in the module docstring). Timing-safe.
+    The signature is checked FIRST (timing-safe); only then is the embedded
+    issued-ts compared against ``settings.extension_token_ttl_days`` — so an
+    attacker learns nothing new from an expired-vs-forged distinction. A token
+    strictly older than the TTL is rejected (→ 401 re-pair). A TTL of 0 or less
+    disables the age check (signature-only), for tests and a "never expire" mode.
     """
     if not token or not isinstance(token, str):
         return False
@@ -197,4 +201,17 @@ def verify_extension_token(token: str | None) -> bool:
     except (ValueError, TypeError, binascii.Error):
         return False
     expected = hmac.new(get_extension_secret(), issued, hashlib.sha256).digest()
-    return hmac.compare_digest(signature, expected)
+    if not hmac.compare_digest(signature, expected):
+        return False
+
+    # Max-age check (G-1391). The signed payload IS the issued epoch, so a valid
+    # signature guarantees the timestamp is authentic (not attacker-chosen).
+    ttl_days = settings.extension_token_ttl_days
+    if ttl_days > 0:
+        try:
+            issued_ts = int(issued.decode("ascii"))
+        except (ValueError, UnicodeDecodeError):
+            return False
+        if time.time() - issued_ts > ttl_days * 86400:
+            return False
+    return True

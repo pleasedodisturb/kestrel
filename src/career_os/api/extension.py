@@ -16,9 +16,10 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from career_os import __version__
+from career_os.api.oauth import limiter
 from career_os.schemas.extension import (
     CaptureRequest,
     CaptureResponse,
@@ -61,9 +62,19 @@ def require_extension_token(
     return token
 
 
-@router.post("/pair", response_model=PairResponse)
-def pair(payload: PairRequest) -> PairResponse:
-    """Validate a pairing code and mint a dedicated extension token."""
+@router.post(
+    "/pair",
+    response_model=PairResponse,
+    responses={429: {"description": "Too many pairing attempts"}},
+)
+@limiter.limit("5/minute")
+def pair(request: Request, payload: PairRequest) -> PairResponse:
+    """Validate a pairing code and mint a dedicated extension token.
+
+    Rate-limited to 5 attempts/min/IP (shared slowapi limiter, same instance the
+    app wires to ``app.state.limiter``) to kill brute-force of the 6-digit code —
+    T-01A-01. slowapi requires the ``request: Request`` first parameter.
+    """
     if not verify_pairing_code(payload.pairing_code):
         raise HTTPException(status_code=401, detail="Invalid or expired pairing code")
     return PairResponse(token=mint_extension_token(), instance=_instance_info())

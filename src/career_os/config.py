@@ -53,6 +53,14 @@ class Settings(BaseSettings):
     extension_token_secret: str = ""
     extension_pairing_window_seconds: int = 300
     extension_cors_regex: str = r"^chrome-extension://[a-p]{32}$"
+    # Extension token max-age (G-1391 / Part A hardening). A minted token embeds
+    # its issued-ts; verify_extension_token rejects one older than this many days
+    # (→ 401 re-pair). 0 (or negative) disables the age check (signature-only).
+    extension_token_ttl_days: int = 30
+    # Single-use pairing-nonce validity (G-1391 / Part A). `kestrel extension pair`
+    # mints a one-time code whose sha256+expiry is persisted to
+    # {data_dir}/.extension_pairing (0600); the code is consumed on first use.
+    extension_pairing_ttl_seconds: int = 120
 
     # Cache settings
     cache_enabled: bool = True

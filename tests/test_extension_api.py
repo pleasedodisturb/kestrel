@@ -25,12 +25,25 @@ _EXTENSION_SRC = (
 
 
 @pytest.fixture(autouse=True)
-def _deterministic_secret(monkeypatch):
-    """Pin the extension secret so pairing codes/tokens are deterministic."""
+def _deterministic_secret(monkeypatch, tmp_path):
+    """Pin the extension secret + isolate per-test pairing/rate-limit state.
+
+    - Pins ``EXTENSION_TOKEN_SECRET`` so codes/tokens are deterministic.
+    - Points ``settings.data_dir`` at a tmp dir so the single-use pairing nonce
+      file (``.extension_pairing``) is isolated per test.
+    - Resets the shared slowapi limiter before and after each test so the 429
+      rate-limit test does not throttle unrelated tests (all requests share the
+      TestClient source IP).
+    """
+    from career_os.api.oauth import limiter as _oauth_limiter
+
     monkeypatch.setenv("EXTENSION_TOKEN_SECRET", "test-extension-secret-000")
+    monkeypatch.setattr(extension_pairing.settings, "data_dir", tmp_path)
     extension_pairing.reset_secret_cache()
+    _oauth_limiter.reset()
     yield
     extension_pairing.reset_secret_cache()
+    _oauth_limiter.reset()
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +110,45 @@ class TestExtensionPairing:
         assert extension_pairing.verify_extension_token("a.b.c") is False
         assert extension_pairing.verify_extension_token(".") is False
 
+    @staticmethod
+    def _token_issued_at(issued_ts: int) -> str:
+        """Forge a validly-signed token whose embedded issued-ts is `issued_ts`.
+
+        Uses the real secret + HMAC path (so the signature verifies) but lets the
+        test choose the age — no time monkeypatching needed.
+        """
+        import hashlib
+        import hmac
+
+        issued = str(int(issued_ts)).encode("ascii")
+        secret = extension_pairing.get_extension_secret()
+        signature = hmac.new(secret, issued, hashlib.sha256).digest()
+        return (
+            f"{extension_pairing._b64url_encode(issued)}."
+            f"{extension_pairing._b64url_encode(signature)}"
+        )
+
+    def test_fresh_token_verifies_within_ttl(self, monkeypatch):
+        monkeypatch.setattr(extension_pairing.settings, "extension_token_ttl_days", 30)
+        token = extension_pairing.mint_extension_token()
+        assert extension_pairing.verify_extension_token(token) is True
+
+    def test_token_older_than_ttl_is_rejected(self, monkeypatch):
+        """A token whose issued-ts is older than the TTL fails verification (→401)."""
+        import time
+
+        monkeypatch.setattr(extension_pairing.settings, "extension_token_ttl_days", 30)
+        stale = self._token_issued_at(int(time.time()) - 31 * 86400)
+        assert extension_pairing.verify_extension_token(stale) is False
+
+    def test_ttl_zero_disables_age_check(self, monkeypatch):
+        """TTL <= 0 = never-expire mode: even an ancient token still verifies."""
+        import time
+
+        monkeypatch.setattr(extension_pairing.settings, "extension_token_ttl_days", 0)
+        ancient = self._token_issued_at(int(time.time()) - 3650 * 86400)  # ~10 years
+        assert extension_pairing.verify_extension_token(ancient) is True
+
     def test_token_minted_under_different_secret_fails(self, monkeypatch):
         token = extension_pairing.mint_extension_token()
         # Rotate the secret — the old token must no longer verify.
@@ -159,6 +211,17 @@ class TestExtensionRoutes:
         resp = client.post("/api/extension/pair", json={"pairing_code": "999999"})
         assert resp.status_code == 401
         assert resp.json()["detail"] == "Invalid or expired pairing code"
+
+    def test_pair_rate_limited_returns_429(self, client: TestClient):
+        """The 6th /pair within a minute from the same IP is throttled (T-01A-01)."""
+        # Fire 6 requests; the limiter is 5/minute/IP. Use a wrong code so none
+        # succeed — the limiter counts attempts regardless of the outcome.
+        statuses = [
+            client.post("/api/extension/pair", json={"pairing_code": "999999"}).status_code
+            for _ in range(6)
+        ]
+        assert statuses[:5] == [401, 401, 401, 401, 401]
+        assert statuses[5] == 429
 
     def test_capture_without_token_returns_401(self, client: TestClient):
         resp = client.post(
