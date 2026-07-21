@@ -7,45 +7,63 @@ title, and the old skills cache had no occupation concepts at all).
 
 Two resolvers feed a pure classifier:
 
-* ``map_family_to_occupation`` — job_family -> ``ESCOOccupation``, via a
+* ``map_family_to_occupation`` — job_family -> occupation ref, via a
   hand-checked overlay (exact, fixture-verified ``concept_uri`` pins for the
-  families that have a genuine ESCO match) plus a conservative fuzzy fallback
-  on ``preferred_label`` only.
-* ``normalize_title_to_occupation`` — free-text JD title -> ``ESCOOccupation``,
+  families that have a genuine ESCO match, casefolded for case-insensitive
+  lookup — G-1351 review F5) plus a conservative fuzzy fallback on
+  ``preferred_label`` only.
+* ``normalize_title_to_occupation`` — free-text JD title -> occupation ref,
   via conservative rapidfuzz n-gram matching over ``preferred_label`` +
-  ``alt_labels``.
+  ``alt_labels`` (minus a curated denylist of ESCO alt-labels that collide
+  with the wrong occupation for our domain — G-1351 review F2).
 
 ``match_occupation`` combines both into a tier: ``same_occupation``,
 ``same_isco_group``, ``no_match``, or ``unknown``. CRITICAL: ``unknown``
 always carries ``score=None`` — never the fake ``0.0`` that made the old axis
 inert and indistinguishable from a real "no match" (``no_match``, which IS
-``0.0``).
+``0.0``). ``match_occupation`` is also self-sufficient (G-1351 review F1): if
+``esco_occupations`` is empty (a normal server deployment that never ran
+``kestrel occupations load``), it lazily populates the table from the bundled
+fixture once, rather than returning ``unknown`` forever.
 
 Naive fuzzy matching over short titles is unsafe (verified failures during
 planning: "Senior Backend Engineer" -> "nurse assistant" via a loose scorer
 picking up the substring "sen"; "data engineer" -> "data scientist" at 100
 via a loose WRatio-style scorer). This module uses ``token_sort_ratio`` with a
-high cutoff, case/punctuation-insensitive comparison, and a length-guard that
-rejects a short/generic candidate matching an unrelated label — an unresolved
-title returns ``None`` (-> ``unknown``) rather than a wrong tier.
+high cutoff, case/punctuation-insensitive comparison, a length-guard that
+rejects a short/generic candidate matching an unrelated label, a unigram
+restriction that disallows single-word candidates on titles longer than 2
+words (G-1351 review F4 — kills the "Representative" hijack of "Sales
+Development Representative" while still resolving "Chef"), and a curated
+alt-label denylist (G-1351 review F2) — an unresolved title returns ``None``
+(-> ``unknown``) rather than a wrong tier.
 """
 
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz, process, utils
 from sqlalchemy.orm import Session
 
 from career_os.models.esco import ESCOOccupation
+from career_os.services.occupation_taxonomy import count_occupations, populate_occupations
 
 logger = logging.getLogger(__name__)
 
-# T-n1d-01 mitigation: cap n-gram generation to the first N words of a title,
-# mirroring cli/extract.py's MAX_WORDS_FOR_NGRAMS (T-02-02) DoS bound. Real JD
-# titles are a handful of words; this only guards against a maliciously huge
-# "title" string blowing up n-gram expansion.
-MAX_WORDS_FOR_NGRAMS = 500
+# T-n1d-01 mitigation (G-1351 review F3): cap n-gram generation to the first N
+# words of a title. Real JD titles are a handful of words (well under 10); the
+# original 500-word bound copied from cli/extract.py's full-text DoS guard was
+# the wrong analog for a short title field and still allowed a ~20s/call CPU
+# burn on a crafted 500-word "title". 20 is generous headroom over any real
+# title while making the n-gram expansion trivially cheap.
+MAX_WORDS_FOR_NGRAMS = 20
+
+# G-1351 review F3: cap raw title length before any processing (splitting,
+# n-gram generation, or the uncapped full-title candidate) so a crafted
+# multi-KB "title" string can never reach the matching loop at all.
+MAX_TITLE_CHARS = 300
 
 # Conservative, high-confidence cutoffs. A generic WRatio/low-cutoff match is
 # what caused the disaster cases above — token_sort_ratio + 90 is deliberately
@@ -62,6 +80,12 @@ MIN_CANDIDATE_LENGTH = 4
 # tying with — or beating — a longer, correct candidate's own exact match).
 LENGTH_GUARD_RATIO = 0.6
 
+# G-1351 review F4: a bare single-word n-gram candidate (e.g. "Representative"
+# out of "Sales Development Representative") is never trusted UNLESS the full
+# title itself is that short — this keeps a genuinely one/two-word title like
+# "Chef" working while killing the generic-unigram hijack of longer titles.
+MAX_WORDS_FOR_UNIGRAM_CANDIDATES = 2
+
 # ---------------------------------------------------------------------------
 # Hand-checked family -> occupation overlay
 # ---------------------------------------------------------------------------
@@ -76,6 +100,11 @@ LENGTH_GUARD_RATIO = 0.6
 FAMILY_OCCUPATION_OVERLAY: dict[str, str] = {
     # -- Technology --
     "SWE": "http://data.europa.eu/esco/occupation/f2b15a0e-e65a-438a-affb-29b9d50b77d1",  # software developer 2512.3
+    # Natural-language alias of "SWE" (G-1351 review F5): job_family is free
+    # text in some callers, not always the scoring-preset code, and the
+    # abbreviation alone doesn't fuzzy-match "software developer" closely
+    # enough (74.3 vs the 90 cutoff) to fall through correctly.
+    "Software Engineer": "http://data.europa.eu/esco/occupation/f2b15a0e-e65a-438a-affb-29b9d50b77d1",  # software developer 2512.3
     "TPM": "http://data.europa.eu/esco/occupation/8b6388a4-4904-471b-9331-d3b1211f5525",  # ICT project manager 1330.7
     "QA Engineer": "http://data.europa.eu/esco/occupation/106f79e4-6264-45f1-9e7a-297435cd684b",  # software tester 2519.6
     "QA Automation Engineer": "http://data.europa.eu/esco/occupation/106f79e4-6264-45f1-9e7a-297435cd684b",  # software tester
@@ -111,13 +140,191 @@ FAMILY_OCCUPATION_OVERLAY: dict[str, str] = {
     "Supply Chain Manager": "http://data.europa.eu/esco/occupation/aacc3918-b5d3-484b-9480-5d29aa550d74",  # supply chain manager 1324.3.4
 }
 
+# Casefolded overlay for case-insensitive lookup (G-1351 review F5): job_family
+# is free text in some callers ("swe", "Software Engineer" as well as the
+# canonical "SWE" scoring-preset code), matching scoring.py's
+# _weights_for_job_family case-insensitivity.
+_FAMILY_OCCUPATION_OVERLAY_CF: dict[str, str] = {
+    key.casefold(): uri for key, uri in FAMILY_OCCUPATION_OVERLAY.items()
+}
+
+# ---------------------------------------------------------------------------
+# Curated alt-label denylist (G-1351 review F2)
+# ---------------------------------------------------------------------------
+# Each entry below is an ESCO alt_label string (casefolded) that is a literal
+# or near-exact collision with an occupation OUTSIDE our domain, verified
+# against the real bundled fixture (see the F2 probe: every JOB_FAMILY_WEIGHTS
+# key run through normalize_title_to_occupation). Filtered out entirely when
+# building the title-matching surface — the affected occupations remain
+# reachable via their own preferred_label; only the misleading alt is removed.
+ALT_LABEL_DENYLIST: frozenset[str] = frozenset(
+    {
+        # Exact alt of "data scientist". "Data Engineer" has no genuine ESCO
+        # pin (see FAMILY_OCCUPATION_OVERLAY comment) — without this entry a
+        # "Data Engineer" JD title resolves same_occupation=1.0 against a
+        # "Data Scientist" family, which is wrong.
+        "data engineer",
+        # Exact alt of BOTH "foundry manager" and "maintenance and repair
+        # engineer" — neither is an engineering-management role in our
+        # domain's sense.
+        "engineering manager",
+        # Exact alt of 4 unrelated occupations (metal production manager,
+        # mine manager, financial markets back office administrator, business
+        # manager). Worse than a fuzzy near-miss: this is a literal string
+        # collision that non-deterministically shadowed the CORRECT
+        # "operations manager" occupation's own preferred_label in the
+        # candidate dict depending on DB row-insertion order — Operations
+        # Manager is one of our 30 pinned overlay families, so this was a
+        # same-title round-trip bug, not just a theoretical risk.
+        "operations manager",
+        # Plural alt of "bank account manager". ESCO has no generic "account
+        # manager" occupation, only specialized variants (bank/ICT/sales); the
+        # plural alt out-scores a plain "Account Manager" JD title via
+        # token_sort_ratio (96.8) even though bank-specific is the wrong
+        # domain for most of our job families.
+        "account managers",
+    }
+)
+
+
+@dataclass(frozen=True)
+class _OccupationRef:
+    """Immutable snapshot of the ESCOOccupation columns match_occupation needs.
+
+    Deliberately NOT the live ORM row (G-1351 review F7): the match surface is
+    cached at module scope across calls (and, in tests, across independently
+    created/closed sessions with the same taxonomy row count). A cached live
+    ORM instance would go detached/expired once its originating session
+    closes; a plain-data snapshot has no such lifecycle to worry about.
+    """
+
+    concept_uri: str
+    preferred_label: str
+    isco_group: str | None
+
+
+@dataclass
+class _MatchSurface:
+    """Pre-built matching surface for a given taxonomy row count (G-1351 F7)."""
+
+    row_count: int
+    family_labels: list[str] = field(default_factory=list)
+    family_label_to_ref: dict[str, _OccupationRef] = field(default_factory=dict)
+    title_candidates: list[str] = field(default_factory=list)
+    title_candidate_to_ref: dict[str, _OccupationRef] = field(default_factory=dict)
+    pin_uri_to_ref: dict[str, _OccupationRef] = field(default_factory=dict)
+
+
+def _build_match_surface(db: Session, row_count: int) -> _MatchSurface:
+    """Query the full taxonomy once and build both matching surfaces.
+
+    Single full-table scan (previously duplicated per-call in both
+    ``map_family_to_occupation`` and ``normalize_title_to_occupation`` —
+    G-1351 review F7). Alt labels in ``ALT_LABEL_DENYLIST`` are dropped here
+    (G-1351 review F2) so every caller of the cached surface benefits.
+    """
+    rows = db.query(ESCOOccupation).all()
+
+    family_label_to_ref: dict[str, _OccupationRef] = {}
+    title_candidate_to_ref: dict[str, _OccupationRef] = {}
+    pin_uri_to_ref: dict[str, _OccupationRef] = {}
+
+    for row in rows:
+        ref = _OccupationRef(
+            concept_uri=row.concept_uri,
+            preferred_label=row.preferred_label,
+            isco_group=row.isco_group,
+        )
+        pin_uri_to_ref[row.concept_uri] = ref
+        # Family fuzzy fallback: preferred_label only (not alt_labels — those
+        # are for title matching, where more variants are acceptable; a
+        # family code should only fall back to a very close canonical
+        # occupation name).
+        family_label_to_ref.setdefault(row.preferred_label, ref)
+        # Title matching: preferred_label + non-denylisted alt_labels.
+        title_candidate_to_ref.setdefault(row.preferred_label, ref)
+        for alt in row.alt_labels_list:
+            if alt.casefold() in ALT_LABEL_DENYLIST:
+                continue
+            title_candidate_to_ref.setdefault(alt, ref)
+
+    return _MatchSurface(
+        row_count=row_count,
+        family_labels=list(family_label_to_ref.keys()),
+        family_label_to_ref=family_label_to_ref,
+        title_candidates=list(title_candidate_to_ref.keys()),
+        title_candidate_to_ref=title_candidate_to_ref,
+        pin_uri_to_ref=pin_uri_to_ref,
+    )
+
+
+# Module-level cache of the built matching surface (G-1351 review F7),
+# invalidated when the taxonomy row count changes. Identical data across DBs
+# at the same row count is acceptable — the taxonomy is a single-source
+# bundled fixture, so two DBs with the same count have the same content.
+_surface_cache: _MatchSurface | None = None
+
+
+def _get_match_surface(db: Session) -> _MatchSurface | None:
+    """Return the cached match surface, rebuilding only if the row count changed.
+
+    Returns ``None`` for an empty taxonomy (row_count == 0) so callers keep
+    their existing "empty taxonomy -> None" behavior without a wasted build.
+    """
+    global _surface_cache
+    row_count = count_occupations(db)
+    if row_count == 0:
+        return None
+    if _surface_cache is None or _surface_cache.row_count != row_count:
+        _surface_cache = _build_match_surface(db, row_count)
+    return _surface_cache
+
+
+# ---------------------------------------------------------------------------
+# F1: lazy self-populate so match_occupation is never inert by default
+# ---------------------------------------------------------------------------
+# Set once a lazy populate attempt has failed, so a persistently-broken
+# fixture/DB doesn't pay the populate-and-fail cost on every single
+# match_occupation call. Intentionally module-level, not per-call: this is a
+# "give up gracefully after one bad attempt" latch, not a per-request cache.
+_POPULATE_ATTEMPT_FAILED = False
+
+
+def _ensure_taxonomy_populated(db: Session) -> None:
+    """Lazily populate esco_occupations if empty (G-1351 review F1).
+
+    A normal server deployment never runs `kestrel occupations load`
+    manually; without this, match_occupation was permanently inert (always
+    `unknown`) in production — the exact 4a "honest but dead" failure shape
+    this ticket exists to fix. `populate_occupations` is idempotent and takes
+    ~1-2s for the bundled 2,942-row fixture, so calling it here is safe; the
+    row-count check makes every call after the first a cheap no-op.
+
+    Never raises: a populate failure degrades to `unknown` (via the empty
+    surface downstream) and flips `_POPULATE_ATTEMPT_FAILED` so it is not
+    retried on every subsequent call.
+    """
+    global _POPULATE_ATTEMPT_FAILED
+    if _POPULATE_ATTEMPT_FAILED:
+        return
+    try:
+        if count_occupations(db) == 0:
+            populate_occupations(db)
+    except Exception:
+        logger.warning(
+            "Lazy populate_occupations failed inside match_occupation; "
+            "degrading to unknown until a successful populate (manual "
+            "`kestrel occupations load` or a later process restart).",
+            exc_info=True,
+        )
+        _POPULATE_ATTEMPT_FAILED = True
+
 
 def _passes_length_guard(query: str, matched_label: str) -> bool:
     """Reject a match where query/label lengths are too disproportionate.
 
     Defense-in-depth alongside the high fuzzy cutoff: a bare abbreviation or a
-    generic single word should never be trusted to resolve a title, even if it
-    happens to clear the score threshold against some unrelated label.
+    generic single word should never be trusted to match anything on its own.
     """
     if len(query) < MIN_CANDIDATE_LENGTH:
         return False
@@ -128,33 +335,46 @@ def _passes_length_guard(query: str, matched_label: str) -> bool:
     return (shorter / longer) >= LENGTH_GUARD_RATIO
 
 
-def map_family_to_occupation(db: Session, family: str | None) -> ESCOOccupation | None:
-    """Resolve a job_family code/label to an ``ESCOOccupation``.
+def map_family_to_occupation(db: Session, family: str | None) -> _OccupationRef | None:
+    """Resolve a job_family code/label to an occupation ref.
 
-    Overlay lookup first (exact family key -> pinned concept_uri), then a
-    conservative fuzzy fallback on ``preferred_label`` only (high cutoff).
-    Unknown/garbage family strings, or families with no confident match,
-    return ``None`` rather than a wrong occupation.
+    Overlay lookup first (casefolded exact family key -> pinned concept_uri —
+    G-1351 review F5), then a conservative fuzzy fallback on ``preferred_label``
+    only (high cutoff). Unknown/garbage family strings, or families with no
+    confident match, return ``None`` rather than a wrong occupation. Does NOT
+    lazily populate an empty taxonomy itself (that's `match_occupation`'s job
+    — G-1351 review F1); called directly on an empty table this simply
+    returns ``None``.
     """
     if not family or not family.strip():
         return None
     family_key = family.strip()
 
-    pinned_uri = FAMILY_OCCUPATION_OVERLAY.get(family_key)
+    surface = _get_match_surface(db)
+    if surface is None:
+        return None
+
+    pinned_uri = _FAMILY_OCCUPATION_OVERLAY_CF.get(family_key.casefold())
     if pinned_uri:
-        return db.query(ESCOOccupation).filter(ESCOOccupation.concept_uri == pinned_uri).first()
+        ref = surface.pin_uri_to_ref.get(pinned_uri)
+        if ref is None:
+            # G-1351 review F9: a pin whose concept_uri isn't in the table
+            # would otherwise silently degrade to None — surface fixture/DB
+            # drift instead of hiding it.
+            logger.warning(
+                "FAMILY_OCCUPATION_OVERLAY pin %r for family %r not found in "
+                "esco_occupations — fixture/DB drift?",
+                pinned_uri,
+                family_key,
+            )
+        return ref
 
     # Conservative fuzzy fallback: preferred_label only (not alt_labels — those
     # are for title matching, where more variants are acceptable; a family
     # code should only fall back to a very close canonical occupation name).
-    rows = db.query(ESCOOccupation).all()
-    if not rows:
-        return None
-    label_to_row = {row.preferred_label: row for row in rows}
-    labels = list(label_to_row.keys())
     result = process.extractOne(
         family_key,
-        labels,
+        surface.family_labels,
         scorer=fuzz.token_sort_ratio,
         score_cutoff=FAMILY_FUZZY_THRESHOLD,
         processor=utils.default_process,
@@ -162,41 +382,44 @@ def map_family_to_occupation(db: Session, family: str | None) -> ESCOOccupation 
     if not result:
         return None
     matched_label = result[0]
-    return label_to_row.get(matched_label)
+    return surface.family_label_to_ref.get(matched_label)
 
 
-def normalize_title_to_occupation(db: Session, jd_title: str | None) -> ESCOOccupation | None:
-    """Resolve a free-text JD title to an ``ESCOOccupation``.
+def normalize_title_to_occupation(db: Session, jd_title: str | None) -> _OccupationRef | None:
+    """Resolve a free-text JD title to an occupation ref.
 
-    Generates n-grams of the title (capped at MAX_WORDS_FOR_NGRAMS — T-n1d-01)
-    and fuzzy-matches each against every occupation's preferred_label AND
-    alt_labels via token_sort_ratio with a case/punctuation-insensitive
-    processor and a high cutoff. A length-guard rejects a candidate/matched-
-    label pair that is too disproportionate in length. Candidates are tried
-    longest-first so a specific multi-word match (e.g. "nurse assistant")
-    wins over a shorter, more generic single-word tie (e.g. "assistant").
-    Empty/whitespace title or an empty taxonomy -> ``None``.
+    Truncates to ``MAX_TITLE_CHARS`` before any processing (G-1351 review F3),
+    then generates n-grams of the (truncated) title, capped at
+    ``MAX_WORDS_FOR_NGRAMS``, and fuzzy-matches each against every
+    occupation's preferred_label AND non-denylisted alt_labels (G-1351 review
+    F2) via token_sort_ratio with a case/punctuation-insensitive processor and
+    a high cutoff. Single-word candidates are only allowed when the full
+    title itself is ``MAX_WORDS_FOR_UNIGRAM_CANDIDATES`` words or fewer
+    (G-1351 review F4). A length-guard rejects a candidate/matched-label pair
+    that is too disproportionate in length. Candidates are tried longest-first
+    so a specific multi-word match (e.g. "nurse assistant") wins over a
+    shorter, more generic single-word tie (e.g. "assistant"). Empty/whitespace
+    title or an empty taxonomy -> ``None``.
     """
     if not jd_title or not jd_title.strip():
         return None
 
-    rows = db.query(ESCOOccupation).all()
-    if not rows:
+    title = jd_title.strip()[:MAX_TITLE_CHARS]
+
+    surface = _get_match_surface(db)
+    if surface is None:
         return None
 
-    candidate_to_row: dict[str, ESCOOccupation] = {}
-    for row in rows:
-        candidate_to_row.setdefault(row.preferred_label, row)
-        for alt in row.alt_labels_list:
-            candidate_to_row.setdefault(alt, row)
-    labels = list(candidate_to_row.keys())
-    if not labels:
+    words = title.split()[:MAX_WORDS_FOR_NGRAMS]
+    if not words:
         return None
+    allow_unigrams = len(words) <= MAX_WORDS_FOR_UNIGRAM_CANDIDATES
 
-    words = jd_title.split()[:MAX_WORDS_FOR_NGRAMS]
-    candidates: set[str] = {jd_title.strip()}
+    candidates: set[str] = {title}
     max_window = min(len(words), 5)
     for n in range(1, max_window + 1):
+        if n == 1 and not allow_unigrams:
+            continue
         for i in range(len(words) - n + 1):
             candidates.add(" ".join(words[i : i + n]))
 
@@ -204,14 +427,14 @@ def normalize_title_to_occupation(db: Session, jd_title: str | None) -> ESCOOccu
     # rather than letting a later, shorter generic word overwrite it.
     ordered_candidates = sorted(candidates, key=lambda c: (-len(c), c))
 
-    best_row: ESCOOccupation | None = None
+    best_ref: _OccupationRef | None = None
     best_score = -1.0
     for candidate in ordered_candidates:
         if len(candidate) < MIN_CANDIDATE_LENGTH:
             continue
         result = process.extractOne(
             candidate,
-            labels,
+            surface.title_candidates,
             scorer=fuzz.token_sort_ratio,
             score_cutoff=TITLE_MATCH_THRESHOLD,
             processor=utils.default_process,
@@ -223,13 +446,13 @@ def normalize_title_to_occupation(db: Session, jd_title: str | None) -> ESCOOccu
             continue
         if score > best_score:
             best_score = score
-            best_row = candidate_to_row.get(matched_label)
+            best_ref = surface.title_candidate_to_ref.get(matched_label)
 
-    return best_row
+    return best_ref
 
 
 def _classify(
-    family_occ: ESCOOccupation | None, title_occ: ESCOOccupation | None
+    family_occ: _OccupationRef | None, title_occ: _OccupationRef | None
 ) -> dict[str, str | float | None]:
     """Pure classifier: two resolved occupations (or None) -> a match tier.
 
@@ -255,11 +478,22 @@ def match_occupation(db: Session, candidate_family: str | None, jd_title: str | 
 
     Returns a dict with ``match`` (same_occupation | same_isco_group |
     no_match | unknown), ``score`` (1.0 | 0.5 | 0.0 | None), and the resolved
-    family/title URIs + labels for explainability. Defensive: any unexpected
-    failure degrades to the ``unknown`` result (never raises), mirroring
-    ``esco_features.py``'s swallow-and-rollback pattern.
+    family/title URIs + labels for explainability. Self-sufficient (G-1351
+    review F1): lazily populates ``esco_occupations`` from the bundled
+    fixture on first use if the table is empty, so a normal server deployment
+    that never runs `kestrel occupations load` still gets a real signal.
+
+    Defensive: any unexpected failure degrades to the ``unknown`` result
+    (never raises). CRITICAL (G-1351 review F6): unlike `esco_features.py`'s
+    swallow-and-rollback pattern, this function NEVER calls `db.rollback()` on
+    failure. It borrows the caller's session, and in the Phase C cascade will
+    run mid `score_job` with the caller's own uncommitted rows already added
+    to that session — rolling back here would silently discard those pending
+    writes. The swallow path only logs and returns `unknown`; it never
+    mutates transaction state.
     """
     try:
+        _ensure_taxonomy_populated(db)
         family_occ = map_family_to_occupation(db, candidate_family)
         title_occ = normalize_title_to_occupation(db, jd_title)
         result = _classify(family_occ, title_occ)
@@ -270,15 +504,12 @@ def match_occupation(db: Session, candidate_family: str | None, jd_title: str | 
         return result
     except Exception:
         logger.warning(
-            "match_occupation failed for family=%r title=%r (swallowed)",
+            "match_occupation failed for family=%r title=%r (swallowed, no "
+            "rollback — see docstring, G-1351 review F6)",
             candidate_family,
             jd_title,
             exc_info=True,
         )
-        try:
-            db.rollback()
-        except Exception:
-            logger.debug("match_occupation rollback also failed", exc_info=True)
         return {
             "match": "unknown",
             "score": None,
