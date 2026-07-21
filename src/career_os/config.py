@@ -46,12 +46,11 @@ class Settings(BaseSettings):
     # (D-2). extension_token_secret seeds the stateless HMAC token/pairing-code
     # scheme; when empty it is auto-generated and persisted to
     # {data_dir}/.extension_secret so tokens survive a backend restart (see
-    # services.extension_pairing). extension_pairing_window_seconds is the pairing
-    # code's validity window (a code stays valid across one boundary). The CORS
-    # regex ADDS concrete chrome-extension:// origins (Chrome extension IDs are 32
-    # chars in a–p) without widening the existing credentialed frontend CORS list.
+    # services.extension_pairing). Pairing now uses a single-use nonce minted by
+    # `kestrel extension pair` (G-1391), not a time-window code. The CORS regex
+    # ADDS concrete chrome-extension:// origins (Chrome extension IDs are 32 chars
+    # in a–p) without widening the existing credentialed frontend CORS list.
     extension_token_secret: str = ""
-    extension_pairing_window_seconds: int = 300
     extension_cors_regex: str = r"^chrome-extension://[a-p]{32}$"
     # Extension token max-age (G-1391 / Part A hardening). A minted token embeds
     # its issued-ts; verify_extension_token rejects one older than this many days

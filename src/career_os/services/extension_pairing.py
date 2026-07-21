@@ -4,13 +4,15 @@ Phase 0 / G-1390. The browser extension authenticates with a DEDICATED token tha
 is entirely separate from the global ``AUTH_API_KEY`` (locked decision D-1) and is
 required even when ``AUTH_ENABLED`` is off (D-2). The flow:
 
-1. The user reads a short-lived, 6-digit pairing code from their own running
-   instance (``kestrel extension pair`` / a future web-UI surface). The code is an
-   HMAC of a server-side secret over a time window, so possession of the code
-   proves local access to the instance.
-2. The extension submits the code to ``POST /api/extension/pair``; the backend
-   validates it and mints a distinct, stateless HMAC token the extension stores and
-   sends as ``Authorization: Bearer <token>`` on every subsequent call.
+1. The user mints a fresh, single-use 6-digit pairing code from their own running
+   instance (``kestrel extension pair`` / a future web-UI surface). Only its
+   sha256 + a short expiry is persisted (``{data_dir}/.extension_pairing``, 0600);
+   possession of the code proves local access to the instance (G-1391 hardening —
+   replaces the always-valid time-windowed code).
+2. The extension submits the code to ``POST /api/extension/pair`` (rate-limited);
+   the backend consumes (deletes) the nonce and mints a distinct, stateless HMAC
+   token the extension stores and sends as ``Authorization: Bearer <token>`` on
+   every subsequent call. The token carries a configurable max-age (TTL).
 
 **Stateless by design (no DB table, no Alembic migration).** These are pure
 functions over a persisted secret — trivially unit-testable and avoiding a
@@ -36,6 +38,7 @@ import base64
 import binascii
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import time
@@ -128,44 +131,95 @@ def _b64url_decode(value: str) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Pairing code — HMAC(secret, window), truncated to 6 digits
+# Pairing code — single-use nonce (G-1391 / Part A hardening)
+#
+# The Phase 0 model was an always-valid, HMAC-over-a-time-window code: an
+# attacker who could reach /pair had a standing target. This replaces it with a
+# user-initiated, single-use nonce: `kestrel extension pair` mints a random
+# 6-digit code and persists ONLY its sha256 + an expiry to
+# {data_dir}/.extension_pairing (0600, mirroring .extension_secret). /pair
+# consumes (deletes) the file on first success, so a code works exactly once and
+# for at most ``extension_pairing_ttl_seconds``. No DB table, no migration.
 # ---------------------------------------------------------------------------
 
-
-def _current_window() -> int:
-    """Return the current pairing time window index."""
-    window_seconds = settings.extension_pairing_window_seconds or 300
-    return int(time.time()) // window_seconds
+_PAIRING_FILENAME = ".extension_pairing"
 
 
-def _code_for_window(window: int) -> str:
-    """Derive the 6-digit zero-padded code for a given window."""
-    digest = hmac.new(get_extension_secret(), str(window).encode(), hashlib.sha256).digest()
-    return f"{int.from_bytes(digest[:4], 'big') % 1_000_000:06d}"
+def _pairing_path() -> Path:
+    return Path(settings.data_dir) / _PAIRING_FILENAME
 
 
-def current_pairing_code() -> str:
-    """Return the current 6-digit pairing code."""
-    return _code_for_window(_current_window())
+def _write_pairing_file(payload: str) -> None:
+    """Atomically write the nonce file 0600, overwriting any prior nonce.
+
+    Write to a private (O_CREAT|O_EXCL, 0600) temp file then ``os.replace`` over
+    the target: the swap is atomic and the result always carries the 0600 mode
+    (never a world-readable window). Mint is user-initiated + single-writer, so
+    clobbering a previous unconsumed code is the intended behavior.
+    """
+    path = _pairing_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(payload)
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
 
 
-def verify_pairing_code(code: str | None) -> bool:
-    """Accept the code for the current AND previous window; reject everything else.
+def mint_pairing_code() -> str:
+    """Mint a fresh single-use 6-digit pairing code and persist its hash+expiry.
 
-    Checking the previous window keeps a code valid across a window boundary so a
-    user who reads a code near the end of a window can still submit it. Comparison
-    is timing-safe.
+    Returns the plaintext code (shown once to the user); the file stores only
+    ``sha256(code)`` so a leak of the file never reveals the code. Overwrites any
+    prior nonce, so each CLI invocation invalidates the previous code.
+    """
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    payload = json.dumps(
+        {
+            "hash": hashlib.sha256(code.encode()).hexdigest(),
+            "expires": time.time() + settings.extension_pairing_ttl_seconds,
+        }
+    )
+    _write_pairing_file(payload)
+    return code
+
+
+def consume_pairing_code(code: str | None) -> bool:
+    """Return True once for the matching, non-expired code, then delete the file.
+
+    Single-use: a second call with the same code returns False (the file is gone).
+    Returns False for empty/None input, a missing file, an expired entry (which is
+    also cleaned up), or a wrong code. On a wrong code the file is left in place so
+    the legitimate user can retry until expiry. Comparison is timing-safe.
     """
     if not code:
         return False
-    candidate = str(code)
-    window = _current_window()
-    valid = False
-    # Evaluate both windows unconditionally (no short-circuit) to keep timing flat.
-    for w in (window, window - 1):
-        if hmac.compare_digest(candidate, _code_for_window(w)):
-            valid = True
-    return valid
+    path = _pairing_path()
+    if not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        stored_hash = str(data["hash"])
+        expires = float(data["expires"])
+    except (ValueError, KeyError, TypeError, OSError):
+        return False
+    if time.time() > expires:
+        path.unlink(missing_ok=True)  # stale nonce — clean up, reject
+        return False
+    candidate = hashlib.sha256(str(code).encode()).hexdigest()
+    if hmac.compare_digest(candidate, stored_hash):
+        path.unlink(missing_ok=True)  # single-use: consume on success
+        return True
+    return False
+
+
+def reset_pairing_state() -> None:
+    """Delete any persisted pairing nonce (test helper / explicit un-pair)."""
+    _pairing_path().unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------

@@ -54,36 +54,63 @@ def _deterministic_secret(monkeypatch, tmp_path):
 class TestExtensionPairing:
     """Unit tests for the pure pairing/token functions."""
 
-    def test_current_pairing_code_is_six_digits(self):
-        code = extension_pairing.current_pairing_code()
+    def test_mint_pairing_code_is_six_digits_and_persisted(self):
+        code = extension_pairing.mint_pairing_code()
         assert isinstance(code, str)
         assert len(code) == 6
         assert code.isdigit()
+        # Only the hash + expiry are stored (never the code itself), 0600.
+        path = extension_pairing._pairing_path()
+        assert path.is_file()
+        assert (path.stat().st_mode & 0o777) == 0o600
+        assert code not in path.read_text(encoding="utf-8")
 
-    def test_verify_accepts_current_code(self):
-        code = extension_pairing.current_pairing_code()
-        assert extension_pairing.verify_pairing_code(code) is True
+    def test_consume_accepts_minted_code_once(self):
+        code = extension_pairing.mint_pairing_code()
+        assert extension_pairing.consume_pairing_code(code) is True
 
-    def test_verify_accepts_previous_window_code(self, monkeypatch):
-        """A code from the previous window is still accepted across a boundary."""
-        window = extension_pairing._current_window()
-        prev_code = extension_pairing._code_for_window(window - 1)
-        assert extension_pairing.verify_pairing_code(prev_code) is True
+    def test_consume_is_single_use(self):
+        """The second consume of the same code fails (nonce deleted on success)."""
+        code = extension_pairing.mint_pairing_code()
+        assert extension_pairing.consume_pairing_code(code) is True
+        assert extension_pairing.consume_pairing_code(code) is False
+        assert extension_pairing._pairing_path().exists() is False
 
-    def test_verify_rejects_wrong_code(self):
-        code = extension_pairing.current_pairing_code()
+    def test_consume_rejects_expired_code(self):
+        """An expired nonce is rejected (and cleaned up); a wrong code stays valid."""
+        import json
+        import time
+
+        code = extension_pairing.mint_pairing_code()
+        # Rewrite the persisted nonce with an already-past expiry.
+        path = extension_pairing._pairing_path()
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["expires"] = time.time() - 1
+        path.write_text(json.dumps(data), encoding="utf-8")
+        assert extension_pairing.consume_pairing_code(code) is False
+        assert path.exists() is False
+
+    def test_consume_rejects_wrong_code_but_keeps_file(self):
+        code = extension_pairing.mint_pairing_code()
         wrong = "000000" if code != "000000" else "111111"
-        assert extension_pairing.verify_pairing_code(wrong) is False
+        assert extension_pairing.consume_pairing_code(wrong) is False
+        # File left in place so the legitimate user can still retry until expiry.
+        assert extension_pairing._pairing_path().is_file()
+        assert extension_pairing.consume_pairing_code(code) is True
 
-    def test_verify_rejects_empty_and_none(self):
-        assert extension_pairing.verify_pairing_code("") is False
-        assert extension_pairing.verify_pairing_code(None) is False
+    def test_consume_rejects_empty_none_and_missing_file(self):
+        assert extension_pairing.consume_pairing_code("") is False
+        assert extension_pairing.consume_pairing_code(None) is False
+        # No file minted yet → reject.
+        extension_pairing.reset_pairing_state()
+        assert extension_pairing.consume_pairing_code("123456") is False
 
-    def test_code_changes_across_windows(self, monkeypatch):
-        window = extension_pairing._current_window()
-        assert extension_pairing._code_for_window(window) != extension_pairing._code_for_window(
-            window + 5
-        )
+    def test_mint_regenerates_and_invalidates_previous_code(self):
+        first = extension_pairing.mint_pairing_code()
+        second = extension_pairing.mint_pairing_code()
+        # A re-mint overwrites the nonce, so the first code no longer works.
+        assert extension_pairing.consume_pairing_code(first) is False
+        assert extension_pairing.consume_pairing_code(second) is True
 
     def test_mint_then_verify_token(self):
         token = extension_pairing.mint_extension_token()
@@ -200,12 +227,21 @@ class TestExtensionRoutes:
     """End-to-end route behavior against the wire contract."""
 
     def test_pair_with_valid_code_returns_token_and_instance(self, client: TestClient):
-        code = extension_pairing.current_pairing_code()
+        code = extension_pairing.mint_pairing_code()
         resp = client.post("/api/extension/pair", json={"pairing_code": code})
         assert resp.status_code == 200
         body = resp.json()
         assert extension_pairing.verify_extension_token(body["token"]) is True
         assert body["instance"] == {"name": "Kestrel", "version": __version__}
+
+    def test_pair_code_is_single_use_over_the_wire(self, client: TestClient):
+        """Re-POSTing a consumed code returns 401 (nonce already spent)."""
+        code = extension_pairing.mint_pairing_code()
+        first = client.post("/api/extension/pair", json={"pairing_code": code})
+        assert first.status_code == 200
+        second = client.post("/api/extension/pair", json={"pairing_code": code})
+        assert second.status_code == 401
+        assert second.json()["detail"] == "Invalid or expired pairing code"
 
     def test_pair_with_wrong_code_returns_401(self, client: TestClient):
         resp = client.post("/api/extension/pair", json={"pairing_code": "999999"})
@@ -319,9 +355,11 @@ class TestExtensionRoutes:
 
 
 class TestExtensionCli:
-    """The CLI surfaces a currently-valid pairing code."""
+    """The CLI mints a fresh single-use pairing code."""
 
-    def test_pair_command_prints_valid_code(self):
+    @staticmethod
+    def _run_pair() -> str:
+        """Invoke `kestrel extension pair` and return the printed 6-digit code."""
         import re
 
         from typer.testing import CliRunner
@@ -330,8 +368,20 @@ class TestExtensionCli:
 
         result = CliRunner().invoke(cli_app, ["extension", "pair"])
         assert result.exit_code == 0
-
         # Strip Rich box formatting/newlines to recover the 6-digit code.
         digits = re.findall(r"\b\d{6}\b", result.stdout.replace("\n", " "))
         assert digits, f"no 6-digit code in output: {result.stdout!r}"
-        assert extension_pairing.verify_pairing_code(digits[0]) is True
+        return digits[0]
+
+    def test_pair_command_prints_consumable_code(self):
+        code = self._run_pair()
+        # The CLI-minted code is accepted by consume_pairing_code exactly once.
+        assert extension_pairing.consume_pairing_code(code) is True
+        assert extension_pairing.consume_pairing_code(code) is False
+
+    def test_pair_command_regenerates_code_each_call(self):
+        first = self._run_pair()
+        second = self._run_pair()
+        # A second CLI call mints a fresh code and invalidates the first.
+        assert extension_pairing.consume_pairing_code(first) is False
+        assert extension_pairing.consume_pairing_code(second) is True

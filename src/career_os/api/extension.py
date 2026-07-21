@@ -29,9 +29,9 @@ from career_os.schemas.extension import (
     StatusResponse,
 )
 from career_os.services.extension_pairing import (
+    consume_pairing_code,
     mint_extension_token,
     verify_extension_token,
-    verify_pairing_code,
 )
 
 router = APIRouter(prefix="/api/extension", tags=["extension"])
@@ -75,7 +75,7 @@ def pair(request: Request, payload: PairRequest) -> PairResponse:
     app wires to ``app.state.limiter``) to kill brute-force of the 6-digit code —
     T-01A-01. slowapi requires the ``request: Request`` first parameter.
     """
-    if not verify_pairing_code(payload.pairing_code):
+    if not consume_pairing_code(payload.pairing_code):
         raise HTTPException(status_code=401, detail="Invalid or expired pairing code")
     return PairResponse(token=mint_extension_token(), instance=_instance_info())
 

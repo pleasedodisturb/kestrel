@@ -1,10 +1,11 @@
-"""CLI commands for browser-extension pairing (Phase 0 / G-1390).
+"""CLI commands for browser-extension pairing (Phase 0 / G-1390, hardened G-1391).
 
-`kestrel extension pair` surfaces the current pairing code so the user can read it
-from their own running instance and type it into the extension's options page once.
-This is the chosen bootstrap surface (a future web-UI panel can render the same
-code): possession of the code proves local access to the instance, and submitting
-it to POST /api/extension/pair mints the extension's dedicated token.
+`kestrel extension pair` MINTS a fresh single-use pairing code the user reads from
+their own running instance and types into the extension's options page once. Each
+invocation generates a new random code (invalidating any previous one) and persists
+only its hash + a short expiry; submitting the code to POST /api/extension/pair
+consumes it and mints the extension's dedicated token. Possession of the code proves
+local access to the instance.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from career_os.config import settings
-from career_os.services.extension_pairing import current_pairing_code
+from career_os.services.extension_pairing import mint_pairing_code
 
 console = Console()
 
@@ -27,18 +28,18 @@ extension_app = typer.Typer(
 
 @extension_app.command("pair")
 def pair() -> None:
-    """Print the current pairing code for the browser extension."""
-    code = current_pairing_code()
-    window_minutes = settings.extension_pairing_window_seconds // 60
+    """Mint and print a fresh single-use pairing code for the browser extension."""
+    code = mint_pairing_code()
+    ttl_minutes = max(1, settings.extension_pairing_ttl_seconds // 60)
 
     console.print(
         Panel(
             f"[bold cyan]{code}[/bold cyan]\n\n"
             f"Enter this code in the Kestrel browser extension's options page to\n"
-            f"pair it with this instance. The code is valid for about "
-            f"[bold]{window_minutes} minute(s)[/bold]; run this command again for a\n"
-            f"fresh one. Pairing mints a dedicated token stored by the extension —\n"
-            f"it never uses or reveals your AUTH_API_KEY.",
+            f"pair it with this instance. The code is [bold]single-use[/bold] and expires in\n"
+            f"about [bold]{ttl_minutes} minute(s)[/bold]; run this command again for a fresh one.\n"
+            f"Pairing mints a dedicated token stored by the extension — it never\n"
+            f"uses or reveals your AUTH_API_KEY.",
             title="[bold]Extension Pairing Code[/bold]",
             border_style="cyan",
         )
