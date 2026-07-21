@@ -248,3 +248,27 @@ class TestExtensionRoutes:
     def test_capture_does_not_import_score_job(self):
         """Structural guard: the capture module must not reference score_job."""
         assert "score_job" not in _EXTENSION_SRC.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Task 3 — `kestrel extension pair` CLI
+# ---------------------------------------------------------------------------
+
+
+class TestExtensionCli:
+    """The CLI surfaces a currently-valid pairing code."""
+
+    def test_pair_command_prints_valid_code(self):
+        import re
+
+        from typer.testing import CliRunner
+
+        from career_os.cli.main import app as cli_app
+
+        result = CliRunner().invoke(cli_app, ["extension", "pair"])
+        assert result.exit_code == 0
+
+        # Strip Rich box formatting/newlines to recover the 6-digit code.
+        digits = re.findall(r"\b\d{6}\b", result.stdout.replace("\n", " "))
+        assert digits, f"no 6-digit code in output: {result.stdout!r}"
+        assert extension_pairing.verify_pairing_code(digits[0]) is True
