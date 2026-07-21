@@ -3841,6 +3841,10 @@ async def batch_score_discovery(
                 discovered_job_id=job.id,
                 embedding_similarity=similarities.get(job.id),
                 jd_text=f"{job.title or ''}\n{job.description or ''}",
+                # Shadow-only occupation 4th signal (G-1351 Phase C): enriches the
+                # persisted cascade_decisions row, never changes routing/gating.
+                candidate_family=profile.job_family,
+                jd_title=job.title,
             )
 
         # LIVE skip: a unanimous-reject job bypasses the LLM and is persisted as a

@@ -272,6 +272,11 @@ class CascadeDecision(Base):
     agreement — one or two signals is never enough). Everything else is scored by
     the LLM as usual.
 
+    A 4th signal, ``occupation`` (job_family vs JD-title match, G-1351 Phase C),
+    is also computed and persisted here, but it is SHADOW-ONLY: it is never part
+    of the ``skip_reject`` gate above. It exists purely so a future analysis can
+    measure how well it would agree with the real gate before any live flip.
+
     Every routing decision is recorded here so the router can be measured before
     it is ever trusted:
 
@@ -328,6 +333,18 @@ class CascadeDecision(Base):
     esco_overlap: Mapped[float | None] = mapped_column(Float, nullable=True)
     esco_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     esco_votes_reject: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # --- Shadow-only 4th signal (G-1351 Phase C) ---
+    # Occupation (job_family vs JD-title) match tier/score/availability/vote.
+    # NEVER part of the gate — see cascade_router.CascadeDecision.signals /
+    # unanimous_reject, which deliberately exclude it. Persisted here purely so
+    # its agreement with the real gate can be measured before any future flip
+    # to a live, gating vote. occupation_score is NULL for an `unknown` match
+    # (never the fake 0.0 that made the old 4a axis inert).
+    occupation_match: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    occupation_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    occupation_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    occupation_votes_reject: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # --- Outcome ---
     # The eventual LLM fit score (shadow rows, and live rows that were scored).

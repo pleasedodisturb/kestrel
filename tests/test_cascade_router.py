@@ -45,12 +45,14 @@ from career_os.services.cascade_router import (
     esco_signal,
     false_skip_rate,
     lexical_signal,
+    occupation_signal,
     persist_cascade_reject,
     record_cascade_decision,
     route_job,
     run_false_skip_report,
     safe_route_job,
 )
+from career_os.services.occupation_taxonomy import populate_occupations
 
 _ESCO_A = "http://data.europa.eu/esco/skill/AAAA"
 _ESCO_B = "http://data.europa.eu/esco/skill/BBBB"
@@ -344,6 +346,74 @@ def test_esco_signal_abstains_when_candidate_has_no_esco_uris(db_session):
 
 
 # ---------------------------------------------------------------------------
+# occupation_signal — shadow-only 4th signal (G-1351 Phase C)
+# ---------------------------------------------------------------------------
+
+
+def _occ_result(match: str) -> dict:
+    """A match_occupation()-shaped dict for a given tier."""
+    score = {"unknown": None, "no_match": 0.0, "same_isco_group": 0.5, "same_occupation": 1.0}[
+        match
+    ]
+    return {
+        "match": match,
+        "score": score,
+        "family_uri": "http://example.org/family" if match != "unknown" else None,
+        "family_label": "Family Label" if match != "unknown" else None,
+        "title_uri": "http://example.org/title" if match != "unknown" else None,
+        "title_label": "Title Label" if match != "unknown" else None,
+    }
+
+
+@pytest.mark.parametrize(
+    "tier,expected_available,expected_value,expected_reject",
+    [
+        ("unknown", False, None, False),
+        ("no_match", True, 0.0, True),
+        ("same_isco_group", True, 0.5, False),
+        ("same_occupation", True, 1.0, False),
+    ],
+)
+def test_occupation_signal_tier_mapping(
+    db_session, tier, expected_available, expected_value, expected_reject
+):
+    with patch(
+        "career_os.services.cascade_router.match_occupation",
+        return_value=_occ_result(tier),
+    ):
+        v = occupation_signal(db_session, candidate_family="SWE", jd_title="Software Developer")
+    assert v.name == "occupation"
+    assert v.available is expected_available
+    if expected_value is None:
+        assert v.value is None  # CRITICAL: unknown is None, never falsy-0.0
+    else:
+        assert v.value == expected_value
+    assert v.votes_reject is expected_reject
+    assert v.detail["match"] == tier
+
+
+def test_occupation_signal_unknown_never_coerced_to_zero(db_session):
+    """Regression guard for the 4a "inert axis" failure mode: unknown must be
+    `is None`, distinguishable from the real 0.0 that `no_match` carries."""
+    with patch(
+        "career_os.services.cascade_router.match_occupation",
+        return_value=_occ_result("unknown"),
+    ):
+        v = occupation_signal(db_session, candidate_family=None, jd_title=None)
+    assert v.value is None
+    assert v.value != 0.0  # sanity: None != 0.0 in Python, but assert explicitly
+
+
+def test_occupation_signal_real_match_occupation_no_data_abstains(db_session):
+    """With no mocking, real match_occupation(None, None) -> unknown -> abstain."""
+    populate_occupations(db_session)
+    v = occupation_signal(db_session, candidate_family=None, jd_title=None)
+    assert v.available is False
+    assert v.value is None
+    assert v.votes_reject is False
+
+
+# ---------------------------------------------------------------------------
 # route_job — THE critical safety assertion
 # ---------------------------------------------------------------------------
 
@@ -353,6 +423,14 @@ def _seed_unanimous_reject_case(db):
     _seed_candidate_skills(db, ["Python", "Roadmapping"], esco_uris=[_ESCO_A, None])
     app = _seed_application(db)
     _seed_requirements(db, app.id, [("Welding", "critical", _ESCO_B)])
+    return app
+
+
+def _seed_only_embedding_rejects_case(db):
+    """Seed DB state where lexical + ESCO both MATCH (only embedding could reject)."""
+    _seed_candidate_skills(db, ["Python"], esco_uris=[_ESCO_A])
+    app = _seed_application(db)
+    _seed_requirements(db, app.id, [("Python", "critical", _ESCO_A)])
     return app
 
 
@@ -464,6 +542,130 @@ def test_route_scores_when_esco_abstains_even_if_emb_and_lex_reject(db_session):
 
 
 # ---------------------------------------------------------------------------
+# route_job — the occupation 4th signal PROVABLY never changes `action`
+# (G-1351 Phase C — the shadow-first safety assertion for this ticket)
+# ---------------------------------------------------------------------------
+
+_SIGNAL_STATE_CASES = [
+    # (case_name, seed_fn, embedding_similarity, jd_text) — >=4 distinct
+    # gate-signal states: unanimous reject, embedding flips it to non-unanimous,
+    # embedding abstains (also non-unanimous), and only-embedding-would-reject
+    # (lexical/ESCO both match).
+    ("unanimous_reject", _seed_unanimous_reject_case, 0.10, "welding forklift"),
+    ("embedding_high_not_unanimous", _seed_unanimous_reject_case, 0.90, "welding forklift"),
+    ("embedding_abstains_not_unanimous", _seed_unanimous_reject_case, None, "welding forklift"),
+    ("only_embedding_rejects_not_unanimous", _seed_only_embedding_rejects_case, 0.05, "python"),
+]
+
+
+@pytest.mark.parametrize(
+    "occupation_tier", ["unknown", "no_match", "same_isco_group", "same_occupation"]
+)
+@pytest.mark.parametrize("case_name,seed_fn,embedding_similarity,jd_text", _SIGNAL_STATE_CASES)
+def test_route_job_action_unchanged_regardless_of_occupation_vote(
+    db_session, case_name, seed_fn, embedding_similarity, jd_text, occupation_tier
+):
+    """The occupation 4th signal — even a reject vote (no_match) — never changes
+    `action`, across >=4 gate-signal states. Compares the action with occupation
+    forced to a real tier vs. occupation forced to always-abstain."""
+    app = seed_fn(db_session)
+
+    def _route(match_occupation_return: dict | None):
+        if match_occupation_return is None:
+            ctx = patch(
+                "career_os.services.cascade_router.occupation_signal",
+                return_value=SignalVote(
+                    name="occupation", available=False, value=None, votes_reject=False
+                ),
+            )
+        else:
+            ctx = patch(
+                "career_os.services.cascade_router.match_occupation",
+                return_value=match_occupation_return,
+            )
+        with ctx:
+            return route_job(
+                db_session,
+                profile_id=1,
+                application_id=app.id,
+                embedding_similarity=embedding_similarity,
+                jd_text=jd_text,
+                candidate_family="SWE",
+                jd_title="Software Developer",
+            ).action
+
+    real_action = _route(_occ_result(occupation_tier))
+    abstain_action = _route(None)
+    assert real_action == abstain_action, (
+        f"{case_name}: action changed based on occupation tier {occupation_tier!r} "
+        "— the shadow signal must never affect routing"
+    )
+
+
+def test_unanimous_reject_stays_skip_even_when_occupation_is_same_occupation(db_session):
+    """Literal <behavior> assertion: a unanimous-reject-of-3 case stays SKIP_REJECT
+    even when occupation independently votes a full same_occupation match."""
+    app = _seed_unanimous_reject_case(db_session)
+    with patch(
+        "career_os.services.cascade_router.match_occupation",
+        return_value=_occ_result("same_occupation"),
+    ):
+        d = route_job(
+            db_session,
+            profile_id=1,
+            application_id=app.id,
+            embedding_similarity=0.10,
+            jd_text="welding forklift",
+            candidate_family="SWE",
+            jd_title="Software Developer",
+        )
+    assert d.action == CascadeAction.SKIP_REJECT
+    assert d.occupation.votes_reject is False
+    assert d.occupation.value == 1.0
+
+
+def test_non_unanimous_stays_score_even_when_occupation_votes_reject(db_session):
+    """Literal <behavior> assertion: a non-unanimous case stays SCORE even when
+    occupation independently votes reject (no_match)."""
+    app = _seed_unanimous_reject_case(db_session)
+    with patch(
+        "career_os.services.cascade_router.match_occupation",
+        return_value=_occ_result("no_match"),
+    ):
+        d = route_job(
+            db_session,
+            profile_id=1,
+            application_id=app.id,
+            embedding_similarity=0.90,  # flips this scenario to non-unanimous
+            jd_text="welding forklift",
+            candidate_family="SWE",
+            jd_title="Software Developer",
+        )
+    assert d.action == CascadeAction.SCORE
+    assert d.occupation.votes_reject is True
+
+
+def test_route_job_signals_tuple_excludes_occupation(db_session):
+    """Structural guard: `signals` stays a 3-tuple even with a real occupation vote."""
+    app = _seed_unanimous_reject_case(db_session)
+    with patch(
+        "career_os.services.cascade_router.match_occupation",
+        return_value=_occ_result("no_match"),
+    ):
+        d = route_job(
+            db_session,
+            profile_id=1,
+            application_id=app.id,
+            embedding_similarity=0.10,
+            jd_text="welding forklift",
+            candidate_family="SWE",
+            jd_title="Software Developer",
+        )
+    assert len(d.signals) == 3
+    assert not any(s is d.occupation for s in d.signals)
+
+
+# ---------------------------------------------------------------------------
 # safe_route_job — defensive
 # ---------------------------------------------------------------------------
 
@@ -510,6 +712,61 @@ def test_record_decision_defensive_on_bad_fk(db_session):
     out = record_cascade_decision(db_session, profile_id=99999, decision=d, mode="shadow")
     assert out is None
     assert db_session.query(CascadeDecisionRow).count() == 0
+
+
+def test_record_decision_persists_occupation_columns(db_session):
+    """record_cascade_decision writes the occupation shadow columns (G-1351 Phase C)."""
+    occ_vote = SignalVote(
+        name="occupation",
+        available=True,
+        value=1.0,
+        votes_reject=False,
+        detail={"match": "same_occupation", "family_uri": "f", "title_uri": "t"},
+    )
+    d = CascadeDecision(
+        action=CascadeAction.SCORE,
+        embedding=_vote(True, 0.9, False, "embedding"),
+        lexical=_vote(True, 1.0, False, "lexical"),
+        esco=_vote(True, 1.0, False, "esco"),
+        occupation=occ_vote,
+    )
+    row = record_cascade_decision(
+        db_session, profile_id=1, decision=d, mode="shadow", llm_fit_score=8.0
+    )
+    assert row is not None
+    assert row.occupation_match == "same_occupation"
+    assert row.occupation_score == 1.0
+    assert row.occupation_available is True
+    assert row.occupation_votes_reject is False
+
+
+def test_record_decision_unknown_occupation_persists_null_score(db_session):
+    """An unknown occupation vote persists occupation_score IS NULL, never 0.0."""
+    occ_vote = SignalVote(
+        name="occupation",
+        available=False,
+        value=None,
+        votes_reject=False,
+        detail={"match": "unknown", "family_uri": None, "title_uri": None},
+    )
+    d = CascadeDecision(
+        action=CascadeAction.SCORE,
+        embedding=_vote(True, 0.9, False, "embedding"),
+        lexical=_vote(True, 1.0, False, "lexical"),
+        esco=_vote(True, 1.0, False, "esco"),
+        occupation=occ_vote,
+    )
+    row = record_cascade_decision(
+        db_session, profile_id=1, decision=d, mode="shadow", llm_fit_score=8.0
+    )
+    assert row is not None
+    assert row.occupation_match == "unknown"
+    assert row.occupation_score is None
+    assert row.occupation_available is False
+
+    # Confirm it round-trips as NULL, not 0.0, through a fresh query.
+    reloaded = db_session.query(CascadeDecisionRow).filter_by(id=row.id).one()
+    assert reloaded.occupation_score is None
 
 
 # ---------------------------------------------------------------------------
