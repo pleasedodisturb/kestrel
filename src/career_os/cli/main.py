@@ -181,6 +181,12 @@ def occupations_load(
         db.close()
 
 
+# Browser-extension pairing subcommand group (Phase 0 / G-1390)
+from career_os.cli.extension import extension_app  # noqa: E402
+
+app.add_typer(extension_app, name="extension")
+
+
 # ---------------------------------------------------------------------------
 # Database helpers
 # ---------------------------------------------------------------------------

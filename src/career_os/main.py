@@ -18,6 +18,7 @@ from career_os.api.calendar import router as calendar_router
 from career_os.api.coaching import router as coaching_router
 from career_os.api.contacts import router as contacts_router
 from career_os.api.discovery import router as discovery_router
+from career_os.api.extension import router as extension_router
 from career_os.api.follow_ups import router as follow_ups_router
 from career_os.api.gaps import router as gaps_router
 from career_os.api.goals import router as goals_router
@@ -231,6 +232,11 @@ _cors_origins: list[str] = (
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    # Additive: concrete chrome-extension:// origins for the browser extension
+    # (Phase 0 / G-1390). This never uses "*", so it does not widen the existing
+    # credentialed-wildcard risk on _cors_origins; the extension sends its token in
+    # a header (not cookies) so the credentialed frontend allowance is untouched.
+    allow_origin_regex=settings.extension_cors_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -245,6 +251,7 @@ app.include_router(applications_router)
 app.include_router(coaching_router)
 app.include_router(contacts_router)
 app.include_router(discovery_router)
+app.include_router(extension_router)
 app.include_router(follow_ups_router)
 app.include_router(gaps_router)
 app.include_router(goals_router)
