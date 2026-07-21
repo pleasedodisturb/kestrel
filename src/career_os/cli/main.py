@@ -134,6 +134,40 @@ from career_os.cli.scoring import scoring_app  # noqa: E402
 
 app.add_typer(scoring_app, name="scoring")
 
+# ESCO occupations taxonomy subcommand group (G-1351 Phase B)
+occupations_app = typer.Typer(
+    name="occupations",
+    help="ESCO occupations taxonomy.",
+    no_args_is_help=True,
+)
+app.add_typer(occupations_app, name="occupations")
+
+
+@occupations_app.command("load")
+def occupations_load(
+    force: bool = typer.Option(
+        False, "--force", help="Re-scan the bundled fixture even if already populated."
+    ),
+) -> None:
+    """Populate esco_occupations from the bundled ESCO fixture (idempotent)."""
+    from career_os.services.occupation_taxonomy import populate_occupations
+
+    db = _get_session()
+    try:
+        result = populate_occupations(db, force=force)
+        if result["already_loaded"]:
+            console.print(
+                f"[yellow]Already loaded:[/yellow] {result['skipped']} occupations present. "
+                "Use --force to re-scan."
+            )
+        else:
+            console.print(
+                f"[green]Loaded[/green] {result['inserted']} occupations "
+                f"({result['skipped']} skipped)."
+            )
+    finally:
+        db.close()
+
 
 # ---------------------------------------------------------------------------
 # Database helpers
