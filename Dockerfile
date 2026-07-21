@@ -52,8 +52,8 @@ COPY src/ ./src/
 # Install the package (non-editable production install)
 RUN pip install --no-cache-dir .
 
-# Copy Alembic configuration and migrations
-COPY alembic/ ./alembic/
+# Copy Alembic config. Migrations themselves live inside the package
+# (src/career_os/_alembic), already copied with src/ above (G-1350).
 COPY alembic.ini ./
 
 # Copy built frontend from stage 1

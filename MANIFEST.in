@@ -1,5 +1,5 @@
 include alembic.ini
-recursive-include alembic *.py *.mako
+recursive-include src/career_os/_alembic *.py *.mako
 recursive-include frontend/dist *
 include .env.example
 include config/personal.yaml.example

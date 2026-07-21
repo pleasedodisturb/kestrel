@@ -5,9 +5,7 @@ Revises: 07cca291f71f
 Create Date: 2026-03-13 22:10:00.000000
 
 """
-
-from typing import Union
-from collections.abc import Sequence
+from typing import Sequence, Union
 
 from alembic import op
 

@@ -4,17 +4,23 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
+from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from alembic import context
-
-# Ensure src/ is on sys.path so career_os is importable
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+# Ensure the package root is on sys.path so career_os is importable.
+# This file now lives at src/career_os/_alembic/env.py (G-1350), so parents[2]
+# is <repo>/src in a checkout — the directory that must be importable. In an
+# installed wheel parents[2] is site-packages, which is already on sys.path, so
+# the insert is a harmless no-op there.
+# (Was parents[1] / "src" when this lived at <repo>/alembic/env.py; after the
+# move that expression resolved to src/career_os/src, which does not exist.)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from career_os.database import Base  # noqa: E402
-from career_os.models import models as _models  # noqa: E402, F401
-from career_os.models import skills as _skills  # noqa: E402, F401
 from career_os.models import discovery as _discovery  # noqa: E402, F401
+from career_os.models import models as _models  # noqa: E402, F401
+from career_os.models import onboarding as _onboarding  # noqa: E402, F401
+from career_os.models import skills as _skills  # noqa: E402, F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
