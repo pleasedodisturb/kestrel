@@ -126,35 +126,34 @@ class TestLoadIntoDb:
             {"concept_uri": "", "preferred_label": "broken row"},
         ]
 
-    def test_insert_dedup_and_error_counting(self, db_session):
-        # insert directly via the session-level logic the loader uses
-        from datetime import UTC, datetime
+    def test_load_occupations_into_db_real_function(self, tmp_path):
+        """Exercise the ACTUAL production loader end-to-end against a temp DB.
 
-        now = datetime.now(UTC)
-        inserted = skipped = errors = 0
-        for row in self._rows() + self._rows()[:1]:  # duplicate first row
-            uri = (row.get("concept_uri") or "").strip()
-            if not uri or not (row.get("preferred_label") or "").strip():
-                errors += 1
-                continue
-            if db_session.query(ESCOOccupation).filter(ESCOOccupation.concept_uri == uri).first():
-                skipped += 1
-                continue
-            db_session.add(
-                ESCOOccupation(
-                    concept_uri=uri,
-                    preferred_label=row["preferred_label"],
-                    alt_labels=row.get("alt_labels") or None,
-                    occupation_code=row.get("occupation_code") or None,
-                    isco_group=row.get("isco_group") or None,
-                    created_at=now,
-                )
-            )
-            db_session.commit()
-            inserted += 1
-        # 2 valid rows insert, the duplicated first row skips, the 1 broken row errors
-        assert (inserted, skipped, errors) == (2, 1, 1)
-        assert db_session.query(ESCOOccupation).count() == 2
+        The first version of this test re-implemented the loader's loop inline
+        and asserted on its own copy — the review flagged it as the vacuous-pass
+        pattern (the real function could break while tests stayed green). This
+        also pins the ``db_url`` plumbing: an earlier implementation set
+        DATABASE_URL via env, which is a silent no-op once career_os.config is
+        imported (as it always is under pytest) and would have written to the
+        app database instead.
+        """
+        import sqlite3
+
+        db_path = tmp_path / "occ.db"
+        db_url = f"sqlite:///{db_path}"
+
+        counts = loader.load_occupations_into_db(self._rows(), db_url=db_url)
+        # 2 valid rows insert, the broken row errors
+        assert counts == {"inserted": 2, "skipped": 0, "errors": 1}
+
+        # the rows went to THIS database, not the app-configured one
+        with sqlite3.connect(db_path) as con:
+            labels = {row[0] for row in con.execute("SELECT preferred_label FROM esco_occupations")}
+        assert labels == {"software developer", "florist"}
+
+        # idempotency: a second run skips everything it already inserted
+        counts2 = loader.load_occupations_into_db(self._rows(), db_url=db_url)
+        assert counts2 == {"inserted": 0, "skipped": 2, "errors": 1}
 
 
 # ---------------------------------------------------------------------------

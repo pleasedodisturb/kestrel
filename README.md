@@ -424,3 +424,7 @@ Our proof is in the research artifacts. Before building anything, we run paralle
 ## License
 
 [AGPL-3.0](LICENSE) — free and open source. If you modify Kestrel and offer it as a service, you must share your changes under the same license.
+
+### Data sources
+
+- **ESCO** (European Skills, Competences, Qualifications and Occupations) — the bundled skills and occupations taxonomies are © European Union, [esco.ec.europa.eu](https://esco.ec.europa.eu), reused under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) per Commission Decision 2011/833/EU. Kestrel ships processed, English-only subsets; changes are described in each fixture's metadata.

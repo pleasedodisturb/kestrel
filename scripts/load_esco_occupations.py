@@ -145,6 +145,8 @@ def harvest_from_api(page_size: int = 20) -> list[dict]:
     seen: set[str] = set()
     page = 0
     total: int | None = None
+    consecutive_failed_pages = 0
+    max_consecutive_failed_pages = 5
 
     def _add(rec: dict) -> None:
         uri = rec.get("uri", "")
@@ -153,8 +155,19 @@ def harvest_from_api(page_size: int = 20) -> list[dict]:
             rows.append(_api_record_to_row(rec))
 
     while total is None or page * page_size < total:
+        # Without this bound, an API outage loops forever: `total` never gets
+        # set, every page falls into the row-by-row fallback, and page += 1
+        # marches on. Five failed pages in a row = the API is down, not one
+        # poisonous record.
+        if consecutive_failed_pages >= max_consecutive_failed_pages:
+            raise RuntimeError(
+                f"ESCO API: {consecutive_failed_pages} consecutive pages failed "
+                f"(harvested {len(rows)} so far) — aborting instead of looping. "
+                "Retry later or use --csv with a manual download."
+            )
         data = _get_json(ESCO_SEARCH_API.format(full="true", limit=page_size, page=page))
         if data is None:
+            recovered = 0
             for sub in range(page_size):
                 row_idx = page * page_size + sub
                 single = _get_json(ESCO_SEARCH_API.format(full="true", limit=1, page=row_idx))
@@ -174,10 +187,15 @@ def harvest_from_api(page_size: int = 20) -> list[dict]:
                     continue
                 for rec in single["_embedded"]["results"]:
                     _add(rec)
+                recovered += 1
                 time.sleep(0.1)
+            # a poisoned page recovers most rows (one bad record); a DEAD page
+            # recovers none — only the latter counts toward the outage bail-out
+            consecutive_failed_pages = 0 if recovered else consecutive_failed_pages + 1
             page += 1
             continue
 
+        consecutive_failed_pages = 0
         total = data["total"]
         for rec in data["_embedded"]["results"]:
             _add(rec)
@@ -196,16 +214,34 @@ def harvest_from_api(page_size: int = 20) -> list[dict]:
 
 
 def load_occupations_into_db(rows: list[dict], db_url: str | None = None) -> dict[str, int]:
-    """Insert occupation rows, skipping ones whose concept_uri already exists."""
-    if db_url:
-        import os
+    """Insert occupation rows, skipping ones whose concept_uri already exists.
 
-        os.environ["DATABASE_URL"] = db_url
+    Builds its OWN engine from ``db_url`` (mirroring the skills loader) — the
+    earlier env-var approach was a silent no-op whenever ``career_os.config``
+    was already imported (pydantic-settings reads env at instantiation), sending
+    rows to the app database instead, and it disposed the shared global engine.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
 
-    from career_os.database import SessionLocal, engine
+    if db_url is None:
+        from career_os.config import settings
+
+        db_url = settings.database_url
+
+    engine = create_engine(db_url, connect_args={"check_same_thread": False})
+
+    # Ensure tables exist (same as the skills loader): create_all only creates
+    # missing tables, never alters existing ones, so a migrated DB is untouched.
+    import career_os.models.esco  # noqa: F401 — registers models with Base
+    from career_os.database import Base
+
+    Base.metadata.create_all(bind=engine)
+
+    session_factory = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     from career_os.models.esco import ESCOOccupation
 
-    db = SessionLocal()
+    db = session_factory()
     counts = {"inserted": 0, "skipped": 0, "errors": 0}
     now = datetime.now(UTC)
 
