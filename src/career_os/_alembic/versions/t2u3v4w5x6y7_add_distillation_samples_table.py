@@ -35,9 +35,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["profile_id"], ["profiles.id"]),
-        sa.ForeignKeyConstraint(
-            ["scored_job_id"], ["scored_jobs.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["scored_job_id"], ["scored_jobs.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["discovered_job_id"], ["discovered_jobs.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -65,8 +63,6 @@ def downgrade() -> None:
     op.drop_index(
         op.f("ix_distillation_samples_discovered_job_id"), table_name="distillation_samples"
     )
-    op.drop_index(
-        op.f("ix_distillation_samples_scored_job_id"), table_name="distillation_samples"
-    )
+    op.drop_index(op.f("ix_distillation_samples_scored_job_id"), table_name="distillation_samples")
     op.drop_index(op.f("ix_distillation_samples_profile_id"), table_name="distillation_samples")
     op.drop_table("distillation_samples")

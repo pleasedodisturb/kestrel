@@ -64,12 +64,15 @@ def _auto_migrate() -> None:
         from alembic import command
         from alembic.config import Config
 
-        # Resolve alembic.ini relative to the project root.
-        # In Docker the CWD is /app which already contains alembic.ini.
-        # Locally, the CWD may differ, so try a few common locations.
+        # Resolve an alembic config. In Docker the CWD is /app which already
+        # contains alembic.ini; locally the CWD may differ. An *installed wheel*
+        # has no repo root at all, so fall back to the config shipped inside the
+        # package — migrations live in career_os/_alembic (G-1350).
+        pkg_dir = Path(__file__).resolve().parent
         candidates = [
             Path.cwd() / "alembic.ini",
-            Path(__file__).resolve().parents[2] / "alembic.ini",  # src/../alembic.ini
+            pkg_dir.parents[1] / "alembic.ini",  # src/../alembic.ini (repo checkout)
+            pkg_dir / "_alembic.ini",  # installed wheel
         ]
         ini_path: Path | None = None
         for candidate in candidates:
@@ -78,8 +81,14 @@ def _auto_migrate() -> None:
                 break
 
         if ini_path is None:
-            logger.warning("alembic.ini not found — skipping auto-migration")
-            return
+            # Previously a warning-and-return, which let an installed deployment
+            # run on an unmigrated DB and fail later as opaque 500s. There is now
+            # always a packaged config, so a miss here means a broken install.
+            raise RuntimeError(
+                "No alembic config found (looked for alembic.ini in CWD, the repo "
+                f"root, and the packaged {pkg_dir / '_alembic.ini'}). The install "
+                "is incomplete — refusing to start on a possibly unmigrated database."
+            )
 
         cfg = Config(str(ini_path))
         command.upgrade(cfg, "head")

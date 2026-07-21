@@ -21,12 +21,9 @@ FRONTEND_DEST="$ROOT/src/career_os/_frontend_dist"
 rm -rf "$FRONTEND_DEST"
 cp -r "$ROOT/frontend/dist" "$FRONTEND_DEST"
 
-# Step 3: Copy alembic into the Python package
-echo "[3/4] Bundling database migrations..."
-ALEMBIC_DEST="$ROOT/src/career_os/_alembic"
-rm -rf "$ALEMBIC_DEST"
-cp -r "$ROOT/alembic" "$ALEMBIC_DEST"
-cp "$ROOT/alembic.ini" "$ROOT/src/career_os/_alembic.ini"
+# Step 3: (no-op) migrations already live in src/career_os/_alembic and are
+# committed + shipped via package-data, so there is nothing to bundle (G-1350).
+echo "[3/4] Migrations are in-package (src/career_os/_alembic) — nothing to bundle."
 
 # Step 4: Build the wheel
 echo "[4/4] Building Python package..."
