@@ -86,6 +86,7 @@ career_os = [
     "_alembic.ini",
     "privacy_registry.json",
     "fixtures/*.json",
+    "fixtures/*.json.gz",
 ]
 
 [tool.ruff]
