@@ -7,9 +7,21 @@ the auth-middleware bypass, the chrome-extension CORS regex, and the
 
 from __future__ import annotations
 
-import pytest
+from pathlib import Path
 
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from career_os import __version__
 from career_os.services import extension_pairing
+
+# A concrete, valid 32-char (a–p) Chrome extension origin for CORS assertions.
+_CHROME_ORIGIN = "chrome-extension://" + "a" * 32
+
+_EXTENSION_SRC = (
+    Path(__file__).resolve().parent.parent / "src" / "career_os" / "api" / "extension.py"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -110,3 +122,129 @@ class TestExtensionPairing:
         extension_pairing.reset_secret_cache()
         secret2 = extension_pairing.get_extension_secret()
         assert secret1 == secret2
+
+
+# ---------------------------------------------------------------------------
+# Task 2 — routes (pair / capture-stub / status) + middleware bypass + CORS
+# ---------------------------------------------------------------------------
+
+
+def _auth_enabled_app() -> FastAPI:
+    """Minimal app with the global API-key middleware ENABLED, extension router on.
+
+    Used to prove the middleware bypass: the extension's dedicated token governs
+    /capture even when a global AUTH_API_KEY is configured.
+    """
+    from career_os.api.extension import router as extension_router
+    from career_os.middleware import APIKeyAuthMiddleware
+
+    test_app = FastAPI()
+    test_app.add_middleware(APIKeyAuthMiddleware, auth_enabled=True, auth_api_key="the-global-key")
+    test_app.include_router(extension_router)
+    return test_app
+
+
+class TestExtensionRoutes:
+    """End-to-end route behavior against the wire contract."""
+
+    def test_pair_with_valid_code_returns_token_and_instance(self, client: TestClient):
+        code = extension_pairing.current_pairing_code()
+        resp = client.post("/api/extension/pair", json={"pairing_code": code})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert extension_pairing.verify_extension_token(body["token"]) is True
+        assert body["instance"] == {"name": "Kestrel", "version": __version__}
+
+    def test_pair_with_wrong_code_returns_401(self, client: TestClient):
+        resp = client.post("/api/extension/pair", json={"pairing_code": "999999"})
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Invalid or expired pairing code"
+
+    def test_capture_without_token_returns_401(self, client: TestClient):
+        resp = client.post(
+            "/api/extension/capture",
+            json={"url": "u", "title": "t", "company": "c", "description": "d"},
+        )
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Extension not paired"
+
+    def test_capture_with_token_returns_job_id_unscored(self, client: TestClient):
+        token = extension_pairing.mint_extension_token()
+        resp = client.post(
+            "/api/extension/capture",
+            json={
+                "url": "https://example.com/job",
+                "title": "Engineer",
+                "company": "Acme",
+                "description": "Build things",
+                "location": "Remote",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["scored"] is False
+        assert body["status"] == "accepted"
+        assert isinstance(body["job_id"], str) and body["job_id"]
+
+    def test_capture_with_bad_token_returns_401(self, client: TestClient):
+        resp = client.post(
+            "/api/extension/capture",
+            json={"url": "u", "title": "t", "company": "c", "description": "d"},
+            headers={"Authorization": "Bearer not-a-real-token"},
+        )
+        assert resp.status_code == 401
+
+    def test_status_with_valid_token(self, client: TestClient):
+        token = extension_pairing.mint_extension_token()
+        resp = client.get("/api/extension/status", headers={"Authorization": f"Bearer {token}"})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        assert body["instance"] == {"name": "Kestrel", "version": __version__}
+
+    def test_status_without_token_returns_401(self, client: TestClient):
+        resp = client.get("/api/extension/status")
+        assert resp.status_code == 401
+
+    def test_middleware_bypass_when_auth_enabled(self):
+        """With AUTH_ENABLED, the extension token (NOT the global key) governs."""
+        app = _auth_enabled_app()
+        client = TestClient(app)
+        payload = {"url": "u", "title": "t", "company": "c", "description": "d"}
+
+        # No auth header: global check is bypassed, per-route token check → 401.
+        assert client.post("/api/extension/capture", json=payload).status_code == 401
+
+        # The GLOBAL key is NOT a valid extension token → still 401.
+        resp_global = client.post(
+            "/api/extension/capture",
+            json=payload,
+            headers={"Authorization": "Bearer the-global-key"},
+        )
+        assert resp_global.status_code == 401
+
+        # A valid EXTENSION token reaches the route → 200.
+        token = extension_pairing.mint_extension_token()
+        resp_ok = client.post(
+            "/api/extension/capture",
+            json=payload,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp_ok.status_code == 200
+
+    def test_cors_preflight_allows_chrome_extension_origin(self, client: TestClient):
+        resp = client.options(
+            "/api/extension/capture",
+            headers={
+                "Origin": _CHROME_ORIGIN,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "authorization,content-type",
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.headers.get("access-control-allow-origin") == _CHROME_ORIGIN
+
+    def test_capture_does_not_import_score_job(self):
+        """Structural guard: the capture module must not reference score_job."""
+        assert "score_job" not in _EXTENSION_SRC.read_text(encoding="utf-8")
