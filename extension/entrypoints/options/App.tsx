@@ -62,6 +62,9 @@ export function App() {
       <section style={{ marginTop: 24 }}>
         <h2 style={{ fontSize: 15, marginBottom: 8 }}>Backend URL</h2>
         <form onSubmit={handleSaveUrl} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <label htmlFor="backend-url" style={{ fontSize: 13, fontWeight: 600 }}>
+            Backend URL
+          </label>
           <div style={{ display: "flex", gap: 8 }}>
             <input
               id="backend-url"
