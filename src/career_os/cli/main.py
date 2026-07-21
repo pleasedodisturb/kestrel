@@ -150,6 +150,8 @@ def occupations_load(
     ),
 ) -> None:
     """Populate esco_occupations from the bundled ESCO fixture (idempotent)."""
+    from sqlalchemy.exc import SQLAlchemyError
+
     from career_os.services.occupation_taxonomy import populate_occupations
 
     db = _get_session()
@@ -165,6 +167,16 @@ def occupations_load(
                 f"[green]Loaded[/green] {result['inserted']} occupations "
                 f"({result['skipped']} skipped)."
             )
+    except SQLAlchemyError:
+        # G-1351 review F8: a fresh DB without migrations applied (missing
+        # esco_occupations table) must get a friendly message, not a raw
+        # traceback.
+        console.print(
+            "[red]Error:[/red] esco_occupations table not found. Run "
+            "`alembic upgrade head` (or start the app once, which auto-migrates) "
+            "before loading occupations."
+        )
+        raise typer.Exit(code=1) from None
     finally:
         db.close()
 
