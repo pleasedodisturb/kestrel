@@ -69,18 +69,78 @@ def test_packaged_config_script_location_points_at_the_package():
     assert resolved.is_dir(), f"script_location does not resolve: {resolved}"
 
 
-def test_auto_migrate_can_find_a_config_without_a_repo_root():
-    """`_auto_migrate` looks for `<package>/_alembic.ini` last — it must be there.
+def test_resolve_alembic_ini_falls_back_to_packaged_config(tmp_path):
+    """Behavioral: with no CWD config and no repo root, the packaged ini wins.
 
-    That candidate is the only one present in an installed wheel (no CWD
-    alembic.ini, no repo root), so if it goes missing, installs silently skip
-    migrations again.
+    This simulates an installed wheel — the review of the first version of this
+    test proved a source-grep was vacuous (the string it looked for also appears
+    in a comment), so this exercises the real resolution path instead.
     """
-    from career_os import main as main_module
+    from career_os.main import _resolve_alembic_ini
 
-    source = Path(main_module.__file__).read_text(encoding="utf-8")
-    assert "_alembic.ini" in source, "_auto_migrate no longer falls back to the packaged config"
-    assert PACKAGED_INI.is_file()
+    # fake installed layout: site-packages/career_os/_alembic.ini
+    site = tmp_path / "site-packages"
+    pkg = site / "career_os"
+    pkg.mkdir(parents=True)
+    packaged = pkg / "_alembic.ini"
+    packaged.write_text(PACKAGED_INI.read_text(encoding="utf-8"), encoding="utf-8")
+    bare_cwd = tmp_path / "somewhere-else"
+    bare_cwd.mkdir()
+
+    resolved = _resolve_alembic_ini(pkg_dir=pkg, cwd=bare_cwd)
+    assert resolved == packaged
+
+    # ...and with the packaged config gone, it must REFUSE to start, not skip
+    packaged.unlink()
+    import pytest as _pytest
+
+    with _pytest.raises(RuntimeError, match="refusing to start"):
+        _resolve_alembic_ini(pkg_dir=pkg, cwd=bare_cwd)
+
+
+def test_resolve_alembic_ini_prefers_cwd_then_repo_root(tmp_path):
+    """Resolution order: CWD (Docker) -> repo root (checkout) -> packaged (wheel)."""
+    from career_os.main import _resolve_alembic_ini
+
+    pkg = tmp_path / "repo" / "src" / "career_os"
+    pkg.mkdir(parents=True)
+    repo_ini = tmp_path / "repo" / "alembic.ini"
+    repo_ini.write_text("[alembic]\n", encoding="utf-8")
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    cwd_ini = cwd / "alembic.ini"
+    cwd_ini.write_text("[alembic]\n", encoding="utf-8")
+
+    assert _resolve_alembic_ini(pkg_dir=pkg, cwd=cwd) == cwd_ini
+    cwd_ini.unlink()
+    assert _resolve_alembic_ini(pkg_dir=pkg, cwd=cwd) == repo_ini
+
+
+def test_root_and_packaged_configs_agree_except_script_location():
+    """The two inis must stay in lockstep — only `script_location` may differ.
+
+    Two hand-synced copies are the failure mode this PR retired; if
+    `sqlalchemy.url`, `file_template`, or logging config drifts between them, an
+    installed wheel migrates differently than a checkout (review WR-7).
+    """
+    import configparser
+
+    def load(path: Path) -> configparser.ConfigParser:
+        parser = configparser.ConfigParser(interpolation=None)
+        parser.read(path)
+        return parser
+
+    root, packaged = load(ROOT_INI), load(PACKAGED_INI)
+    assert set(root.sections()) == set(packaged.sections())
+    for section in root.sections():
+        keys = set(root[section]) | set(packaged[section])
+        for key in keys:
+            if section == "alembic" and key == "script_location":
+                continue
+            assert root[section].get(key) == packaged[section].get(key), (
+                f"[{section}] {key} differs between alembic.ini and the packaged "
+                f"_alembic.ini — keep them identical except script_location (G-1350)."
+            )
 
 
 def test_package_data_ships_the_migrations():
@@ -93,10 +153,76 @@ def test_package_data_ships_the_migrations():
 
 
 def test_no_build_time_migration_copy_remains():
-    """The copy step is what drifted — it must stay gone from both build paths."""
+    """The copy step is what drifted — it must stay gone from both build paths.
+
+    Asserts on `_alembic` appearing as a copy *destination* rather than matching
+    exact `cp -r alembic` strings (review WR-8: `cp -a`, `rsync`, `./alembic`, or
+    re-adding the `cp alembic.ini src/career_os/_alembic.ini` half would have
+    slipped past a literal match).
+    """
+    import re
+
+    copy_dest = re.compile(
+        r"\b(?:cp|rsync|install)\b[^\n]*\b(?:src/career_os/_alembic|\$\w+/_alembic|_alembic\.ini)",
+    )
     for rel in ("scripts/build-pip.sh", ".github/workflows/publish.yml"):
         text = (REPO_ROOT / rel).read_text(encoding="utf-8")
-        assert "cp -r alembic " not in text and 'cp -r "$ROOT/alembic"' not in text, (
-            f"{rel} still copies alembic into the package — migrations are committed "
-            f"in src/career_os/_alembic now (G-1350)."
+        hits = [
+            line.strip()
+            for line in text.splitlines()
+            if copy_dest.search(line) and not line.strip().startswith("#")
+        ]
+        assert not hits, (
+            f"{rel} writes into the packaged _alembic at build time: {hits} — "
+            f"migrations are committed in src/career_os/_alembic; nothing may "
+            f"regenerate them (G-1350)."
         )
+
+
+def test_migrated_schema_matches_model_metadata(tmp_path):
+    """`alembic upgrade head` must produce exactly the tables the models declare.
+
+    This is the gap that let `warn_filings` go missing from every migrated
+    database while `models/warn.py`, `cli/warn.py` and the WARN red-flag rule all
+    queried it (G-1350). Nothing else catches it: `tests/conftest.py` builds the
+    test schema with `Base.metadata.create_all`, so the table always exists under
+    pytest, and CI only asserts that `alembic upgrade head` *runs*.
+
+    Note the deliberate `pkgutil` sweep — `career_os.models.__init__` does not
+    import every model module, so a plain `import career_os.models` silently
+    under-counts the expected tables (which is exactly how this was missed).
+    """
+    import importlib
+    import pkgutil
+    import sqlite3
+
+    from alembic import command
+
+    import career_os.models as models_pkg
+    from career_os.database import Base
+
+    for module in pkgutil.iter_modules(models_pkg.__path__):
+        importlib.import_module(f"career_os.models.{module.name}")
+
+    db_path = tmp_path / "schema_check.db"
+    # Config built programmatically, NOT from the ini file: env.py only calls
+    # fileConfig() when config_file_name is set, and fileConfig globally disables
+    # existing loggers — which silently broke five unrelated caplog-based tests
+    # further down the suite when this test loaded the real ini.
+    cfg = Config()
+    cfg.set_main_option("script_location", str(PKG_DIR / "_alembic"))
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+    command.upgrade(cfg, "head")
+
+    with sqlite3.connect(db_path) as con:
+        migrated = {
+            row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+    declared = set(Base.metadata.tables)
+
+    missing = sorted(declared - migrated)
+    assert not missing, (
+        f"table(s) {missing} are declared in Base.metadata but no migration creates "
+        f"them — a migrated deployment will fail at runtime on any query against "
+        f"them (G-1350)."
+    )

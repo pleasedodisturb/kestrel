@@ -250,7 +250,7 @@ kestrel/
 │   │   ├── IntegrationPanel.tsx
 │   │   └── ...
 │   └── api/                   # API client layer (17 modules)
-├── alembic/                   # Database migrations
+├── src/career_os/_alembic/    # Database migrations (in-package so wheels ship them)
 ├── tests/                     # 143 test modules, 3744 tests
 ├── docker-compose.yml         # Backend + Frontend orchestration
 ├── Dockerfile                 # Backend image

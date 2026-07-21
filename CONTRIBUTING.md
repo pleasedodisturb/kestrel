@@ -35,6 +35,11 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 alembic upgrade head
+# NB: migrations live in src/career_os/_alembic/ (in-package so wheels ship
+# them). New revisions land there: alembic revision -m "..." writes into
+# src/career_os/_alembic/versions/. That directory is excluded from ruff and
+# the whitespace hooks (generated/historical files), so lint your migration
+# by eye — CI will not.
 
 # Frontend
 cd frontend

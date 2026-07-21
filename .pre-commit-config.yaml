@@ -1,15 +1,17 @@
-# Alembic scaffolding (src/career_os/_alembic) is generated + historical: it has
-# already run against production databases, so hooks must not rewrite it. Ruff
-# skips it via extend-exclude in pyproject.toml; the whitespace fixers need the
-# exclude spelled out here (G-1350).
-exclude: ^src/career_os/_alembic/
-
+# NB: Alembic scaffolding (src/career_os/_alembic) is generated + historical and
+# has already run against production databases, so the *rewriting* hooks must not
+# touch it (G-1350). The exclude is applied per-hook rather than top-level on
+# purpose: a global `exclude:` would also switch off detect-private-key,
+# check-added-large-files, check-merge-conflict and gitleaks for that path.
+# Ruff skips the directory via extend-exclude in pyproject.toml.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
+        exclude: ^src/career_os/_alembic/
       - id: trailing-whitespace
+        exclude: ^src/career_os/_alembic/
       - id: check-yaml
       - id: check-added-large-files
         args: ["--maxkb=1024"]
@@ -17,6 +19,7 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
         args: ["--fix=lf"]
+        exclude: ^src/career_os/_alembic/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.0
