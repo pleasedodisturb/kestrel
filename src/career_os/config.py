@@ -40,6 +40,20 @@ class Settings(BaseSettings):
     # Data directory
     data_dir: Path = Path("data")
 
+    # Browser extension (Phase 0 / G-1390) — the extension authenticates with a
+    # DEDICATED token minted via POST /api/extension/pair, entirely separate from
+    # AUTH_API_KEY (locked decision D-1) and required even when AUTH_ENABLED=false
+    # (D-2). extension_token_secret seeds the stateless HMAC token/pairing-code
+    # scheme; when empty it is auto-generated and persisted to
+    # {data_dir}/.extension_secret so tokens survive a backend restart (see
+    # services.extension_pairing). extension_pairing_window_seconds is the pairing
+    # code's validity window (a code stays valid across one boundary). The CORS
+    # regex ADDS concrete chrome-extension:// origins (Chrome extension IDs are 32
+    # chars in a–p) without widening the existing credentialed frontend CORS list.
+    extension_token_secret: str = ""
+    extension_pairing_window_seconds: int = 300
+    extension_cors_regex: str = r"^chrome-extension://[a-p]{32}$"
+
     # Cache settings
     cache_enabled: bool = True
     cache_encryption_key: str = ""  # User-provided Fernet key; auto-generated if empty
