@@ -308,8 +308,18 @@ def _ensure_taxonomy_populated(db: Session) -> None:
     if _POPULATE_ATTEMPT_FAILED:
         return
     try:
-        if count_occupations(db) == 0:
-            populate_occupations(db)
+        # Count AND populate on a SEPARATE session bound to the caller's
+        # engine/connection: populate_occupations commits, and committing the
+        # caller's borrowed session would persist the caller's own pending
+        # score_job writes mid-transaction (the commit-flavored twin of the
+        # F6 rollback hazard). Touching the caller's session here at all
+        # would also autoflush its pending writes and take a write lock,
+        # blocking the populate connection. On a connection-bound test
+        # session this degrades gracefully to a savepoint (SQLAlchemy
+        # conditional_savepoint join mode).
+        with Session(bind=db.get_bind()) as populate_session:
+            if count_occupations(populate_session) == 0:
+                populate_occupations(populate_session)
     except Exception:
         logger.warning(
             "Lazy populate_occupations failed inside match_occupation; "
@@ -490,7 +500,9 @@ def match_occupation(db: Session, candidate_family: str | None, jd_title: str | 
     run mid `score_job` with the caller's own uncommitted rows already added
     to that session — rolling back here would silently discard those pending
     writes. The swallow path only logs and returns `unknown`; it never
-    mutates transaction state.
+    mutates transaction state. The F1 lazy populate likewise runs on its OWN
+    session bound to the caller's engine — its commit can never persist the
+    caller's pending writes.
     """
     try:
         _ensure_taxonomy_populated(db)

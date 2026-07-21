@@ -395,6 +395,39 @@ def test_match_occupation_lazy_populate_not_retried_after_failure(
     assert call_count["n"] == 1
 
 
+def test_lazy_populate_does_not_commit_callers_pending_writes(tmp_path) -> None:
+    """The F1 lazy populate runs populate_occupations, which COMMITS — on the
+    caller's session that would persist the caller's own pending score_job
+    writes mid-transaction (the commit-flavored twin of the F6 rollback
+    hazard). It must run on its OWN session bound to the caller's engine.
+
+    Uses a file-backed engine-bound session (not the connection-bound
+    db_session fixture) because that is the production shape where the hazard
+    exists."""
+    from sqlalchemy import create_engine
+
+    from career_os.database import Base
+    from career_os.models.models import Profile
+
+    engine = create_engine(f"sqlite:///{tmp_path}/lazy_populate.db")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as caller:
+        caller.add(Profile(name="pending-uncommitted"))  # pending, never committed
+
+        result = match_occupation(caller, "SWE", "Senior Software Engineer")
+
+        assert result["match"] == "same_occupation"  # lazy populate worked
+        caller.rollback()
+
+    with Session(engine) as check:
+        # The caller's pending write must NOT have been committed by the
+        # lazy populate; the taxonomy itself must have persisted.
+        assert check.query(Profile).count() == 0
+        assert count_occupations(check) > 0
+    engine.dispose()
+
+
 # ---------------------------------------------------------------------------
 # F6 — swallow path never rolls back the caller's session
 # ---------------------------------------------------------------------------
