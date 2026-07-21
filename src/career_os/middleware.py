@@ -17,6 +17,14 @@ _PUBLIC_PATHS = frozenset(
     }
 )
 
+# Prefixes that bypass the GLOBAL AUTH_API_KEY check. The browser-extension routes
+# use a DEDICATED token space (a separate secret, see services.extension_pairing)
+# enforced per-route by require_extension_token, so the global key must not shadow
+# them — otherwise a user with AUTH_ENABLED=true could not pair without also
+# knowing AUTH_API_KEY. This bypass ONLY skips the global key: /capture and /status
+# remain gated by the per-route extension token, and /pair is code-gated (T-00-02).
+_PUBLIC_PREFIXES = ("/api/extension/",)
+
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     """Require Authorization: Bearer <key> when auth is enabled.
@@ -36,6 +44,11 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
 
         # Public paths always pass
         if request.url.path in _PUBLIC_PATHS:
+            return await call_next(request)
+
+        # Extension routes use a dedicated token enforced per-route — the global
+        # AUTH_API_KEY must not shadow them (see _PUBLIC_PREFIXES rationale).
+        if any(request.url.path.startswith(p) for p in _PUBLIC_PREFIXES):
             return await call_next(request)
 
         # Check Authorization header
