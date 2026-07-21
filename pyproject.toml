@@ -90,6 +90,10 @@ career_os = [
 
 [tool.ruff]
 target-version = "py311"
+# Alembic scaffolding is generated + historical: linting/reformatting it churns
+# files that already ran against production databases, and pre-commit's pinned
+# ruff disagrees with CI's floating one on their formatting (G-1350).
+extend-exclude = ["src/career_os/_alembic"]
 line-length = 100
 src = ["src", "tests"]
 

@@ -6,8 +6,7 @@ Create Date: 2026-04-15 00:00:00.000000
 
 """
 
-from typing import Union
-from collections.abc import Sequence
+from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
@@ -32,8 +31,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("entity_type", "entity_id", "model_name", name="uq_embedding_entity"),
     )
-    op.create_index(op.f("ix_embeddings_entity_type"), "embeddings", ["entity_type"], unique=False)
-    op.create_index(op.f("ix_embeddings_entity_id"), "embeddings", ["entity_id"], unique=False)
+    op.create_index(
+        op.f("ix_embeddings_entity_type"), "embeddings", ["entity_type"], unique=False
+    )
+    op.create_index(
+        op.f("ix_embeddings_entity_id"), "embeddings", ["entity_id"], unique=False
+    )
 
     # --- embedding_similarity column on discovered_jobs ---
     op.add_column(

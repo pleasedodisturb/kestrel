@@ -1,3 +1,9 @@
+# Alembic scaffolding (src/career_os/_alembic) is generated + historical: it has
+# already run against production databases, so hooks must not rewrite it. Ruff
+# skips it via extend-exclude in pyproject.toml; the whitespace fixers need the
+# exclude spelled out here (G-1350).
+exclude: ^src/career_os/_alembic/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
