@@ -78,3 +78,46 @@ class SkillMapping(Base):
             f"<SkillMapping(raw='{self.raw_text}', uri='{self.esco_uri}', "
             f"method='{self.match_method}')>"
         )
+
+
+class ESCOOccupation(Base):
+    """Cached ESCO occupations-pillar entry (G-1351).
+
+    A separate table from :class:`ESCOSkill` on purpose: the 4a occupation axis
+    was inert precisely because occupation concepts were conflated with the
+    skills cache. Populated by ``scripts/load_esco_occupations.py`` from the
+    bundled fixture (ESCO v1.2, English) or the ESCO API/CSV.
+
+    Source: ESCO (European Skills, Competences, Qualifications and Occupations),
+    © European Union — reused under CC BY 4.0 (Commission Decision 2011/833/EU).
+    The bundled fixture is a processed English-only subset.
+    """
+
+    __tablename__ = "esco_occupations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    concept_uri: Mapped[str] = mapped_column(String(500), nullable=False, unique=True, index=True)
+    preferred_label: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
+    alt_labels: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # newline-separated synonyms — the title-matching surface
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    occupation_code: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # ESCO code, e.g. "2166.4" — ISCO unit group + ESCO suffix
+    isco_group: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, index=True
+    )  # ISCO-08 unit group (first code segment) — same-group match tier
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<ESCOOccupation(uri='{self.concept_uri}', label='{self.preferred_label}')>"
+
+    @property
+    def alt_labels_list(self) -> list[str]:
+        """Return alt_labels as a Python list."""
+        if not self.alt_labels:
+            return []
+        return [lbl.strip() for lbl in self.alt_labels.split("\n") if lbl.strip()]
