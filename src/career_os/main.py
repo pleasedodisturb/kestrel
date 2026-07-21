@@ -54,6 +54,44 @@ from career_os.services.ticktick_scheduler import (
 logger = logging.getLogger(__name__)
 
 
+PACKAGE_DIR = Path(__file__).resolve().parent
+
+
+def _alembic_ini_candidates(pkg_dir: Path, cwd: Path) -> list[Path]:
+    """Ordered alembic.ini locations, most specific first.
+
+    In Docker the CWD is /app which already contains alembic.ini; locally the CWD
+    may differ. An *installed wheel* has no repo root at all, so the packaged
+    config is the last resort — migrations live in career_os/_alembic (G-1350).
+
+    Split out so the fallback order is directly testable without a real install.
+    """
+    return [
+        cwd / "alembic.ini",
+        pkg_dir.parents[1] / "alembic.ini",  # src/../alembic.ini (repo checkout)
+        pkg_dir / "_alembic.ini",  # installed wheel
+    ]
+
+
+def _resolve_alembic_ini(pkg_dir: Path | None = None, cwd: Path | None = None) -> Path:
+    """Return the first alembic config that exists, else raise.
+
+    Previously a miss warned and returned, which let an installed deployment run
+    on an unmigrated DB and fail later as opaque 500s. A packaged config always
+    ships now, so a miss means a broken install (G-1350).
+    """
+    pkg_dir = pkg_dir or PACKAGE_DIR
+    cwd = cwd or Path.cwd()
+    for candidate in _alembic_ini_candidates(pkg_dir, cwd):
+        if candidate.is_file():
+            return candidate
+    raise RuntimeError(
+        "No alembic config found (looked for alembic.ini in CWD, the repo root, "
+        f"and the packaged {pkg_dir / '_alembic.ini'}). The install is incomplete "
+        "— refusing to start on a possibly unmigrated database."
+    )
+
+
 def _auto_migrate() -> None:
     """Run Alembic migrations programmatically (upgrade head).
 
@@ -64,26 +102,15 @@ def _auto_migrate() -> None:
         from alembic import command
         from alembic.config import Config
 
-        # Resolve alembic.ini relative to the project root.
-        # In Docker the CWD is /app which already contains alembic.ini.
-        # Locally, the CWD may differ, so try a few common locations.
-        candidates = [
-            Path.cwd() / "alembic.ini",
-            Path(__file__).resolve().parents[2] / "alembic.ini",  # src/../alembic.ini
-        ]
-        ini_path: Path | None = None
-        for candidate in candidates:
-            if candidate.is_file():
-                ini_path = candidate
-                break
-
-        if ini_path is None:
-            logger.warning("alembic.ini not found — skipping auto-migration")
-            return
-
+        ini_path = _resolve_alembic_ini()
         cfg = Config(str(ini_path))
+        # The ini hard-codes sqlalchemy.url, so without this the app would
+        # confidently migrate data/career_os.db while running against whatever
+        # DATABASE_URL points at — "migration complete" on an unmigrated DB,
+        # the exact failure this path exists to prevent (G-1350).
+        cfg.set_main_option("sqlalchemy.url", settings.database_url)
         command.upgrade(cfg, "head")
-        logger.info("Auto-migration complete (alembic upgrade head)")
+        logger.info("Auto-migration complete (alembic upgrade head) using %s", ini_path)
     except Exception:
         logger.exception("Auto-migration failed")
         raise

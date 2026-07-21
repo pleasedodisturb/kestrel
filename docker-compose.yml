@@ -17,7 +17,6 @@ services:
       - "8100:8100"
     volumes:
       - ./src:/app/src
-      - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
       - career-data:/app/data
     environment:
