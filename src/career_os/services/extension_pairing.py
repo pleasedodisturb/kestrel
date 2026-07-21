@@ -90,11 +90,19 @@ def get_extension_secret() -> bytes:
             _cached_file_secret = value.encode()
             return _cached_file_secret
 
-    # First run (or empty file): generate, persist with tight perms, cache.
+    # First run (or empty file): generate and persist ATOMICALLY with tight perms.
+    # O_CREAT|O_EXCL means the file is created 0600 from the first byte (never a
+    # world-readable window) and only one process wins the create — a concurrent
+    # worker that loses the race reads the winner's secret so every worker agrees.
     value = secrets.token_urlsafe(32)
     secret_path.parent.mkdir(parents=True, exist_ok=True)
-    secret_path.write_text(value, encoding="utf-8")
-    os.chmod(secret_path, 0o600)
+    try:
+        fd = os.open(secret_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        value = secret_path.read_text(encoding="utf-8").strip()
+    else:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(value)
     _cached_file_secret = value.encode()
     return _cached_file_secret
 
