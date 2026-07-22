@@ -52,6 +52,7 @@ from career_os.services.cascade_router import (
     run_false_skip_report,
     safe_route_job,
 )
+from career_os.services.occupation_matcher import match_occupation
 from career_os.services.occupation_taxonomy import populate_occupations
 
 _ESCO_A = "http://data.europa.eu/esco/skill/AAAA"
@@ -769,6 +770,39 @@ def test_record_decision_unknown_occupation_persists_null_score(db_session):
     assert reloaded.occupation_score is None
 
 
+def test_record_decision_default_occupation_persists_null_match_not_unknown_string(db_session):
+    """G-1351 review F5: a default-constructed CascadeDecision (occupation=
+    omitted entirely, using the `_abstaining_occupation_vote()` dataclass
+    default with detail={}) must persist occupation_match as SQL NULL
+    (Python None) — DISTINCT from the STRING "unknown" persisted above when
+    match_occupation actually ran and evaluated the pair.
+
+    NULL means "this decision's occupation signal was never evaluated at
+    all" (e.g. a legacy row, or a caller that never wired
+    candidate_family/jd_title); the "unknown" string means "evaluated, no
+    confident match". Future analysis code must bucket these separately —
+    this test pins the NULL case so a regression collapsing both into the
+    same value is caught."""
+    d = _decision(
+        CascadeAction.SCORE,
+        _vote(True, 0.9, False, "embedding"),
+        _vote(True, 1.0, False, "lexical"),
+        _vote(True, 1.0, False, "esco"),
+        # occupation intentionally omitted -> _abstaining_occupation_vote()
+        # default, whose detail={} means occ.detail.get("match") is None.
+    )
+    row = record_cascade_decision(
+        db_session, profile_id=1, decision=d, mode="shadow", llm_fit_score=8.0
+    )
+    assert row is not None
+    assert row.occupation_match is None
+    assert row.occupation_score is None
+    assert row.occupation_available is False
+
+    reloaded = db_session.query(CascadeDecisionRow).filter_by(id=row.id).one()
+    assert reloaded.occupation_match is None
+
+
 # ---------------------------------------------------------------------------
 # false_skip_rate — toy data, hand-computed
 # ---------------------------------------------------------------------------
@@ -1102,6 +1136,209 @@ async def test_batch_live_persist_failure_is_isolated_by_rollback(db_session, mo
     assert db_session.query(ScoredJob).count() == 2
     assert all(s.fit_score == 8.0 for s in db_session.query(ScoredJob).all())
     assert provider.score.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# G-1351 Phase C 3-pass review — batch-loop wiring (F1, F7, F8)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_batch_wires_candidate_family_and_jd_title_to_occupation_signal(
+    db_session, monkeypatch
+):
+    """F1 (BLOCKER): batch_score_discovery's safe_route_job call MUST pass
+    candidate_family=profile.job_family and jd_title=job.title through to the
+    occupation shadow signal.
+
+    Mutation probe: deleting those two kwargs from the batch-loop call site
+    leaves every other test in this suite green — occupation_signal silently
+    falls back to its default abstain (candidate_family=None, jd_title=None ->
+    match="unknown" forever), the exact 4a "inert axis" failure this ticket
+    exists to fix, just moved one level up the call stack and never caught.
+
+    Proved end-to-end through the REAL batch path: the profile fixture's
+    job_family is "TPM" (seeded in the db_session fixture) and the discovered
+    job's title is "ICT Project Manager" — a pair that resolves to a REAL,
+    non-"unknown" tier against the real bundled ESCO fixture (matching
+    test_occupation_integration.py's non-inertness pair for TPM). The
+    assertion compares the persisted row's tier against calling
+    match_occupation directly with the SAME (family, title) pair, so it has
+    teeth regardless of exactly which tier the fixture resolves to.
+    """
+    monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
+    monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
+    monkeypatch.setattr(settings, "cascade_shadow_enabled", True)
+    monkeypatch.setattr(settings, "cascade_routing_enabled", False)
+
+    populate_occupations(db_session)
+
+    app = _seed_application(db_session)
+    dj = DiscoveredJob(
+        profile_id=1,
+        title="ICT Project Manager",
+        company="Acme",
+        location="Berlin",
+        description="Manage ICT projects end to end.",
+        title_normalized="ict project manager",
+        company_normalized="acme",
+        location_normalized="berlin",
+        application_id=app.id,
+    )
+    db_session.add(dj)
+    db_session.commit()
+    db_session.refresh(dj)
+
+    # Sanity: the (family, title) pair really does resolve a REAL tier against
+    # the real fixture — if this fails, the fixture pair is wrong, not the
+    # code under test.
+    expected = match_occupation(db_session, "TPM", "ICT Project Manager")
+    assert expected["match"] != "unknown", (
+        f"test fixture pair (TPM, 'ICT Project Manager') did not resolve a real "
+        f"tier: {expected!r} — fix the fixture pair, not the assertion below"
+    )
+
+    await _run_batch(db_session, sim_value=0.9)  # high sim -> never a shadow/live skip
+
+    row = db_session.query(CascadeDecisionRow).filter_by(discovered_job_id=dj.id).one()
+    assert row.occupation_match == expected["match"]
+    assert row.occupation_score == expected["score"]
+    assert row.occupation_match != "unknown"
+
+
+@pytest.mark.asyncio
+async def test_batch_off_by_default_never_calls_match_occupation(db_session, monkeypatch):
+    """F7: with both cascade flags off, match_occupation must never run at all
+    — safe_route_job (and therefore occupation_signal) is gated entirely
+    behind `cascade_on` in the batch loop."""
+    monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
+    monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
+    assert settings.cascade_shadow_enabled is False
+    assert settings.cascade_routing_enabled is False
+
+    _app, _dj = _seed_scorable_discovered_job(db_session)
+    with patch("career_os.services.occupation_matcher.match_occupation") as mock_match:
+        await _run_batch(db_session, sim_value=0.05)
+    mock_match.assert_not_called()
+
+
+async def _run_batch_counting_job_family_reads(n_jobs: int) -> int:
+    """Run a fresh, isolated batch_score_discovery with `n_jobs` discovered
+    jobs (cascade shadow ON) and return how many times the `Profile.job_family`
+    ORM attribute was READ anywhere during the run.
+
+    Counts via a counting descriptor wrapped around the real
+    `Profile.job_family` instrumented attribute — NOT a SQL-statement count —
+    because `_gather_profile_data`/`get_or_create_weights` etc. ALSO
+    legitimately read `profile.job_family` once per job independent of this
+    fix (that part is unavoidable and out of scope for F8). Comparing the
+    DELTA between an n-job and an (n+1)-job run isolates just the batch
+    loop's OWN behavior: each ADDITIONAL job should add a constant number of
+    reads regardless of `n`, and reverting the F8 hoist adds exactly one
+    more read per additional job (the loop's own now-hoisted access).
+    """
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+
+    @event.listens_for(engine, "connect")
+    def _fk(dbapi_conn, _rec):
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.close()
+
+    Base.metadata.create_all(bind=engine)
+    connection = engine.connect()
+    db = sessionmaker(bind=connection, autocommit=False, autoflush=False)()
+    db.add(
+        Profile(id=1, name="Test User", email="t@example.com", location="Berlin", job_family="TPM")
+    )
+    db.commit()
+
+    for i in range(n_jobs):
+        app = Application(profile_id=1, company="Acme", role="TPM", status="discovered")
+        db.add(app)
+        db.commit()
+        db.add(
+            DiscoveredJob(
+                profile_id=1,
+                title=f"Title {i}",
+                company=f"Co{i}",
+                location="Berlin",
+                description="d",
+                title_normalized=f"title {i}",
+                company_normalized=f"co{i}",
+                location_normalized="berlin",
+                application_id=app.id,
+            )
+        )
+    db.commit()
+
+    get_count = {"n": 0}
+    original_descriptor = Profile.job_family
+
+    class _CountingDescriptor:
+        def __get__(self, instance, owner=None):
+            if instance is not None:
+                get_count["n"] += 1
+            return original_descriptor.__get__(instance, owner)
+
+        def __set__(self, instance, value):
+            return original_descriptor.__set__(instance, value)
+
+    Profile.job_family = _CountingDescriptor()
+    try:
+        result = await _run_batch(db, sim_value=0.9)
+    finally:
+        Profile.job_family = original_descriptor
+
+    assert result["scored_count"] == n_jobs
+    db.close()
+    connection.close()
+    engine.dispose()
+    return get_count["n"]
+
+
+@pytest.mark.asyncio
+async def test_batch_reads_profile_job_family_constant_reads_per_job(monkeypatch):
+    """F8 (perf/robustness): profile.job_family must be hoisted to a local
+    BEFORE the per-job loop, not re-read from the (post-commit, expired) ORM
+    attribute once per job.
+
+    Each job's score_job call commits, which expires `profile`'s attributes;
+    re-reading `profile.job_family` per iteration (instead of a hoisted
+    local) would add ONE EXTRA `.job_family` read for every additional job
+    in the batch, on top of the reads score_job's own internals already make
+    per job (unavoidable, out of scope here). Verified via mutation: with
+    the F8 hoist reverted (`candidate_family=profile.job_family` instead of
+    the local), the observed delta below goes from 2 to 3 — confirmed by
+    hand during test authoring; this assertion pins the FIXED value so a
+    regression (reintroducing the direct attribute read) fails it.
+    """
+    monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
+    monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
+    monkeypatch.setattr(settings, "cascade_shadow_enabled", True)
+    monkeypatch.setattr(settings, "cascade_routing_enabled", False)
+
+    reads_for_1_job = await _run_batch_counting_job_family_reads(1)
+    reads_for_2_jobs = await _run_batch_counting_job_family_reads(2)
+    reads_for_3_jobs = await _run_batch_counting_job_family_reads(3)
+
+    delta_1_to_2 = reads_for_2_jobs - reads_for_1_job
+    delta_2_to_3 = reads_for_3_jobs - reads_for_2_jobs
+
+    assert delta_1_to_2 == delta_2_to_3, (
+        f"job_family read count did not grow linearly with batch size "
+        f"(1->2 delta={delta_1_to_2}, 2->3 delta={delta_2_to_3}) — the per-job "
+        f"read cost is not constant, suggesting quadratic/expired-attribute "
+        f"re-fetch behavior somewhere in the loop"
+    )
+    assert delta_1_to_2 == 2, (
+        f"expected exactly 2 `.job_family` reads per ADDITIONAL job (score_job's "
+        f"own internal read + _gather_profile_data's read — both unavoidable "
+        f"and unrelated to this fix), got {delta_1_to_2} — the batch loop's own "
+        f"`profile.job_family` access (candidate_family=... at the safe_route_job "
+        f"call site) is adding an extra read per job instead of using the "
+        f"`job_family` local hoisted before the loop (G-1351 Phase C review F8)"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -134,6 +134,11 @@ _FAMILY_TITLE_PAIRS: list[tuple[str, str]] = [
     ("TPM", "ICT Project Manager"),  # -> same_occupation
     ("Product Manager", "Data Analyst"),  # -> no_match
     ("Data Scientist", "Registered Nurse"),  # -> unknown (title unresolved)
+    # G-1351 review F6: a 5th pair that resolves same_isco_group through the
+    # REAL score_job path — "data scientist" and "data analyst" are distinct
+    # ESCO occupations sharing ISCO unit group 2511 (verified in Phase B's
+    # own test_match_occupation_same_isco_group_data_scientist_vs_data_analyst).
+    ("Data Scientist", "Data Analyst"),  # -> same_isco_group
 ]
 
 
@@ -211,6 +216,28 @@ async def test_resolved_pair_logs_real_tier_and_score(db_session):
 
 
 @pytest.mark.asyncio
+async def test_same_isco_group_pair_logs_that_tier_through_real_caller_path(db_session):
+    """G-1351 review F6: the same_isco_group tier must be reachable through
+    the REAL score_job path, not just via a direct match_occupation() call
+    (which Phase B's own tests already cover). "Data Scientist" family vs a
+    "Data Analyst" title share ISCO unit group 2511 but are distinct
+    occupations, so this must persist same_isco_group at 0.5 — never
+    same_occupation (1.0) and never a fake no_match (0.0)."""
+    profile = _make_profile(db_session, profile_id=1, job_family="Data Scientist")
+    with patch("career_os.services.scoring.get_ai_provider", return_value=_patch_provider(8.0)):
+        scored = await score_job(
+            db_session,
+            profile_id=profile.id,
+            job_description="Data Analyst role",
+            job_title="Data Analyst",
+        )
+    sample = db_session.query(DistillationSample).filter_by(scored_job_id=scored.id).one()
+    signals = json.loads(sample.signals)
+    assert signals["occupation"]["match"] == "same_isco_group"
+    assert signals["occupation"]["score"] == 0.5
+
+
+@pytest.mark.asyncio
 async def test_occupation_present_alongside_esco_when_both_available(db_session):
     """occupation is always included, additively alongside `esco` (never replaces it)."""
     profile = _make_profile(db_session, profile_id=1, job_family="SWE")
@@ -268,3 +295,54 @@ def test_startup_populate_occupations_succeeds_normally(monkeypatch):
     main_module._startup_populate_occupations()
 
     mock_populate.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_lifespan_invokes_startup_populate_occupations(tmp_path, monkeypatch):
+    """G-1351 review F3: drives the REAL `main.lifespan` async context manager
+    (not a direct call to the extracted `_startup_populate_occupations`
+    helper) and asserts the ESCO occupations taxonomy is actually populated
+    by the time startup completes.
+
+    Deleting `_startup_populate_occupations()` from `lifespan` would leave
+    `test_startup_populate_occupations_succeeds_normally` above green (it
+    only exercises the extracted helper in isolation) — this test closes
+    that gap by exercising the wiring between `lifespan` and the helper.
+
+    Heavy/unrelated startup side effects (real Alembic migration, background
+    schedulers) are monkeypatched out; `SessionLocal` is redirected to a real
+    temp-file SQLite DB with the ORM schema created directly (equivalent to
+    what a completed migration would produce), so `_startup_populate_occupations`
+    (and the seeding/status-normalization steps around it) run for real
+    against a real, if minimal, database.
+    """
+    import career_os.main as main_module
+
+    db_path = tmp_path / "lifespan_test.db"
+    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(bind=engine)
+    TestSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+    monkeypatch.setattr(main_module, "SessionLocal", TestSessionLocal)
+    monkeypatch.setattr(main_module, "_auto_migrate", lambda: None)
+    monkeypatch.setattr(main_module, "start_scheduler", lambda: None)
+    monkeypatch.setattr(main_module, "stop_scheduler", lambda: None)
+    monkeypatch.setattr(main_module, "start_ticktick_scheduler", lambda: None)
+    monkeypatch.setattr(main_module, "stop_ticktick_scheduler", lambda: None)
+
+    async with main_module.lifespan(main_module.app):
+        pass
+
+    from sqlalchemy import text
+
+    check_session = TestSessionLocal()
+    try:
+        count = check_session.execute(text("SELECT COUNT(*) FROM esco_occupations")).scalar()
+    finally:
+        check_session.close()
+    engine.dispose()
+
+    assert count is not None and count > 0, (
+        "esco_occupations is empty after running the REAL lifespan — "
+        "_startup_populate_occupations() is not actually wired into lifespan"
+    )
