@@ -42,6 +42,7 @@ alt-label denylist (G-1351 review F2) — an unresolved title returns ``None``
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
 from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz, process, utils
@@ -483,6 +484,29 @@ def _classify(
     return {"match": "no_match", "score": 0.0}
 
 
+# ---------------------------------------------------------------------------
+# G-1351 Phase C 3-pass review, finding F2: memoize the whole-result match,
+# not just the match surface. (Note: Phase B's OWN review already used "F2"
+# for the ALT_LABEL_DENYLIST above — these are two independent review passes
+# with independently-numbered findings; "Phase C review F2" below always
+# means THIS memoization fix, never the Phase B alt-label one.)
+# ---------------------------------------------------------------------------
+# `match_occupation` is called twice per scored job on the distillation path
+# (once from cascade_router.occupation_signal, once again — argument-identically
+# — from scoring.score_job's distillation block), and each call runs the full
+# rapidfuzz token_sort_ratio sweep (~41ms) even though the surface cache (F7,
+# above) already makes the SURFACE build itself a no-op on the second call.
+# Keyed on (candidate_family, jd_title, row_count) — NOT on `db` — mirroring
+# the surface cache's own "identical data across DBs at the same row count is
+# acceptable" rationale (the taxonomy is a single-source bundled fixture).
+# FIFO-evicted hand-rolled dict (functools.lru_cache can't key on `db`, an
+# unhashable/per-call-varying SQLAlchemy Session). Never populated on the
+# exception path — see `match_occupation` below, where the cache write sits
+# strictly inside the `try` before `except Exception` takes over.
+_MATCH_RESULT_CACHE_MAXSIZE = 512
+_match_result_cache: OrderedDict[tuple[str | None, str | None, int], dict] = OrderedDict()
+
+
 def match_occupation(db: Session, candidate_family: str | None, jd_title: str | None) -> dict:
     """Pure feature: job_family + JD title -> occupation-match tier + score.
 
@@ -492,6 +516,15 @@ def match_occupation(db: Session, candidate_family: str | None, jd_title: str | 
     review F1): lazily populates ``esco_occupations`` from the bundled
     fixture on first use if the table is empty, so a normal server deployment
     that never runs `kestrel occupations load` still gets a real signal.
+
+    Memoized (G-1351 Phase C review F2) on ``(candidate_family, jd_title,
+    row_count)``: a second identical call (e.g. the cascade shadow signal
+    followed by the distillation-logging block scoring the same job) is a
+    dict hit instead of re-running the fuzzy-match sweep. Invalidated
+    whenever the taxonomy row count changes (a `kestrel occupations load`
+    re-run) since row_count is part of the key. Never caches the
+    exception-path (degraded ``unknown``) result — a transient failure must
+    not poison future calls.
 
     Defensive: any unexpected failure degrades to the ``unknown`` result
     (never raises). CRITICAL (G-1351 review F6): unlike `esco_features.py`'s
@@ -506,6 +539,12 @@ def match_occupation(db: Session, candidate_family: str | None, jd_title: str | 
     """
     try:
         _ensure_taxonomy_populated(db)
+        row_count = count_occupations(db)
+        cache_key = (candidate_family, jd_title, row_count)
+        cached = _match_result_cache.get(cache_key)
+        if cached is not None:
+            return dict(cached)
+
         family_occ = map_family_to_occupation(db, candidate_family)
         title_occ = normalize_title_to_occupation(db, jd_title)
         result = _classify(family_occ, title_occ)
@@ -513,13 +552,25 @@ def match_occupation(db: Session, candidate_family: str | None, jd_title: str | 
         result["family_label"] = family_occ.preferred_label if family_occ else None
         result["title_uri"] = title_occ.concept_uri if title_occ else None
         result["title_label"] = title_occ.preferred_label if title_occ else None
+
+        _match_result_cache[cache_key] = dict(result)
+        if len(_match_result_cache) > _MATCH_RESULT_CACHE_MAXSIZE:
+            _match_result_cache.popitem(last=False)  # FIFO evict the oldest entry
+
         return result
     except Exception:
+        # G-1351 Phase C review F9: cap the logged title — this is the
+        # exception path, so `jd_title` may not have passed through the
+        # MAX_TITLE_CHARS guard in normalize_title_to_occupation yet (e.g. a
+        # failure in map_family_to_occupation, before title normalization even
+        # runs). Distinct from Phase B's own "F9" (the overlay pin-not-found
+        # warning below, in map_family_to_occupation).
+        logged_title = jd_title[:MAX_TITLE_CHARS] if jd_title else jd_title
         logger.warning(
             "match_occupation failed for family=%r title=%r (swallowed, no "
             "rollback — see docstring, G-1351 review F6)",
             candidate_family,
-            jd_title,
+            logged_title,
             exc_info=True,
         )
         return {

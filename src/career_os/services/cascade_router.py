@@ -39,6 +39,15 @@ The rule (locked design):
 * **Live is a separate flag, off by default.** A live ``SKIP_REJECT`` bypasses the
   LLM and is persisted as a scored-but-rejected job (never dropped).
 
+* **Occupation is a shadow-only 4th signal (G-1351 Phase C).** ``CascadeDecision``
+  additionally carries an ``occupation`` vote from
+  :func:`~career_os.services.occupation_matcher.match_occupation` (job_family vs
+  JD-title). It is computed and persisted to ``cascade_decisions`` on every
+  decision so its agreement with the real gate can be measured, but it is
+  **structurally excluded** from the gate: it is not part of the ``signals``
+  3-tuple and ``unanimous_reject`` never looks at it. Promoting it to a real,
+  gating vote is a separate, out-of-scope flip pending that analysis.
+
 Everything here is **defensive**: a routing or logging failure is logged and
 swallowed, and on any uncertainty the router falls back to ``SCORE`` — it never
 skips a job on an error. The router itself makes **zero LLM calls**.
@@ -64,6 +73,7 @@ from career_os.services.esco_features import (
     compute_job_skills_overlap,
     get_candidate_skill_uris,
 )
+from career_os.services.occupation_matcher import match_occupation
 
 logger = logging.getLogger(__name__)
 
@@ -106,14 +116,27 @@ class SignalVote:
             self.votes_reject = False
 
 
+def _abstaining_occupation_vote() -> SignalVote:
+    """Default ``CascadeDecision.occupation`` value: abstain (no data)."""
+    return SignalVote(name="occupation", available=False, value=None, votes_reject=False)
+
+
 @dataclass
 class CascadeDecision:
-    """The full routing decision plus the three signal votes."""
+    """The full routing decision plus the three GATING signal votes.
+
+    ``occupation`` is a 4th, shadow-only signal (G-1351 Phase C): computed and
+    persisted for future analysis, but CRITICAL — it is NOT part of the
+    ``signals`` gate tuple below and must never be added to it or to
+    ``unanimous_reject`` in :func:`route_job`. That structural exclusion is what
+    guarantees the occupation signal can never affect routing.
+    """
 
     action: CascadeAction
     embedding: SignalVote
     lexical: SignalVote
     esco: SignalVote
+    occupation: SignalVote = field(default_factory=_abstaining_occupation_vote)
 
     @property
     def would_skip(self) -> bool:
@@ -122,7 +145,11 @@ class CascadeDecision:
 
     @property
     def signals(self) -> tuple[SignalVote, SignalVote, SignalVote]:
-        """The three signal votes in a stable order."""
+        """The three GATING signal votes in a stable order.
+
+        Deliberately excludes ``occupation`` (G-1351 Phase C shadow signal) — this
+        tuple IS the gate; adding a 4th signal here would silently make it live.
+        """
         return (self.embedding, self.lexical, self.esco)
 
     def reject_reasons(self) -> list[str]:
@@ -385,6 +412,53 @@ def esco_signal(
 
 
 # ---------------------------------------------------------------------------
+# Occupation — a shadow-only 4th signal (G-1351 Phase C)
+# ---------------------------------------------------------------------------
+
+# match_occupation tier -> (available, value, votes_reject). `unknown` NEVER
+# gets a real value (None, not 0.0 — the same "honest unknown" invariant as
+# match_occupation itself); `no_match` is the only tier with a real 0.0.
+_OCCUPATION_TIER_TO_VOTE: dict[str, tuple[bool, float | None, bool]] = {
+    "unknown": (False, None, False),
+    "no_match": (True, 0.0, True),
+    "same_isco_group": (True, 0.5, False),
+    "same_occupation": (True, 1.0, False),
+}
+
+
+def occupation_signal(
+    db: Session,
+    *,
+    candidate_family: str | None,
+    jd_title: str | None,
+) -> SignalVote:
+    """Shadow-only 4th signal: job_family vs JD-title occupation match.
+
+    Wraps :func:`~career_os.services.occupation_matcher.match_occupation` (which
+    never raises) into a :class:`SignalVote`. ``unknown`` abstains (``value=None``
+    — never the fake ``0.0`` that made the old 4a axis inert); ``no_match`` votes
+    reject at ``0.0``; ``same_isco_group`` is a partial match at ``0.5``;
+    ``same_occupation`` is a full match at ``1.0``. This vote is a
+    "would-have-voted" record ONLY — see the module docstring and
+    :class:`CascadeDecision` for why it can never affect the gate.
+    """
+    result = match_occupation(db, candidate_family, jd_title)
+    tier = result.get("match", "unknown")
+    available, value, votes_reject = _OCCUPATION_TIER_TO_VOTE.get(tier, (False, None, False))
+    return SignalVote(
+        name="occupation",
+        available=available,
+        value=value,
+        votes_reject=votes_reject,
+        detail={
+            "match": tier,
+            "family_uri": result.get("family_uri"),
+            "title_uri": result.get("title_uri"),
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
 # The router
 # ---------------------------------------------------------------------------
 
@@ -400,12 +474,19 @@ def route_job(
     embedding_reject_threshold: float | None = None,
     lexical_reject_threshold: float | None = None,
     esco_reject_threshold: float | None = None,
+    candidate_family: str | None = None,
+    jd_title: str | None = None,
 ) -> CascadeDecision:
-    """Compute the routing decision for one job from the three signals.
+    """Compute the routing decision for one job from the three GATING signals.
 
     Returns :attr:`CascadeAction.SKIP_REJECT` **iff all three signals have data
     AND all three vote to reject** (unanimous, conservative). Any abstaining or
     non-reject signal yields :attr:`CascadeAction.SCORE`. Makes zero LLM calls.
+
+    ``candidate_family``/``jd_title`` (both default ``None``, which abstains)
+    feed the shadow-only occupation 4th signal (G-1351 Phase C) — it is computed
+    and attached to the returned decision for persistence/analysis but
+    STRUCTURALLY CANNOT affect ``action`` (see :class:`CascadeDecision`).
     """
     emb = embedding_signal(embedding_similarity, reject_threshold=embedding_reject_threshold)
     lex = lexical_signal(
@@ -421,10 +502,11 @@ def route_job(
         application_id=application_id,
         reject_threshold=esco_reject_threshold,
     )
+    occ = occupation_signal(db, candidate_family=candidate_family, jd_title=jd_title)
 
     unanimous_reject = all(s.available and s.votes_reject for s in (emb, lex, esc))
     action = CascadeAction.SKIP_REJECT if unanimous_reject else CascadeAction.SCORE
-    return CascadeDecision(action=action, embedding=emb, lexical=lex, esco=esc)
+    return CascadeDecision(action=action, embedding=emb, lexical=lex, esco=esc, occupation=occ)
 
 
 def safe_route_job(
@@ -435,6 +517,8 @@ def safe_route_job(
     discovered_job_id: int | None = None,
     embedding_similarity: float | None = None,
     jd_text: str | None = None,
+    candidate_family: str | None = None,
+    jd_title: str | None = None,
 ) -> CascadeDecision | None:
     """Defensive wrapper around :func:`route_job` for the live scoring path.
 
@@ -450,6 +534,8 @@ def safe_route_job(
             discovered_job_id=discovered_job_id,
             embedding_similarity=embedding_similarity,
             jd_text=jd_text,
+            candidate_family=candidate_family,
+            jd_title=jd_title,
         )
     except Exception:
         logger.warning(
@@ -545,11 +631,13 @@ def record_cascade_decision(
 ) -> CascadeDecisionRow | None:
     """Log a routing decision to ``cascade_decisions``. Defensive; never raises.
 
-    Records the action, the three signal votes, and the outcome. In shadow mode
-    ``llm_fit_score`` is the eventual live score (so the false-skip comparator can
-    run); in a live skip it is ``None`` (no LLM call) and ``reject_fit_score`` is
-    the deterministic score persisted instead. Any failure is logged and swallowed
-    and the session rolled back — logging never affects the committed score.
+    Records the action, the three GATING signal votes, the shadow-only
+    occupation 4th signal (G-1351 Phase C — persisted for analysis, never part
+    of ``action``), and the outcome. In shadow mode ``llm_fit_score`` is the
+    eventual live score (so the false-skip comparator can run); in a live skip
+    it is ``None`` (no LLM call) and ``reject_fit_score`` is the deterministic
+    score persisted instead. Any failure is logged and swallowed and the
+    session rolled back — logging never affects the committed score.
     """
     try:
         quadrant = (
@@ -557,7 +645,12 @@ def record_cascade_decision(
             if llm_fit_score is not None
             else None
         )
-        emb, lex, esc = decision.embedding, decision.lexical, decision.esco
+        emb, lex, esc, occ = (
+            decision.embedding,
+            decision.lexical,
+            decision.esco,
+            decision.occupation,
+        )
         row = CascadeDecisionRow(
             profile_id=profile_id,
             scored_job_id=scored_job_id,
@@ -575,6 +668,10 @@ def record_cascade_decision(
             esco_overlap=esc.value,
             esco_available=esc.available,
             esco_votes_reject=esc.votes_reject,
+            occupation_match=occ.detail.get("match"),
+            occupation_score=occ.value,
+            occupation_available=occ.available,
+            occupation_votes_reject=occ.votes_reject,
             llm_fit_score=llm_fit_score,
             llm_quadrant=quadrant,
             reject_fit_score=reject_fit_score,

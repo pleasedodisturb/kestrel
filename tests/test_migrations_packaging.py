@@ -226,3 +226,118 @@ def test_migrated_schema_matches_model_metadata(tmp_path):
         f"them — a migrated deployment will fail at runtime on any query against "
         f"them (G-1350)."
     )
+
+
+def test_migrated_schema_columns_match_model_metadata(tmp_path):
+    """`alembic upgrade head` must produce exactly the COLUMNS the models
+    declare, for every table — not just the right table names.
+
+    G-1351 review F4: the table-name-only comparison above
+    (`test_migrated_schema_matches_model_metadata`) would pass even if a
+    migration had a typo'd column name, or a model added a column with no
+    corresponding `add_column` in any migration — exactly the kind of gap
+    that let `w5x6y7z8a9b0`'s 4 new `cascade_decisions` columns go unverified
+    against the model. Compares PRAGMA table_info column names against
+    `Base.metadata` columns for every table present in both.
+    """
+    import importlib
+    import pkgutil
+    import sqlite3
+
+    from alembic import command
+
+    import career_os.models as models_pkg
+    from career_os.database import Base
+
+    for module in pkgutil.iter_modules(models_pkg.__path__):
+        importlib.import_module(f"career_os.models.{module.name}")
+
+    db_path = tmp_path / "schema_columns_check.db"
+    cfg = Config()
+    cfg.set_main_option("script_location", str(PKG_DIR / "_alembic"))
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+    command.upgrade(cfg, "head")
+
+    with sqlite3.connect(db_path) as con:
+        migrated_tables = {
+            row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        declared_tables = set(Base.metadata.tables)
+
+        missing_col_errors: list[str] = []
+        extra_col_errors: list[str] = []
+        for table_name in sorted(declared_tables & migrated_tables):
+            model_columns = {col.name for col in Base.metadata.tables[table_name].columns}
+            pragma_columns = {row[1] for row in con.execute(f"PRAGMA table_info('{table_name}')")}
+
+            missing_cols = sorted(model_columns - pragma_columns)
+            extra_cols = sorted(pragma_columns - model_columns)
+            if missing_cols:
+                missing_col_errors.append(f"{table_name}: {missing_cols}")
+            if extra_cols:
+                extra_col_errors.append(f"{table_name}: {extra_cols}")
+
+    assert not missing_col_errors, (
+        f"column(s) declared in the SQLAlchemy model but missing from the "
+        f"migrated schema (a migration is missing an add_column, or has a "
+        f"typo'd column name): {missing_col_errors} (G-1351 review F4)."
+    )
+    assert not extra_col_errors, (
+        f"column(s) exist in the migrated schema but are not declared in the "
+        f"SQLAlchemy model (a stale/orphaned migration column, or a model "
+        f"field renamed without a matching migration): {extra_col_errors} "
+        f"(G-1351 review F4)."
+    )
+
+
+def test_head_migration_downgrade_is_sqlite_safe(tmp_path):
+    """The HEAD migration's `downgrade()` must round-trip cleanly on SQLite.
+
+    G-1351 review F10: `w5x6y7z8a9b0`'s downgrade originally used plain
+    `op.drop_column` calls, which older SQLite (pre-3.35) ALTER TABLE does
+    not support outside a batch operation (repo precedent `b192ca99adc9`,
+    `a7b8c9d0e1f2` always wrap column drops in `op.batch_alter_table`).
+    Exercises the REAL upgrade -> downgrade -> upgrade cycle on a real
+    SQLite file. Note: on the SQLite bundled with this test environment
+    (3.35+), a plain `op.drop_column` also happens to succeed at runtime —
+    the sibling source-level test below is what actually pins the
+    batch_alter_table requirement for broader SQLite-version compatibility.
+    """
+    from alembic import command
+
+    db_path = tmp_path / "downgrade_check.db"
+    cfg = Config()
+    cfg.set_main_option("script_location", str(PKG_DIR / "_alembic"))
+    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+
+    command.upgrade(cfg, "head")
+    command.downgrade(cfg, "-1")
+    command.upgrade(cfg, "head")
+
+
+def test_head_migration_downgrade_uses_batch_alter_table():
+    """Source-level pin for G-1351 review F10: the HEAD migration's
+    `downgrade()` must use `op.batch_alter_table`, matching repo precedent
+    (`b192ca99adc9`, `a7b8c9d0e1f2`) for SQLite-safe column drops.
+
+    The round-trip test above alone does NOT catch a regression back to
+    plain `op.drop_column` — this test environment's SQLite (3.35+) happens
+    to support unbatched DROP COLUMN natively, so a runtime round-trip stays
+    green either way. Older SQLite (pre-3.35, still common in production
+    Docker base images) does not, so this source-level check is what
+    actually enforces the fix.
+    """
+    versions_dir = PKG_DIR / "_alembic" / "versions"
+    matches = list(versions_dir.glob("w5x6y7z8a9b0_*.py"))
+    assert len(matches) == 1, f"expected exactly one w5x6y7z8a9b0_*.py migration, found {matches}"
+
+    source = matches[0].read_text(encoding="utf-8")
+    # Isolate the downgrade() function body specifically — an upgrade()-only
+    # batch_alter_table reference elsewhere in the file would be a false pass.
+    downgrade_start = source.index("def downgrade()")
+    downgrade_body = source[downgrade_start:]
+    assert "batch_alter_table" in downgrade_body, (
+        "w5x6y7z8a9b0's downgrade() does not use op.batch_alter_table — "
+        "plain op.drop_column is not SQLite-safe on pre-3.35 SQLite "
+        "(G-1351 review F10)."
+    )

@@ -3302,11 +3302,17 @@ async def score_job(
     Returns a ScoredJob record persisted in the database.
     """
     profile = _validate_scoring_inputs(db, profile_id, application_id, discovered_job_id)
+    # G-1351 review F8: capture BEFORE `db.commit()` below expires `profile`'s
+    # attributes. job_family is re-read post-commit only in the (off-by-default)
+    # distillation block; re-reading `profile.job_family` there would trigger an
+    # expired-attribute refresh SELECT on every scored job instead of a free
+    # local-variable read.
+    job_family = profile.job_family
 
     # Guard: profile must have target roles and location for meaningful scores
-    if not profile.job_family or not profile.location:
+    if not job_family or not profile.location:
         missing = []
-        if not profile.job_family:
+        if not job_family:
             missing.append("target roles")
         if not profile.location:
             missing.append("location")
@@ -3541,6 +3547,7 @@ async def score_job(
     if settings.distillation_logging_enabled:
         from career_os.services.distillation import log_distillation_sample
         from career_os.services.esco_features import compute_esco_features
+        from career_os.services.occupation_matcher import match_occupation
 
         # ESCO quantitative features (G-1338, finding L) — a non-LLM structured
         # signal (severity-weighted skills-overlap). Best-effort and additive:
@@ -3552,6 +3559,19 @@ async def score_job(
             profile_id=profile_id,
             application_id=application_id,
         )
+        # Occupation match tier (G-1351 Phase C) — job_family vs JD-title, a
+        # second non-LLM structured signal alongside ESCO. NOTE: this block runs
+        # AFTER db.commit() above, so match_occupation's borrowed-session use
+        # (and its own lazy-populate side session) cannot disturb the
+        # already-persisted score (G-1351 review F6). Always included, even
+        # when `unknown` — never dropped, so the training tuple can distinguish
+        # "no signal" from "confidently no match". Uses the `job_family` local
+        # captured pre-commit (G-1351 review F8), not `profile.job_family` —
+        # the latter would trigger an expired-attribute refresh SELECT here.
+        occ = match_occupation(db, candidate_family=job_family, jd_title=job_title)
+        extra: dict = {"occupation": occ}
+        if esco:
+            extra["esco"] = esco
         log_distillation_sample(
             db,
             profile_id=profile_id,
@@ -3560,7 +3580,7 @@ async def score_job(
             scored_job_id=scored_job.id,
             discovered_job_id=discovered_job_id,
             rubric_version=RUBRIC_VERSION,
-            extra_signals={"esco": esco} if esco else None,
+            extra_signals=extra,
             # WR-02: log the desire actually persisted to ScoredJob — which may be
             # *derived* when the model omitted desire_score — so the training tuple's
             # desire_score + quadrant match the stored row instead of being None.
@@ -3739,11 +3759,16 @@ async def batch_score_discovery(
     profile = db.query(Profile).filter(Profile.id == profile_id).first()
     if not profile:
         raise ProfileNotFoundError(f"Profile {profile_id} not found")
+    # G-1351 review F8: capture BEFORE the per-job loop below — each iteration's
+    # score_job/persist_cascade_reject call commits, which expires `profile`'s
+    # attributes; re-reading `profile.job_family` per iteration would trigger a
+    # refresh SELECT on every job in the batch instead of a free local read.
+    job_family = profile.job_family
 
     # Guard: profile must have target roles and location for meaningful scores
-    if not profile.job_family or not profile.location:
+    if not job_family or not profile.location:
         missing = []
-        if not profile.job_family:
+        if not job_family:
             missing.append("target roles")
         if not profile.location:
             missing.append("location")
@@ -3841,6 +3866,12 @@ async def batch_score_discovery(
                 discovered_job_id=job.id,
                 embedding_similarity=similarities.get(job.id),
                 jd_text=f"{job.title or ''}\n{job.description or ''}",
+                # Shadow-only occupation 4th signal (G-1351 Phase C): enriches the
+                # persisted cascade_decisions row, never changes routing/gating.
+                # Uses the `job_family` local captured pre-loop (G-1351 review
+                # F8), not `profile.job_family` — see the capture site above.
+                candidate_family=job_family,
+                jd_title=job.title,
             )
 
         # LIVE skip: a unanimous-reject job bypasses the LLM and is persisted as a

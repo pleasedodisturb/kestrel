@@ -327,6 +327,24 @@ async def test_score_job_off_by_default_writes_no_sample(db_session, monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_score_job_off_by_default_never_calls_match_occupation(db_session, monkeypatch):
+    """G-1351 review F7: with distillation logging off (the default), the
+    occupation matcher must never even be invoked — not merely "not
+    persisted". The `match_occupation` import + call both live inside the
+    `if settings.distillation_logging_enabled:` block in score_job, so with
+    the flag off it should never run at all."""
+    monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
+    monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
+    assert settings.distillation_logging_enabled is False
+    with (
+        patch("career_os.services.scoring.get_ai_provider", return_value=_patch_provider()),
+        patch("career_os.services.occupation_matcher.match_occupation") as mock_match,
+    ):
+        await score_job(db_session, profile_id=1, job_description="TPM role", job_title="TPM")
+    mock_match.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_score_job_logs_sample_when_enabled(db_session, monkeypatch, enable_distillation):
     monkeypatch.setattr(settings, "feedback_calibration_enabled", False)
     monkeypatch.setattr(settings, "borderline_scoring_enabled", False)
