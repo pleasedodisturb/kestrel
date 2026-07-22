@@ -17,6 +17,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/chrome": "^0.0.287",
@@ -27,5 +28,17 @@
     "typescript": "^5.8.3",
     "vitest": "^3.2.4",
     "wxt": "^0.20.27"
+  },
+  "overrides": {
+    "shell-quote": "^1.9.0",
+    "adm-zip": "^0.6.0",
+    "tmp": "^0.2.6",
+    "uuid": "^11.1.1",
+    "esbuild": "^0.28.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true,
+    "spawn-sync@1.0.15": true
   }
 }
