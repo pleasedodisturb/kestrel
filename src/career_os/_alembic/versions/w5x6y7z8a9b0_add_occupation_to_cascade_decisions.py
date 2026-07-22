@@ -48,7 +48,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column("cascade_decisions", "occupation_votes_reject")
-    op.drop_column("cascade_decisions", "occupation_available")
-    op.drop_column("cascade_decisions", "occupation_score")
-    op.drop_column("cascade_decisions", "occupation_match")
+    # SQLite-safe drop (G-1351 review F10): plain `op.drop_column` isn't
+    # supported for SQLite outside a batch operation, matching repo precedent
+    # (b192ca99adc9, a7b8c9d0e1f2) which always batches column drops.
+    with op.batch_alter_table("cascade_decisions", schema=None) as batch_op:
+        batch_op.drop_column("occupation_votes_reject")
+        batch_op.drop_column("occupation_available")
+        batch_op.drop_column("occupation_score")
+        batch_op.drop_column("occupation_match")

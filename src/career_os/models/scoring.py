@@ -341,6 +341,18 @@ class CascadeDecision(Base):
     # its agreement with the real gate can be measured before any future flip
     # to a live, gating vote. occupation_score is NULL for an `unknown` match
     # (never the fake 0.0 that made the old 4a axis inert).
+    #
+    # occupation_match has TWO distinct NULL-ish states future analysis must
+    # bucket separately (G-1351 review F5):
+    #   * the STRING "unknown" — match_occupation actually ran and could not
+    #     confidently resolve family and/or title (a real, evaluated result);
+    #   * SQL NULL (Python None) — this row's CascadeDecision was built
+    #     WITHOUT an explicit `occupation=` vote (the abstaining
+    #     `_abstaining_occupation_vote()` dataclass default, detail={}), i.e.
+    #     the occupation signal was never evaluated for this decision at all
+    #     (a legacy row from before this signal existed, or a caller that
+    #     never wired candidate_family/jd_title). Treat NULL as "no data",
+    #     not as a match attempt that failed.
     occupation_match: Mapped[str | None] = mapped_column(String(20), nullable=True)
     occupation_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     occupation_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
