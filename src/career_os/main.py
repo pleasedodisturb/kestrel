@@ -47,6 +47,7 @@ from career_os.database import SessionLocal
 from career_os.discovery.scheduler import start_scheduler, stop_scheduler
 from career_os.migration.seed import seed_default_profile, seed_ghost_detection_records
 from career_os.models.models import Application
+from career_os.services.occupation_taxonomy import populate_occupations
 from career_os.services.ticktick_scheduler import (
     start_ticktick_scheduler,
     stop_ticktick_scheduler,
@@ -117,6 +118,27 @@ def _auto_migrate() -> None:
         raise
 
 
+def _startup_populate_occupations() -> None:
+    """Populate the ESCO occupations taxonomy at startup (G-1351 Phase C).
+
+    Non-fatal: a first-ever `match_occupation()` call already holding a SQLite
+    write lock would otherwise latch its own lazy populate to `unknown` until
+    the next process restart (Phase B review carried note); running it once
+    here, eagerly, at startup makes the lazy in-`match_occupation` populate a
+    fallback rather than the primary path. Any failure (e.g. a locked/
+    read-only DB) is logged and swallowed — the app must still start.
+    Extracted to a standalone function so it is directly unit-testable
+    (drive it in isolation rather than the full lifespan generator).
+    """
+    db = SessionLocal()
+    try:
+        populate_occupations(db)
+    except Exception as e:
+        logger.warning("Could not populate occupation taxonomy at startup: %s", e)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: auto-migrate then seed default profile on startup."""
@@ -147,6 +169,10 @@ async def lifespan(app: FastAPI):
         logger.warning("Could not normalize statuses: %s", e)
     finally:
         db.close()
+
+    # 3.5. Populate the ESCO occupations taxonomy (non-fatal — see
+    # _startup_populate_occupations docstring, G-1351 Phase C).
+    _startup_populate_occupations()
 
     # 4. Start background discovery scheduler
     start_scheduler()

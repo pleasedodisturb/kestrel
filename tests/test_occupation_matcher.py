@@ -17,6 +17,7 @@ additional testing-gap coverage (F8).
 from __future__ import annotations
 
 import time
+from collections import OrderedDict
 
 import pytest
 from sqlalchemy.orm import Session
@@ -40,16 +41,18 @@ def _populated(db_session: Session) -> Session:
 def _reset_matcher_module_state(monkeypatch):
     """Reset module-level lazy-populate/cache state around every test.
 
-    Both `_POPULATE_ATTEMPT_FAILED` (F1) and `_surface_cache` (F7) are
-    intentionally module-level (they cache/latch across calls within a
-    process), but that makes them cross-test-contamination risks in a test
-    suite that runs many independent DBs in the same process. monkeypatch
-    restores the pre-test value after each test regardless of what the code
-    mutates it to during the test, so this keeps every test hermetic without
-    losing the module-level design the production code needs.
+    `_POPULATE_ATTEMPT_FAILED` (F1), `_surface_cache` (F7), and
+    `_match_result_cache` (G-1351 review F2) are all intentionally
+    module-level (they cache/latch across calls within a process), but that
+    makes them cross-test-contamination risks in a test suite that runs many
+    independent DBs in the same process. monkeypatch restores the pre-test
+    value after each test regardless of what the code mutates it to during
+    the test, so this keeps every test hermetic without losing the
+    module-level design the production code needs.
     """
     monkeypatch.setattr(occupation_matcher, "_POPULATE_ATTEMPT_FAILED", False)
     monkeypatch.setattr(occupation_matcher, "_surface_cache", None)
+    monkeypatch.setattr(occupation_matcher, "_match_result_cache", OrderedDict())
     yield
 
 
@@ -461,6 +464,38 @@ def test_match_occupation_swallow_path_does_not_rollback(db_session: Session, mo
 
 
 # ---------------------------------------------------------------------------
+# G-1351 Phase C review F9 — exception-log title truncation (distinct from
+# Phase B's own "F9" above, the overlay pin-not-found warning)
+# ---------------------------------------------------------------------------
+
+
+def test_match_occupation_exception_log_truncates_long_title(
+    db_session: Session, monkeypatch, caplog
+) -> None:
+    """A crafted/huge jd_title must never appear un-truncated in the
+    exception-path log line — mirrors the MAX_TITLE_CHARS cap
+    normalize_title_to_occupation applies on the happy path, but here on the
+    FAILURE path too (e.g. a failure in map_family_to_occupation, before
+    normalize_title_to_occupation's own truncation ever runs)."""
+    db = _populated(db_session)
+
+    def _boom(db, family):
+        raise RuntimeError("simulated internal failure")
+
+    monkeypatch.setattr(occupation_matcher, "map_family_to_occupation", _boom)
+
+    huge_title = "x" * 5000
+    with caplog.at_level("WARNING", logger="career_os.services.occupation_matcher"):
+        result = match_occupation(db, "SWE", huge_title)
+
+    assert result["match"] == "unknown"
+    logged = caplog.text
+    assert huge_title not in logged
+    truncated = huge_title[: occupation_matcher.MAX_TITLE_CHARS]
+    assert truncated in logged
+
+
+# ---------------------------------------------------------------------------
 # F7 — match-surface cache
 # ---------------------------------------------------------------------------
 
@@ -501,6 +536,100 @@ def test_match_surface_second_call_is_fast(db_session: Session) -> None:
     elapsed = time.perf_counter() - start
 
     assert elapsed < 0.5, f"second call took {elapsed:.3f}s (expected < 0.5s)"
+
+
+# ---------------------------------------------------------------------------
+# G-1351 Phase C review F2 — whole-result memoization (distinct from Phase
+# B's own "F2" above, the ALT_LABEL_DENYLIST)
+# ---------------------------------------------------------------------------
+
+
+def test_match_occupation_second_identical_call_skips_fuzzy_path(
+    db_session: Session, monkeypatch
+) -> None:
+    """A second identical (family, title, row_count) call must be a cache hit
+    — it must not re-run map_family_to_occupation or
+    normalize_title_to_occupation at all (G-1351 Phase C review F2)."""
+    db = _populated(db_session)
+
+    call_count = {"family": 0, "title": 0}
+    original_family = occupation_matcher.map_family_to_occupation
+    original_title = occupation_matcher.normalize_title_to_occupation
+
+    def _counting_family(db, family):
+        call_count["family"] += 1
+        return original_family(db, family)
+
+    def _counting_title(db, title):
+        call_count["title"] += 1
+        return original_title(db, title)
+
+    monkeypatch.setattr(occupation_matcher, "map_family_to_occupation", _counting_family)
+    monkeypatch.setattr(occupation_matcher, "normalize_title_to_occupation", _counting_title)
+
+    first = match_occupation(db, "SWE", "Senior Software Engineer")
+    second = match_occupation(db, "SWE", "Senior Software Engineer")
+
+    assert call_count["family"] == 1
+    assert call_count["title"] == 1
+    assert second == first
+
+
+def test_match_occupation_cache_invalidates_on_row_count_change(
+    db_session: Session, monkeypatch
+) -> None:
+    """A taxonomy row-count change (e.g. a `kestrel occupations load` re-run
+    that adds rows) must NOT serve a stale cached result — row_count is part
+    of the cache key (G-1351 Phase C review F2)."""
+    db = _populated(db_session)
+
+    call_count = {"n": 0}
+    original_family = occupation_matcher.map_family_to_occupation
+
+    def _counting_family(db, family):
+        call_count["n"] += 1
+        return original_family(db, family)
+
+    monkeypatch.setattr(occupation_matcher, "map_family_to_occupation", _counting_family)
+
+    match_occupation(db, "SWE", "Senior Software Engineer")
+    assert call_count["n"] == 1
+
+    from career_os.models.esco import ESCOOccupation
+
+    db.add(
+        ESCOOccupation(
+            concept_uri="http://example.org/occupation/new-row-f2-test",
+            preferred_label="brand new test occupation",
+            isco_group="9999",
+        )
+    )
+    db.commit()
+
+    match_occupation(db, "SWE", "Senior Software Engineer")
+    assert call_count["n"] == 2, "cache served a stale result after the row count changed"
+
+
+def test_match_occupation_exception_path_is_never_cached(db_session: Session, monkeypatch) -> None:
+    """A transient failure must not poison the cache — the NEXT call (after
+    the fault clears) must run for real, not replay a cached `unknown`
+    (G-1351 Phase C review F2)."""
+    db = _populated(db_session)
+    original_family = occupation_matcher.map_family_to_occupation
+
+    def _boom(db, family):
+        raise RuntimeError("simulated transient failure")
+
+    monkeypatch.setattr(occupation_matcher, "map_family_to_occupation", _boom)
+    failed = match_occupation(db, "SWE", "Senior Software Engineer")
+    assert failed["match"] == "unknown"
+    assert failed["score"] is None
+
+    monkeypatch.setattr(occupation_matcher, "map_family_to_occupation", original_family)
+    recovered = match_occupation(db, "SWE", "Senior Software Engineer")
+    assert recovered["match"] != "unknown", (
+        "the exception-path result was cached, poisoning the next call"
+    )
 
 
 # ---------------------------------------------------------------------------
