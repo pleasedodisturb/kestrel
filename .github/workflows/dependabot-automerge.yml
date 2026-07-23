@@ -5,8 +5,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   automerge:
@@ -16,6 +15,12 @@ jobs:
     # whoever triggered the run (e.g. a re-run) and is spoofable
     # (zizmor bot-conditions).
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    # contents:write + pull-requests:write are both required by
+    # `gh pr merge --auto --squash` (enabling auto-merge / merging touches
+    # both the PR and the target branch). Scoped to this job only. (G-1412)
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       # This uses the default GITHUB_TOKEN, elevated via the permissions block
       # (which applies even to Dependabot-triggered runs). Known tradeoff:

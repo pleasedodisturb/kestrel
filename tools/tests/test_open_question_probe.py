@@ -89,3 +89,28 @@ def test_essay_prompt_containing_standard_word_flagged():
         qs = _STD + [{"label": label, "required": True, "fields": [{"type": "textarea"}]}]
         r = oqp.probe_greenhouse("acme", "1", client=_fake_client(qs))
         assert r["has_open_questions"] is True, f"{label!r} should be an essay"
+
+
+def test_is_greenhouse_host_exact_and_subdomains():
+    """Hostname routing accepts greenhouse.io and its subdomains only."""
+    assert oqp._is_greenhouse_host("https://boards.greenhouse.io/acme/jobs/123")
+    assert oqp._is_greenhouse_host("https://job-boards.eu.greenhouse.io/acme/jobs/1")
+    assert oqp._is_greenhouse_host("https://greenhouse.io/x")
+
+
+def test_is_greenhouse_host_rejects_lookalike_hosts():
+    """Substring lookalikes must not route to the Greenhouse probe (CodeQL
+    py/incomplete-url-substring-sanitization regression)."""
+    assert not oqp._is_greenhouse_host("https://greenhouse.io.evil.com/jobs/123")
+    assert not oqp._is_greenhouse_host("https://evil.com/greenhouse.io")
+    assert not oqp._is_greenhouse_host("https://notgreenhouse.io/jobs/1")
+    assert not oqp._is_greenhouse_host("")
+
+
+def test_probe_open_questions_lookalike_host_not_checked():
+    """A lookalike host with a gh_jid-style path must fall through to
+    checked=False instead of being probed as Greenhouse."""
+    result = oqp.probe_open_questions(
+        "https://greenhouse.io.evil.com/acme/jobs/123", source="other"
+    )
+    assert result["checked"] is False
