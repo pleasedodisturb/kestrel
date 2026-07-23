@@ -4,6 +4,7 @@ Validates that the config files introduced for automated dependency
 tracking are well-formed and follow project conventions.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -61,9 +62,17 @@ class TestDependabotConfig:
         assert "@types/node" in npm_ignored, "@types/node majors must track the pinned Node runtime"
 
     def test_dockerfile_runtime_is_python_311(self):
-        """The runtime base image tracks the project's pinned Python."""
+        """The runtime base image tracks the project's pinned Python.
+
+        Accepts an optional @sha256 digest pin (G-1412 supply-chain
+        hardening) — the policy being guarded is the 3.11-slim tag itself.
+        """
         dockerfile = (PROJECT_ROOT / "Dockerfile").read_text()
-        assert "FROM python:3.11-slim AS runtime" in dockerfile, (
+        assert re.search(
+            r"^FROM python:3\.11-slim(@sha256:[0-9a-f]{64})? AS runtime$",
+            dockerfile,
+            flags=re.MULTILINE,
+        ), (
             "Runtime image must stay on python:3.11-slim until the deliberate "
             "upgrade ticket (G-1289) lands"
         )
