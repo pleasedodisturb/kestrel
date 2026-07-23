@@ -24,13 +24,12 @@ jobs:
     if: |
       github.event_name == 'check_suite' ||
       contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
-    # contents:read — actions/checkout below.
+    # contents:write — `gh pr merge` (the merge endpoint writes a merge
+    # commit to the repo; pull-requests:write alone 403s the merge).
     # issues:read — `gh issue list` (blocker/release-broken check).
-    # pull-requests:write — `gh pr merge`/`gh pr comment`/`gh pr close`
-    # (merges of pull requests are covered by the pull-requests scope; no
-    # contents:write is needed for the merge itself). (G-1412)
+    # pull-requests:write — `gh pr comment`/`gh pr close`/auto-merge. (G-1412)
     permissions:
-      contents: read
+      contents: write
       issues: read
       pull-requests: write
     steps:
