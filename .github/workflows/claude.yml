@@ -17,6 +17,12 @@ on:
   pull_request_review:
     types: [submitted]
 
+# Least-privilege ceiling for the whole workflow; the claude job below grants
+# itself the broader scopes it actually needs (PR/issue comments, OIDC token
+# for claude-code-action). (G-1412)
+permissions:
+  contents: read
+
 jobs:
   claude:
     if: |

@@ -13,12 +13,16 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   build-and-push:
     name: Build and push image
     runs-on: ubuntu-latest
+    # packages:write is needed to push the built image to GHCR (docker/login-action
+    # + docker/build-push-action below). Scoped to this job only. (G-1412)
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 

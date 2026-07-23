@@ -5,6 +5,11 @@ on:
     - cron: '0 2 * * *'  # 2am UTC daily
   workflow_dispatch:  # manual trigger
 
+# Least-privilege ceiling; scoring-eval below re-declares its own read-only
+# grant (kept as-is), call-smoke/nightly-status need no write access. (G-1412)
+permissions:
+  contents: read
+
 jobs:
   call-smoke:
     uses: ./.github/workflows/smoke.yml

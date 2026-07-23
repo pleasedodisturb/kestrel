@@ -8,6 +8,14 @@ on:
   check_suite:
     types: [completed]
 
+# Least-privilege ceiling; evaluate below grants itself the exact scopes its
+# gh CLI calls need. This workflow previously had NO permissions block at
+# all, meaning it ran on whatever the repo/org default GITHUB_TOKEN
+# permissions happened to be — flagged by OSSF Scorecard TokenPermissions.
+# (G-1412)
+permissions:
+  contents: read
+
 jobs:
   evaluate:
     name: Evaluate release readiness
@@ -16,6 +24,15 @@ jobs:
     if: |
       github.event_name == 'check_suite' ||
       contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
+    # contents:read — actions/checkout below.
+    # issues:read — `gh issue list` (blocker/release-broken check).
+    # pull-requests:write — `gh pr merge`/`gh pr comment`/`gh pr close`
+    # (merges of pull requests are covered by the pull-requests scope; no
+    # contents:write is needed for the merge itself). (G-1412)
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
 

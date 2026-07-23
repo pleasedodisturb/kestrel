@@ -72,13 +72,18 @@ on:
         type: boolean
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   daily-scan:
     if: github.event_name == 'workflow_dispatch' || vars.DAILY_SCAN_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # contents:write is needed by the "Commit digest to repo" step, which
+    # git-commits + pushes tracking/daily-scan-*.md straight to main. No
+    # other write scope is used by this job. (G-1412)
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
