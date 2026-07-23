@@ -13,8 +13,22 @@ T3 browser-fill detects an unfilled required textarea live as the real backstop.
 
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 import httpx
 from batch_probe import parse_greenhouse_url
+
+
+def _is_greenhouse_host(url: str) -> bool:
+    """True iff the URL's host is greenhouse.io or a subdomain of it.
+
+    A substring test ("greenhouse.io" in url) also matches attacker-controlled
+    hosts like greenhouse.io.evil.com or evil.com/greenhouse.io (CodeQL
+    py/incomplete-url-substring-sanitization) — route on the parsed hostname.
+    """
+    host = (urlparse(url).hostname or "").lower()
+    return host == "greenhouse.io" or host.endswith(".greenhouse.io")
+
 
 # Standard fields the pipeline can auto-populate (substring match on the lowercased
 # question label). A required textarea whose label hits one of these is NOT an essay.
@@ -133,7 +147,7 @@ def probe_open_questions(url: str, source: str, client: httpx.Client | None = No
     detects live required textareas as the backstop).
     """
     src = (source or "").lower().strip()
-    if src == "greenhouse" or "greenhouse.io" in (url or ""):
+    if src == "greenhouse" or _is_greenhouse_host(url or ""):
         parsed = parse_greenhouse_url(url or "")
         if parsed:
             return probe_greenhouse(parsed[0], parsed[1], client=client)

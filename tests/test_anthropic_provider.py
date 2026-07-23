@@ -13,6 +13,7 @@ Covers:
 import json
 import os
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import httpx
 import pytest
@@ -679,7 +680,9 @@ class TestBatchResultsUrlValidation:
         assert result["status"] == "ended"
         assert result["results"] == {}
         # The malicious results_url must never be fetched (no key leak).
-        assert not any("evil.example.com" in u for u in requested_urls)
+        # Hostname-precise check (not substring) so the assertion is exact
+        # about which host must never be contacted.
+        assert all(urlparse(u).hostname != "evil.example.com" for u in requested_urls)
 
     @pytest.mark.asyncio
     async def test_accepts_anthropic_results_url(self) -> None:

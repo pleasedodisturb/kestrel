@@ -5,13 +5,20 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   release-please:
     name: Release Please
     runs-on: ubuntu-latest
+    # release-please needs contents:write (release commits/tags) +
+    # pull-requests:write (release PRs). The job actually authenticates via
+    # the scoped GitHub App token below, not the default GITHUB_TOKEN, but
+    # the job-level grant is kept to match what the action can legitimately
+    # need if it ever falls back to the default token. (G-1412)
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Generate token
         id: app-token

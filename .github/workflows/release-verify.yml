@@ -7,6 +7,13 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Least-privilege ceiling; alert-on-failure below grants itself issues:write
+# for filing/commenting on the release-broken tracking issue. This workflow
+# previously had NO permissions block at all — flagged by OSSF Scorecard
+# TokenPermissions. (G-1412)
+permissions:
+  contents: read
+
 jobs:
   verify-release:
     name: Verify latest release
@@ -25,7 +32,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.release.outputs.tag != 'none'
         with:
           ref: ${{ steps.release.outputs.tag }}
@@ -66,8 +73,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [verify-release]
     if: failure()
+    # issues:write — `gh issue create`/`gh issue comment` for the
+    # release-broken tracking issue. (G-1412)
+    permissions:
+      contents: read
+      issues: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Create GitHub Issue for broken release
         run: |

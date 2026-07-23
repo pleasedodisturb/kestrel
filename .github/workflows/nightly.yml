@@ -5,6 +5,11 @@ on:
     - cron: '0 2 * * *'  # 2am UTC daily
   workflow_dispatch:  # manual trigger
 
+# Least-privilege ceiling; scoring-eval below re-declares its own read-only
+# grant (kept as-is), call-smoke/nightly-status need no write access. (G-1412)
+permissions:
+  contents: read
+
 jobs:
   call-smoke:
     uses: ./.github/workflows/smoke.yml
@@ -15,8 +20,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
           cache: pip

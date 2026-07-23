@@ -19,8 +19,8 @@ jobs:
     name: Backend (Python 3.11)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
           cache: pip
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: backend-coverage
           path: coverage.xml
@@ -115,7 +115,7 @@ jobs:
         # no fix yet, add the vuln ID to .pip-audit-ignore (one per line,
         # with a comment) as a temporary escape hatch.
         run: |
-          pip install pip-audit
+          pip install pip-audit==2.10.1
           ignore_args=()
           if [ -f .pip-audit-ignore ]; then
             while IFS= read -r line; do
@@ -147,7 +147,7 @@ jobs:
     name: actionlint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Run actionlint directly (pinned official image) instead of the reviewdog
       # wrapper. reviewdog fetches the PR diff via the GitHub API to scope
       # findings; with this repo's read-only token it can 403 ("Resource not
@@ -155,7 +155,7 @@ jobs:
       # unrelated to workflow lint. A direct run needs no diff, token, or extra
       # permissions and fails only on real lint errors.
       - name: Run actionlint
-        uses: docker://rhysd/actionlint:1.7.7
+        uses: docker://rhysd/actionlint@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9 # 1.7.7
         with:
           args: -color
         env:
@@ -170,8 +170,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: "22"
           cache: npm
@@ -200,7 +200,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: frontend-coverage
           path: frontend/coverage/lcov.info
@@ -258,13 +258,13 @@ jobs:
           fetch-depth: 0  # Full history for accurate blame / new code detection
 
       - name: Download backend coverage
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: backend-coverage
         continue-on-error: true  # Missing coverage shouldn't block the scan
 
       - name: Download frontend coverage
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: frontend-coverage
           path: frontend/coverage
