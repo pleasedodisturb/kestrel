@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/pleasedodisturb/kestrel/compare/v0.23.0...v0.23.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* **G-1412:** code-scanning backlog — CodeQL highs, workflow token permissions, SHA/digest pinning ([#474](https://github.com/pleasedodisturb/kestrel/issues/474)) ([a57f544](https://github.com/pleasedodisturb/kestrel/commit/a57f5442b78ffd6cdc092b5125d2cba9d4968e19))
+
 ## [0.23.0](https://github.com/pleasedodisturb/kestrel/compare/v0.22.0...v0.23.0) (2026-07-22)
 
 
