@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.23.0](https://github.com/pleasedodisturb/kestrel/compare/v0.22.0...v0.23.0) (2026-07-22)
+
+
+### Features
+
+* **G-1351:** ESCO occupations taxonomy cache + loader + bundled fixture (Phase A) ([#467](https://github.com/pleasedodisturb/kestrel/issues/467)) ([337dbc3](https://github.com/pleasedodisturb/kestrel/commit/337dbc33e4e0fb939ab7034512bdf5a578a0df0c))
+* **G-1351:** occupation matcher — family/title→tier classifier + in-package taxonomy consumer (Phase B) ([#468](https://github.com/pleasedodisturb/kestrel/issues/468)) ([aab8a97](https://github.com/pleasedodisturb/kestrel/commit/aab8a97d9279f0035a10926d53bc5a241b551a07))
+* **G-1351:** shadow-first occupation signal — cascade 4th signal + distillation logging + startup populate (Phase C) ([#473](https://github.com/pleasedodisturb/kestrel/issues/473)) ([cfa9832](https://github.com/pleasedodisturb/kestrel/commit/cfa9832d1665fb480e8b478a0bc239d0e21ffcd8))
+
+
+### Bug Fixes
+
+* **G-1348:** repair the dead OpenAI provider + cross-provider contract tests ([#464](https://github.com/pleasedodisturb/kestrel/issues/464)) ([5548482](https://github.com/pleasedodisturb/kestrel/commit/5548482f049a9199f9ba396de47400677cfc8233))
+* **G-1350:** make in-package migrations the single source of truth ([#465](https://github.com/pleasedodisturb/kestrel/issues/465)) ([2bb1bae](https://github.com/pleasedodisturb/kestrel/commit/2bb1bae7f33d91d72c33d348bd442dbcef696a12))
+* **G-1378:** guard openrouter premium-model routing in fallback chains ([#461](https://github.com/pleasedodisturb/kestrel/issues/461)) ([d83d2ed](https://github.com/pleasedodisturb/kestrel/commit/d83d2edb5526c827d94758f9569e6f920a0debce))
+
+
+### Dependencies
+
+* **G-1384:** bump brace-expansion to 5.0.7 in frontend + dashboard ([#466](https://github.com/pleasedodisturb/kestrel/issues/466)) ([3838e13](https://github.com/pleasedodisturb/kestrel/commit/3838e13033cfc2c86f94a56176f6b98d5c02ae36))
+* **G-1408:** fix all 9 open Dependabot alerts (1 critical) — extension, dashboard, worker ([#472](https://github.com/pleasedodisturb/kestrel/issues/472)) ([5cf50ea](https://github.com/pleasedodisturb/kestrel/commit/5cf50eae1057a98251838510b4972aecf095918c))
+
 ## [0.22.0](https://github.com/pleasedodisturb/kestrel/compare/v0.21.0...v0.22.0) (2026-07-17)
 
 
