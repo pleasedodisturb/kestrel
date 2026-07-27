@@ -178,6 +178,26 @@ def _find_or_create_discovered_job(db: Session, profile_id: int, fields: dict) -
     return dj
 
 
+def _latest_fresh_score(db: Session, profile_id: int, discovered_job_id: int) -> ScoredJob | None:
+    """Return the newest non-stale ScoredJob for this discovered job, or None.
+
+    A capture that re-hits an already-scored job reuses this instead of paying
+    for another LLM scoring call and writing a duplicate ScoredJob row (MED-03).
+    Stale scores (weights/profile changed → ``is_stale``) are ignored so a
+    re-capture correctly re-scores when the existing score is no longer valid.
+    """
+    return (
+        db.query(ScoredJob)
+        .filter(
+            ScoredJob.profile_id == profile_id,
+            ScoredJob.discovered_job_id == discovered_job_id,
+            ScoredJob.is_stale.is_(False),
+        )
+        .order_by(ScoredJob.created_at.desc())
+        .first()
+    )
+
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -230,6 +250,16 @@ async def capture_and_score(
         "source": source,
     }
     dj = _find_or_create_discovered_job(db, profile_id, fields)
+
+    # Re-capture short-circuit (MED-03): if this job was already scored and the
+    # score is still fresh, return it instead of making another paid LLM scoring
+    # call and inserting a duplicate ScoredJob row. A brand-new capture has no
+    # prior score, so this only triggers on a genuine dedupe hit.
+    existing_score = _latest_fresh_score(db, profile_id, dj.id)
+    if existing_score is not None:
+        db.commit()  # persist any description enrichment from the dedupe hit
+        db.refresh(dj)
+        return dj, existing_score
 
     scored = await score_job(
         db,

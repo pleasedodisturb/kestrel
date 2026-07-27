@@ -102,6 +102,43 @@ class TestStructuredCapture:
         djs = db_session.query(DiscoveredJob).filter(DiscoveredJob.profile_id == 1).all()
         assert len(djs) == 1
 
+    def test_recapture_reuses_score_no_second_scoring_call(
+        self, client: TestClient, db_session: Session, profile: Profile, monkeypatch
+    ):
+        """Capturing the same job twice scores ONCE and never duplicates the score.
+
+        MED-03: dedupe only deduped the DiscoveredJob; score_job unconditionally
+        inserted a new ScoredJob on every call, so a second Capture click silently
+        re-charged a paid LLM call and left two ScoredJob rows. On a dedupe hit
+        with a fresh existing score we now return it without re-scoring.
+        """
+        import career_os.services.extension_capture as ec
+
+        calls = {"n": 0}
+        real_score_job = ec.score_job
+
+        async def _counting_score_job(*args, **kwargs):
+            calls["n"] += 1
+            return await real_score_job(*args, **kwargs)
+
+        monkeypatch.setattr(ec, "score_job", _counting_score_job)
+
+        first = client.post(
+            "/api/extension/capture", json=_STRUCTURED_PAYLOAD, headers=_auth_headers()
+        )
+        second = client.post(
+            "/api/extension/capture", json=_STRUCTURED_PAYLOAD, headers=_auth_headers()
+        )
+        assert first.status_code == 200 and second.status_code == 200
+        # Second capture reused the first score: exactly ONE scoring call...
+        assert calls["n"] == 1
+        # ...and exactly ONE ScoredJob row for the single deduped DiscoveredJob.
+        dj_id = first.json()["discovered_job_id"]
+        assert second.json()["discovered_job_id"] == dj_id
+        assert db_session.query(ScoredJob).filter(ScoredJob.discovered_job_id == dj_id).count() == 1
+        # The reused score is still returned to the caller.
+        assert second.json()["fit_score"] == first.json()["fit_score"]
+
     def test_oversize_description_returns_413(
         self, client: TestClient, db_session: Session, profile: Profile
     ):
