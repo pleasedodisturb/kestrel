@@ -4,12 +4,9 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
-    "dev": "node build.js && npx serve ."
+    "dev": "node build.js && python3 -m http.server 8102 --bind 127.0.0.1"
   },
   "dependencies": {
     "@linear/sdk": "^29.0.0"
-  },
-  "devDependencies": {
-    "serve": "^14.0.0"
   }
 }
