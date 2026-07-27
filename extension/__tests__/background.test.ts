@@ -107,7 +107,8 @@ describe("CAPTURE", () => {
 
     const res = await handleMessage({ type: "CAPTURE", payload: SAMPLE_PAYLOAD });
 
-    expect(res).toEqual({ ok: true, jobId: "job-1" });
+    // Captured identity (title/company) is echoed back for the auto-log banner.
+    expect(res).toEqual({ ok: true, jobId: "job-1", title: "Staff Engineer", company: "Acme" });
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.credentials).toBe("omit");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-xyz");
@@ -133,6 +134,8 @@ describe("CAPTURE", () => {
     expect(res).toEqual({
       ok: true,
       jobId: "42",
+      title: "Staff Engineer",
+      company: "Acme",
       discoveredJobId: 42,
       fitScore: 7.5,
       letterGrade: "B",

@@ -63,6 +63,11 @@ export async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       const response: ExtResponse = {
         ok: true,
         jobId: result.jobId,
+        // Echo the captured job identity so the auto-log banner can name it
+        // (MED-02). The backend response carries no title/company, so take them
+        // from the payload the user just captured.
+        title: message.payload.title || undefined,
+        company: message.payload.company || undefined,
         discoveredJobId: result.discoveredJobId,
         fitScore: result.fitScore,
         letterGrade: result.letterGrade,

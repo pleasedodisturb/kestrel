@@ -98,6 +98,12 @@ describe("showConfirmationBanner — visible + dismissible, never silent", () =>
     expect(host?.shadowRoot?.textContent).toContain("Log this application to Kestrel?");
   });
 
+  it("names the job (title + company) when a jobLabel is provided (MED-02)", () => {
+    showConfirmationBanner({ onLog: vi.fn(), jobLabel: "Senior Backend Engineer · Acme" });
+    const host = document.getElementById("kestrel-autolog-banner");
+    expect(host?.shadowRoot?.textContent).toContain("Senior Backend Engineer · Acme");
+  });
+
   it("Dismiss removes the banner and sends nothing", () => {
     const onLog = vi.fn();
     const onDismiss = vi.fn();
@@ -182,17 +188,32 @@ describe("startAutolog — main() load path (HIGH-01 TDZ regression)", () => {
   // `ReferenceError: Cannot access 'observer' before initialization`, the banner
   // never rendered, and auto-log was dead on its headline flow. This drives the
   // real main() wiring (not just the pure helpers) so it can't regress.
-  it("renders the banner without throwing when a confirmation page is caught on load", () => {
-    installChrome({ ok: true, discoveredJobId: 5 });
+  it("renders the banner without throwing when a confirmation page is caught on load", async () => {
+    installChrome({
+      ok: true,
+      discoveredJobId: 5,
+      title: "Senior Backend Engineer",
+      company: "Acme",
+    });
     document.body.innerHTML = '<div id="application_confirmation">Thanks for applying</div>';
     const getContext = (): DetectionContext =>
       ctx({ url: "https://boards.greenhouse.io/acme/jobs/123/confirmation" });
 
+    // The TDZ regression (HIGH-01) throws synchronously inside startAutolog, so
+    // asserting "does not throw" still guards it even though the banner now
+    // renders after an async label read.
     let teardown: () => void = () => {};
     expect(() => {
       teardown = startAutolog(getContext);
     }).not.toThrow();
-    expect(document.getElementById("kestrel-autolog-banner")).not.toBeNull();
+
+    await vi.waitFor(() => {
+      expect(document.getElementById("kestrel-autolog-banner")).not.toBeNull();
+    });
+    // MED-02: the caught-on-load banner names the captured job.
+    const host = document.getElementById("kestrel-autolog-banner");
+    expect(host?.shadowRoot?.textContent).toContain("Senior Backend Engineer");
+    expect(host?.shadowRoot?.textContent).toContain("Acme");
     teardown();
   });
 

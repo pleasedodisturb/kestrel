@@ -54,6 +54,13 @@ export interface CaptureResponse {
   ok: boolean;
   jobId?: string;
   error?: string;
+  /**
+   * Captured job identity (echoed from the CapturePayload). Persisted in session
+   * `lastCapture` so the auto-log banner can name WHAT it is about to log
+   * (MED-02) instead of a bare "Log this application?".
+   */
+  title?: string;
+  company?: string;
   /** Score fields from the 01-02 backend; consumed by the 01-04 panel surface. */
   discoveredJobId?: number;
   fitScore?: number;

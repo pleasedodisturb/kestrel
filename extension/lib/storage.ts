@@ -80,6 +80,21 @@ export async function getLastDiscoveredJobId(): Promise<number | undefined> {
 }
 
 /**
+ * A short "Title · Company" label for the last captured job, or `null` when
+ * neither is known. Used by the auto-log banner so the user can see WHAT is
+ * about to be logged and catch a stale/wrong correlation (MED-02).
+ */
+export async function getLastCaptureLabel(): Promise<string | null> {
+  const last = await getLastCapture();
+  const title = (last?.title ?? "").trim();
+  const company = (last?.company ?? "").trim();
+  if (title && company) {
+    return `${title} · ${company}`;
+  }
+  return title || company || null;
+}
+
+/**
  * Subscribe to session `lastCapture` changes; returns an unsubscribe fn. Guarded
  * so it is a no-op when `chrome.storage.session.onChanged` is unavailable.
  */

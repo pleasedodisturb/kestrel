@@ -1,6 +1,6 @@
 import { defineContentScript } from "#imports";
 import type { ExtMessage } from "@/lib/api/messages";
-import { getLastDiscoveredJobId } from "@/lib/storage";
+import { getLastCaptureLabel, getLastDiscoveredJobId } from "@/lib/storage";
 
 /**
  * Auto-log-on-submit for recognized ATSes (Greenhouse / Lever / Ashby). When the
@@ -102,6 +102,11 @@ export interface BannerHandle {
 export interface BannerOptions {
   readonly onLog: () => void;
   readonly onDismiss?: () => void;
+  /**
+   * "Title · Company" of the job being logged. Rendered as static text so the
+   * user can see WHAT is about to be logged (MED-02). Omitted → generic prompt.
+   */
+  readonly jobLabel?: string | null;
 }
 
 /**
@@ -133,7 +138,12 @@ export function showConfirmationBanner(options: BannerOptions): BannerHandle {
     "box-shadow: 0 4px 16px rgba(0,0,0,.18); display: flex; gap: 10px; align-items: center;";
 
   const label = document.createElement("span");
-  label.textContent = "Log this application to Kestrel?";
+  // Static textContent only (never innerHTML) — the job label is app-derived,
+  // but keeping it textContent preserves the T-01D-04 no-page-markup guarantee.
+  const jobLabel = options.jobLabel?.trim();
+  label.textContent = jobLabel
+    ? `Log "${jobLabel}" to Kestrel?`
+    : "Log this application to Kestrel?";
 
   const logBtn = document.createElement("button");
   logBtn.type = "button";
@@ -220,14 +230,24 @@ export function startAutolog(
     if (detectApplicationSubmit(getContext()) === null) {
       return;
     }
+    // Flip the guard synchronously (before the async label read) so a
+    // concurrent observer/submit callback can't double-show the banner.
     bannerShown = true;
     observer.disconnect();
-    showConfirmationBanner({
-      onLog: () => void logApplication(),
-      onDismiss: () => {
-        bannerShown = false;
-      },
-    });
+    // Read the captured job's identity, then render it in the banner so the user
+    // sees WHAT is about to be logged (MED-02). The label read is best-effort:
+    // on failure we still show the (generic) banner.
+    void getLastCaptureLabel()
+      .catch(() => null)
+      .then((jobLabel) => {
+        showConfirmationBanner({
+          jobLabel,
+          onLog: () => void logApplication(),
+          onDismiss: () => {
+            bannerShown = false;
+          },
+        });
+      });
   };
 
   const onSubmit = (): void => {
