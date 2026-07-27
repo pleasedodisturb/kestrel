@@ -4,19 +4,29 @@
  * page-provided strings are turned into plain text, never re-injected as HTML.
  */
 
+const HTML_ENTITIES: Record<string, string> = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+};
+
 /** Strip HTML tags and collapse whitespace to plain text (no innerHTML sink). */
 export function stripHtml(value: unknown): string {
   if (typeof value !== "string") {
     return "";
   }
-  return value
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/\s+/g, " ")
-    .trim();
+  return (
+    value
+      .replace(/<[^>]*>/g, " ")
+      // Single-pass entity decode: each entity is decoded exactly once, left to
+      // right, so an encoded literal like "&amp;lt;" yields "&lt;" (not "<").
+      // A chained .replace() (with &amp; first) would double-unescape it — the
+      // js/double-escaping class CodeQL flags.
+      .replace(/&(nbsp|amp|lt|gt);/gi, (m) => HTML_ENTITIES[m.toLowerCase()] ?? m)
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 /** Read a `<meta property=... | name=...>` content attribute, or "". */
