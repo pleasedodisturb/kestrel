@@ -43,6 +43,10 @@ class SearchProfileNotFoundError(Exception):
     """Raised when a search profile is not found."""
 
 
+class DiscoveredJobNotFoundError(Exception):
+    """Raised when a referenced DiscoveredJob does not exist for the profile."""
+
+
 # ---------------------------------------------------------------------------
 # Deduplication
 # ---------------------------------------------------------------------------
@@ -227,6 +231,62 @@ def _dedup_and_filter(all_raw_jobs, sp_filters):
     }
 
 
+def promote_discovered_job_to_application(
+    db: Session,
+    *,
+    profile_id: int,
+    discovered_job_id: int,
+    source: str,
+    notes: str | None = None,
+) -> Application:
+    """Create (or return the existing) Application linked to a DiscoveredJob.
+
+    Reusable add-to-pipeline: discovery calls it with ``source="discovery"`` and
+    the auto-discovered note (keeping its historical Application byte-identical);
+    the extension's ``/promote`` route calls it with ``source="extension"``.
+
+    Idempotent — if the DiscoveredJob already has an ``application_id``, the
+    existing Application is returned unchanged. Otherwise a new Application
+    mirroring the job's company/role/url/salary is created, linked via
+    ``DiscoveredJob.application_id``, and returned.
+
+    Raises ``DiscoveredJobNotFoundError`` when the job does not exist for the
+    profile. Flushes but does not commit (the caller controls the transaction).
+    """
+    dj = (
+        db.query(DiscoveredJob)
+        .filter(
+            DiscoveredJob.id == discovered_job_id,
+            DiscoveredJob.profile_id == profile_id,
+        )
+        .first()
+    )
+    if dj is None:
+        raise DiscoveredJobNotFoundError(
+            f"DiscoveredJob {discovered_job_id} not found for profile {profile_id}"
+        )
+
+    if dj.application_id is not None:
+        existing = db.query(Application).filter(Application.id == dj.application_id).first()
+        if existing is not None:
+            return existing
+
+    app = Application(
+        profile_id=profile_id,
+        company=dj.company,
+        role=dj.title,
+        url=dj.url,
+        source=source,
+        status="discovered",
+        salary_range=dj.salary_range,
+        notes=notes,
+    )
+    db.add(app)
+    db.flush()
+    dj.application_id = app.id
+    return app
+
+
 def _create_discovered_job(db: Session, profile_id: int, merged: dict, key: tuple):
     """Create a new DiscoveredJob + linked Application in a savepoint.
 
@@ -254,19 +314,17 @@ def _create_discovered_job(db: Session, profile_id: int, merged: dict, key: tupl
             db.add(dj)
             db.flush()
 
-            app = Application(
+            # Create the linked pipeline entry via the shared promote service so
+            # discovery and the extension produce an IDENTICAL Application shape.
+            # source/notes are passed explicitly to keep this path byte-identical
+            # to its historical inline form ("discovery" + the auto-discovered note).
+            promote_discovered_job_to_application(
+                db,
                 profile_id=profile_id,
-                company=merged["company"],
-                role=merged["title"],
-                url=merged["url"],
+                discovered_job_id=dj.id,
                 source="discovery",
-                status="discovered",
-                salary_range=merged["salary_range"],
                 notes=f"Auto-discovered from: {', '.join(merged['sources'])}",
             )
-            db.add(app)
-            db.flush()
-            dj.application_id = app.id
 
             # D-13: Auto-clear demo data when first real job arrives
             from career_os.services.applications import _auto_clear_demo_data

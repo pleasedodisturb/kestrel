@@ -6,3 +6,10 @@
 export function defineBackground<T>(main: T): T {
   return main;
 }
+
+// Identity stub for content-script entrypoints so `autolog.content.ts` can be
+// imported to unit-test its exported pure helpers (the registered `main()` is
+// never invoked under vitest).
+export function defineContentScript<T>(def: T): T {
+  return def;
+}

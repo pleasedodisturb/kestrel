@@ -381,6 +381,32 @@ class TestDiscoveryService:
         assert dj.application_id == apps[0].id
 
     @pytest.mark.asyncio
+    async def test_discovery_application_source_and_notes_unchanged(self, db_session):
+        """R2 regression guard: after the promote refactor, the discovery path must
+        still produce an Application with source='discovery' AND the auto-discovered
+        notes string (byte-identical to the pre-refactor inline creation).
+
+        Without this, a future change routing discovery through the shared promote
+        service with source='extension' or dropped notes would ship silently.
+        """
+        adapter = MockAdapter(
+            "arbeitnow",
+            [_make_job("arbeitnow", title="Data Eng", company="DataCo", location="Remote")],
+        )
+        with (
+            patch(
+                "career_os.services.discovery.get_available_adapters",
+                return_value=[adapter],
+            ),
+            _PREFILTER_OFF,
+        ):
+            await run_discovery(db_session, 1, keywords=["data"])
+
+        app = db_session.query(Application).filter(Application.profile_id == 1).one()
+        assert app.source == "discovery"
+        assert app.notes == "Auto-discovered from: arbeitnow"
+
+    @pytest.mark.asyncio
     async def test_scraper_failure_doesnt_block_others(self, db_session):
         """VAL-DISC-009: One source failing still returns results from others."""
         adapter_ok = MockAdapter(

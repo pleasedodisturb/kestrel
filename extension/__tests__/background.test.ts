@@ -9,13 +9,18 @@ import { setBackendUrl } from "@/lib/storage";
 
 function installFakeStorage(): Record<string, unknown> {
   const store: Record<string, unknown> = {};
-  const local = {
+  // One backing object shared by `local` and `session`: the keys never collide
+  // (extensionToken/backendUrl vs lastCapture), so a single record keeps the
+  // fake tiny while letting tests assert `store.lastCapture` from session.set.
+  const area = {
     get: vi.fn(async (key: string) => (key in store ? { [key]: store[key] } : {})),
     set: vi.fn(async (items: Record<string, unknown>) => {
       Object.assign(store, items);
     }),
   };
-  (globalThis as unknown as { chrome: unknown }).chrome = { storage: { local } };
+  (globalThis as unknown as { chrome: unknown }).chrome = {
+    storage: { local: area, session: area },
+  };
   return store;
 }
 
@@ -102,10 +107,113 @@ describe("CAPTURE", () => {
 
     const res = await handleMessage({ type: "CAPTURE", payload: SAMPLE_PAYLOAD });
 
-    expect(res).toEqual({ ok: true, jobId: "job-1" });
+    // Captured identity (title/company) is echoed back for the auto-log banner.
+    expect(res).toEqual({ ok: true, jobId: "job-1", title: "Staff Engineer", company: "Acme" });
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.credentials).toBe("omit");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-xyz");
+  });
+
+  it("passes the score fields through when the backend scores the capture", async () => {
+    store.extensionToken = "tok-xyz";
+    routeFetch({
+      "/api/extension/capture": jsonResponse({
+        job_id: "42",
+        status: "scored",
+        scored: true,
+        discovered_job_id: 42,
+        fit_score: 7.5,
+        letter_grade: "B",
+        score_breakdown: [{ factor: "skills", score: 3 }],
+        gap: "missing: Kubernetes, Go; seniority ✓",
+      }),
+    });
+
+    const res = await handleMessage({ type: "CAPTURE", payload: SAMPLE_PAYLOAD });
+
+    expect(res).toEqual({
+      ok: true,
+      jobId: "42",
+      title: "Staff Engineer",
+      company: "Acme",
+      discoveredJobId: 42,
+      fitScore: 7.5,
+      letterGrade: "B",
+      scoreBreakdown: [{ factor: "skills", score: 3 }],
+      gap: "missing: Kubernetes, Go; seniority ✓",
+    });
+    // The score is stashed in session storage for the sidePanel to read on open.
+    expect(store.lastCapture).toEqual(res);
+  });
+
+  it("forwards a raw_text payload and tolerates a null score_breakdown", async () => {
+    store.extensionToken = "tok-xyz";
+    const fetchMock = routeFetch({
+      "/api/extension/capture": jsonResponse({
+        job_id: "9",
+        status: "scored",
+        scored: true,
+        discovered_job_id: 9,
+        fit_score: 5,
+        letter_grade: "C",
+        score_breakdown: null,
+        gap: "no major keyword gaps; seniority ✓",
+      }),
+    });
+
+    const rawPayload: CapturePayload = {
+      url: "https://jobs.example.com/raw",
+      title: "",
+      company: "",
+      description: "Whole page text.",
+      raw_text: "Whole page text.",
+    };
+    const res = (await handleMessage({ type: "CAPTURE", payload: rawPayload })) as {
+      ok: boolean;
+      scoreBreakdown?: unknown[];
+      gap?: string;
+    };
+
+    expect(res.ok).toBe(true);
+    expect(res.scoreBreakdown).toBeUndefined();
+    expect(res.gap).toBe("no major keyword gaps; seniority ✓");
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string).raw_text).toBe("Whole page text.");
+  });
+});
+
+describe("PROMOTE", () => {
+  it("errors and never calls fetch when there is no stored token", async () => {
+    const fetchMock = routeFetch({});
+
+    const res = await handleMessage({ type: "PROMOTE", discoveredJobId: 42 });
+
+    expect(res).toEqual({ ok: false, error: "not-paired" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("promotes a captured job through the worker and returns the application id", async () => {
+    store.extensionToken = "tok-xyz";
+    const fetchMock = routeFetch({
+      "/api/extension/promote": jsonResponse({ application_id: 7, status: "discovered" }),
+    });
+
+    const res = await handleMessage({ type: "PROMOTE", discoveredJobId: 42 });
+
+    expect(res).toEqual({ ok: true, applicationId: 7, status: "discovered" });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.credentials).toBe("omit");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-xyz");
+    expect(JSON.parse(init.body as string).discovered_job_id).toBe(42);
+  });
+
+  it("maps a 401 to bad-key", async () => {
+    store.extensionToken = "stale";
+    routeFetch({ "/api/extension/promote": jsonResponse({ detail: "no" }, 401) });
+
+    const res = await handleMessage({ type: "PROMOTE", discoveredJobId: 42 });
+
+    expect(res).toEqual({ ok: false, error: "bad-key" });
   });
 });
 

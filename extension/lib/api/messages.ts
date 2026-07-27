@@ -26,6 +26,8 @@ export interface CapturePayload {
   location?: string | null;
   salary?: string | null;
   source?: string | null;
+  /** Sent when structured extraction failed → backend LLM-parses it (01-02). */
+  raw_text?: string | null;
 }
 
 /** Discriminated union of every message the background worker accepts. */
@@ -33,6 +35,7 @@ export type ExtMessage =
   | { type: "PAIR"; pairingCode: string }
   | { type: "HEALTH" }
   | { type: "CAPTURE"; payload: CapturePayload }
+  | { type: "PROMOTE"; discoveredJobId: number }
   | { type: "STATUS" };
 
 export interface PairResponse {
@@ -51,6 +54,19 @@ export interface CaptureResponse {
   ok: boolean;
   jobId?: string;
   error?: string;
+  /**
+   * Captured job identity (echoed from the CapturePayload). Persisted in session
+   * `lastCapture` so the auto-log banner can name WHAT it is about to log
+   * (MED-02) instead of a bare "Log this application?".
+   */
+  title?: string;
+  company?: string;
+  /** Score fields from the 01-02 backend; consumed by the 01-04 panel surface. */
+  discoveredJobId?: number;
+  fitScore?: number;
+  letterGrade?: string;
+  scoreBreakdown?: unknown[];
+  gap?: string;
 }
 
 export interface StatusResponse {
@@ -59,5 +75,22 @@ export interface StatusResponse {
   error?: string;
 }
 
+/**
+ * Result of promoting a captured job to the pipeline via
+ * `POST /api/extension/promote` (from 01-02). Idempotent — a repeat promote of
+ * the same job returns the same `applicationId`.
+ */
+export interface PromoteResponse {
+  ok: boolean;
+  applicationId?: number;
+  status?: string;
+  error?: string;
+}
+
 /** Discriminated union of every response the background worker returns. */
-export type ExtResponse = PairResponse | HealthResponse | CaptureResponse | StatusResponse;
+export type ExtResponse =
+  | PairResponse
+  | HealthResponse
+  | CaptureResponse
+  | PromoteResponse
+  | StatusResponse;
