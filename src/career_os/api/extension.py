@@ -139,8 +139,10 @@ async def capture(
     except ScoringError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - defensive 500
+        # Never surface internal exception text to the client (SECURITY F-4); the
+        # real error is logged server-side via logger.exception.
         logger.exception("Extension capture failed")
-        raise HTTPException(status_code=500, detail=f"Capture error: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Capture failed") from exc
 
     breakdown: list | None = None
     if scored.score_breakdown:
@@ -189,8 +191,9 @@ def promote(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - defensive 500
         db.rollback()
+        # Generic client detail; internal error stays server-side (SECURITY F-4).
         logger.exception("Extension promote failed")
-        raise HTTPException(status_code=500, detail=f"Promote error: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Promote failed") from exc
 
     return PromoteResponse(application_id=app.id, status=app.status)
 
