@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractJob, isJobPage } from "@/lib/extraction";
+import { stripHtml } from "@/lib/extraction/dom";
 
 // ---------------------------------------------------------------------------
 // Extraction is a pure function over a `Document`, so every case builds a
@@ -203,5 +204,24 @@ describe("isJobPage", () => {
   it("is false on a page with no JobPosting signal", () => {
     const d = doc(`<html><body>just a blog</body></html>`);
     expect(isJobPage(d)).toBe(false);
+  });
+});
+
+describe("stripHtml entity decoding (js/double-escaping guard)", () => {
+  it("decodes each entity exactly once — no double-unescape of &amp;lt;", () => {
+    // The encoded literal text "&lt;" is written as "&amp;lt;"; it must decode
+    // to the literal "&lt;", NOT to "<" (which a chained decode would produce).
+    expect(stripHtml("a &amp;lt; b")).toBe("a &lt; b");
+    expect(stripHtml("x &amp;gt; y")).toBe("x &gt; y");
+  });
+
+  it("still decodes plain entities and strips tags", () => {
+    expect(stripHtml("<b>A&nbsp;&amp;&nbsp;B</b>")).toBe("A & B");
+    expect(stripHtml("<p>1 &lt; 2</p>")).toBe("1 < 2");
+  });
+
+  it("returns empty string for non-string input", () => {
+    expect(stripHtml(null)).toBe("");
+    expect(stripHtml(undefined)).toBe("");
   });
 });
