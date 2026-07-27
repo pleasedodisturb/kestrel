@@ -26,6 +26,8 @@ export interface CapturePayload {
   location?: string | null;
   salary?: string | null;
   source?: string | null;
+  /** Sent when structured extraction failed → backend LLM-parses it (01-02). */
+  raw_text?: string | null;
 }
 
 /** Discriminated union of every message the background worker accepts. */
@@ -51,6 +53,12 @@ export interface CaptureResponse {
   ok: boolean;
   jobId?: string;
   error?: string;
+  /** Score fields from the 01-02 backend; consumed by the 01-04 panel surface. */
+  discoveredJobId?: number;
+  fitScore?: number;
+  letterGrade?: string;
+  scoreBreakdown?: unknown[];
+  gap?: string;
 }
 
 export interface StatusResponse {

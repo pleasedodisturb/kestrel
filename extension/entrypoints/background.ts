@@ -58,7 +58,17 @@ export async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       if (!result.ok) {
         return { ok: false, error: result.error };
       }
-      return { ok: true, jobId: result.jobId };
+      // Pass the score fields through to the caller (popup / content script →
+      // the 01-04 panel surface renders them).
+      return {
+        ok: true,
+        jobId: result.jobId,
+        discoveredJobId: result.discoveredJobId,
+        fitScore: result.fitScore,
+        letterGrade: result.letterGrade,
+        scoreBreakdown: result.scoreBreakdown,
+        gap: result.gap,
+      };
     }
     case "STATUS": {
       const result = await client.status();

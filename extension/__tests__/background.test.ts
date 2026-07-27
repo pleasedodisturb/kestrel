@@ -107,6 +107,69 @@ describe("CAPTURE", () => {
     expect(init.credentials).toBe("omit");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-xyz");
   });
+
+  it("passes the score fields through when the backend scores the capture", async () => {
+    store.extensionToken = "tok-xyz";
+    routeFetch({
+      "/api/extension/capture": jsonResponse({
+        job_id: "42",
+        status: "scored",
+        scored: true,
+        discovered_job_id: 42,
+        fit_score: 7.5,
+        letter_grade: "B",
+        score_breakdown: [{ factor: "skills", score: 3 }],
+        gap: "missing: Kubernetes, Go; seniority ✓",
+      }),
+    });
+
+    const res = await handleMessage({ type: "CAPTURE", payload: SAMPLE_PAYLOAD });
+
+    expect(res).toEqual({
+      ok: true,
+      jobId: "42",
+      discoveredJobId: 42,
+      fitScore: 7.5,
+      letterGrade: "B",
+      scoreBreakdown: [{ factor: "skills", score: 3 }],
+      gap: "missing: Kubernetes, Go; seniority ✓",
+    });
+  });
+
+  it("forwards a raw_text payload and tolerates a null score_breakdown", async () => {
+    store.extensionToken = "tok-xyz";
+    const fetchMock = routeFetch({
+      "/api/extension/capture": jsonResponse({
+        job_id: "9",
+        status: "scored",
+        scored: true,
+        discovered_job_id: 9,
+        fit_score: 5,
+        letter_grade: "C",
+        score_breakdown: null,
+        gap: "no major keyword gaps; seniority ✓",
+      }),
+    });
+
+    const rawPayload: CapturePayload = {
+      url: "https://jobs.example.com/raw",
+      title: "",
+      company: "",
+      description: "Whole page text.",
+      raw_text: "Whole page text.",
+    };
+    const res = (await handleMessage({ type: "CAPTURE", payload: rawPayload })) as {
+      ok: boolean;
+      scoreBreakdown?: unknown[];
+      gap?: string;
+    };
+
+    expect(res.ok).toBe(true);
+    expect(res.scoreBreakdown).toBeUndefined();
+    expect(res.gap).toBe("no major keyword gaps; seniority ✓");
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string).raw_text).toBe("Whole page text.");
+  });
 });
 
 describe("STATUS", () => {
