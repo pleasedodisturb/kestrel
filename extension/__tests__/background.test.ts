@@ -9,13 +9,18 @@ import { setBackendUrl } from "@/lib/storage";
 
 function installFakeStorage(): Record<string, unknown> {
   const store: Record<string, unknown> = {};
-  const local = {
+  // One backing object shared by `local` and `session`: the keys never collide
+  // (extensionToken/backendUrl vs lastCapture), so a single record keeps the
+  // fake tiny while letting tests assert `store.lastCapture` from session.set.
+  const area = {
     get: vi.fn(async (key: string) => (key in store ? { [key]: store[key] } : {})),
     set: vi.fn(async (items: Record<string, unknown>) => {
       Object.assign(store, items);
     }),
   };
-  (globalThis as unknown as { chrome: unknown }).chrome = { storage: { local } };
+  (globalThis as unknown as { chrome: unknown }).chrome = {
+    storage: { local: area, session: area },
+  };
   return store;
 }
 
@@ -134,6 +139,8 @@ describe("CAPTURE", () => {
       scoreBreakdown: [{ factor: "skills", score: 3 }],
       gap: "missing: Kubernetes, Go; seniority ✓",
     });
+    // The score is stashed in session storage for the sidePanel to read on open.
+    expect(store.lastCapture).toEqual(res);
   });
 
   it("forwards a raw_text payload and tolerates a null score_breakdown", async () => {
@@ -169,6 +176,41 @@ describe("CAPTURE", () => {
     expect(res.gap).toBe("no major keyword gaps; seniority ✓");
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(init.body as string).raw_text).toBe("Whole page text.");
+  });
+});
+
+describe("PROMOTE", () => {
+  it("errors and never calls fetch when there is no stored token", async () => {
+    const fetchMock = routeFetch({});
+
+    const res = await handleMessage({ type: "PROMOTE", discoveredJobId: 42 });
+
+    expect(res).toEqual({ ok: false, error: "not-paired" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("promotes a captured job through the worker and returns the application id", async () => {
+    store.extensionToken = "tok-xyz";
+    const fetchMock = routeFetch({
+      "/api/extension/promote": jsonResponse({ application_id: 7, status: "discovered" }),
+    });
+
+    const res = await handleMessage({ type: "PROMOTE", discoveredJobId: 42 });
+
+    expect(res).toEqual({ ok: true, applicationId: 7, status: "discovered" });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.credentials).toBe("omit");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-xyz");
+    expect(JSON.parse(init.body as string).discovered_job_id).toBe(42);
+  });
+
+  it("maps a 401 to bad-key", async () => {
+    store.extensionToken = "stale";
+    routeFetch({ "/api/extension/promote": jsonResponse({ detail: "no" }, 401) });
+
+    const res = await handleMessage({ type: "PROMOTE", discoveredJobId: 42 });
+
+    expect(res).toEqual({ ok: false, error: "bad-key" });
   });
 });
 

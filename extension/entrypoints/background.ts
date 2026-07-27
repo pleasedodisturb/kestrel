@@ -1,7 +1,7 @@
 import { defineBackground } from "#imports";
 import * as client from "@/lib/api/client";
 import type { ExtMessage, ExtResponse, HealthState } from "@/lib/api/messages";
-import { getToken, setToken } from "@/lib/storage";
+import { getToken, setLastCapture, setToken } from "@/lib/storage";
 
 /**
  * Background service worker: the extension's networking spine. It owns the typed
@@ -60,7 +60,7 @@ export async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
       }
       // Pass the score fields through to the caller (popup / content script →
       // the 01-04 panel surface renders them).
-      return {
+      const response: ExtResponse = {
         ok: true,
         jobId: result.jobId,
         discoveredJobId: result.discoveredJobId,
@@ -69,6 +69,23 @@ export async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
         scoreBreakdown: result.scoreBreakdown,
         gap: result.gap,
       };
+      // Stash the score in ephemeral session storage so the sidePanel renders it
+      // on open (and live-updates via its onChanged subscription). The panel is
+      // opened from the user gesture in the listener below, not here.
+      await setLastCapture(response);
+      return response;
+    }
+    case "PROMOTE": {
+      // Add-to-pipeline: token required before any network call.
+      const token = await getToken();
+      if (!token) {
+        return { ok: false, error: "not-paired" };
+      }
+      const result = await client.promote(message.discoveredJobId);
+      if (!result.ok) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true, applicationId: result.applicationId, status: result.status };
     }
     case "STATUS": {
       const result = await client.status();
@@ -84,9 +101,43 @@ export async function handleMessage(message: ExtMessage): Promise<ExtResponse> {
   }
 }
 
+/**
+ * Open the sidePanel for the tab a CAPTURE originated from. This MUST run
+ * SYNCHRONOUSLY at the top of the message listener, BEFORE any `await`: the user
+ * gesture that fired the capture (the floating button click) propagates across
+ * `sendMessage`, but only if `chrome.sidePanel.open` is called before the event
+ * loop yields — otherwise the gesture is consumed and the call throws. If
+ * sidePanel is unavailable (older Chrome), we swallow the error; the in-page
+ * overlay/inline acknowledgement remains the documented fallback surface.
+ */
+function openSidePanelForCapture(message: ExtMessage, sender: chrome.runtime.MessageSender): void {
+  if (message.type !== "CAPTURE") {
+    return;
+  }
+  const tabId = sender.tab?.id;
+  const opener = (chrome as { sidePanel?: { open?: (opts: { tabId: number }) => unknown } })
+    .sidePanel?.open;
+  if (typeof tabId !== "number" || typeof opener !== "function") {
+    return;
+  }
+  try {
+    // Fire-and-forget: opening is best-effort and gesture-tied; the score itself
+    // is delivered via chrome.storage.session, read by the panel on load.
+    void Promise.resolve(opener({ tabId })).catch(() => {});
+  } catch {
+    // Gesture already consumed or API unavailable — fall back silently.
+  }
+}
+
 export default defineBackground(() => {
   chrome.runtime.onMessage.addListener(
-    (message: ExtMessage, _sender, sendResponse: (response: ExtResponse) => void) => {
+    (
+      message: ExtMessage,
+      sender: chrome.runtime.MessageSender,
+      sendResponse: (response: ExtResponse) => void,
+    ) => {
+      // Gesture-tied side-panel open happens FIRST, synchronously.
+      openSidePanelForCapture(message, sender);
       handleMessage(message)
         .then(sendResponse)
         .catch(() => sendResponse({ ok: false, error: "internal-error" }));

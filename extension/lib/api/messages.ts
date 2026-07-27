@@ -35,6 +35,7 @@ export type ExtMessage =
   | { type: "PAIR"; pairingCode: string }
   | { type: "HEALTH" }
   | { type: "CAPTURE"; payload: CapturePayload }
+  | { type: "PROMOTE"; discoveredJobId: number }
   | { type: "STATUS" };
 
 export interface PairResponse {
@@ -67,5 +68,22 @@ export interface StatusResponse {
   error?: string;
 }
 
+/**
+ * Result of promoting a captured job to the pipeline via
+ * `POST /api/extension/promote` (from 01-02). Idempotent — a repeat promote of
+ * the same job returns the same `applicationId`.
+ */
+export interface PromoteResponse {
+  ok: boolean;
+  applicationId?: number;
+  status?: string;
+  error?: string;
+}
+
 /** Discriminated union of every response the background worker returns. */
-export type ExtResponse = PairResponse | HealthResponse | CaptureResponse | StatusResponse;
+export type ExtResponse =
+  | PairResponse
+  | HealthResponse
+  | CaptureResponse
+  | PromoteResponse
+  | StatusResponse;

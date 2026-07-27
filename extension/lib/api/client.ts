@@ -33,6 +33,10 @@ export type CaptureOutcome =
     }
   | { ok: false; error: string };
 
+export type PromoteOutcome =
+  | { ok: true; applicationId?: number; status?: string }
+  | { ok: false; error: string };
+
 export type StatusOutcome =
   | { ok: true; instance: InstanceInfo }
   | { ok: false; status: number | null; error: string };
@@ -114,6 +118,33 @@ export async function capture(payload: CapturePayload): Promise<CaptureOutcome> 
     scoreBreakdown: data.score_breakdown ?? undefined,
     gap: data.gap,
   };
+}
+
+export async function promote(discoveredJobId: number): Promise<PromoteOutcome> {
+  const base = await getBackendUrl();
+  const token = await getToken();
+  const result = await request(`${base}/api/extension/promote`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+    body: JSON.stringify({ discovered_job_id: discoveredJobId }),
+  });
+  if (result.kind === "network") {
+    return { ok: false, error: "backend-unreachable" };
+  }
+  if (result.response.status === 401) {
+    return { ok: false, error: "bad-key" };
+  }
+  if (!result.response.ok) {
+    return { ok: false, error: "promote-failed" };
+  }
+  const data = (await result.response.json()) as {
+    application_id?: number;
+    status?: string;
+  };
+  return { ok: true, applicationId: data.application_id, status: data.status };
 }
 
 export async function status(): Promise<StatusOutcome> {
