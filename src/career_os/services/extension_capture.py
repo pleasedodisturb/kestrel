@@ -38,6 +38,11 @@ _SENIORITY_OK_THRESHOLD = 5.0
 # Cap the number of missing keywords surfaced in the plain-language gap so the
 # string stays glanceable in the extension panel.
 _MAX_MISSING_KEYWORDS = 5
+# Per-field cap for the short structured fields (title/company/location/salary).
+# The big-text cap (settings.extension_max_jd_chars) only bounds
+# description/raw_text, but title+company flow into the scoring prompt too, so a
+# multi-megabyte title would bypass the DoS/cost bound (SECURITY F-1 / LOW-01).
+_MAX_FIELD_CHARS = 1000
 
 
 class CaptureTooLargeError(ValueError):
@@ -219,6 +224,20 @@ async def capture_and_score(
         for candidate in ((payload.description or ""), (payload.raw_text or "")):
             if len(candidate) > cap:
                 raise CaptureTooLargeError(f"Captured text exceeds the {cap}-character limit")
+
+    # Bound the short structured fields too, BEFORE any LLM/scoring call: title +
+    # company reach the scoring prompt, so an oversize one bypasses the JD cap
+    # (SECURITY F-1). Checked against a tighter per-field limit.
+    for field_name, field_value in (
+        ("title", payload.title),
+        ("company", payload.company),
+        ("location", payload.location),
+        ("salary", payload.salary),
+    ):
+        if field_value and len(field_value) > _MAX_FIELD_CHARS:
+            raise CaptureTooLargeError(
+                f"Captured {field_name} exceeds the {_MAX_FIELD_CHARS}-character limit"
+            )
 
     title = (payload.title or "").strip()
     company = (payload.company or "").strip()

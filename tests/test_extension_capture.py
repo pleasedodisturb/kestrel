@@ -152,6 +152,21 @@ class TestStructuredCapture:
         assert db_session.query(DiscoveredJob).count() == 0
         assert db_session.query(ScoredJob).count() == 0
 
+    def test_oversize_title_returns_413(
+        self, client: TestClient, db_session: Session, profile: Profile
+    ):
+        """A multi-megabyte title is rejected before any LLM/DB write (F-1).
+
+        The big-text cap only bounds description/raw_text, but title+company flow
+        into the scoring prompt, so an unbounded title bypassed the cost/DoS
+        bound. Short fields now have their own per-field cap.
+        """
+        payload = {**_STRUCTURED_PAYLOAD, "title": "x" * 5000}
+        resp = client.post("/api/extension/capture", json=payload, headers=_auth_headers())
+        assert resp.status_code == 413
+        assert db_session.query(DiscoveredJob).count() == 0
+        assert db_session.query(ScoredJob).count() == 0
+
     def test_profile_incomplete_returns_422(self, client: TestClient, db_session: Session):
         # A profile that exists but lacks job_family/location → ProfileIncompleteError.
         db_session.add(Profile(id=1, name="Incomplete", email="i@example.com"))
