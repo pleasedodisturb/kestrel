@@ -46,13 +46,24 @@ class Settings(BaseSettings):
     # (D-2). extension_token_secret seeds the stateless HMAC token/pairing-code
     # scheme; when empty it is auto-generated and persisted to
     # {data_dir}/.extension_secret so tokens survive a backend restart (see
-    # services.extension_pairing). extension_pairing_window_seconds is the pairing
-    # code's validity window (a code stays valid across one boundary). The CORS
-    # regex ADDS concrete chrome-extension:// origins (Chrome extension IDs are 32
-    # chars in a–p) without widening the existing credentialed frontend CORS list.
+    # services.extension_pairing). Pairing now uses a single-use nonce minted by
+    # `kestrel extension pair` (G-1391), not a time-window code. The CORS regex
+    # ADDS concrete chrome-extension:// origins (Chrome extension IDs are 32 chars
+    # in a–p) without widening the existing credentialed frontend CORS list.
     extension_token_secret: str = ""
-    extension_pairing_window_seconds: int = 300
     extension_cors_regex: str = r"^chrome-extension://[a-p]{32}$"
+    # Extension token max-age (G-1391 / Part A hardening). A minted token embeds
+    # its issued-ts; verify_extension_token rejects one older than this many days
+    # (→ 401 re-pair). 0 (or negative) disables the age check (signature-only).
+    extension_token_ttl_days: int = 30
+    # Single-use pairing-nonce validity (G-1391 / Part A). `kestrel extension pair`
+    # mints a one-time code whose sha256+expiry is persisted to
+    # {data_dir}/.extension_pairing (0600); the code is consumed on first use.
+    extension_pairing_ttl_seconds: int = 120
+    # Max JD/raw-text length accepted by /api/extension/capture (G-1391 / Part B,
+    # SECURITY T-01B-01). Description/raw_text longer than this is rejected with a
+    # 413 BEFORE any LLM extraction or scoring call, bounding paid-LLM cost/DoS.
+    extension_max_jd_chars: int = 30000
 
     # Cache settings
     cache_enabled: bool = True

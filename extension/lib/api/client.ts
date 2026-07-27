@@ -21,7 +21,21 @@ export type PairOutcome =
   | { ok: true; token: string; instance: InstanceInfo }
   | { ok: false; error: string };
 
-export type CaptureOutcome = { ok: true; jobId: string } | { ok: false; error: string };
+export type CaptureOutcome =
+  | {
+      ok: true;
+      jobId: string;
+      discoveredJobId?: number;
+      fitScore?: number;
+      letterGrade?: string;
+      scoreBreakdown?: unknown[];
+      gap?: string;
+    }
+  | { ok: false; error: string };
+
+export type PromoteOutcome =
+  | { ok: true; applicationId?: number; status?: string }
+  | { ok: false; error: string };
 
 export type StatusOutcome =
   | { ok: true; instance: InstanceInfo }
@@ -85,8 +99,52 @@ export async function capture(payload: CapturePayload): Promise<CaptureOutcome> 
   if (!result.response.ok) {
     return { ok: false, error: "capture-failed" };
   }
-  const data = (await result.response.json()) as { job_id: string };
-  return { ok: true, jobId: data.job_id };
+  const data = (await result.response.json()) as {
+    job_id: string;
+    discovered_job_id?: number;
+    fit_score?: number;
+    letter_grade?: string;
+    score_breakdown?: unknown[] | null;
+    gap?: string;
+  };
+  return {
+    ok: true,
+    jobId: data.job_id,
+    discoveredJobId: data.discovered_job_id,
+    fitScore: data.fit_score,
+    letterGrade: data.letter_grade,
+    // score_breakdown may be null when the provider returns none (01-02) —
+    // normalize to undefined so the panel can treat "missing" uniformly.
+    scoreBreakdown: data.score_breakdown ?? undefined,
+    gap: data.gap,
+  };
+}
+
+export async function promote(discoveredJobId: number): Promise<PromoteOutcome> {
+  const base = await getBackendUrl();
+  const token = await getToken();
+  const result = await request(`${base}/api/extension/promote`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+    body: JSON.stringify({ discovered_job_id: discoveredJobId }),
+  });
+  if (result.kind === "network") {
+    return { ok: false, error: "backend-unreachable" };
+  }
+  if (result.response.status === 401) {
+    return { ok: false, error: "bad-key" };
+  }
+  if (!result.response.ok) {
+    return { ok: false, error: "promote-failed" };
+  }
+  const data = (await result.response.json()) as {
+    application_id?: number;
+    status?: string;
+  };
+  return { ok: true, applicationId: data.application_id, status: data.status };
 }
 
 export async function status(): Promise<StatusOutcome> {
