@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     # mints a one-time code whose sha256+expiry is persisted to
     # {data_dir}/.extension_pairing (0600); the code is consumed on first use.
     extension_pairing_ttl_seconds: int = 120
+    # Max JD/raw-text length accepted by /api/extension/capture (G-1391 / Part B,
+    # SECURITY T-01B-01). Description/raw_text longer than this is rejected with a
+    # 413 BEFORE any LLM extraction or scoring call, bounding paid-LLM cost/DoS.
+    extension_max_jd_chars: int = 30000
 
     # Cache settings
     cache_enabled: bool = True
