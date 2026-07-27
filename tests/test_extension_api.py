@@ -19,9 +19,9 @@ from career_os.services import extension_pairing
 # A concrete, valid 32-char (a–p) Chrome extension origin for CORS assertions.
 _CHROME_ORIGIN = "chrome-extension://" + "a" * 32
 
-_EXTENSION_SRC = (
-    Path(__file__).resolve().parent.parent / "src" / "career_os" / "api" / "extension.py"
-)
+_SRC_ROOT = Path(__file__).resolve().parent.parent / "src" / "career_os"
+_EXTENSION_SRC = _SRC_ROOT / "api" / "extension.py"
+_CAPTURE_SVC_SRC = _SRC_ROOT / "services" / "extension_capture.py"
 
 
 @pytest.fixture(autouse=True)
@@ -267,24 +267,10 @@ class TestExtensionRoutes:
         assert resp.status_code == 401
         assert resp.json()["detail"] == "Extension not paired"
 
-    def test_capture_with_token_returns_job_id_unscored(self, client: TestClient):
-        token = extension_pairing.mint_extension_token()
-        resp = client.post(
-            "/api/extension/capture",
-            json={
-                "url": "https://example.com/job",
-                "title": "Engineer",
-                "company": "Acme",
-                "description": "Build things",
-                "location": "Remote",
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["scored"] is False
-        assert body["status"] == "accepted"
-        assert isinstance(body["job_id"], str) and body["job_id"]
+    # NOTE: the Phase-0 "capture returns an UNSCORED id" test was removed here —
+    # capture now really dedupes + scores (Part B). Real capture behavior (scoring,
+    # dedupe, LLM fallback, size cap, promote) is covered in test_extension_capture.py
+    # where the DB/profile fixtures are available.
 
     def test_capture_with_bad_token_returns_401(self, client: TestClient):
         resp = client.post(
@@ -323,11 +309,12 @@ class TestExtensionRoutes:
         )
         assert resp_global.status_code == 401
 
-        # A valid EXTENSION token reaches the route → 200.
+        # A valid EXTENSION token gets PAST the global middleware to the per-route
+        # token check. We assert on /status (token-gated, no DB/scoring) so this
+        # test stays about the middleware bypass, not capture's scoring path.
         token = extension_pairing.mint_extension_token()
-        resp_ok = client.post(
-            "/api/extension/capture",
-            json=payload,
+        resp_ok = client.get(
+            "/api/extension/status",
             headers={"Authorization": f"Bearer {token}"},
         )
         assert resp_ok.status_code == 200
@@ -344,9 +331,19 @@ class TestExtensionRoutes:
         assert resp.status_code == 200
         assert resp.headers.get("access-control-allow-origin") == _CHROME_ORIGIN
 
-    def test_capture_does_not_import_score_job(self):
-        """Structural guard: the capture module must not reference score_job."""
-        assert "score_job" not in _EXTENSION_SRC.read_text(encoding="utf-8")
+    def test_capture_scores_through_scoring_service(self):
+        """Re-scoped structural guard (was test_capture_does_not_import_score_job).
+
+        Capture now legitimately scores, but ONLY by going THROUGH
+        services.scoring — it must not reimplement the prompt. Assert:
+        - the extension_capture service references score_job (reuse, not reimpl),
+        - the route delegates to capture_and_score rather than calling score_job
+          or building a scoring prompt itself.
+        """
+        capture_src = _CAPTURE_SVC_SRC.read_text(encoding="utf-8")
+        route_src = _EXTENSION_SRC.read_text(encoding="utf-8")
+        assert "score_job" in capture_src
+        assert "capture_and_score" in route_src
 
 
 # ---------------------------------------------------------------------------

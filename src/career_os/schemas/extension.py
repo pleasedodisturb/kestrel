@@ -30,23 +30,51 @@ class PairResponse(BaseModel):
 
 
 class CaptureRequest(BaseModel):
-    """Normalized job payload captured by the extension (Phase 0 stub target)."""
+    """Job payload captured by the extension (Part B — now really scored).
 
-    url: str
-    title: str
-    company: str
-    description: str
+    Two entry modes: structured fields (title+company scraped by the client) OR
+    ``raw_text`` only (the backend runs one LLM extraction to fill the fields).
+    ``profile_id`` defaults to the single-user self-hosted profile (1).
+    """
+
+    url: str = ""
+    title: str = ""
+    company: str = ""
+    description: str = ""
     location: str | None = None
     salary: str | None = None
     source: str | None = None
+    raw_text: str | None = Field(
+        default=None,
+        description="Unstructured page text for the LLM-extraction fallback",
+    )
+    profile_id: int = Field(default=1, description="Owning profile (single-user default 1)")
 
 
 class CaptureResponse(BaseModel):
-    """Stub capture response — accepted with an id, but NOT scored in Phase 0."""
+    """Capture response — the deduped DiscoveredJob id plus its fresh score + gap."""
 
     job_id: str
     status: str = "accepted"
     scored: bool = False
+    discovered_job_id: int | None = None
+    fit_score: float | None = None
+    letter_grade: str | None = None
+    score_breakdown: list | None = None
+    gap: str | None = None
+
+
+class PromoteRequest(BaseModel):
+    """Body for POST /api/extension/promote — add a captured job to the pipeline."""
+
+    discovered_job_id: int = Field(..., description="DiscoveredJob to promote to an Application")
+
+
+class PromoteResponse(BaseModel):
+    """Result of promoting a captured job — the linked Application id + status."""
+
+    application_id: int
+    status: str
 
 
 class StatusResponse(BaseModel):
