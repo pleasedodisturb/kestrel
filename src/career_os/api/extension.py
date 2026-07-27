@@ -119,7 +119,9 @@ async def capture(
     Domain exceptions map to HTTP mirroring ``api/scoring.py`` (T-01B-04: the
     response is an explicit Pydantic model, never a raw ORM dump).
     """
-    profile_id = payload.profile_id or 1
+    # Profile is fixed server-side to the single-user default; never honor a
+    # client-supplied profile_id (MED-01 / SECURITY F-2). Matches /promote.
+    profile_id = 1
     try:
         dj, scored = await capture_and_score(db, payload, profile_id=profile_id)
     except CaptureTooLargeError as exc:

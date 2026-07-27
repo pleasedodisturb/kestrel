@@ -128,6 +128,26 @@ class TestStructuredCapture:
         resp = client.post("/api/extension/capture", json=_STRUCTURED_PAYLOAD)
         assert resp.status_code == 401
 
+    def test_capture_ignores_client_profile_id(
+        self, client: TestClient, db_session: Session, profile: Profile
+    ):
+        """A client-supplied profile_id must be ignored — capture always uses 1.
+
+        MED-01 / SECURITY F-2: /capture previously did ``payload.profile_id or 1``,
+        letting a paired token write/score into an arbitrary profile. The field is
+        removed from CaptureRequest and the route hardcodes profile 1 (matching
+        /promote); an attacker-named profile_id is silently dropped by Pydantic.
+        """
+        resp = client.post(
+            "/api/extension/capture",
+            json={**_STRUCTURED_PAYLOAD, "profile_id": 999},
+            headers=_auth_headers(),
+        )
+        assert resp.status_code == 200, resp.text
+        # DiscoveredJob landed under profile 1, never the client-named 999.
+        assert db_session.query(DiscoveredJob).filter(DiscoveredJob.profile_id == 1).count() == 1
+        assert db_session.query(DiscoveredJob).filter(DiscoveredJob.profile_id == 999).count() == 0
+
 
 # ---------------------------------------------------------------------------
 # Raw-text capture → single LLM extraction, then score

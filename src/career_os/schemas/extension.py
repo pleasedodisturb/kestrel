@@ -34,7 +34,11 @@ class CaptureRequest(BaseModel):
 
     Two entry modes: structured fields (title+company scraped by the client) OR
     ``raw_text`` only (the backend runs one LLM extraction to fill the fields).
-    ``profile_id`` defaults to the single-user self-hosted profile (1).
+
+    There is deliberately NO ``profile_id`` field: the owning profile is fixed
+    server-side to the single-user default (1), matching ``/promote``. A
+    client-supplied ``profile_id`` must never be trusted (MED-01 / SECURITY F-2)
+    — accepting one let a paired token write/score into an arbitrary profile.
     """
 
     url: str = ""
@@ -48,7 +52,6 @@ class CaptureRequest(BaseModel):
         default=None,
         description="Unstructured page text for the LLM-extraction fallback",
     )
-    profile_id: int = Field(default=1, description="Owning profile (single-user default 1)")
 
 
 class CaptureResponse(BaseModel):
