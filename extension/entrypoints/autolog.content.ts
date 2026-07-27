@@ -185,6 +185,72 @@ export async function logApplication(): Promise<void> {
   await chrome.runtime.sendMessage(buildAutologMessage(discoveredJobId));
 }
 
+/**
+ * Wire up the three auto-log detection triggers (caught-on-load, post-submit,
+ * SPA DOM-swap). Extracted from `main()` so it is unit-testable under jsdom by
+ * injecting a `getContext` factory (the default reads `location`/`document`).
+ *
+ * ORDERING (HIGH-01): `observer` is created and assigned BEFORE the first
+ * `maybeConfirm()` call. On a full-navigation confirmation page (Greenhouse
+ * `/confirmation`, Lever `/thanks`) the content script runs fresh and
+ * `detectApplicationSubmit` returns non-null on that first synchronous call, so
+ * `maybeConfirm` reaches `observer.disconnect()` immediately. If `observer` were
+ * still in the temporal dead zone there it would throw
+ * `ReferenceError: Cannot access 'observer' before initialization`, unwinding
+ * `main()` and killing auto-log on its headline path. The `MutationObserver`
+ * callback only *calls* `maybeConfirm` on a later DOM mutation, so referencing
+ * `maybeConfirm` at observer-construction time is safe.
+ */
+export function startAutolog(
+  getContext: () => DetectionContext = () => ({
+    host: location.hostname,
+    url: location.href,
+    doc: document,
+  }),
+): () => void {
+  let bannerShown = false;
+
+  // Assigned before any maybeConfirm() call (see ORDERING note above).
+  const observer = new MutationObserver(() => maybeConfirm());
+
+  const maybeConfirm = (): void => {
+    if (bannerShown || !document.body) {
+      return;
+    }
+    if (detectApplicationSubmit(getContext()) === null) {
+      return;
+    }
+    bannerShown = true;
+    observer.disconnect();
+    showConfirmationBanner({
+      onLog: () => void logApplication(),
+      onDismiss: () => {
+        bannerShown = false;
+      },
+    });
+  };
+
+  const onSubmit = (): void => {
+    setTimeout(maybeConfirm, 800);
+  };
+
+  // SPA success states that swap DOM without navigation: observe until shown.
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  // 1) A full-navigation confirmation page (Greenhouse/Lever) is caught on load.
+  maybeConfirm();
+
+  // 2) An in-page/AJAX submit (Ashby SPA, Lever): re-check shortly after submit.
+  document.addEventListener("submit", onSubmit, true);
+
+  // Teardown for tests / hot-reload; the live content script runs for the page
+  // lifetime and never needs it.
+  return () => {
+    observer.disconnect();
+    document.removeEventListener("submit", onSubmit, true);
+  };
+}
+
 export default defineContentScript({
   // Explicit ATS application-host allowlist — NEVER a wildcard or broad-host
   // match. This script runs only on recognized ATS pages to watch for a submit.
@@ -195,45 +261,6 @@ export default defineContentScript({
     "*://*.ashbyhq.com/*",
   ],
   main() {
-    let bannerShown = false;
-
-    const ctx = (): DetectionContext => ({
-      host: location.hostname,
-      url: location.href,
-      doc: document,
-    });
-
-    const maybeConfirm = (): void => {
-      if (bannerShown || !document.body) {
-        return;
-      }
-      if (detectApplicationSubmit(ctx()) === null) {
-        return;
-      }
-      bannerShown = true;
-      observer.disconnect();
-      showConfirmationBanner({
-        onLog: () => void logApplication(),
-        onDismiss: () => {
-          bannerShown = false;
-        },
-      });
-    };
-
-    // 1) A full-navigation confirmation page (Greenhouse/Lever) is caught on load.
-    maybeConfirm();
-
-    // 2) An in-page/AJAX submit (Ashby SPA, Lever): re-check shortly after submit.
-    document.addEventListener(
-      "submit",
-      () => {
-        setTimeout(maybeConfirm, 800);
-      },
-      true,
-    );
-
-    // 3) SPA success states that swap DOM without navigation: observe until shown.
-    const observer = new MutationObserver(() => maybeConfirm());
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    startAutolog();
   },
 });

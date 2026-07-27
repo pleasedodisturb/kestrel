@@ -5,6 +5,7 @@ import {
   detectApplicationSubmit,
   logApplication,
   showConfirmationBanner,
+  startAutolog,
 } from "@/entrypoints/autolog.content";
 
 // ---------------------------------------------------------------------------
@@ -156,5 +157,56 @@ describe("logApplication — promotes the captured job through the worker", () =
 
   it("buildAutologMessage builds the PROMOTE message", () => {
     expect(buildAutologMessage(7)).toEqual({ type: "PROMOTE", discoveredJobId: 7 });
+  });
+});
+
+describe("startAutolog — main() load path (HIGH-01 TDZ regression)", () => {
+  function installChrome(lastCapture?: unknown): void {
+    const store: Record<string, unknown> = {};
+    if (lastCapture !== undefined) {
+      store.lastCapture = lastCapture;
+    }
+    (globalThis as unknown as { chrome: unknown }).chrome = {
+      storage: {
+        session: {
+          get: vi.fn(async (key: string) => (key in store ? { [key]: store[key] } : {})),
+        },
+      },
+      runtime: { sendMessage: vi.fn(async () => ({ ok: true })) },
+    };
+  }
+
+  // Regression guard for HIGH-01: on a full-navigation confirmation page the very
+  // first synchronous maybeConfirm() reaches observer.disconnect(). Before the
+  // fix `observer` was a `const` declared AFTER that call, so this path threw
+  // `ReferenceError: Cannot access 'observer' before initialization`, the banner
+  // never rendered, and auto-log was dead on its headline flow. This drives the
+  // real main() wiring (not just the pure helpers) so it can't regress.
+  it("renders the banner without throwing when a confirmation page is caught on load", () => {
+    installChrome({ ok: true, discoveredJobId: 5 });
+    document.body.innerHTML = '<div id="application_confirmation">Thanks for applying</div>';
+    const getContext = (): DetectionContext =>
+      ctx({ url: "https://boards.greenhouse.io/acme/jobs/123/confirmation" });
+
+    let teardown: () => void = () => {};
+    expect(() => {
+      teardown = startAutolog(getContext);
+    }).not.toThrow();
+    expect(document.getElementById("kestrel-autolog-banner")).not.toBeNull();
+    teardown();
+  });
+
+  it("does not render a banner on a pre-submit form (no confirmation signal)", () => {
+    installChrome({ ok: true, discoveredJobId: 5 });
+    document.body.innerHTML = '<form id="application_form"><input name="email" /></form>';
+    const getContext = (): DetectionContext =>
+      ctx({ url: "https://boards.greenhouse.io/acme/jobs/123" });
+
+    let teardown: () => void = () => {};
+    expect(() => {
+      teardown = startAutolog(getContext);
+    }).not.toThrow();
+    expect(document.getElementById("kestrel-autolog-banner")).toBeNull();
+    teardown();
   });
 });
