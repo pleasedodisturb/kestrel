@@ -207,7 +207,34 @@ jobs:
           retention-days: 1
 
       - name: Security audit (dependencies)
-        run: npm audit --audit-level=moderate
+        # Same strictness as before (moderate+ fails), but with the
+        # repo-root .npm-audit-ignore as the documented escape hatch for
+        # advisories with no upstream fix (mirrors .pip-audit-ignore for
+        # Python and ALLOWLIST in tests/test_dep_security.py).
+        run: |
+          npm audit --json > /tmp/audit.json || true
+          node -e '
+            const fs = require("fs");
+            const audit = JSON.parse(fs.readFileSync("/tmp/audit.json", "utf8"));
+            const ignoreFile = "../.npm-audit-ignore";
+            const ignore = new Set(fs.existsSync(ignoreFile)
+              ? fs.readFileSync(ignoreFile, "utf8").split("\n")
+                  .map(l => l.split("#")[0].trim()).filter(Boolean)
+              : []);
+            const levels = ["moderate", "high", "critical"];
+            const bad = {};
+            for (const [pkg, info] of Object.entries(audit.vulnerabilities || {}))
+              for (const via of info.via || [])
+                if (typeof via === "object" && levels.includes(via.severity)) {
+                  const id = (via.url || "").split("/").pop() || `unknown:${pkg}`;
+                  if (!ignore.has(id)) bad[id] = `${via.severity} ${pkg}: ${via.title}`;
+                }
+            if (Object.keys(bad).length) {
+              console.error("Non-ignored moderate+ advisories:", bad);
+              process.exit(1);
+            }
+            console.log("npm audit clean; ignored:", [...ignore].join(", ") || "none");
+          '
 
       - name: Verify npm package signatures
         run: npm audit signatures

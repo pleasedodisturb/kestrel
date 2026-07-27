@@ -1,0 +1,5 @@
+# Documented not-applicable npm advisories — the CI "Security audit" step
+# filters these GHSA ids. Mirrors the per-package ALLOWLIST in
+# tests/test_dep_security.py: KEEP THE TWO IN SYNC, and remove an entry as
+# soon as a forward-patched version exists.
+GHSA-qwww-vcr4-c8h2  # react-router RSC-mode CSRF (7.12.0-8.2.0, no forward patch); frontend is a non-RSC BrowserRouter SPA (G-1412 2026-07-27)
