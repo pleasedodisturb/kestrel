@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.24.0](https://github.com/pleasedodisturb/kestrel/compare/v0.23.1...v0.24.0) (2026-08-02)
+
+
+### Features
+
+* **G-1391:** browser extension Phase 1 — THE EYE (capture + inline score + gap + auto-log) ([#478](https://github.com/pleasedodisturb/kestrel/issues/478)) ([ae4f316](https://github.com/pleasedodisturb/kestrel/commit/ae4f31667a5800e5892e277ff1af285353c93a3a))
+
+
+### Bug Fixes
+
+* **G-1391:** single-pass HTML-entity decode in stripHtml (js/double-escaping) ([#479](https://github.com/pleasedodisturb/kestrel/issues/479)) ([d58be8b](https://github.com/pleasedodisturb/kestrel/commit/d58be8baa3a2b1e4f9f8b874efa115ade0ce6df2))
+
+
+### Dependencies
+
+* bump @tanstack/react-query in /frontend in the tanstack group ([#487](https://github.com/pleasedodisturb/kestrel/issues/487)) ([c1e7458](https://github.com/pleasedodisturb/kestrel/commit/c1e74585128bcb28ff98a2a48244345386bb6fc4))
+* bump the eslint group in /frontend with 2 updates ([#486](https://github.com/pleasedodisturb/kestrel/issues/486)) ([812b890](https://github.com/pleasedodisturb/kestrel/commit/812b89083acb50c26ddd24e51270068cb39c5bb4))
+* bump the react group in /frontend with 2 updates ([#484](https://github.com/pleasedodisturb/kestrel/issues/484)) ([01cef5f](https://github.com/pleasedodisturb/kestrel/commit/01cef5f13bbeeeebd5f7c4e3fcd9259bfcd92a26))
+* bump the tailwind group across 1 directory with 2 updates ([#488](https://github.com/pleasedodisturb/kestrel/issues/488)) ([ded357f](https://github.com/pleasedodisturb/kestrel/commit/ded357f6c457e6837668896fc50a2c6a42ea9375))
+* bump the vitest group across 1 directory with 3 updates ([#489](https://github.com/pleasedodisturb/kestrel/issues/489)) ([d68dafc](https://github.com/pleasedodisturb/kestrel/commit/d68dafcfd5fcb7ef6f536e7010ddd62c8da9aaf2))
+* **G-1412:** react-router 7.18.1 + brace-expansion/postcss advisory bumps (frontend) ([#476](https://github.com/pleasedodisturb/kestrel/issues/476)) ([3eeb600](https://github.com/pleasedodisturb/kestrel/commit/3eeb6001e9b7e9701ebe3d817e89f81bf1d3381a))
+* update openai requirement from &gt;=2.44.0 to &gt;=2.50.0 ([#485](https://github.com/pleasedodisturb/kestrel/issues/485)) ([80becab](https://github.com/pleasedodisturb/kestrel/commit/80becab47eb80788c50c58db4698cc1c20cb3a1e))
+
 ## [0.23.1](https://github.com/pleasedodisturb/kestrel/compare/v0.23.0...v0.23.1) (2026-07-23)
 
 
