@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.1](https://github.com/pleasedodisturb/kestrel/compare/v0.24.0...v0.24.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **G-1427:** Web Storage shim covers Node 26's undefined localStorage global ([#491](https://github.com/pleasedodisturb/kestrel/issues/491)) ([3dce5ae](https://github.com/pleasedodisturb/kestrel/commit/3dce5aefd637ad4f45d8d9551b949a79a62afdc8))
+
 ## [0.24.0](https://github.com/pleasedodisturb/kestrel/compare/v0.23.1...v0.24.0) (2026-08-02)
 
 
