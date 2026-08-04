@@ -40,10 +40,10 @@ Kestrel scans job boards, scores every posting against your profile with an LLM,
 | **Tests** | 4,600+ automated tests run in CI: 4,243 backend (pytest), 360 frontend (vitest) |
 | **AI providers** | Ten behind one interface: Anthropic, OpenAI, Mistral, Gemini, Groq, Together, OpenRouter, Ollama, Hugging Face, xAI. Automatic fallback chains, prompt caching, and a guard that stops a dry free tier from silently billing premium models |
 | **Scoring evals** | A [golden-set eval harness](tests/eval/README.md) runs the real production scorer in nightly CI: weighted Cohen's kappa and NDCG@5, gated on deltas against a frozen baseline, zero paid LLM calls |
-| **Privacy** | Your data lives in a local SQLite file. PII masking sits between you and every provider call; per-provider retention tiers are [documented](docs/reference/AI-PROVIDERS.md) |
+| **Privacy** | Your data lives in a local SQLite file. A privacy boundary blocks personal-data features from any provider without a zero-data-retention guarantee; per-provider retention tiers are [documented](docs/reference/AI-PROVIDERS.md) |
 | **Ships as** | [PyPI](https://pypi.org/project/kestrel-app/), npm, Homebrew, Docker, a Railway template, and Codespaces. AGPL-3.0 |
 
-The scoring pipeline is treated as a measured system, not a prompt that felt right once: the eval harness scores the production code path (never a reimplementation), and quality regressions fail the build before they ship. How that works, and what is still interim about it, is written up in [tests/eval/README.md](tests/eval/README.md).
+The scoring pipeline is treated as a measured system, not a prompt that felt right once: the eval harness scores the production code path (never a reimplementation), and a scoring regression fails the nightly build before it ships. How that works, and what is still interim about it, is written up in [tests/eval/README.md](tests/eval/README.md).
 
 ---
 
