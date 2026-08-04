@@ -37,7 +37,7 @@ Kestrel scans job boards, scores every posting against your profile with an LLM,
 
 | | |
 |---|---|
-| **Tests** | 4,600+ automated tests run in CI: 4,243 backend (pytest), 360 frontend (vitest) |
+| **Tests** | 4,600+ automated tests run in CI: 4,243 backend (pytest), 376 frontend (vitest) |
 | **AI providers** | Ten behind one interface: Anthropic, OpenAI, Mistral, Gemini, Groq, Together, OpenRouter, Ollama, Hugging Face, xAI. Automatic fallback chains, prompt caching, and a guard that stops a dry free tier from silently billing premium models |
 | **Scoring evals** | A [golden-set eval harness](tests/eval/README.md) runs the real production scorer in nightly CI: weighted Cohen's kappa and NDCG@5, gated on deltas against a frozen baseline, zero paid LLM calls |
 | **Privacy** | Your data lives in a local SQLite file. A privacy boundary blocks personal-data features from any provider without a zero-data-retention guarantee; per-provider retention tiers are [documented](docs/reference/AI-PROVIDERS.md) |
