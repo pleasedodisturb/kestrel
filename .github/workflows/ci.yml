@@ -127,21 +127,54 @@ jobs:
           pip-audit "${ignore_args[@]}"
 
       - name: PII leak check
+        # Scans every TRACKED file with `git grep` — this deliberately covers
+        # markdown, docs, and profile/ (not just code dirs). A prior version
+        # scanned only src/ tests/ frontend/src/ tools/ with 5 code extensions,
+        # so a markdown dossier committed elsewhere sailed through unseen.
+        #
+        # Patterns come from two sources, so the public repo never has to carry
+        # real identifiers:
+        #   1. .github/pii-patterns.txt  — committed, public; forks edit this.
+        #   2. PII_PATTERNS repo secret  — private, newline-delimited; the owner's
+        #      real identifiers live here, never in source. Empty on fork PRs
+        #      (secrets aren't shared with forks) — that path just no-ops loudly.
+        env:
+          PII_PATTERNS_SECRET: ${{ secrets.PII_PATTERNS }}
         run: |
-          # Check for personal data patterns defined in .github/pii-patterns.txt
-          # For forks: update that file with your own patterns
-          FAIL=0
-          if [ -f .github/pii-patterns.txt ]; then
-            while IFS= read -r pattern; do
-              [[ "$pattern" =~ ^#.*$ || -z "$pattern" ]] && continue
-              if grep -rn "$pattern" --include="*.py" --include="*.ts" --include="*.tsx" --include="*.yaml" --include="*.yml" \
-                src/ tests/ frontend/src/ tools/ 2>/dev/null; then
-                echo "PII pattern found: $pattern"
-                FAIL=1
-              fi
-            done < .github/pii-patterns.txt
+          patterns=()
+          add_patterns() {  # read one-per-line, skip blanks and # comments
+            while IFS= read -r line; do
+              [[ "$line" =~ ^[[:space:]]*# || -z "${line// }" ]] && continue
+              patterns+=("$line")
+            done
+          }
+          [ -f .github/pii-patterns.txt ] && add_patterns < .github/pii-patterns.txt
+          [ -n "${PII_PATTERNS_SECRET:-}" ] && add_patterns <<< "$PII_PATTERNS_SECRET"
+
+          echo "PII gate: ${#patterns[@]} active pattern(s) loaded."
+          if [ "${#patterns[@]}" -eq 0 ]; then
+            # Fail-open ONLY here, and loudly: an empty gate is legitimate for a
+            # fresh fork, but must never masquerade as a passing PII check.
+            echo "::warning::PII gate is INACTIVE (0 patterns). Add patterns to .github/pii-patterns.txt or the PII_PATTERNS secret to enable it."
+            exit 0
           fi
-          [ "$FAIL" -eq 0 ] && echo "No PII found - clean." || exit 1
+
+          FAIL=0
+          for pattern in "${patterns[@]}"; do
+            # -l: list matching files only. Never print the matched line — that
+            # content is not a masked secret and would leak the very PII we guard.
+            files=$(git grep -lE -- "$pattern") && status=0 || status=$?
+            if [ "$status" -eq 0 ]; then
+              echo "::error::PII pattern matched in tracked files (pattern withheld from log):"
+              echo "$files"
+              FAIL=1
+            elif [ "$status" -ge 2 ]; then
+              # Fail-closed: a scan that errored is NOT a clean scan.
+              echo "::error::git grep errored (exit $status) while scanning — treating as failure."
+              exit 1
+            fi
+          done
+          [ "$FAIL" -eq 0 ] && echo "No PII found — clean." || exit 1
 
   actionlint:
     name: actionlint
@@ -240,28 +273,58 @@ jobs:
       - name: Verify npm package signatures
         run: npm audit signatures
 
+  extension:
+    name: Extension (WXT)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install dependencies
+        # postinstall runs `wxt prepare`, which generates the .wxt/ type
+        # shims that the tsc compile step below depends on.
+        run: npm ci --legacy-peer-deps
+
+      - name: Type check
+        run: npm run compile
+
+      - name: Run tests
+        run: npx vitest run
+
+      - name: Verify npm package signatures
+        run: npm audit signatures
+
   ci-complete:
     name: CI Complete
     runs-on: ubuntu-latest
     if: always()
-    needs: [backend, frontend, actionlint]
+    needs: [backend, frontend, extension, actionlint]
     steps:
       - name: Check required jobs
         env:
           BACKEND_RESULT: ${{ needs.backend.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
+          EXTENSION_RESULT: ${{ needs.extension.result }}
           ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
         run: |
-          # All three jobs are hard gates. Backend was advisory while the
+          # All four jobs are hard gates. Backend was advisory while the
           # golden-set failures were being resolved; those are fixed (main
           # has been fully green since 2026-06) and CI Complete is now a
           # required status check gating Dependabot automerge (G-1277) —
-          # a soft backend gate would let a broken pip bump auto-merge.
+          # a soft gate would let a broken bump auto-merge.
           failed=0
-          for job in backend frontend actionlint; do
+          for job in backend frontend extension actionlint; do
             case "$job" in
               backend) result="$BACKEND_RESULT" ;;
               frontend) result="$FRONTEND_RESULT" ;;
+              extension) result="$EXTENSION_RESULT" ;;
               actionlint) result="$ACTIONLINT_RESULT" ;;
             esac
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then

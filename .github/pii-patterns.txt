@@ -1,9 +1,23 @@
-# PII patterns for CI leak detection
-# These patterns catch personal identifiers that should not appear in source code.
-# Add project-specific patterns below (one per line, blank lines and # comments are ignored).
+# PII patterns for the CI leak check (see the "PII leak check" step in ci.yml).
 #
-# For forks: replace these with your own patterns or delete lines you don't need.
-# Add your own PII patterns here (one per line).
-# Example:
+# One extended-regex pattern per line. Blank lines and # comments are ignored.
+# The gate scans EVERY tracked file (code, markdown, docs, profile/) via
+# `git grep`, so a pattern here catches identifiers wherever they land — not
+# just in code directories.
+#
+# Two ways to supply patterns:
+#   1. This file — committed and PUBLIC. Only put patterns here that are safe to
+#      publish (generic shapes, a fork's own project name). NEVER put a real
+#      person's name, email, phone, or address here: committing the pattern
+#      leaks the very thing it guards.
+#   2. The PII_PATTERNS repo secret (Settings -> Secrets -> Actions) — PRIVATE,
+#      newline-delimited. Put real identifiers here so they never enter source
+#      history. The gate merges both sources. Fork PRs don't receive the secret,
+#      so they fall back to this file alone.
+#
+# With zero active patterns from both sources the gate is INACTIVE and emits a
+# CI warning (it will not silently report "clean").
+#
+# Example (safe generic shapes only):
 # your\.email
 # yourname
