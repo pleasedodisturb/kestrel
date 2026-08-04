@@ -5,11 +5,11 @@ description: "A guide to how Kestrel stays reliable — and why we test so aggre
 
 # How Testing Works
 
-Every time you open Kestrel, search for jobs, or check your pipeline, over 2,800 automated checks have already confirmed that things work the way they should. Think of it like quality control in a restaurant kitchen — the chef tastes every sauce, someone checks each completed plate, and a health inspector verifies the kitchen itself is safe. Each layer catches a different kind of problem, and together they make it really hard for bugs to slip through to your table.
+Every time you open Kestrel, search for jobs, or check your pipeline, over 4,200 automated checks have already confirmed that things work the way they should. Think of it like quality control in a restaurant kitchen — the chef tastes every sauce, someone checks each completed plate, and a health inspector verifies the kitchen itself is safe. Each layer catches a different kind of problem, and together they make it really hard for bugs to slip through to your table.
 
 ## The Short Version
 
-- **2,800+ automated tests** run on every code change, catching bugs in under 2 minutes
+- **4,200+ automated tests** run on every code change, catching bugs in under 2 minutes
 - Tests are organized in layers: unit tests (individual ingredients), integration tests (the full plate), golden set regression tests (is it as good as last time?), and security scans (the health inspection)
 - **Golden sets** of hand-labeled real-world jobs prevent scoring drift across career domains (tech, finance, design)
 - The entire quality infrastructure costs **$0/month** — all open-source tooling
@@ -22,7 +22,7 @@ Software testing follows a pyramid shape — many fast, cheap tests at the base,
 
 ```mermaid
 flowchart TD
-    UNIT[Unit Tests - 2,800+] --> INT[Integration Tests]
+    UNIT[Unit Tests - 4,200+] --> INT[Integration Tests]
     INT --> E2E[Smoke and E2E Tests]
 
     LINT[Lint and Format] -.-> UNIT
@@ -34,7 +34,7 @@ flowchart TD
     SONAR[SonarCloud Analysis] -.-> INT
 ```
 
-**Unit tests** are like tasting while you cook. Does this function calculate the right score? Does that button render with the correct label? Over 2,800 of these run in about two minutes. They're fast, focused, and form the foundation of everything else.
+**Unit tests** are like tasting while you cook. Does this function calculate the right score? Does that button render with the correct label? Over 4,200 of these run in a few minutes. They're fast, focused, and form the foundation of everything else.
 
 **Integration tests** are the full plate check. When the frontend asks the backend for your pipeline data, does the whole chain deliver the right answer? These verify that different parts of the system work together correctly.
 
@@ -68,7 +68,7 @@ When the scoring algorithm changes, every golden set job gets re-scored. If a "d
 flowchart LR
     PR[Pull Request Opened] --> |"~2 min"| CI{CI Pipeline}
     CI --> LINT[Lint & Format]
-    CI --> TEST[2,800+ Tests]
+    CI --> TEST[4,200+ Tests]
     CI --> MIG[Migration Check]
     CI --> SMOKE[API Smoke Test]
     CI --> PII_SCAN[PII Leak Scan]
@@ -87,7 +87,7 @@ flowchart LR
     MERGE --> GOLDEN_RUN[Golden Set Re-check]
 ```
 
-**On every code change (~2 minutes):** Lint, 2,800+ tests, migration check, API smoke test, PII scan, and dependency audit — all running in parallel on GitHub Actions.
+**On every code change (~2 minutes):** Lint, 4,200+ tests, migration check, API smoke test, PII scan, and dependency audit — all running in parallel on GitHub Actions.
 
 **On every merge to main:** The same pipeline runs again (catching conflicts between individually-passing PRs), plus SonarCloud deep analysis for code smells and complexity hotspots.
 
@@ -130,7 +130,7 @@ Not by gut feel. The strategy was designed after parallel research into modern t
 |--------|-------|
 | Backend test files | 102 |
 | Frontend test files | 22 |
-| Total test functions (backend) | 2,800+ |
+| Total test functions (backend) | 3,900+ |
 | Golden set career domains | 3 |
 | Hand-labeled golden set jobs | 20+ per domain |
 | CI checks per pull request | 6 parallel jobs |
