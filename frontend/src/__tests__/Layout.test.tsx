@@ -23,9 +23,9 @@ function renderWithRouter(initialEntries: string[] = ["/"]) {
 }
 
 describe("Layout", () => {
-  it("renders the Career OS branding", () => {
+  it("renders the Kestrel branding", () => {
     renderWithRouter();
-    expect(screen.getByText("Career OS")).toBeInTheDocument();
+    expect(screen.getByText("Kestrel")).toBeInTheDocument();
   });
 
   it("renders Pipeline navigation link", () => {

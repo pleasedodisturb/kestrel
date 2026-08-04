@@ -29,6 +29,6 @@ class Kestrel < Formula
   end
 
   test do
-    assert_match "Career OS", shell_output("#{bin}/kestrel --help")
+    assert_match "Kestrel", shell_output("#{bin}/kestrel --help")
   end
 end
