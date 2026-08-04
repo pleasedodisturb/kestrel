@@ -27,7 +27,23 @@
 
 ---
 
-**[See it in action](#from-unemployed-to-multiple-offers)** · **[Install](#install)** · **[Features](#what-it-does)** · **[Privacy](#your-data-stays-yours)** · **[Roadmap](#whats-coming)** · **[Docs](#docs)** · **[AI providers](#add-real-ai-optional)**
+**[At a glance](#at-a-glance)** · **[See it in action](#from-unemployed-to-multiple-offers)** · **[Install](#install)** · **[Features](#what-it-does)** · **[Privacy](#your-data-stays-yours)** · **[Roadmap](#whats-coming)** · **[Docs](#docs)** · **[AI providers](#add-real-ai-optional)**
+
+---
+
+## At a glance
+
+Kestrel scans job boards, scores every posting against your profile with an LLM, and tracks the whole search in a local-first web app (FastAPI backend, React frontend). Numbers first:
+
+| | |
+|---|---|
+| **Tests** | 4,600+ automated tests run in CI: 4,243 backend (pytest), 376 frontend (vitest) |
+| **AI providers** | Ten behind one interface: Anthropic, OpenAI, Mistral, Gemini, Groq, Together, OpenRouter, Ollama, Hugging Face, xAI. Automatic fallback chains, prompt caching, and a guard that stops a dry free tier from silently billing premium models |
+| **Scoring evals** | A [golden-set eval harness](tests/eval/README.md) runs the real production scorer in nightly CI: weighted Cohen's kappa and NDCG@5, gated on deltas against a frozen baseline, zero paid LLM calls |
+| **Privacy** | Your data lives in a local SQLite file. A privacy boundary blocks personal-data features from any provider without a zero-data-retention guarantee; per-provider retention tiers are [documented](docs/reference/AI-PROVIDERS.md) |
+| **Ships as** | [PyPI](https://pypi.org/project/kestrel-app/), npm, Homebrew, Docker, a Railway template, and Codespaces. AGPL-3.0 |
+
+The scoring pipeline is treated as a measured system, not a prompt that felt right once: the eval harness scores the production code path (never a reimplementation), and a scoring regression fails the nightly build before it ships. How that works, and what is still interim about it, is written up in [tests/eval/README.md](tests/eval/README.md).
 
 ---
 
@@ -294,7 +310,8 @@ Fully isolated — nothing touches your system Python. Requires [OrbStack](https
 | Guide | What you'll learn |
 |-------|-------------------|
 | [How Scoring Works](docs/guides/how-scoring-works.md) | What "fit score" actually means, and how Kestrel decides which jobs match you |
-| [How Testing Works](docs/guides/how-testing-works.md) | 2,800+ automated checks — the kitchen analogy for quality assurance |
+| [Scoring eval harness](tests/eval/README.md) | Why the eval scores the production path, what kappa and NDCG@5 gate, and where the human-label step stands |
+| [How Testing Works](docs/guides/how-testing-works.md) | How the 4,600-test suite is layered: the kitchen analogy for quality assurance |
 
 **Going deeper:**
 
