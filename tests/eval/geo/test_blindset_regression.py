@@ -131,10 +131,27 @@ def test_fixture_carries_no_pii_or_tracking_urls():
         FIXTURES / "judgements.json"
     ).read_text(encoding="utf-8")
 
+    patterns = scrub_patterns()
+    # A gate that shrinks is a gate that stops gating. The committed
+    # .github/pii-patterns.txt is deliberately all-comments (real identifiers
+    # live in the private PII_PATTERNS repo secret, since committing a pattern
+    # leaks what it guards), so its active-line count is legitimately 0 here —
+    # scrub_patterns() raising on a MISSING file is what guards that half.
+    # What must never silently vanish is the built-in set below.
+    required = {
+        "personal:name-stem",
+        "personal:surname",
+        "personal:home-city-country",
+        "personal:mail-domain",
+        "generic:email",
+        "tracking:url-query",
+    }
+    assert required <= set(patterns), (
+        f"scrub gate degraded — built-in patterns missing: {sorted(required - set(patterns))}"
+    )
+
     hits = {
-        label: pattern.findall(blob)
-        for label, pattern in scrub_patterns().items()
-        if pattern.search(blob)
+        label: pattern.findall(blob) for label, pattern in patterns.items() if pattern.search(blob)
     }
     assert not hits, f"scrub gate: committed fixture matches PII/tracking patterns: {sorted(hits)}"
 

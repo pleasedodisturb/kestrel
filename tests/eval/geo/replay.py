@@ -77,11 +77,19 @@ def scrub_patterns(repo_root: Path | None = None) -> dict[str, re.Pattern[str]]:
     patterns: dict[str, re.Pattern[str]] = {}
 
     gate_file = root / ".github" / "pii-patterns.txt"
-    if gate_file.exists():
-        for n, line in enumerate(gate_file.read_text(encoding="utf-8").splitlines(), start=1):
-            stripped = line.strip()
-            if stripped and not stripped.startswith("#"):
-                patterns[f"gate:pii-patterns.txt#{n}"] = re.compile(stripped, re.IGNORECASE)
+    if not gate_file.exists():
+        # Fail loud. Silently falling back to the handful of hand-written
+        # patterns below would make the fixture-integrity test pass HARDER the
+        # moment its ruleset disappears (rename, sdist, installed package) —
+        # the wrong failure direction for a security gate.
+        raise FileNotFoundError(
+            f"PII gate file missing: {gate_file}. scrub_patterns() must never "
+            "degrade to a partial pattern set."
+        )
+    for n, line in enumerate(gate_file.read_text(encoding="utf-8").splitlines(), start=1):
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            patterns[f"gate:pii-patterns.txt#{n}"] = re.compile(stripped, re.IGNORECASE)
 
     # Fragment-assembled personal identifiers (see docstring). The name patterns
     # use the broad stem so derived spellings are caught too.

@@ -260,7 +260,7 @@ the exact benchmark argument shape (`geofix_v2.py::geo_v2`).
 | Metric | Value |
 |--------|-------|
 | Items compared | {len(original_items)} |
-| Items differing | 0 |
+| Items differing | {len(diffs)} |
 
 (On any difference this log is never written and the script exits non-zero.)
 

@@ -116,7 +116,7 @@ home_tokens:            # place names that count as YOUR home region
   - ireland
   - dublin
   - cork
-allow_pan_region_remote: true   # count EMEA / EU-wide / global remote as eligible
+allow_pan_region_remote: true   # count multi-country + unspecified remote as eligible
 extra_foreign_tokens: []        # optional extra places to always drop
 ```
 
@@ -124,19 +124,29 @@ These are the **only three keys** the config loader parses: `home_tokens`,
 `allow_pan_region_remote`, `extra_foreign_tokens`. Anything else in the file is
 silently ignored — do not invent keys.
 
+`allow_pan_region_remote: true` admits two things: multi-country region tokens
+(`EMEA`, `Europe`, `DACH`, `Benelux`, `Nordics`, `EU-wide`) and the
+global/worldwide/anywhere family, **plus** an unspecified bare `Remote` posting
+with no other geo signal. Set it to `false` and all of those become `unknown`
+instead — that is what "require an explicit home-region anchor" means. Note
+`unknown` is still an eligible class (absence of signal never buries a role);
+the flag changes classification, not survival.
+
 The config route builds a profile via `GeoProfile.from_home_tokens(...)`: your
 home tokens become the home vocabulary, and the shared public geography list
-(minus your home tokens) becomes the foreign vocabulary. **A flat token
+(minus your home tokens) becomes the foreign vocabulary. **A home token always
+wins** — list your country and its cities are safe even where the same name
+appears in the built-in public geography list. **A flat token
 vocabulary cannot express a commute-belt split or a visa-required region** — a
 config-driven profile classifies every home hit as `home_local`, and an onsite
 posting in, say, an EU country outside your home tokens lands in the shared
 foreign vocabulary rather than `visa_free_relocate`. If you need those
 distinctions, use the code route.
 
-### 2. Code route — the full nine-field profile
+### 2. Code route — the full ten-field profile
 
 `build_profile(name, **pattern_strings)` compiles explicit regex strings for
-all nine pattern fields (this is how the shipped presets are defined), and
+all ten pattern fields (this is how the shipped presets are defined), and
 `GeoProfile.from_home_tokens(name, home_tokens, *, home_local_tokens=...,
 visa_required_tokens=..., extra_foreign_tokens=..., allow_pan_region_remote=...)`
 accepts the finer vocabularies as **function parameters**.
@@ -166,10 +176,15 @@ profile = GeoProfile.from_home_tokens(
   `tools/t3_lane.py` guardrail (`geo == "foreign"`).
 - **Discovery pre-filter** (`src/career_os/discovery/prefilter.py`) — an
   **opt-in** geo gate: set `PrefilterConfig.geo_profile` to enable it. It
-  stores the verdict on each job as `job["geo_class"]`, rejects only
-  `foreign` (reported as `geo_rejections`), and never rejects `unknown` or a
-  flagged class. With no profile configured, pre-filter behaviour is
-  unchanged.
+  annotates each job dict with `job["geo_class"]` and counts the `foreign`
+  class as `geo_rejections`, but **keeps the job** — `foreign` is the engine's
+  cap / review-queue class, and deleting it costs ~6.4% recall against human
+  GO judgements. Deletion requires the separate `geo_drop_foreign` opt-in.
+  `unknown` and the flagged classes are never rejected under either setting.
+  With no profile configured, pre-filter behaviour is unchanged.
+  The `geo_class` annotation currently reaches **direct callers of
+  `run_prefilter` only**: the discovery service rebuilds its merged job dicts
+  after pre-filtering, so the verdict is not yet persisted to `DiscoveredJob`.
 - **`tools/batch_probe.py`** — the legacy tools-side gate; `geo_classify` /
   `geo_ok` still use its internal 3-way token classifier and public geography
   lists. New code should call the package engine instead.

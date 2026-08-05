@@ -59,7 +59,7 @@ def test_preset_patterns_are_precompiled_and_never_recompiled(monkeypatch):
             assert value is None or isinstance(value, re.Pattern), (
                 f"{profile.name}.{field.name} is not precompiled: {type(value)!r}"
             )
-        assert checked >= 9, f"{profile.name}: only {checked} pattern fields inspected"
+        assert checked >= 10, f"{profile.name}: only {checked} pattern fields inspected"
 
     def _forbidden_compile(*args, **kwargs):
         raise AssertionError(

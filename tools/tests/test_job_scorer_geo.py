@@ -45,7 +45,14 @@ def test_geo_eligibility_home_local():
 
 
 def test_geo_eligibility_eligible_remote():
+    # Assert the DISCRIMINATING case: bare "EMEA" carries no "remote" token, so
+    # it can only pass by being recognized as a multi-country region. Testing
+    # "Remote - EMEA" alone proves nothing — it passed identically as
+    # "Remote - Antarctica" via the bare-remote fallback.
+    assert job_scorer.geo_eligibility("EMEA") == "eligible_remote"
     assert job_scorer.geo_eligibility("Remote - EMEA") == "eligible_remote"
+    # ...and the counter-case that shares the "Remote - X" shape.
+    assert job_scorer.geo_eligibility("Remote - US") == "foreign"
 
 
 def test_geo_eligibility_eu_onsite_is_foreign_under_flat_config():
@@ -84,6 +91,133 @@ def test_geo_eligibility_explicit_profile_bypasses_config():
 def test_geo_profile_is_memoized():
     first = job_scorer._default_geo_profile()
     assert job_scorer._default_geo_profile() is first
+
+
+def test_profile_is_keyword_only():
+    # A positionally-bound profile would be str()-lowered into a no-op match:
+    # a silently wrong verdict. Keyword-only turns that into a loud TypeError,
+    # and matches the engine's own signature.
+    import inspect
+
+    from career_os.services.geo.presets import US_REMOTE_PROFILE
+
+    with pytest.raises(TypeError):
+        job_scorer.geo_eligibility("Cork, Ireland", None, False, "", "", US_REMOTE_PROFILE)
+
+    params = inspect.signature(job_scorer.geo_eligibility).parameters
+    assert params["profile"].kind is inspect.Parameter.KEYWORD_ONLY
+
+
+# --- differential vs the gate this replaced (batch_probe.geo_classify) ------
+#
+# The config route is the PRODUCTION path, and it is the one that regressed
+# while the preset-only suite stayed green. This pins it against the behaviour
+# it replaced over a fixed corpus: batch_probe returns None to DROP, the engine
+# returns "foreign", and the two must agree on every string except the
+# divergences enumerated below.
+
+_DIFFERENTIAL_CORPUS = (
+    # home
+    "Cork, Ireland",
+    "Dublin",
+    "Dublin, Ireland",
+    "Remote - Ireland",
+    "Galway",
+    # short foreign signals (the BL-02 regression)
+    "Remote - US",
+    "Remote, US",
+    "Remote (US)",
+    "Remote - UK",
+    "Remote - NA",
+    # US cities missing from the ported token list (the BL-02 regression)
+    "Miami, FL",
+    "Dallas, TX",
+    "Los Angeles, CA",
+    "San Diego",
+    "Houston, TX",
+    "Phoenix, AZ",
+    "San Jose, CA",
+    # foreign, already correct
+    "New York, United States",
+    "San Francisco, CA",
+    "Seattle, WA",
+    "Austin, Texas",
+    "Paris, France",
+    "Madrid, Spain",
+    "Tokyo, Japan",
+    "Singapore",
+    "Tel Aviv, Israel",
+    # pan-region (the BL-04 vocabulary)
+    "Remote - EMEA",
+    "EMEA",
+    "Europe",
+    "DACH",
+    "Benelux",
+    "Nordics",
+    "EU-wide",
+    "Remote - Worldwide",
+    "Global",
+    "Anywhere",
+    "Work from anywhere",
+    # unspecified remote
+    "Remote",
+    "Fully remote",
+    # no signal
+    "",
+    "Somewhereville",
+)
+
+# Divergences we intend to keep: (location, remote_flag) -> why.
+# Anything NOT listed here must match the old gate exactly; anything listed
+# must still diverge, so silently "fixing" one of these also fails the test.
+_INTENDED_DIVERGENCES = {
+    # The engine's public geography list is far broader than batch_probe's
+    # ~30 hand-picked foreign tokens, which carried no European or Latin
+    # American entries at all. A remote posting anchored in a named foreign
+    # country is now correctly blocked instead of admitted.
+    ("Berlin, Germany", True): "broader public geography list",
+    ("Mexico City, Mexico", True): "broader public geography list",
+    # Core 7-way contract: absence of geo signal must NEVER bury a role.
+    # The old gate dropped it; "unknown" is deliberately an eligible class.
+    ("", False): "unknown is deliberately not buried",
+    ("Somewhereville", False): "unknown is deliberately not buried",
+    ("Unknown City", False): "unknown is deliberately not buried",
+}
+
+
+@pytest.mark.parametrize("location", _DIFFERENTIAL_CORPUS)
+@pytest.mark.parametrize("remote", [False, True], ids=["onsite", "remote"])
+def test_config_route_matches_the_gate_it_replaced(location, remote):
+    old_drops = batch_probe.geo_classify(location, None, remote) is None
+    new_drops = job_scorer.geo_eligibility(location, None, remote) == "foreign"
+
+    if (location, remote) in _INTENDED_DIVERGENCES:
+        assert old_drops != new_drops, (
+            f"{location!r} (remote={remote}) no longer diverges — remove it from "
+            f"_INTENDED_DIVERGENCES: {_INTENDED_DIVERGENCES[location, remote]}"
+        )
+    else:
+        assert old_drops == new_drops, (
+            f"{location!r} (remote={remote}): old gate "
+            f"{'DROPPED' if old_drops else 'KEPT'}, engine "
+            f"{'DROPPED' if new_drops else 'KEPT'} — an unintended behaviour change"
+        )
+
+
+def test_differential_corpus_covers_the_regressed_strings():
+    # Guards the guard: the nine strings that regressed must stay in the corpus.
+    regressed = {
+        "Remote - US",
+        "Remote, US",
+        "Remote (US)",
+        "Remote - UK",
+        "Remote - NA",
+        "Miami, FL",
+        "Dallas, TX",
+        "Los Angeles, CA",
+        "San Diego",
+    }
+    assert regressed <= set(_DIFFERENTIAL_CORPUS)
 
 
 # --- is_api_submittable ----------------------------------------------------
