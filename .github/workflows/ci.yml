@@ -67,6 +67,12 @@ jobs:
         # separate nightly gate (nightly.yml) so the fast unit run stays lean.
         run: pytest tests/ -v --tb=short -m "not eval" --cov=src/career_os --cov-report=xml
 
+      - name: Geo blind-set gate
+        # G-1474: differential + precision/recall + perf gate for the geo engine.
+        # eval-marked so the fast unit run stays lean; runs here (not only
+        # nightly) because a geo regression silently admits ineligible roles.
+        run: pytest tests/eval/geo -v --tb=short -m eval
+
       - name: Run tool-script tests
         # tools/ is dev tooling, not the shipped package, so these run as a
         # separate gate without --cov (keeps src/career_os coverage clean).

@@ -1,0 +1,1405 @@
+{
+  "generated_from": "eyas tools/job_scorer.py @ 6de611d",
+  "generated_at": "2026-08-05T15:22:19Z",
+  "profile": "FRANKFURT_PROFILE",
+  "thresholds": {
+    "recall": 0.93,
+    "precision": 0.74
+  },
+  "class_map": {
+    "de_local": "home_local",
+    "de_relocate": "home_relocate",
+    "eu_relocate": "visa_free_relocate",
+    "uk_relocate": "visa_required_relocate",
+    "eligible_remote": "eligible_remote",
+    "foreign": "foreign",
+    "unknown": "unknown"
+  },
+  "items": {
+    "J0000": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0001": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0002": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0003": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0004": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0005": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0006": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0007": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0008": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0009": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": false
+    },
+    "J0010": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0011": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0012": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0013": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": false
+    },
+    "J0014": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0015": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0016": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0017": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0018": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0019": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": false
+    },
+    "J0020": {
+      "eyas_class": "uk_relocate",
+      "generic_class": "visa_required_relocate",
+      "role_keep": false
+    },
+    "J0021": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0022": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0023": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0024": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0025": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0026": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0027": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0028": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0029": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0030": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0031": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0032": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0033": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0034": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0035": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0036": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0037": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0038": {
+      "eyas_class": "uk_relocate",
+      "generic_class": "visa_required_relocate",
+      "role_keep": true
+    },
+    "J0039": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": false
+    },
+    "J0040": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0041": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0042": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0043": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0044": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0045": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0046": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0047": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0048": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0049": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0050": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0051": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0052": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0053": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0054": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0055": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0056": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0057": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": true
+    },
+    "J0058": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0059": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0060": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0061": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0062": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0063": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0064": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0065": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0066": {
+      "eyas_class": "uk_relocate",
+      "generic_class": "visa_required_relocate",
+      "role_keep": true
+    },
+    "J0067": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0068": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0069": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0070": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0071": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0072": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0073": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0074": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0075": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0076": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0077": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0078": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0079": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0080": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0081": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0082": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0083": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0084": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0085": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0086": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0087": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0088": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0089": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": false
+    },
+    "J0090": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0091": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0092": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0093": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0094": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0095": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0096": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0097": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0098": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0099": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0100": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0101": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0102": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0103": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0104": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0105": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0106": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0107": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0108": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0109": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0110": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": false
+    },
+    "J0111": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0112": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0113": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0114": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0115": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0116": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0117": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0118": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0119": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": false
+    },
+    "J0120": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0121": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0122": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0123": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0124": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0125": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0126": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0127": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0128": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": false
+    },
+    "J0129": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0130": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0131": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0132": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0133": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0134": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0135": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0136": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": false
+    },
+    "J0137": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0138": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0139": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0140": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0141": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": false
+    },
+    "J0142": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0143": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0144": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0145": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0146": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": false
+    },
+    "J0147": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0148": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0149": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0150": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0151": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0152": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0153": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0154": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0155": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": false
+    },
+    "J0156": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0157": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0158": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0159": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0160": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0161": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0162": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0163": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0164": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0165": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0166": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0167": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0168": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0169": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0170": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0171": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0172": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0173": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0174": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0175": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": false
+    },
+    "J0176": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": false
+    },
+    "J0177": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0178": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0179": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0180": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0181": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0182": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0183": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0184": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0185": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0186": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0187": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0188": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0189": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0190": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0191": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0192": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0193": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0194": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0195": {
+      "eyas_class": "uk_relocate",
+      "generic_class": "visa_required_relocate",
+      "role_keep": false
+    },
+    "J0196": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0197": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0198": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0199": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0200": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0201": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0202": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0203": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0204": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": false
+    },
+    "J0205": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0206": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0207": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0208": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0209": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0210": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0211": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0212": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0213": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0214": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0215": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0216": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0217": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0218": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0219": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0220": {
+      "eyas_class": "uk_relocate",
+      "generic_class": "visa_required_relocate",
+      "role_keep": true
+    },
+    "J0221": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0222": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0223": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0224": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0225": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0226": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0227": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0228": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": true
+    },
+    "J0229": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0230": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0231": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0232": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0233": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0234": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0235": {
+      "eyas_class": "uk_relocate",
+      "generic_class": "visa_required_relocate",
+      "role_keep": false
+    },
+    "J0236": {
+      "eyas_class": "de_local",
+      "generic_class": "home_local",
+      "role_keep": true
+    },
+    "J0237": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0238": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0239": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0240": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0241": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0242": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0243": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0244": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0245": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0246": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0247": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0248": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0249": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0250": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0251": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": false
+    },
+    "J0252": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0253": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0254": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0255": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0256": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0257": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0258": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": false
+    },
+    "J0259": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0260": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0261": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0262": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0263": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0264": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    },
+    "J0265": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0266": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0267": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": true
+    },
+    "J0268": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0269": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0270": {
+      "eyas_class": "eligible_remote",
+      "generic_class": "eligible_remote",
+      "role_keep": true
+    },
+    "J0271": {
+      "eyas_class": "de_relocate",
+      "generic_class": "home_relocate",
+      "role_keep": true
+    },
+    "J0272": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0273": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": false
+    },
+    "J0274": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": true
+    },
+    "J0275": {
+      "eyas_class": "eu_relocate",
+      "generic_class": "visa_free_relocate",
+      "role_keep": true
+    },
+    "J0276": {
+      "eyas_class": "foreign",
+      "generic_class": "foreign",
+      "role_keep": true
+    }
+  }
+}
