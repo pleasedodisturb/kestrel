@@ -25,6 +25,7 @@ from hypothesis import strategies as st  # noqa: E402
 from career_os.services.geo.classifier import (  # noqa: E402
     ALL_CLASSES,
     ELIGIBLE_CLASSES,
+    MAYBE_CLASSES,
     classify_candidate,
     geo_eligibility,
 )
@@ -89,20 +90,31 @@ def test_classify_candidate_total(candidate, remote, profile):
 
 def test_unknown_is_an_eligible_class():
     assert "unknown" in ELIGIBLE_CLASSES
-    assert "unknown" not in {"foreign"}
+    assert "unknown" not in MAYBE_CLASSES
+    assert "unknown" not in ALL_CLASSES - ELIGIBLE_CLASSES
+
+
+# Alphabetic text carrying no geographic token at all. Generated from a
+# restricted alphabet so Hypothesis cannot stumble onto a real place name
+# ("us", "eu", "asia"), then filtered against every profile pattern — the
+# property is only meaningful for genuinely signal-free input.
+_no_geo_signal = st.text(alphabet="qxzjkvw", min_size=1, max_size=40)
 
 
 @given(
-    location=_text_or_none,
+    location=_no_geo_signal,
     remote=st.booleans(),
     profile=st.sampled_from(PROFILES),
 )
 @settings(max_examples=200, deadline=None)
-def test_unknown_verdict_is_never_ineligible(location, remote, profile):
+def test_signal_free_input_is_never_buried(location, remote, profile):
+    # The geo-gate rule that the whole 7-way design exists to protect: absence
+    # of geo data must never bury a role. This can actually fail — if any
+    # pattern started matching arbitrary text, or if the terminal fallback
+    # stopped defaulting eligible, the verdict would leave ELIGIBLE_CLASSES.
     verdict = geo_eligibility(location, remote=remote, profile=profile)
-    if verdict == "unknown":
-        assert verdict != "foreign"
-        assert verdict in ELIGIBLE_CLASSES
+    assert verdict in ELIGIBLE_CLASSES, f"{location!r} (remote={remote}) -> {verdict}"
+    assert verdict != "foreign"
 
 
 # ---------------------------------------------------------------------------

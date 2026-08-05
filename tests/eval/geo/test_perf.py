@@ -61,14 +61,22 @@ def test_preset_patterns_are_precompiled_and_never_recompiled(monkeypatch):
             )
         assert checked >= 10, f"{profile.name}: only {checked} pattern fields inspected"
 
-    def _forbidden_compile(*args, **kwargs):
-        raise AssertionError(
-            f"re.compile called during classification (args={args!r}) — "
-            "all geo patterns must be compiled once at profile construction"
-        )
+    def _forbidden(name):
+        def _raise(*args, **kwargs):
+            raise AssertionError(
+                f"re.{name} called during classification (args={args!r}) — "
+                "all geo patterns must be compiled once at profile construction"
+            )
+
+        return _raise
 
     items = load_items()
-    monkeypatch.setattr(re, "compile", _forbidden_compile)
+    # Patch the module-level helpers too, not just re.compile: a regression
+    # written as `re.search(pattern_string, text)` never calls re.compile
+    # directly (it goes through re._compile) and would sail past a
+    # compile-only guard while recompiling on every classification.
+    for name in ("compile", "search", "match", "fullmatch", "_compile"):
+        monkeypatch.setattr(re, name, _forbidden(name))
     for item in itertools.islice(itertools.cycle(items), 500):
         classify(item, FRANKFURT_PROFILE)
         classify(item, US_REMOTE_PROFILE)

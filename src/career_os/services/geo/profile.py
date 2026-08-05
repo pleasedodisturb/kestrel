@@ -219,6 +219,13 @@ def build_profile(name: str, **pattern_strings: str | None) -> GeoProfile:
     a regex source string (compiled once, with ``re.IGNORECASE``) or ``None``.
     The non-pattern flags (``home_wins``, ``allow_unspecified_remote``) are not
     settable here — presets keep their defaults.
+
+    CAVEAT: pattern strings are compiled verbatim, NOT escaped — that is the
+    point of this route, but it means a catastrophic pattern (nested
+    quantifiers such as ``(\\S+)+``) would hang the classifier on scraped text.
+    Keep patterns to literal alternations with at most one non-nested
+    quantifier, as the shipped presets do. Build profiles from untrusted input
+    with :meth:`GeoProfile.from_home_tokens`, which ``re.escape``-s every token.
     """
     compiled: dict[str, re.Pattern[str] | None] = {}
     for field_name, source in pattern_strings.items():

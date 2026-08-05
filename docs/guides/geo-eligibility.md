@@ -151,6 +151,13 @@ all ten pattern fields (this is how the shipped presets are defined), and
 visa_required_tokens=..., extra_foreign_tokens=..., allow_pan_region_remote=...)`
 accepts the finer vocabularies as **function parameters**.
 
+`build_profile` compiles its pattern strings **verbatim, without escaping** —
+that is the point of the route, but it means you own their complexity. Keep
+them to literal alternations with at most one non-nested quantifier (as the
+shipped presets do): a catastrophic pattern like `(\S+)+` would hang the
+scorer on scraped text. For anything derived from untrusted input use
+`from_home_tokens`, which `re.escape`s every token.
+
 `home_local_tokens` and `visa_required_tokens` are code-level parameters only —
 they are **not** YAML keys, and putting them in `config/geo.yaml` does nothing.
 With them you can express the commute belt (postings there rank as
