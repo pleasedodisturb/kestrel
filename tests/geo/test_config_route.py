@@ -162,6 +162,32 @@ def test_multi_country_region_tokens_are_suppressed_when_pan_region_is_off(locat
     assert geo_eligibility(location, profile=IE_NO_PAN) == "unknown"
 
 
+@pytest.mark.parametrize(
+    "location",
+    [
+        "Remote EMEA/US",
+        "Remote (EMEA, US)",
+        "Remote - EMEA or US",
+        "Europe or US",
+        "Remote, EMEA/AMER",
+        "EMEA / North America",
+        "Remote - Europe, US & Canada",
+    ],
+)
+def test_multi_region_rescue_survives_a_foreign_token(location):
+    # BL-05 regression (contract rule 1): a posting that names an eligible
+    # region alongside a foreign one is rescued, not buried. Requires
+    # from_home_tokens to wire eligible_region to the pan-region vocabulary —
+    # with eligible_region=None the foreign token alone decided the verdict.
+    assert geo_eligibility(location, profile=IE) == "eligible_remote"
+
+
+def test_multi_region_rescue_is_off_with_pan_region_disabled():
+    # With the pan-region vocabulary disabled there is nothing eligible to
+    # rescue on: the explicit foreign token dominates.
+    assert geo_eligibility("Remote EMEA/US", profile=IE_NO_PAN) == "foreign"
+
+
 def test_presets_keep_unspecified_remote_eligible():
     from career_os.services.geo.presets import FRANKFURT_PROFILE, US_REMOTE_PROFILE
 

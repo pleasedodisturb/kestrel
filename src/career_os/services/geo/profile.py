@@ -21,11 +21,13 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 # Pan-region vocabulary used by ``from_home_tokens`` when the caller allows
-# pan-region remote postings. Deliberately region-agnostic: these tokens name a
-# multi-country region rather than a single foreign place, so a posting carrying
-# one is open to a home-based candidate no matter where home is. The
-# multi-country names (emea/dach/...) are absent from ``PUBLIC_GEOGRAPHY_TOKENS``
-# on purpose — nothing here can collide with the foreign vocabulary.
+# pan-region remote postings. The first group is truly region-agnostic
+# (global/worldwide/anywhere); the second is European multi-country shorthand
+# (emea/dach/...), carried over from the gate this replaces. A non-European
+# home config that should NOT treat bare "EMEA" as reachable needs a custom
+# ``build_profile`` — the flat config route cannot express that distinction.
+# The multi-country names are absent from ``PUBLIC_GEOGRAPHY_TOKENS`` on
+# purpose — nothing here can collide with the foreign vocabulary.
 _PAN_REGION_WIDE = (
     r"\b(?:global(?:ly)?|worldwide|anywhere|international|"
     r"emea|european|europe|dach|benelux|nordics|eu[\s\-]?wide)\b"
@@ -169,7 +171,11 @@ class GeoProfile:
             visa_required=_compile_tokens(visa_required),
             foreign=_compile_tokens(foreign_tokens),
             foreign_location_only=foreign_location_only,
-            eligible_region=None,
+            # The multi-region rescue (contract rule 1) needs an eligible
+            # vocabulary to fire; without it "Remote EMEA/US" would classify
+            # foreign off the US token alone. The pan-region vocabulary is the
+            # config route's only notion of "eligible region", so reuse it.
+            eligible_region=visa_free_wide,
             title_region_foreign=None,
             home_wins=True,
             allow_unspecified_remote=allow_pan_region_remote,
