@@ -188,17 +188,20 @@ def test_prefilter_without_profile_is_byte_identical_regression_guard():
     assert all("geo_class" not in job for job in passed)
 
 
-def test_prefilter_with_profile_drops_only_foreign():
+def test_prefilter_with_profile_annotates_but_keeps_foreign_by_default():
     jobs = _prefilter_jobs()
     passed, metrics = run_prefilter(jobs, _config(geo_profile=FRANKFURT_PROFILE))
 
     kept_locations = [job["location"] for job in passed]
-    # Both foreign fixtures are dropped and counted.
-    assert "New York, United States" not in kept_locations
+    # "foreign" is the engine's cap / review-queue class: counted, annotated,
+    # NOT destroyed. Deleting it here costs ~6.4% recall against human GO
+    # judgements, inside a module that promises 99.5%.
     assert metrics.geo_rejections == 2
-    assert metrics.filtered == 2
+    assert metrics.filtered == 0
+    assert "New York, United States" in kept_locations
+    assert len(passed) == len(jobs)
 
-    # NEVER dropped: unknown and the maybe classes.
+    # NEVER rejected under any setting: unknown and the maybe classes.
     assert "Somewhereville" in kept_locations
     assert "London" in kept_locations
     assert "Amsterdam, Netherlands" in kept_locations
@@ -206,9 +209,40 @@ def test_prefilter_with_profile_drops_only_foreign():
     assert "Frankfurt am Main" in kept_locations
     assert "Austin, Texas" in kept_locations  # the office-rescued role
 
-    # Survivors carry the verdict for downstream consumers (t3 lane, ranking).
+    # Every job carries its verdict for the caller to cap/rank on.
     assert all(job.get("geo_class") in ALL_CLASSES for job in passed)
+    assert sum(1 for job in passed if job["geo_class"] == "foreign") == 2
+
+
+def test_prefilter_drops_foreign_only_with_the_explicit_second_opt_in():
+    jobs = _prefilter_jobs()
+    passed, metrics = run_prefilter(
+        jobs,
+        _config(geo_profile=FRANKFURT_PROFILE, geo_drop_foreign=True),
+    )
+
+    kept_locations = [job["location"] for job in passed]
+    assert "New York, United States" not in kept_locations
+    assert metrics.geo_rejections == 2
+    assert metrics.filtered == 2
     assert all(job["geo_class"] != "foreign" for job in passed)
+
+    # Still never dropped: unknown and the maybe classes.
+    assert "Somewhereville" in kept_locations
+    assert "London" in kept_locations
+    assert "Amsterdam, Netherlands" in kept_locations
+
+
+def test_geo_drop_foreign_without_a_profile_is_inert():
+    jobs = _prefilter_jobs()
+    snapshot = copy.deepcopy(jobs)
+    passed, metrics = run_prefilter(jobs, _config(geo_drop_foreign=True))
+
+    # The gate needs BOTH opt-ins; the drop flag alone changes nothing.
+    assert passed == snapshot
+    assert metrics.geo_rejections == 0
+    assert metrics.filtered == 0
+    assert all("geo_class" not in job for job in passed)
 
 
 def test_prefilter_off_strategy_bypasses_the_geo_gate():
@@ -227,10 +261,31 @@ def test_prefilter_strict_strategy_also_applies_the_geo_gate():
     jobs = _prefilter_jobs()
     passed, metrics = run_prefilter(
         jobs,
-        _config(geo_profile=FRANKFURT_PROFILE, strategy=PrefilterStrategy.STRICT),
+        _config(
+            geo_profile=FRANKFURT_PROFILE,
+            strategy=PrefilterStrategy.STRICT,
+            geo_drop_foreign=True,
+        ),
     )
     assert metrics.geo_rejections == 2
     assert all(job["geo_class"] != "foreign" for job in passed)
+
+
+def test_keyword_counters_are_not_truncated_by_the_geo_gate():
+    # The counters must mean the same thing with and without the geo gate,
+    # since they are logged side by side. Only `filtered` may differ.
+    jobs = _prefilter_jobs()
+    _, baseline = run_prefilter(jobs, _config())
+
+    _, gated = run_prefilter(
+        _prefilter_jobs(),
+        _config(geo_profile=FRANKFURT_PROFILE, geo_drop_foreign=True),
+    )
+
+    assert gated.title_matches == baseline.title_matches
+    assert gated.skill_matches == baseline.skill_matches
+    assert gated.industry_rejections == baseline.industry_rejections
+    assert gated.geo_rejections == 2
 
 
 # ---------------------------------------------------------------------------

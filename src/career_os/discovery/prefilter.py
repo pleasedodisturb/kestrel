@@ -9,6 +9,14 @@ Three aggressiveness levels:
 - off:      disabled — all jobs pass through
 
 Based on validated spike results in tools/spike_prefilter.py.
+
+The 99.5% recall figure describes the keyword filter above. The optional geo
+gate is a SEPARATE signal with its own measured recall of 93.6% (G-1474
+blind set, 47 human-judged GO roles, 3 classified ``foreign``), so it does not
+delete anything by default: it annotates and counts, leaving the cap/review
+decision to the scoring layer, exactly as the engine's own contract defines the
+``foreign`` class. Deletion is available behind ``geo_drop_foreign`` — turning
+it on trades the module's 99.5% recall claim for the geo gate's 93.6%.
 """
 
 from __future__ import annotations
@@ -44,7 +52,13 @@ class PrefilterConfig:
         blacklist_industries: Industries to reject in strict mode.
         geo_profile: Optional GeoProfile enabling the opt-in geo gate. When
             None (the default) the gate is a strict no-op and pre-filter
-            behaviour is unchanged.
+            behaviour is unchanged. When set, jobs are ANNOTATED with their
+            geo class and counted — nothing is deleted.
+        geo_drop_foreign: Second, explicit opt-in that turns the geo gate from
+            annotating into deleting. Off by default: ``foreign`` is the
+            engine's "cap / review queue" class, and deleting it costs ~6.4%
+            recall against human GO judgements (see module docstring). Only
+            turn this on where a lost eligible role is acceptable.
     """
 
     strategy: PrefilterStrategy = PrefilterStrategy.STRICT
@@ -53,6 +67,7 @@ class PrefilterConfig:
     min_skill_matches: int = 2
     blacklist_industries: list[str] = field(default_factory=list)
     geo_profile: GeoProfile | None = None
+    geo_drop_foreign: bool = False
 
 
 @dataclass
@@ -69,6 +84,9 @@ class PrefilterMetrics:
     title_matches: int = 0
     skill_matches: int = 0
     industry_rejections: int = 0
+    # Jobs classified "foreign" by the geo gate. Counted whether or not they
+    # were actually dropped (see PrefilterConfig.geo_drop_foreign), so the
+    # number always means "geo-ineligible roles seen".
     geo_rejections: int = 0
 
     @property
@@ -116,10 +134,19 @@ def run_prefilter(
 
     The geo gate is OPT-IN: it runs only when ``config.geo_profile`` is set,
     and only in strict/moderate mode (``off`` stays a full bypass — no geo
-    classification happens). When active it stores the verdict on each job as
-    ``job["geo_class"]`` and rejects ONLY the explicit ``"foreign"`` class;
-    ``unknown`` and the maybe classes always pass through — absence of geo
-    signal must never bury a role.
+    classification happens). When active it annotates each job dict in place
+    with ``job["geo_class"]`` and counts the ``"foreign"`` class in
+    ``metrics.geo_rejections``, but keeps the job. ``unknown`` and the maybe
+    classes are never rejected — absence of geo signal must never bury a role.
+
+    Set ``config.geo_drop_foreign`` to actually delete the ``"foreign"`` class
+    (see the module docstring for the recall cost).
+
+    NOTE: ``job["geo_class"]`` is written onto the caller's dicts and is
+    available to DIRECT callers of this function only. The discovery service
+    rebuilds its merged job dicts after pre-filtering, so the annotation does
+    not currently reach ``DiscoveredJob`` persistence — wiring that hand-off is
+    tracked as follow-up work.
 
     Returns:
         Tuple of (passed_jobs, metrics).
@@ -148,8 +175,27 @@ def run_prefilter(
         description = job.get("description", "")
         industry = job.get("industry", "")
 
-        # Opt-in geo gate: inert unless a profile is configured. Rejects ONLY
-        # the explicit "foreign" class; "unknown" and the maybe classes pass.
+        # Keyword signals are counted for EVERY job, before the geo gate can
+        # short-circuit: otherwise title_matches silently stops meaning "jobs
+        # whose title matched" and starts meaning "...among geo-survivors",
+        # while being logged side by side with the untruncated counters.
+        has_title = _title_matches(title, title_patterns)
+        has_skills = _skill_density_passes(description, skill_patterns, config.min_skill_matches)
+        is_blacklisted = _industry_blacklisted(industry, blacklist)
+
+        if has_title:
+            metrics.title_matches += 1
+        if has_skills:
+            metrics.skill_matches += 1
+        if is_blacklisted:
+            metrics.industry_rejections += 1
+
+        # Opt-in geo gate: inert unless a profile is configured. Annotates and
+        # counts the explicit "foreign" class but does NOT delete it — that is
+        # the engine's cap/review-queue class, and destroying it here would
+        # bury eligible roles the pre-filter promises to keep. Deletion needs
+        # the second, explicit geo_drop_foreign opt-in. "unknown" and the maybe
+        # classes are never rejected under either setting.
         if config.geo_profile is not None:
             geo_class = geo_eligibility(
                 job.get("location"),
@@ -162,19 +208,9 @@ def run_prefilter(
             job["geo_class"] = geo_class
             if geo_class == "foreign":
                 metrics.geo_rejections += 1
-                metrics.filtered += 1
-                continue
-
-        has_title = _title_matches(title, title_patterns)
-        has_skills = _skill_density_passes(description, skill_patterns, config.min_skill_matches)
-        is_blacklisted = _industry_blacklisted(industry, blacklist)
-
-        if has_title:
-            metrics.title_matches += 1
-        if has_skills:
-            metrics.skill_matches += 1
-        if is_blacklisted:
-            metrics.industry_rejections += 1
+                if config.geo_drop_foreign:
+                    metrics.filtered += 1
+                    continue
 
         # Decision logic depends on strategy
         if config.strategy == PrefilterStrategy.STRICT:
