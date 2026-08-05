@@ -22,7 +22,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# G-1477: import batch_apply_browser as a bare module off tools/, matching
+# tests/conftest.py and every other tool test in this repo. The package-
+# qualified `tools.` form does not resolve in the Python 3.11 CI environment:
+# tools/ has no __init__.py, so it is only a namespace *portion*, and a
+# regular `tools` package anywhere on sys.path silently shadows it.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
 # batch_apply_browser loads config/personal.yaml at import time.
 # Skip the entire module when the config file is absent (CI, fresh clones).
@@ -33,7 +38,7 @@ if not _personal_config.exists():
         allow_module_level=True,
     )
 
-from tools.batch_apply_browser import (
+from batch_apply_browser import (
     PERSONAL,
     detect_platform,
     get_cover_letter_text,
@@ -286,7 +291,7 @@ def make_page_with_fields(field_map=None, url="https://jobs.lever.co/company/abc
 class TestFillSourceField:
     @pytest.mark.asyncio
     async def test_fills_text_input_by_name(self):
-        from tools.batch_apply_browser import fill_source_field
+        from batch_apply_browser import fill_source_field
 
         found_loc = _make_found_locator(value="text", tag="input")
         page = make_page_with_fields({'name*="source"': found_loc})
@@ -296,7 +301,7 @@ class TestFillSourceField:
 
     @pytest.mark.asyncio
     async def test_fills_select_by_name(self):
-        from tools.batch_apply_browser import fill_source_field
+        from batch_apply_browser import fill_source_field
 
         select_loc = _make_found_locator(tag="select")
         page = make_page_with_fields({'name*="source"': select_loc})
@@ -306,14 +311,14 @@ class TestFillSourceField:
 
     @pytest.mark.asyncio
     async def test_no_source_field_doesnt_crash(self):
-        from tools.batch_apply_browser import fill_source_field
+        from batch_apply_browser import fill_source_field
 
         page = make_page_with_fields({})
         await fill_source_field(page)  # Should not raise
 
     @pytest.mark.asyncio
     async def test_fills_via_label_for_attr(self):
-        from tools.batch_apply_browser import fill_source_field
+        from batch_apply_browser import fill_source_field
 
         label_loc = _make_found_locator()
         label_loc.first.get_attribute = AsyncMock(return_value="source-input")
@@ -339,7 +344,7 @@ class TestFillSourceField:
 class TestFillLever:
     @pytest.mark.asyncio
     async def test_navigates_to_apply_url(self):
-        from tools.batch_apply_browser import fill_lever
+        from batch_apply_browser import fill_lever
 
         page = make_page_with_fields({})
         app = {
@@ -347,8 +352,8 @@ class TestFillLever:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_lever(page, app, dry_run=False)
 
         page.goto.assert_called_once()
@@ -357,7 +362,7 @@ class TestFillLever:
 
     @pytest.mark.asyncio
     async def test_uploads_cv_first(self):
-        from tools.batch_apply_browser import fill_lever
+        from batch_apply_browser import fill_lever
 
         file_loc = _make_found_locator()
         page = make_page_with_fields({'type="file"': file_loc})
@@ -367,15 +372,15 @@ class TestFillLever:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_lever(page, app, dry_run=False)
 
         file_loc.first.set_input_files.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_fills_name_email_phone(self):
-        from tools.batch_apply_browser import fill_lever
+        from batch_apply_browser import fill_lever
 
         name_loc = _make_found_locator()
         email_loc = _make_found_locator()
@@ -394,8 +399,8 @@ class TestFillLever:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_lever(page, app, dry_run=False)
 
         # name_input.fill("") then name_input.fill(PERSONAL["full_name"])
@@ -406,7 +411,7 @@ class TestFillLever:
 
     @pytest.mark.asyncio
     async def test_fills_linkedin_github(self):
-        from tools.batch_apply_browser import fill_lever
+        from batch_apply_browser import fill_lever
 
         linkedin_loc = _make_found_locator()
         github_loc = _make_found_locator()
@@ -423,8 +428,8 @@ class TestFillLever:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_lever(page, app, dry_run=False)
 
         linkedin_loc.first.fill.assert_called_with(PERSONAL["linkedin"])
@@ -432,7 +437,7 @@ class TestFillLever:
 
     @pytest.mark.asyncio
     async def test_returns_true(self):
-        from tools.batch_apply_browser import fill_lever
+        from batch_apply_browser import fill_lever
 
         page = make_page_with_fields({})
         app = {
@@ -440,8 +445,8 @@ class TestFillLever:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 result = await fill_lever(page, app, dry_run=False)
 
         assert result is True
@@ -455,7 +460,7 @@ class TestFillLever:
 class TestFillGreenhouse:
     @pytest.mark.asyncio
     async def test_clicks_apply_button(self):
-        from tools.batch_apply_browser import fill_greenhouse
+        from batch_apply_browser import fill_greenhouse
 
         apply_loc = _make_found_locator()
         page = make_page_with_fields(
@@ -469,15 +474,15 @@ class TestFillGreenhouse:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_greenhouse(page, app, dry_run=False)
 
         apply_loc.first.click.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_fills_first_last_name_email_phone(self):
-        from tools.batch_apply_browser import fill_greenhouse
+        from batch_apply_browser import fill_greenhouse
 
         first_loc = _make_found_locator()
         last_loc = _make_found_locator()
@@ -498,8 +503,8 @@ class TestFillGreenhouse:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_greenhouse(page, app, dry_run=False)
 
         first_loc.first.fill.assert_called_with(PERSONAL["first_name"])
@@ -509,7 +514,7 @@ class TestFillGreenhouse:
 
     @pytest.mark.asyncio
     async def test_uploads_resume(self):
-        from tools.batch_apply_browser import fill_greenhouse
+        from batch_apply_browser import fill_greenhouse
 
         # For greenhouse, resume_input = page.locator('input[type="file"]').first
         # then await resume_input.count() > 0 — but .first is an attribute of the
@@ -530,8 +535,8 @@ class TestFillGreenhouse:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_greenhouse(page, app, dry_run=False)
 
         # resume_input is file_loc.first, then set_input_files called on it
@@ -539,7 +544,7 @@ class TestFillGreenhouse:
 
     @pytest.mark.asyncio
     async def test_returns_true(self):
-        from tools.batch_apply_browser import fill_greenhouse
+        from batch_apply_browser import fill_greenhouse
 
         page = make_page_with_fields({})
         app = {
@@ -547,8 +552,8 @@ class TestFillGreenhouse:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 result = await fill_greenhouse(page, app, dry_run=False)
 
         assert result is True
@@ -562,7 +567,7 @@ class TestFillGreenhouse:
 class TestFillAshby:
     @pytest.mark.asyncio
     async def test_fills_system_fields(self):
-        from tools.batch_apply_browser import fill_ashby
+        from batch_apply_browser import fill_ashby
 
         name_loc = _make_found_locator()
         email_loc = _make_found_locator()
@@ -582,8 +587,8 @@ class TestFillAshby:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_ashby(page, app, dry_run=False)
 
         name_loc.first.fill.assert_called_with(PERSONAL["full_name"])
@@ -592,7 +597,7 @@ class TestFillAshby:
 
     @pytest.mark.asyncio
     async def test_clicks_apply_button(self):
-        from tools.batch_apply_browser import fill_ashby
+        from batch_apply_browser import fill_ashby
 
         apply_loc = _make_found_locator()
         page = make_page_with_fields(
@@ -607,15 +612,15 @@ class TestFillAshby:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_ashby(page, app, dry_run=False)
 
         apply_loc.first.click.assert_called()
 
     @pytest.mark.asyncio
     async def test_fills_linkedin(self):
-        from tools.batch_apply_browser import fill_ashby
+        from batch_apply_browser import fill_ashby
 
         linkedin_loc = _make_found_locator()
         page = make_page_with_fields(
@@ -630,15 +635,15 @@ class TestFillAshby:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 await fill_ashby(page, app, dry_run=False)
 
         linkedin_loc.first.fill.assert_called_with(PERSONAL["linkedin"])
 
     @pytest.mark.asyncio
     async def test_returns_true(self):
-        from tools.batch_apply_browser import fill_ashby
+        from batch_apply_browser import fill_ashby
 
         page = make_page_with_fields({}, url="https://jobs.ashbyhq.com/company/abc123")
         app = {
@@ -646,8 +651,8 @@ class TestFillAshby:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
                 result = await fill_ashby(page, app, dry_run=False)
 
         assert result is True
@@ -661,7 +666,7 @@ class TestFillAshby:
 class TestFillFieldByLabel:
     @pytest.mark.asyncio
     async def test_fills_via_for_attribute(self):
-        from tools.batch_apply_browser import _fill_field_by_label
+        from batch_apply_browser import _fill_field_by_label
 
         label_loc = _make_found_locator()
         label_loc.first.get_attribute = AsyncMock(return_value="my-input")
@@ -681,7 +686,7 @@ class TestFillFieldByLabel:
 
     @pytest.mark.asyncio
     async def test_fills_select_via_for_attribute(self):
-        from tools.batch_apply_browser import _fill_field_by_label
+        from batch_apply_browser import _fill_field_by_label
 
         label_loc = _make_found_locator()
         label_loc.first.get_attribute = AsyncMock(return_value="my-select")
@@ -701,7 +706,7 @@ class TestFillFieldByLabel:
 
     @pytest.mark.asyncio
     async def test_fills_via_sibling_fallback(self):
-        from tools.batch_apply_browser import _fill_field_by_label
+        from batch_apply_browser import _fill_field_by_label
 
         label_loc = _make_found_locator()
         label_loc.first.get_attribute = AsyncMock(return_value=None)  # No 'for' attr
@@ -721,7 +726,7 @@ class TestFillFieldByLabel:
 
     @pytest.mark.asyncio
     async def test_fills_via_aria_label_fallback(self):
-        from tools.batch_apply_browser import _fill_field_by_label
+        from batch_apply_browser import _fill_field_by_label
 
         aria_loc = _make_found_locator(tag="input")
         page = make_page_with_fields(
@@ -736,7 +741,7 @@ class TestFillFieldByLabel:
 
     @pytest.mark.asyncio
     async def test_returns_false_when_not_found(self):
-        from tools.batch_apply_browser import _fill_field_by_label
+        from batch_apply_browser import _fill_field_by_label
 
         page = make_page_with_fields({})
 
@@ -745,7 +750,7 @@ class TestFillFieldByLabel:
 
     @pytest.mark.asyncio
     async def test_exact_match_mode(self):
-        from tools.batch_apply_browser import _fill_field_by_label
+        from batch_apply_browser import _fill_field_by_label
 
         label_loc = _make_found_locator()
         label_loc.first.get_attribute = AsyncMock(return_value="exact-field")
@@ -772,7 +777,7 @@ class TestFillFieldByLabel:
 class TestClickRadioByLabel:
     @pytest.mark.asyncio
     async def test_clicks_standard_radio(self):
-        from tools.batch_apply_browser import _click_radio_by_label
+        from batch_apply_browser import _click_radio_by_label
 
         radio_loc = _make_found_locator()
         page = make_page_with_fields(
@@ -787,7 +792,7 @@ class TestClickRadioByLabel:
 
     @pytest.mark.asyncio
     async def test_clicks_via_get_by_text_fallback(self):
-        from tools.batch_apply_browser import _click_radio_by_label
+        from batch_apply_browser import _click_radio_by_label
 
         text_loc = _make_found_locator()
         page = make_page_with_fields({})
@@ -799,7 +804,7 @@ class TestClickRadioByLabel:
 
     @pytest.mark.asyncio
     async def test_clicks_via_js_fallback(self):
-        from tools.batch_apply_browser import _click_radio_by_label
+        from batch_apply_browser import _click_radio_by_label
 
         page = make_page_with_fields({})
         page.get_by_text = MagicMock(return_value=_make_empty_locator())
@@ -810,7 +815,7 @@ class TestClickRadioByLabel:
 
     @pytest.mark.asyncio
     async def test_returns_false_when_no_radio(self):
-        from tools.batch_apply_browser import _click_radio_by_label
+        from batch_apply_browser import _click_radio_by_label
 
         page = make_page_with_fields({})
         page.get_by_text = MagicMock(return_value=_make_empty_locator())
@@ -828,7 +833,7 @@ class TestClickRadioByLabel:
 class TestSelectDropdownOption:
     @pytest.mark.asyncio
     async def test_selects_native_dropdown(self):
-        from tools.batch_apply_browser import _select_dropdown_option
+        from batch_apply_browser import _select_dropdown_option
 
         label_loc = _make_found_locator()
         parent_loc = AsyncMock()
@@ -849,7 +854,7 @@ class TestSelectDropdownOption:
 
     @pytest.mark.asyncio
     async def test_clicks_custom_dropdown_option(self):
-        from tools.batch_apply_browser import _select_dropdown_option
+        from batch_apply_browser import _select_dropdown_option
 
         label_loc = _make_found_locator()
         parent_loc = AsyncMock()
@@ -875,7 +880,7 @@ class TestSelectDropdownOption:
 
     @pytest.mark.asyncio
     async def test_returns_false_when_no_label(self):
-        from tools.batch_apply_browser import _select_dropdown_option
+        from batch_apply_browser import _select_dropdown_option
 
         page = make_page_with_fields({})
 
@@ -884,7 +889,7 @@ class TestSelectDropdownOption:
 
     @pytest.mark.asyncio
     async def test_falls_back_to_div_has_text(self):
-        from tools.batch_apply_browser import _select_dropdown_option
+        from batch_apply_browser import _select_dropdown_option
 
         # First label:has-text returns empty, then div:has-text returns found
         div_loc = _make_found_locator()
@@ -910,7 +915,7 @@ class TestSelectDropdownOption:
 
         This covers the portaled-menu Greenhouse pattern where the visible label
         isn't a <label> element and isn't a wrapping div either."""
-        from tools.batch_apply_browser import _select_dropdown_option
+        from batch_apply_browser import _select_dropdown_option
 
         trigger_loc = _make_found_locator(tag="button")
         option_loc = _make_found_locator()
@@ -935,7 +940,7 @@ class TestSelectDropdownOption:
         """When the label is found and a button trigger exists near it but
         the inline-option lookup returns nothing, we fall through to the
         portaled-menu path so an option in document.body is still picked."""
-        from tools.batch_apply_browser import _select_dropdown_option
+        from batch_apply_browser import _select_dropdown_option
 
         label_loc = _make_found_locator()
         parent_loc = AsyncMock()
@@ -993,7 +998,7 @@ class TestPortaledComboboxDispatch:
 
     @pytest.mark.asyncio
     async def test_click_portaled_option_dispatches_mousedown_and_click(self):
-        from tools.batch_apply_browser import _click_portaled_option
+        from batch_apply_browser import _click_portaled_option
 
         option_loc = _make_found_locator()
         page = make_page_with_fields({'role="option"': option_loc})
@@ -1007,7 +1012,7 @@ class TestPortaledComboboxDispatch:
     async def test_click_portaled_option_survives_dispatch_failure(self):
         """If dispatch_event raises (older Playwright / weird mock), we still
         click. This is the safety net referenced in the docstring."""
-        from tools.batch_apply_browser import _click_portaled_option
+        from batch_apply_browser import _click_portaled_option
 
         option_loc = _make_found_locator()
         option_loc.first.dispatch_event = AsyncMock(side_effect=RuntimeError("no dispatch"))
@@ -1019,7 +1024,7 @@ class TestPortaledComboboxDispatch:
 
     @pytest.mark.asyncio
     async def test_click_portaled_option_returns_false_when_not_found(self):
-        from tools.batch_apply_browser import _click_portaled_option
+        from batch_apply_browser import _click_portaled_option
 
         page = make_page_with_fields({})
 
@@ -1030,7 +1035,7 @@ class TestPortaledComboboxDispatch:
     async def test_select_portaled_combobox_uses_aria_haspopup_trigger(self):
         """The portaled-menu pattern: <button aria-haspopup="listbox"> opens a
         portaled <div role="listbox"> in document.body."""
-        from tools.batch_apply_browser import _select_portaled_combobox
+        from batch_apply_browser import _select_portaled_combobox
 
         trigger_loc = _make_found_locator(tag="button")
         option_loc = _make_found_locator()
@@ -1049,7 +1054,7 @@ class TestPortaledComboboxDispatch:
 
     @pytest.mark.asyncio
     async def test_select_portaled_combobox_returns_false_with_no_trigger(self):
-        from tools.batch_apply_browser import _select_portaled_combobox
+        from batch_apply_browser import _select_portaled_combobox
 
         page = make_page_with_fields({})
         # All selectors return empty — no combobox trigger anywhere.
@@ -1060,7 +1065,7 @@ class TestPortaledComboboxDispatch:
     async def test_select_portaled_combobox_skips_failing_selectors(self):
         """Some Playwright selectors (e.g. :has() with certain inner exprs)
         may raise. We should swallow those and keep trying other patterns."""
-        from tools.batch_apply_browser import _select_portaled_combobox
+        from batch_apply_browser import _select_portaled_combobox
 
         # First selectors raise; final selector finds the trigger.
         trigger_loc = _make_found_locator(tag="button")
@@ -1097,7 +1102,7 @@ class TestFillFieldByLabelComboboxFallback:
         """If the label is found but no input/textarea/select sibling exists,
         and the field is actually a portaled React combobox, the new fallback
         should drive it."""
-        from tools.batch_apply_browser import _fill_field_by_label
+        from batch_apply_browser import _fill_field_by_label
 
         label_loc = _make_found_locator()
         label_loc.first.get_attribute = AsyncMock(return_value=None)
@@ -1130,35 +1135,35 @@ class TestAnswerBank:
     """The answer bank + @-ref resolver that replaced the hardcoded essays."""
 
     def test_answer_bank_populated(self):
-        from tools.batch_apply_browser import ANSWERS
+        from batch_apply_browser import ANSWERS
 
         assert "why_company" in ANSWERS
         assert len(ANSWERS["why_company"]) > 20
 
     def test_location_ref_seeded_from_personal(self):
-        from tools.batch_apply_browser import ANSWERS, PERSONAL
+        from batch_apply_browser import ANSWERS, PERSONAL
 
         assert ANSWERS["location"] == PERSONAL["location"]
 
     def test_resolve_answer_dereferences_ref(self):
-        from tools.batch_apply_browser import ANSWERS, _resolve_answer
+        from batch_apply_browser import ANSWERS, _resolve_answer
 
         assert _resolve_answer("@why_company") == ANSWERS["why_company"]
 
     def test_resolve_answer_passes_through_literal(self):
-        from tools.batch_apply_browser import _resolve_answer
+        from batch_apply_browser import _resolve_answer
 
         assert _resolve_answer("Yes") == "Yes"
 
     def test_resolve_answer_unknown_ref_returns_empty(self):
-        from tools.batch_apply_browser import _resolve_answer
+        from batch_apply_browser import _resolve_answer
 
         assert _resolve_answer("@nonexistent_key") == ""
 
     def test_custom_questions_floor_present(self):
         # The fictional floor rules are always loaded so the fill mechanism is
         # testable regardless of the (gitignored) config contents.
-        from tools.batch_apply_browser import CUSTOM_QUESTIONS
+        from batch_apply_browser import CUSTOM_QUESTIONS
 
         matches = {
             (r["match"].get("platform"), r["match"].get("slug_or_url")) for r in CUSTOM_QUESTIONS
@@ -1176,24 +1181,22 @@ class TestAnswerBank:
 class TestFillCustomQuestions:
     @pytest.mark.asyncio
     async def test_lever_rule_fills_location(self):
-        from tools.batch_apply_browser import fill_custom_questions
+        from batch_apply_browser import fill_custom_questions
 
         page = make_page_with_fields({})
         app = {"url": "https://jobs.lever.co/nimbusworks/abc123", "slug": "nimbusworks"}
 
         with patch(
-            "tools.batch_apply_browser._fill_field_by_label",
+            "batch_apply_browser._fill_field_by_label",
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_fill:
             with patch(
-                "tools.batch_apply_browser._click_radio_by_label",
+                "batch_apply_browser._click_radio_by_label",
                 new_callable=AsyncMock,
                 return_value=True,
             ):
-                with patch(
-                    "tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock
-                ):
+                with patch("batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
                     await fill_custom_questions(page, app)
             # Should have tried to fill "Current location"
             labels = [c[0][1] for c in mock_fill.call_args_list if len(c[0]) >= 2]
@@ -1202,7 +1205,7 @@ class TestFillCustomQuestions:
 
     @pytest.mark.asyncio
     async def test_greenhouse_rule_fills_fields(self):
-        from tools.batch_apply_browser import fill_custom_questions
+        from batch_apply_browser import fill_custom_questions
 
         page = make_page_with_fields({})
         app = {
@@ -1211,11 +1214,11 @@ class TestFillCustomQuestions:
         }
 
         with patch(
-            "tools.batch_apply_browser._fill_field_by_label",
+            "batch_apply_browser._fill_field_by_label",
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_fill:
-            with patch("tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
+            with patch("batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
                 await fill_custom_questions(page, app)
                 assert mock_fill.call_count > 0
                 # Check the "Why {company}" / "Country" baseline labels were filled
@@ -1226,7 +1229,7 @@ class TestFillCustomQuestions:
     async def test_greenhouse_rule_appends_role_overlay(self):
         # The slug matches a role overlay, so the qualifying-question extras
         # (which mention a local-language question) must also be filled.
-        from tools.batch_apply_browser import fill_custom_questions
+        from batch_apply_browser import fill_custom_questions
 
         page = make_page_with_fields({})
         app = {
@@ -1235,18 +1238,18 @@ class TestFillCustomQuestions:
         }
 
         with patch(
-            "tools.batch_apply_browser._fill_field_by_label",
+            "batch_apply_browser._fill_field_by_label",
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_fill:
-            with patch("tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
+            with patch("batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
                 await fill_custom_questions(page, app)
         labels = " ".join(c[0][1] for c in mock_fill.call_args_list if len(c[0]) >= 2).lower()
         assert "language" in labels
 
     @pytest.mark.asyncio
     async def test_ashby_rule_fills_fields(self):
-        from tools.batch_apply_browser import fill_custom_questions
+        from batch_apply_browser import fill_custom_questions
 
         page = make_page_with_fields({})
         app = {
@@ -1255,18 +1258,16 @@ class TestFillCustomQuestions:
         }
 
         with patch(
-            "tools.batch_apply_browser._fill_field_by_label",
+            "batch_apply_browser._fill_field_by_label",
             new_callable=AsyncMock,
             return_value=True,
         ) as mock_fill:
             with patch(
-                "tools.batch_apply_browser._click_radio_by_label",
+                "batch_apply_browser._click_radio_by_label",
                 new_callable=AsyncMock,
                 return_value=True,
             ):
-                with patch(
-                    "tools.batch_apply_browser._select_dropdown_option", new_callable=AsyncMock
-                ):
+                with patch("batch_apply_browser._select_dropdown_option", new_callable=AsyncMock):
                     await fill_custom_questions(page, app)
                     labels = [c[0][1] for c in mock_fill.call_args_list if len(c[0]) >= 2]
                     assert any(
@@ -1275,7 +1276,7 @@ class TestFillCustomQuestions:
 
     @pytest.mark.asyncio
     async def test_unknown_company_does_nothing(self):
-        from tools.batch_apply_browser import fill_custom_questions
+        from batch_apply_browser import fill_custom_questions
 
         page = make_page_with_fields({})
         app = {"url": "https://example.com/jobs/123", "slug": "unknown"}
@@ -1292,7 +1293,7 @@ class TestFillCustomQuestions:
 class TestProcessApplication:
     @pytest.mark.asyncio
     async def test_skips_unsupported_platform(self):
-        from tools.batch_apply_browser import process_application
+        from batch_apply_browser import process_application
 
         browser = AsyncMock()
         app = {
@@ -1307,7 +1308,7 @@ class TestProcessApplication:
 
     @pytest.mark.asyncio
     async def test_dry_run_returns_dry_run_status(self):
-        from tools.batch_apply_browser import process_application
+        from batch_apply_browser import process_application
 
         browser = AsyncMock()
         page = make_page_with_fields({}, url="https://jobs.lever.co/company/abc123")
@@ -1323,9 +1324,9 @@ class TestProcessApplication:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-            with patch("tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
-                with patch("tools.batch_apply_browser.SCREENSHOTS_DIR") as mock_dir:
+        with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+            with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+                with patch("batch_apply_browser.SCREENSHOTS_DIR") as mock_dir:
                     mock_dir.__truediv__ = MagicMock(return_value=Path("/tmp/test.png"))
                     result = await process_application(browser, app, 1, 1, dry_run=True)
 
@@ -1334,7 +1335,7 @@ class TestProcessApplication:
 
     @pytest.mark.asyncio
     async def test_error_returns_error_status(self):
-        from tools.batch_apply_browser import process_application
+        from batch_apply_browser import process_application
 
         browser = AsyncMock()
         page = AsyncMock()
@@ -1352,7 +1353,7 @@ class TestProcessApplication:
             "cover_letter": "cv/applications/test/cover-letter.pdf",
         }
 
-        with patch("tools.batch_apply_browser.SCREENSHOTS_DIR") as mock_dir:
+        with patch("batch_apply_browser.SCREENSHOTS_DIR") as mock_dir:
             mock_dir.mkdir = MagicMock()
             mock_dir.__truediv__ = MagicMock(return_value=Path("/tmp/err.png"))
             result = await process_application(browser, app, 1, 1, dry_run=False)
@@ -1369,7 +1370,7 @@ class TestProcessApplication:
 class TestRunTestUrl:
     @pytest.mark.asyncio
     async def test_unsupported_platform_returns_early(self):
-        from tools.batch_apply_browser import _run_test_url
+        from batch_apply_browser import _run_test_url
 
         # linkedin is not in FILLERS, should print and return without launching browser
         with patch("builtins.print") as mock_print:
@@ -1409,13 +1410,11 @@ class TestRunTestUrl:
             "sys.modules",
             {"playwright": mock_pw_module, "playwright.async_api": mock_pw_module.async_api},
         ):
-            from tools.batch_apply_browser import _run_test_url
+            from batch_apply_browser import _run_test_url
 
-            with patch("tools.batch_apply_browser.fill_source_field", new_callable=AsyncMock):
-                with patch(
-                    "tools.batch_apply_browser.fill_custom_questions", new_callable=AsyncMock
-                ):
-                    with patch("tools.batch_apply_browser.SCREENSHOTS_DIR") as mock_dir:
+            with patch("batch_apply_browser.fill_source_field", new_callable=AsyncMock):
+                with patch("batch_apply_browser.fill_custom_questions", new_callable=AsyncMock):
+                    with patch("batch_apply_browser.SCREENSHOTS_DIR") as mock_dir:
                         mock_dir.mkdir = MagicMock()
                         mock_dir.__truediv__ = MagicMock(return_value=Path("/tmp/test.png"))
                         await _run_test_url("https://jobs.lever.co/testco/abc123")
@@ -1430,14 +1429,14 @@ class TestRunTestUrl:
 
 class TestFillersDict:
     def test_fillers_has_all_platforms(self):
-        from tools.batch_apply_browser import FILLERS
+        from batch_apply_browser import FILLERS
 
         assert "lever" in FILLERS
         assert "greenhouse" in FILLERS
         assert "ashby" in FILLERS
 
     def test_fillers_values_are_callable(self):
-        from tools.batch_apply_browser import FILLERS
+        from batch_apply_browser import FILLERS
 
         for platform, func in FILLERS.items():
             assert callable(func), f"FILLERS['{platform}'] is not callable"
