@@ -17,12 +17,16 @@
 #   cities and country/region names before using the gate for real.
 #
 # allow_pan_region_remote
-#   When true, EMEA / EU-wide / Europe / global / unspecified-remote postings
-#   count as eligible remote. Set false to require an explicit home-region anchor.
+#   When true, multi-country region postings (EMEA / Europe / DACH / Benelux /
+#   Nordics / EU-wide) and global / worldwide / anywhere / unspecified-remote
+#   postings all count as eligible remote. Set false to require an explicit
+#   home-region anchor: an unanchored "Remote" then classifies as "unknown"
+#   rather than eligible.
 #
 # extra_foreign_tokens
 #   Optional extra place names to treat as foreign (drop), on top of the public
-#   geography list in tools/batch_probe.py.
+#   geography list in tools/batch_probe.py. Tokens ending in punctuation
+#   ("u.s.") are matched correctly; punctuation-only entries are ignored.
 
 home_tokens:
   # --- EXAMPLE home region -- replace this whole block with your own ---

@@ -67,6 +67,15 @@ jobs:
         # separate nightly gate (nightly.yml) so the fast unit run stays lean.
         run: pytest tests/ -v --tb=short -m "not eval" --cov=src/career_os --cov-report=xml
 
+      - name: Geo blind-set gate
+        # G-1474: differential + precision/recall + perf gate for the geo engine.
+        # The tests keep their `eval` marker (it excludes them from the fast run
+        # above and drives the nightly split), but this step selects by
+        # DIRECTORY only: with `-m eval` a module that lost its pytestmark would
+        # simply stop being collected and the step would still pass green. The
+        # differential gate is the one that must never be silently skippable.
+        run: pytest tests/eval/geo -v --tb=short
+
       - name: Run tool-script tests
         # tools/ is dev tooling, not the shipped package, so these run as a
         # separate gate without --cov (keeps src/career_os coverage clean).
