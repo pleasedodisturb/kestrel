@@ -18,6 +18,9 @@ import re
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from career_os.services.geo.classifier import geo_eligibility
+from career_os.services.geo.profile import GeoProfile
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,6 +42,9 @@ class PrefilterConfig:
         skill_keywords: Skill terms to search for in descriptions.
         min_skill_matches: Minimum skill keyword matches to pass (default 2).
         blacklist_industries: Industries to reject in strict mode.
+        geo_profile: Optional GeoProfile enabling the opt-in geo gate. When
+            None (the default) the gate is a strict no-op and pre-filter
+            behaviour is unchanged.
     """
 
     strategy: PrefilterStrategy = PrefilterStrategy.STRICT
@@ -46,6 +52,7 @@ class PrefilterConfig:
     skill_keywords: list[str] = field(default_factory=list)
     min_skill_matches: int = 2
     blacklist_industries: list[str] = field(default_factory=list)
+    geo_profile: GeoProfile | None = None
 
 
 @dataclass
@@ -62,6 +69,7 @@ class PrefilterMetrics:
     title_matches: int = 0
     skill_matches: int = 0
     industry_rejections: int = 0
+    geo_rejections: int = 0
 
     @property
     def filter_rate(self) -> float:
@@ -104,6 +112,14 @@ def run_prefilter(
     - "title": str
     - "description": str
     - "industry": str (optional, used only in strict mode)
+    - "location" / "offices" / "remote" (optional, used only by the geo gate)
+
+    The geo gate is OPT-IN: it runs only when ``config.geo_profile`` is set,
+    and only in strict/moderate mode (``off`` stays a full bypass — no geo
+    classification happens). When active it stores the verdict on each job as
+    ``job["geo_class"]`` and rejects ONLY the explicit ``"foreign"`` class;
+    ``unknown`` and the maybe classes always pass through — absence of geo
+    signal must never bury a role.
 
     Returns:
         Tuple of (passed_jobs, metrics).
@@ -131,6 +147,23 @@ def run_prefilter(
         title = job.get("title", "")
         description = job.get("description", "")
         industry = job.get("industry", "")
+
+        # Opt-in geo gate: inert unless a profile is configured. Rejects ONLY
+        # the explicit "foreign" class; "unknown" and the maybe classes pass.
+        if config.geo_profile is not None:
+            geo_class = geo_eligibility(
+                job.get("location"),
+                job.get("offices"),
+                bool(job.get("remote")),
+                job.get("title", ""),
+                job.get("description", ""),
+                profile=config.geo_profile,
+            )
+            job["geo_class"] = geo_class
+            if geo_class == "foreign":
+                metrics.geo_rejections += 1
+                metrics.filtered += 1
+                continue
 
         has_title = _title_matches(title, title_patterns)
         has_skills = _skill_density_passes(description, skill_patterns, config.min_skill_matches)
@@ -163,7 +196,7 @@ def run_prefilter(
 
     logger.info(
         "Prefilter [%s]: %d/%d passed (%.1f%% filtered) "
-        "| title_matches=%d skill_matches=%d industry_rejections=%d",
+        "| title_matches=%d skill_matches=%d industry_rejections=%d geo_rejections=%d",
         config.strategy.value,
         metrics.passed,
         metrics.total,
@@ -171,6 +204,7 @@ def run_prefilter(
         metrics.title_matches,
         metrics.skill_matches,
         metrics.industry_rejections,
+        metrics.geo_rejections,
     )
 
     return passed, metrics
