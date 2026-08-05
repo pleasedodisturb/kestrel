@@ -21,12 +21,30 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 # Pan-region vocabulary used by ``from_home_tokens`` when the caller allows
-# pan-region remote postings. Deliberately region-agnostic: these tokens mean
-# "open to everyone" no matter where home is.
-_PAN_REGION_WIDE = r"\b(?:global(?:ly)?|worldwide|anywhere|international)\b"
+# pan-region remote postings. Deliberately region-agnostic: these tokens name a
+# multi-country region rather than a single foreign place, so a posting carrying
+# one is open to a home-based candidate no matter where home is. The
+# multi-country names (emea/dach/...) are absent from ``PUBLIC_GEOGRAPHY_TOKENS``
+# on purpose — nothing here can collide with the foreign vocabulary.
+_PAN_REGION_WIDE = (
+    r"\b(?:global(?:ly)?|worldwide|anywhere|international|"
+    r"emea|european|europe|dach|benelux|nordics|eu[\s\-]?wide)\b"
+)
 _PAN_REGION_REMOTE_PHRASE = (
     r"(?:work[ \-]from[ \-]anywhere|remote[ ,\-]*(?:global(?:ly)?|worldwide|anywhere)|"
     r"(?:global(?:ly)?|worldwide|anywhere)[ ,\-]*remote)"
+)
+
+# Short/ambiguous foreign signals that are only safe to read off a LOCATION,
+# OFFICE or TITLE string. They are deliberately NEVER consulted on description
+# prose, where bare "us" means "join us" rather than the United States. Each
+# entry pairs the bare token (matched against the caller's reserved vocabulary
+# so a home region named "UK" is never made foreign) with its pattern source.
+_FOREIGN_LOCATION_ONLY: tuple[tuple[str, str], ...] = (
+    ("us", r"\bus\b"),
+    ("uk", r"\buk\b"),
+    ("na", r"\bna\b"),  # North America
+    ("u.s.", r"\bu\.s\.(?:a\b)?"),
 )
 
 
@@ -54,10 +72,25 @@ class GeoProfile:
     visa_required: re.Pattern[str] | None = None
     # Explicitly ineligible places.
     foreign: re.Pattern[str] | None = None
+    # Short foreign signals safe ONLY on location/office/title strings, never on
+    # description prose (see ``_FOREIGN_LOCATION_ONLY``).
+    foreign_location_only: re.Pattern[str] | None = None
     # Tokens that rescue a multi-region posting ("EMEA/AMER"-shaped strings).
     eligible_region: re.Pattern[str] | None = None
     # Market-naming tokens in a title ("(AMER)", ", Korea") that bind first.
     title_region_foreign: re.Pattern[str] | None = None
+    # When True a home hit wins outright, even alongside a foreign token. Set by
+    # ``from_home_tokens`` (the user-config route), where the home vocabulary is
+    # an explicit "this is MY region" statement and the foreign vocabulary is a
+    # generic public list that cannot know which cities sit in the home country.
+    # The presets keep False: they carry curated, non-overlapping vocabularies
+    # and rely on the foreign token to veto (e.g. a home city named alongside a
+    # foreign market in one string).
+    home_wins: bool = False
+    # When False an unspecified/bare "Remote" posting with no other geo signal
+    # is ``unknown`` instead of ``eligible_remote`` — the user asked for an
+    # explicit home-region anchor.
+    allow_unspecified_remote: bool = True
 
     @classmethod
     def from_home_tokens(
@@ -84,6 +117,17 @@ class GeoProfile:
         pattern is the shared public geography list OR'd with
         ``extra_foreign_tokens``, minus any token already claimed by a
         home/local/visa-required vocabulary.
+
+        The returned profile sets ``home_wins=True``: a home token wins
+        classification outright, even when the same string also carries a
+        foreign token. Token subtraction alone cannot honour that contract —
+        it has no city-to-country knowledge, so a home-country city that
+        appears in the public list ("Berlin, Germany" for a ``germany`` home)
+        would otherwise classify foreign inside the user's own country.
+
+        ``allow_pan_region_remote`` drives BOTH the pan-region vocabulary and
+        ``allow_unspecified_remote``; setting it False is what makes an
+        unanchored "Remote" posting ``unknown`` rather than eligible.
         """
         # Imported lazily: presets.py imports build_profile from this module,
         # so a module-level import here would be circular.
@@ -101,6 +145,13 @@ class GeoProfile:
         home_country = _compile_tokens(home)
         home_local = _compile_tokens(local) if local else home_country
 
+        # Short foreign signals ("Remote - US") the plain token list cannot
+        # express, minus anything the caller claimed as home.
+        location_only = [src for tok, src in _FOREIGN_LOCATION_ONLY if tok not in reserved]
+        foreign_location_only = (
+            re.compile("|".join(location_only), re.IGNORECASE) if location_only else None
+        )
+
         if allow_pan_region_remote:
             visa_free_wide = re.compile(_PAN_REGION_WIDE, re.IGNORECASE)
             visa_free_remote_phrase = re.compile(_PAN_REGION_REMOTE_PHRASE, re.IGNORECASE)
@@ -117,8 +168,11 @@ class GeoProfile:
             visa_free_remote_phrase=visa_free_remote_phrase,
             visa_required=_compile_tokens(visa_required),
             foreign=_compile_tokens(foreign_tokens),
+            foreign_location_only=foreign_location_only,
             eligible_region=None,
             title_region_foreign=None,
+            home_wins=True,
+            allow_unspecified_remote=allow_pan_region_remote,
         )
 
 
@@ -132,12 +186,30 @@ def _normalize_tokens(tokens: Iterable[str]) -> list[str]:
     return list(seen)
 
 
+def _token_pattern(token: str) -> str:
+    """Escape one token and fence it with the word boundaries it can honour.
+
+    A ``\\b`` is only meaningful next to a word character: appending one after a
+    token ending in punctuation ("u.s.") demands a word character follow, so
+    the token could never match at end-of-string or before a comma. The
+    boundary is therefore applied per-side, per-token.
+    """
+    prefix = r"\b" if token[:1].isalnum() else ""
+    suffix = r"\b" if token[-1:].isalnum() else ""
+    return prefix + re.escape(token) + suffix
+
+
 def _compile_tokens(tokens: Iterable[str]) -> re.Pattern[str] | None:
-    """Compile a token list into a word-boundary alternation (or ``None``)."""
-    escaped = [re.escape(t) for t in _normalize_tokens(tokens)]
-    if not escaped:
+    """Compile a token list into a boundary-fenced alternation (or ``None``).
+
+    Tokens with no alphanumeric character are dropped: unfenced, a token like
+    ``"-"`` would match every hyphen in every string and classify the whole
+    corpus off one stray config entry.
+    """
+    usable = [t for t in _normalize_tokens(tokens) if any(c.isalnum() for c in t)]
+    if not usable:
         return None
-    return re.compile(r"\b(?:" + "|".join(escaped) + r")\b", re.IGNORECASE)
+    return re.compile("|".join(_token_pattern(t) for t in usable), re.IGNORECASE)
 
 
 def build_profile(name: str, **pattern_strings: str | None) -> GeoProfile:
@@ -145,6 +217,8 @@ def build_profile(name: str, **pattern_strings: str | None) -> GeoProfile:
 
     Each keyword must be a :class:`GeoProfile` pattern field name; the value is
     a regex source string (compiled once, with ``re.IGNORECASE``) or ``None``.
+    The non-pattern flags (``home_wins``, ``allow_unspecified_remote``) are not
+    settable here — presets keep their defaults.
     """
     compiled: dict[str, re.Pattern[str] | None] = {}
     for field_name, source in pattern_strings.items():

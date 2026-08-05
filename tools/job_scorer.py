@@ -652,10 +652,11 @@ def _default_geo_profile() -> GeoProfile:
 
 def geo_eligibility(
     location: str | None,
-    offices: list[str] | None = None,
+    offices: list[str] | str | None = None,
     remote: bool = False,
     title: str = "",
     description: str = "",
+    *,
     profile: GeoProfile | None = None,
 ) -> str:
     """Classify a role's geo eligibility for the configured home region.
@@ -664,6 +665,10 @@ def geo_eligibility(
     :func:`career_os.services.geo.classifier.geo_eligibility`. Authoritative
     ``offices`` override the (unreliable) ``location`` list string; ``remote``
     never rescues a foreign role on its own.
+
+    ``profile`` is keyword-only, matching the engine: bound positionally it
+    would land in ``title`` and silently return a wrong verdict instead of
+    raising.
 
     When ``profile`` is None, a :class:`GeoProfile` is built lazily (and
     memoized) from the ``config/geo.yaml`` runtime config via batch_probe.

@@ -76,7 +76,7 @@ def test_totality_and_exactly_one_class(location, offices, remote, title, descri
 )
 @settings(max_examples=200, deadline=None)
 def test_classify_candidate_total(candidate, remote, profile):
-    verdict = classify_candidate(candidate, remote, profile)
+    verdict = classify_candidate(candidate, remote, profile=profile)
     assert isinstance(verdict, str)
     # classify_candidate may additionally return the two internal classes.
     assert verdict in ALL_CLASSES | {"bare_remote", "country_locked"}
@@ -122,6 +122,7 @@ def _profile_snapshot(profile):
             "visa_free_remote_phrase",
             "visa_required",
             "foreign",
+            "foreign_location_only",
             "eligible_region",
             "title_region_foreign",
         )
@@ -166,7 +167,7 @@ def test_adversarial_inputs_classify_quickly(adversarial):
     # The 30s pytest timeout is the budget; linear-time literal alternations
     # should finish orders of magnitude faster.
     for profile in PROFILES:
-        assert classify_candidate(adversarial, True, profile) in (
+        assert classify_candidate(adversarial, True, profile=profile) in (
             ALL_CLASSES | {"bare_remote", "country_locked"}
         )
         verdict = geo_eligibility(

@@ -47,13 +47,19 @@ def test_10k_classifications_within_wall_clock_budget():
 def test_preset_patterns_are_precompiled_and_never_recompiled(monkeypatch):
     """Every pattern field is a compiled ``re.Pattern``; zero ``re.compile`` at call time."""
     for profile in (FRANKFURT_PROFILE, US_REMOTE_PROFILE):
+        checked = 0
         for field in dataclasses.fields(profile):
-            value = getattr(profile, field.name)
-            if field.name == "name":
+            # Selected off the annotation, not a name allow-list: a new pattern
+            # field is covered automatically, a new non-pattern flag
+            # (home_wins, allow_unspecified_remote) is skipped automatically.
+            if "re.Pattern" not in str(field.type):
                 continue
+            checked += 1
+            value = getattr(profile, field.name)
             assert value is None or isinstance(value, re.Pattern), (
                 f"{profile.name}.{field.name} is not precompiled: {type(value)!r}"
             )
+        assert checked >= 9, f"{profile.name}: only {checked} pattern fields inspected"
 
     def _forbidden_compile(*args, **kwargs):
         raise AssertionError(
