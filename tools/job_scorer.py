@@ -20,6 +20,9 @@ from urllib.parse import urlparse
 import pandas as pd
 import yaml
 
+from career_os.services.geo.classifier import geo_eligibility as _geo_eligibility_engine
+from career_os.services.geo.profile import GeoProfile
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # --------------------------------------------------------------------------
@@ -619,37 +622,65 @@ _ATS_HOSTS: tuple[str, ...] = (
 )
 
 
+# Memoized default profile derived from the runtime geo config. The yaml is
+# read once (batch_probe loads it at import time); the profile compiles once.
+_GEO_PROFILE: GeoProfile | None = None
+
+
+def _default_geo_profile() -> GeoProfile:
+    """Build (once) a GeoProfile from the tools-side geo config.
+
+    Reads batch_probe's already-loaded ``GeoConfig`` (the ``config/geo.yaml``
+    -> ``config/geo.example.yaml`` chain, which parses exactly ``home_tokens``,
+    ``allow_pan_region_remote`` and ``extra_foreign_tokens``) and converts it
+    via :meth:`GeoProfile.from_home_tokens`. Only those three parsed values are
+    passed through — the config file defines no other keys.
+    """
+    global _GEO_PROFILE
+    if _GEO_PROFILE is None:
+        import batch_probe
+
+        cfg = batch_probe._CONFIG
+        _GEO_PROFILE = GeoProfile.from_home_tokens(
+            "geo-config",
+            cfg.home_tokens,
+            extra_foreign_tokens=cfg.extra_foreign_tokens,
+            allow_pan_region_remote=cfg.allow_pan_region_remote,
+        )
+    return _GEO_PROFILE
+
+
 def geo_eligibility(
     location: str | None,
-    offices: list[str] | None = None,
+    offices: list[str] | str | None = None,
     remote: bool = False,
+    title: str = "",
+    description: str = "",
+    *,
+    profile: GeoProfile | None = None,
 ) -> str:
     """Classify a role's geo eligibility for the configured home region.
 
-    Delegates to tools/batch_probe.py's authoritative gate. Authoritative
+    Delegates to the single geo authority,
+    :func:`career_os.services.geo.classifier.geo_eligibility`. Authoritative
     ``offices`` override the (unreliable) ``location`` list string; ``remote``
     never rescues a foreign role on its own.
 
-    Returns one of: "home", "eligible_remote", "foreign", "unknown".
+    ``profile`` is keyword-only, matching the engine: bound positionally it
+    would land in ``title`` and silently return a wrong verdict instead of
+    raising.
+
+    When ``profile`` is None, a :class:`GeoProfile` is built lazily (and
+    memoized) from the ``config/geo.yaml`` runtime config via batch_probe.
+
+    Returns one of the 7 public classes: "home_local", "home_relocate",
+    "eligible_remote", "visa_free_relocate", "visa_required_relocate",
+    "foreign", "unknown". The "foreign" class is preserved verbatim so the
+    ``geo == "foreign"`` consumer in tools/t3_lane.py keeps working unchanged.
     """
-    from batch_probe import _classify_token
-
-    office_candidates = [o for o in (offices or []) if o and o.strip()]
-    if office_candidates:
-        candidates = office_candidates
-    elif location and location.strip():
-        candidates = [location]
-    else:
-        return "eligible_remote" if remote else "unknown"
-
-    classes = [_classify_token(c) for c in candidates]
-    if "home" in classes:
-        return "home"
-    if "eu_remote" in classes:
-        return "eligible_remote"
-    if "foreign" in classes:
-        return "foreign"
-    return "eligible_remote" if remote else "unknown"
+    if profile is None:
+        profile = _default_geo_profile()
+    return _geo_eligibility_engine(location, offices, remote, title, description, profile=profile)
 
 
 def _is_ats_host(url: str | None) -> bool:

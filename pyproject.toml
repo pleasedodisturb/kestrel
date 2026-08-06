@@ -67,6 +67,8 @@ dev = [
     # tests/eval to cross-check those implementations against a reference.
     # Not a runtime dependency; the shipped package never imports it.
     "scikit-learn>=1.4",
+    # Powers the property-based test tier (tests/property/ + tests/geo/) via Hypothesis.
+    "hypothesis>=6.100",
 ]
 
 [project.scripts]

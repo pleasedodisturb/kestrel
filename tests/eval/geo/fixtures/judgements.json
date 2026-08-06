@@ -1,0 +1,1664 @@
+{
+  "J0000": {
+    "id": "J0000",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Quota sales, Japan geo"
+  },
+  "J0001": {
+    "id": "J0001",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "US federal quota sales"
+  },
+  "J0002": {
+    "id": "J0002",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "RL research scientist, US onsite"
+  },
+  "J0003": {
+    "id": "J0003",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "SDR sales, US"
+  },
+  "J0004": {
+    "id": "J0004",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Launch ops engineer, aerospace domain, not TPM"
+  },
+  "J0005": {
+    "id": "J0005",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "FDE but Korea-based"
+  },
+  "J0006": {
+    "id": "J0006",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Deployment strategist, Mexico geo"
+  },
+  "J0007": {
+    "id": "J0007",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Solutions architect, Seoul geo"
+  },
+  "J0008": {
+    "id": "J0008",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Research manager interpretability, US"
+  },
+  "J0009": {
+    "id": "J0009",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Systems/reliability infra engineering"
+  },
+  "J0010": {
+    "id": "J0010",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Forward Deployed AI Engineer, Frankfurt, ideal fit"
+  },
+  "J0011": {
+    "id": "J0011",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "PM fit but US onsite only"
+  },
+  "J0012": {
+    "id": "J0012",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Director sales, US"
+  },
+  "J0013": {
+    "id": "J0013",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Intern, Paris"
+  },
+  "J0014": {
+    "id": "J0014",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "DevRel but US-remote only"
+  },
+  "J0015": {
+    "id": "J0015",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Data software engineer, US"
+  },
+  "J0016": {
+    "id": "J0016",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Staff PM but US/Canada remote only"
+  },
+  "J0017": {
+    "id": "J0017",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "DevRel but San Francisco based"
+  },
+  "J0018": {
+    "id": "J0018",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Staff PM, remote, no stated geo restriction"
+  },
+  "J0019": {
+    "id": "J0019",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Demand gen marketing, enterprise sales side"
+  },
+  "J0020": {
+    "id": "J0020",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "London onsite, UK permit"
+  },
+  "J0021": {
+    "id": "J0021",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Marketing generalist, US"
+  },
+  "J0022": {
+    "id": "J0022",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Inference research, New York"
+  },
+  "J0023": {
+    "id": "J0023",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Solutions engineer, US East region"
+  },
+  "J0024": {
+    "id": "J0024",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Partnerships sales, Spain"
+  },
+  "J0025": {
+    "id": "J0025",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "AI applications engineer but SF-based"
+  },
+  "J0026": {
+    "id": "J0026",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "People data scientist, US"
+  },
+  "J0027": {
+    "id": "J0027",
+    "verdict": "GO",
+    "score": 9,
+    "reason": "Product Manager, Germany remote, AI/robotics deployment"
+  },
+  "J0028": {
+    "id": "J0028",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "BOM/PLM configuration management, hardware specialist"
+  },
+  "J0029": {
+    "id": "J0029",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "TPM fit but Korea geo"
+  },
+  "J0030": {
+    "id": "J0030",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Real estate PM, SF"
+  },
+  "J0031": {
+    "id": "J0031",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Solutions architect AMER region"
+  },
+  "J0032": {
+    "id": "J0032",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Sales AE, Australia"
+  },
+  "J0033": {
+    "id": "J0033",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Director revenue accounting, US"
+  },
+  "J0034": {
+    "id": "J0034",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "PM fit but United States geo"
+  },
+  "J0035": {
+    "id": "J0035",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Database reliability engineering, deep infra"
+  },
+  "J0036": {
+    "id": "J0036",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Federal sales AE, DC"
+  },
+  "J0037": {
+    "id": "J0037",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Senior AI Engineer agentic, Frankfurt area Germany"
+  },
+  "J0038": {
+    "id": "J0038",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "PM but London onsite"
+  },
+  "J0039": {
+    "id": "J0039",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Comms lead, US"
+  },
+  "J0040": {
+    "id": "J0040",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Solution Engineer, Munich office, customer-facing technical"
+  },
+  "J0041": {
+    "id": "J0041",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Solutions architect, Sydney"
+  },
+  "J0042": {
+    "id": "J0042",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Full-stack engineering, UK"
+  },
+  "J0043": {
+    "id": "J0043",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Deployment strategist, UAE geo"
+  },
+  "J0044": {
+    "id": "J0044",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Solutions architect, India"
+  },
+  "J0045": {
+    "id": "J0045",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Automotive retail implementation, US-based"
+  },
+  "J0046": {
+    "id": "J0046",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Manager role, US hybrid"
+  },
+  "J0047": {
+    "id": "J0047",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Frontend design engineer, US-based"
+  },
+  "J0048": {
+    "id": "J0048",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Japan-based services engineer"
+  },
+  "J0049": {
+    "id": "J0049",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "HR business partner, Tokyo"
+  },
+  "J0050": {
+    "id": "J0050",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Enterprise solutions engineer, Germany remote"
+  },
+  "J0051": {
+    "id": "J0051",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Recruiting coordinator contract, US"
+  },
+  "J0052": {
+    "id": "J0052",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Solutions architect but UK/US geo"
+  },
+  "J0053": {
+    "id": "J0053",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Deployment strategist but Chile onsite"
+  },
+  "J0054": {
+    "id": "J0054",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Creative producer, UK, off-profile"
+  },
+  "J0055": {
+    "id": "J0055",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Mexico City only, deep SWE"
+  },
+  "J0056": {
+    "id": "J0056",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "TPM fit but Canada-remote, ML infra"
+  },
+  "J0057": {
+    "id": "J0057",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Senior PM but onsite Stockholm, no DE"
+  },
+  "J0058": {
+    "id": "J0058",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Quota sales engineer, US"
+  },
+  "J0059": {
+    "id": "J0059",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "AMER-only partner architect"
+  },
+  "J0060": {
+    "id": "J0060",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "MENA-based solutions architect"
+  },
+  "J0061": {
+    "id": "J0061",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "DevRel fit but North America only"
+  },
+  "J0062": {
+    "id": "J0062",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Accounting manager"
+  },
+  "J0063": {
+    "id": "J0063",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Amazon FBA operator, US timezones"
+  },
+  "J0064": {
+    "id": "J0064",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Test site manager, Dubai"
+  },
+  "J0065": {
+    "id": "J0065",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Data & AI architect, Frankfurt, consulting-facing"
+  },
+  "J0066": {
+    "id": "J0066",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Security architect depth, London onsite"
+  },
+  "J0067": {
+    "id": "J0067",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Director-level, San Francisco"
+  },
+  "J0068": {
+    "id": "J0068",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Engineering manager, North America"
+  },
+  "J0069": {
+    "id": "J0069",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Backend scalability depth, not product shipping"
+  },
+  "J0070": {
+    "id": "J0070",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Staff PM AI but US/Canada remote only"
+  },
+  "J0071": {
+    "id": "J0071",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Chief of Staff, deep-tech, Germany"
+  },
+  "J0072": {
+    "id": "J0072",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Datacenter infra engineering, US onsite"
+  },
+  "J0073": {
+    "id": "J0073",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Deployed engineer fit but Phoenix US"
+  },
+  "J0074": {
+    "id": "J0074",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Legal counsel"
+  },
+  "J0075": {
+    "id": "J0075",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Database systems engineer, SF"
+  },
+  "J0076": {
+    "id": "J0076",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "PM role, remote, infra platform product"
+  },
+  "J0077": {
+    "id": "J0077",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Workplace operations, New York"
+  },
+  "J0078": {
+    "id": "J0078",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Global Product Manager, Mannheim Germany"
+  },
+  "J0079": {
+    "id": "J0079",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "ABAP developer, Bangalore"
+  },
+  "J0080": {
+    "id": "J0080",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Federal support engineer, US clearance"
+  },
+  "J0081": {
+    "id": "J0081",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "GTM ops associate, New York"
+  },
+  "J0082": {
+    "id": "J0082",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Postgres infra engineering, US remote"
+  },
+  "J0083": {
+    "id": "J0083",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Pricing PM but US-centric remote"
+  },
+  "J0084": {
+    "id": "J0084",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Partner architect, Tokyo"
+  },
+  "J0085": {
+    "id": "J0085",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Staff SWE agents, SF onsite"
+  },
+  "J0086": {
+    "id": "J0086",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "GenAI solution architect, Frankfurt"
+  },
+  "J0087": {
+    "id": "J0087",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "AI engineer shipping product, Frankfurt"
+  },
+  "J0088": {
+    "id": "J0088",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Product marketing, San Francisco"
+  },
+  "J0089": {
+    "id": "J0089",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Propulsion systems engineer, France"
+  },
+  "J0090": {
+    "id": "J0090",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Senior AI engineer, Europe-remote marketplace"
+  },
+  "J0091": {
+    "id": "J0091",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Senior PM, Europe-remote marketplace"
+  },
+  "J0092": {
+    "id": "J0092",
+    "verdict": "GO",
+    "score": 9,
+    "reason": "Senior TPM Vehicle OS, Stuttgart Germany"
+  },
+  "J0093": {
+    "id": "J0093",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "AI forward deployed engineer, fully remote"
+  },
+  "J0094": {
+    "id": "J0094",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Quota enterprise sales, US-based"
+  },
+  "J0095": {
+    "id": "J0095",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Solutions architect but AMER West US geo"
+  },
+  "J0096": {
+    "id": "J0096",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "US onsite support engineer role"
+  },
+  "J0097": {
+    "id": "J0097",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "FDE but UAE-based, wrong geo"
+  },
+  "J0098": {
+    "id": "J0098",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Data science finance analytics, SF onsite"
+  },
+  "J0099": {
+    "id": "J0099",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Principal PM growth, remote; geo unconfirmed"
+  },
+  "J0100": {
+    "id": "J0100",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Sales engineer, US Colorado region"
+  },
+  "J0101": {
+    "id": "J0101",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Executive assistant, UK"
+  },
+  "J0102": {
+    "id": "J0102",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Solutions engineer, US West geo"
+  },
+  "J0103": {
+    "id": "J0103",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Product engineer, European timezones eligible"
+  },
+  "J0104": {
+    "id": "J0104",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Delivery consultant, US West Coast"
+  },
+  "J0105": {
+    "id": "J0105",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Embedded security engineer, Sunnyvale onsite"
+  },
+  "J0106": {
+    "id": "J0106",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Requires Montevideo Uruguay residence"
+  },
+  "J0107": {
+    "id": "J0107",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "ML runtime optimization, deep ML, onsite US"
+  },
+  "J0108": {
+    "id": "J0108",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "iOS SDK engineer, Canada"
+  },
+  "J0109": {
+    "id": "J0109",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Manager role, Tokyo"
+  },
+  "J0110": {
+    "id": "J0110",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Engagement manager onsite Paris, wrong geo"
+  },
+  "J0111": {
+    "id": "J0111",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Strong PM fit but hybrid San Francisco"
+  },
+  "J0112": {
+    "id": "J0112",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "AI agent build work but Bulgaria-located"
+  },
+  "J0113": {
+    "id": "J0113",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Recruiter role, US"
+  },
+  "J0114": {
+    "id": "J0114",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Program manager, Munich, autonomous systems"
+  },
+  "J0115": {
+    "id": "J0115",
+    "verdict": "GO",
+    "score": 10,
+    "reason": "Applied AI Architect, Munich, ideal fit"
+  },
+  "J0116": {
+    "id": "J0116",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Colombia remote, wrong geo"
+  },
+  "J0117": {
+    "id": "J0117",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Biology research associate, no fit"
+  },
+  "J0118": {
+    "id": "J0118",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Agentic AI engineer, Germany, delivery-focused"
+  },
+  "J0119": {
+    "id": "J0119",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Internship, too junior"
+  },
+  "J0120": {
+    "id": "J0120",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Hardware assembly/test engineering lead"
+  },
+  "J0121": {
+    "id": "J0121",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Procurement manager, New York"
+  },
+  "J0122": {
+    "id": "J0122",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Support manager, Dublin, people leadership"
+  },
+  "J0123": {
+    "id": "J0123",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Global Product Manager, Mannheim Germany"
+  },
+  "J0124": {
+    "id": "J0124",
+    "verdict": "GO",
+    "score": 9,
+    "reason": "Senior PM, fully remote global, agentic orchestration"
+  },
+  "J0125": {
+    "id": "J0125",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Fullstack frontend-leaning engineering, likely US remote"
+  },
+  "J0126": {
+    "id": "J0126",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Security sales engineer, US"
+  },
+  "J0127": {
+    "id": "J0127",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Ideal TPM role but US onsite only"
+  },
+  "J0128": {
+    "id": "J0128",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Engineering manager, Madrid"
+  },
+  "J0129": {
+    "id": "J0129",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "US-headquartered remote PM, hardware domain"
+  },
+  "J0130": {
+    "id": "J0130",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Senior Product Builder, remote global, AI-first"
+  },
+  "J0131": {
+    "id": "J0131",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "US-only remote staff PM"
+  },
+  "J0132": {
+    "id": "J0132",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Security software engineering, SF"
+  },
+  "J0133": {
+    "id": "J0133",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Independent AI architect, Europe eligible, ships AI products"
+  },
+  "J0134": {
+    "id": "J0134",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "ML systems engineer, no ML background"
+  },
+  "J0135": {
+    "id": "J0135",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Product engineer but North America only"
+  },
+  "J0136": {
+    "id": "J0136",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "RevOps architect, US"
+  },
+  "J0137": {
+    "id": "J0137",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Engineering manager, US"
+  },
+  "J0138": {
+    "id": "J0138",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Solutions architect, UAE geo"
+  },
+  "J0139": {
+    "id": "J0139",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Deployment strategist but Singapore"
+  },
+  "J0140": {
+    "id": "J0140",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Backend model-serving engineering, not his profile"
+  },
+  "J0141": {
+    "id": "J0141",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "DevOps infra engineer, Serbia onsite"
+  },
+  "J0142": {
+    "id": "J0142",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "FDE fit but San Francisco / US-based"
+  },
+  "J0143": {
+    "id": "J0143",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "RL research intern, US onsite"
+  },
+  "J0144": {
+    "id": "J0144",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Revenue ops, US-only"
+  },
+  "J0145": {
+    "id": "J0145",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Quota account executive, Boston"
+  },
+  "J0146": {
+    "id": "J0146",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "SRE infra role, Serbia onsite"
+  },
+  "J0147": {
+    "id": "J0147",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Creative producer role, UK, not PM/TPM"
+  },
+  "J0148": {
+    "id": "J0148",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Model training research, Toronto"
+  },
+  "J0149": {
+    "id": "J0149",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Fleet ops specialist, Tokyo onsite"
+  },
+  "J0150": {
+    "id": "J0150",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Presales value engineer, AMER-only"
+  },
+  "J0151": {
+    "id": "J0151",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Germany remote but people-manager of SAs"
+  },
+  "J0152": {
+    "id": "J0152",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "US public sector, requires US clearance/geo"
+  },
+  "J0153": {
+    "id": "J0153",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "US/Canada remote only"
+  },
+  "J0154": {
+    "id": "J0154",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Deep backend API engineering, New York"
+  },
+  "J0155": {
+    "id": "J0155",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "DevOps cloud infra, US remote"
+  },
+  "J0156": {
+    "id": "J0156",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Payroll manager, unrelated"
+  },
+  "J0157": {
+    "id": "J0157",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Requires Mexico City residency"
+  },
+  "J0158": {
+    "id": "J0158",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Finance role, Seoul"
+  },
+  "J0159": {
+    "id": "J0159",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Solutions architect but Sunnyvale onsite"
+  },
+  "J0160": {
+    "id": "J0160",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Partner SA, Seoul onsite"
+  },
+  "J0161": {
+    "id": "J0161",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Transformer research, ML pedigree, US onsite"
+  },
+  "J0162": {
+    "id": "J0162",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Customer success, AMER"
+  },
+  "J0163": {
+    "id": "J0163",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "SAP S/4HANA architect, 10+ yrs SAP"
+  },
+  "J0164": {
+    "id": "J0164",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Data analyst, not his track"
+  },
+  "J0165": {
+    "id": "J0165",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Interpretability research scientist, SF"
+  },
+  "J0166": {
+    "id": "J0166",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Fullstack frontend engineering, UK"
+  },
+  "J0167": {
+    "id": "J0167",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Senior PM, marketplace trust, remote; geo unconfirmed"
+  },
+  "J0168": {
+    "id": "J0168",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Loyalty program marketing, Vietnam"
+  },
+  "J0169": {
+    "id": "J0169",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Quota AE, Chile"
+  },
+  "J0170": {
+    "id": "J0170",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "TPM in Frankfurt, ex-Amazon fit; infra fiber domain"
+  },
+  "J0171": {
+    "id": "J0171",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "IT product manager, Vietnam onsite"
+  },
+  "J0172": {
+    "id": "J0172",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Observability platform core engineering, India"
+  },
+  "J0173": {
+    "id": "J0173",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Marketing creative lead, Canada"
+  },
+  "J0174": {
+    "id": "J0174",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Data platform engineering, SF onsite"
+  },
+  "J0175": {
+    "id": "J0175",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Windows VPN systems engineer"
+  },
+  "J0176": {
+    "id": "J0176",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Traditional fullstack TS/React engineer"
+  },
+  "J0177": {
+    "id": "J0177",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "RL research engineer, model training"
+  },
+  "J0178": {
+    "id": "J0178",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Security GRC specialist, Toronto"
+  },
+  "J0179": {
+    "id": "J0179",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Good role type but Tokyo onsite"
+  },
+  "J0180": {
+    "id": "J0180",
+    "verdict": "GO",
+    "score": 9,
+    "reason": "Deployment Strategist, Germany, AI product deployment"
+  },
+  "J0181": {
+    "id": "J0181",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Freelance marketplace, hard SWE hiring bar"
+  },
+  "J0182": {
+    "id": "J0182",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Research consultancy, Sub-Saharan Africa"
+  },
+  "J0183": {
+    "id": "J0183",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Engineering manager, US onsite"
+  },
+  "J0184": {
+    "id": "J0184",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Hardware signal-integrity engineer"
+  },
+  "J0185": {
+    "id": "J0185",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Partner SA, AMER East US"
+  },
+  "J0186": {
+    "id": "J0186",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Health partnerships, US onsite"
+  },
+  "J0187": {
+    "id": "J0187",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Recruiting sourcing contract, US-based"
+  },
+  "J0188": {
+    "id": "J0188",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "US-only remote; data-engineering advocacy depth"
+  },
+  "J0189": {
+    "id": "J0189",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Mexico-based role; wrong geo"
+  },
+  "J0190": {
+    "id": "J0190",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Traditional fullstack engineering, not his lane"
+  },
+  "J0191": {
+    "id": "J0191",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Denver onsite; RFP proposal ops mismatch"
+  },
+  "J0192": {
+    "id": "J0192",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "UAE-based; wrong geo"
+  },
+  "J0193": {
+    "id": "J0193",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Mexico-based; wrong geo"
+  },
+  "J0194": {
+    "id": "J0194",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "AMER region plus people-management lead role"
+  },
+  "J0195": {
+    "id": "J0195",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Quota sales, UK-based"
+  },
+  "J0196": {
+    "id": "J0196",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "San Francisco onsite; comms/PR role"
+  },
+  "J0197": {
+    "id": "J0197",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "HR benefits role, Sunnyvale onsite"
+  },
+  "J0198": {
+    "id": "J0198",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "TPM but demands deep hands-on SAP MDG architecture"
+  },
+  "J0199": {
+    "id": "J0199",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Texas onsite; wrong geo"
+  },
+  "J0200": {
+    "id": "J0200",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "United States; wrong geo"
+  },
+  "J0201": {
+    "id": "J0201",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Germany FDE but needs robot-learning/VLA engineering"
+  },
+  "J0202": {
+    "id": "J0202",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "US-remote only; core TS/Go engineering"
+  },
+  "J0203": {
+    "id": "J0203",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Melbourne onsite; wrong geo"
+  },
+  "J0204": {
+    "id": "J0204",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Senior Manager leading team; GTM ops, not product"
+  },
+  "J0205": {
+    "id": "J0205",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "APAC support management; wrong geo and level"
+  },
+  "J0206": {
+    "id": "J0206",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Munich innovation/program lead; high-agency builder mandate"
+  },
+  "J0207": {
+    "id": "J0207",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Backend platform engineering, Bengaluru"
+  },
+  "J0208": {
+    "id": "J0208",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Backend/systems runtime engineering, New York"
+  },
+  "J0209": {
+    "id": "J0209",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Field marketing, Bangalore, junior"
+  },
+  "J0210": {
+    "id": "J0210",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Remote-Utah; US work authorization"
+  },
+  "J0211": {
+    "id": "J0211",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Sales management role, US onsite"
+  },
+  "J0212": {
+    "id": "J0212",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "HR generalist, early-career"
+  },
+  "J0213": {
+    "id": "J0213",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Backend-leaning fullstack engineering, UK"
+  },
+  "J0214": {
+    "id": "J0214",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Strong PM role but US/Canada remote only"
+  },
+  "J0215": {
+    "id": "J0215",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Product Engineer, Europe-remote, AI features; heavy TS depth"
+  },
+  "J0216": {
+    "id": "J0216",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Quota enterprise sales with existing account"
+  },
+  "J0217": {
+    "id": "J0217",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Product Engineer on MCP gateway UI; remote geo unclear"
+  },
+  "J0218": {
+    "id": "J0218",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Support management, Bangalore"
+  },
+  "J0219": {
+    "id": "J0219",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Deep data-lake infra engineering despite Germany remote"
+  },
+  "J0220": {
+    "id": "J0220",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "FDE but London onsite, UK work permit"
+  },
+  "J0221": {
+    "id": "J0221",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Technical Product Manager in Frankfurt; direct fit"
+  },
+  "J0222": {
+    "id": "J0222",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Senior PM, EMEA remote, platform security product"
+  },
+  "J0223": {
+    "id": "J0223",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Staff distributed-systems engineering, New York"
+  },
+  "J0224": {
+    "id": "J0224",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Mountain View onsite; wrong geo"
+  },
+  "J0225": {
+    "id": "J0225",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Brand/marketing specialist, not his lane"
+  },
+  "J0226": {
+    "id": "J0226",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Brazil onsite; design advocacy"
+  },
+  "J0227": {
+    "id": "J0227",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Forward Deployed Engineer, Munich; customer-facing technical"
+  },
+  "J0228": {
+    "id": "J0228",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Applied AI solutions consultant, but Stockholm onsite"
+  },
+  "J0229": {
+    "id": "J0229",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Perception ML lead, California; no ML pedigree"
+  },
+  "J0230": {
+    "id": "J0230",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Renewals leadership, US onsite"
+  },
+  "J0231": {
+    "id": "J0231",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "AI Solution Architect in Frankfurt; strong fit"
+  },
+  "J0232": {
+    "id": "J0232",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Solution Engineer, Munich; customer-facing technical"
+  },
+  "J0233": {
+    "id": "J0233",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Product Engineer, Germany/EU remote; fullstack-leaning"
+  },
+  "J0234": {
+    "id": "J0234",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Forward Deployed Engineer, agentic platform, Europe remote"
+  },
+  "J0235": {
+    "id": "J0235",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Quota AE sales role, London hybrid"
+  },
+  "J0236": {
+    "id": "J0236",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "GenAI build role in Frankfurt; consultancy delivery fit"
+  },
+  "J0237": {
+    "id": "J0237",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "FDE but San Francisco based, wrong geo"
+  },
+  "J0238": {
+    "id": "J0238",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "North America outbound sales pipeline role"
+  },
+  "J0239": {
+    "id": "J0239",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "US West in-office solutions engineer"
+  },
+  "J0240": {
+    "id": "J0240",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Sales leadership executive, Japan"
+  },
+  "J0241": {
+    "id": "J0241",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Sales enablement manager, Singapore"
+  },
+  "J0242": {
+    "id": "J0242",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "Senior PM, Berlin; strong seniority and geo fit"
+  },
+  "J0243": {
+    "id": "J0243",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Dubai, outside EU work authorization"
+  },
+  "J0244": {
+    "id": "J0244",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Fullstack software engineer, New York"
+  },
+  "J0245": {
+    "id": "J0245",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Customer Solutions Architect, EMEA remote, customer-facing technical"
+  },
+  "J0246": {
+    "id": "J0246",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "LATAM/Mexico solutions engineer, wrong geo"
+  },
+  "J0247": {
+    "id": "J0247",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "US federal public sector, clearance geo"
+  },
+  "J0248": {
+    "id": "J0248",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Program manager, Munich; hardware but TPM core"
+  },
+  "J0249": {
+    "id": "J0249",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "iOS developer, not his profile"
+  },
+  "J0250": {
+    "id": "J0250",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Legal counsel role, San Francisco"
+  },
+  "J0251": {
+    "id": "J0251",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Intern simulation role, too junior"
+  },
+  "J0252": {
+    "id": "J0252",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Engineering manager, Americas/UK, deep Git internals"
+  },
+  "J0253": {
+    "id": "J0253",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Good PM role but Toronto/Canada geo"
+  },
+  "J0254": {
+    "id": "J0254",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Talent operations/recruiting lead, UK"
+  },
+  "J0255": {
+    "id": "J0255",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "US remote Seattle, connector product line PM"
+  },
+  "J0256": {
+    "id": "J0256",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "San Francisco onsite PM, wrong geo"
+  },
+  "J0257": {
+    "id": "J0257",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Security quota sales specialist, US"
+  },
+  "J0258": {
+    "id": "J0258",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "ML engineer role, no ML background"
+  },
+  "J0259": {
+    "id": "J0259",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "FDE but Remote US only"
+  },
+  "J0260": {
+    "id": "J0260",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Seoul in-office customer engineer"
+  },
+  "J0261": {
+    "id": "J0261",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Senior PM but onsite Novi Sad, Serbia"
+  },
+  "J0262": {
+    "id": "J0262",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Product ops but onsite Texas"
+  },
+  "J0263": {
+    "id": "J0263",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Solutions engineer, remote Denmark/Nordics, EU-eligible"
+  },
+  "J0264": {
+    "id": "J0264",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "FDE infrastructure specialist; deep infra depth required"
+  },
+  "J0265": {
+    "id": "J0265",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "SRE/observability engineering lead, San Francisco"
+  },
+  "J0266": {
+    "id": "J0266",
+    "verdict": "SKIP",
+    "score": 2,
+    "reason": "Engineering manager, SF/NYC onsite"
+  },
+  "J0267": {
+    "id": "J0267",
+    "verdict": "GO",
+    "score": 6,
+    "reason": "Value/applied AI engineer, Amsterdam, customer-facing EU"
+  },
+  "J0268": {
+    "id": "J0268",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Territory sales rep, construction products"
+  },
+  "J0269": {
+    "id": "J0269",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Recruiter role in Brazil"
+  },
+  "J0270": {
+    "id": "J0270",
+    "verdict": "GO",
+    "score": 8,
+    "reason": "PM for developer/agent interfaces, fully remote"
+  },
+  "J0271": {
+    "id": "J0271",
+    "verdict": "GO",
+    "score": 7,
+    "reason": "Group PM Berlin; lead-level product, good geo"
+  },
+  "J0272": {
+    "id": "J0272",
+    "verdict": "SKIP",
+    "score": 3,
+    "reason": "Internal AI transformation engineering, United States"
+  },
+  "J0273": {
+    "id": "J0273",
+    "verdict": "SKIP",
+    "score": 0,
+    "reason": "Sales manager, Tokyo"
+  },
+  "J0274": {
+    "id": "J0274",
+    "verdict": "SKIP",
+    "score": 4,
+    "reason": "Requires 5y backend engineering, Paris onsite"
+  },
+  "J0275": {
+    "id": "J0275",
+    "verdict": "SKIP",
+    "score": 5,
+    "reason": "Demands shipped fullstack plus ML depth, Valencia hybrid"
+  },
+  "J0276": {
+    "id": "J0276",
+    "verdict": "SKIP",
+    "score": 1,
+    "reason": "Saudi Arabia solutions architect, wrong geo"
+  }
+}

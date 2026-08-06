@@ -15,9 +15,14 @@ from unittest.mock import patch
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_REPO_ROOT))
+# G-1477: import batch_apply_browser as a bare module off tools/, matching
+# tests/conftest.py and every other tool test in this repo. The package-
+# qualified `tools.` form does not resolve in the Python 3.11 CI environment:
+# tools/ has no __init__.py, so it is only a namespace *portion*, and a
+# regular `tools` package anywhere on sys.path silently shadows it.
+sys.path.insert(0, str(_REPO_ROOT / "tools"))
 
-# `tools.batch_apply_browser` loads `config/personal.yaml` eagerly at import
+# `batch_apply_browser` loads `config/personal.yaml` eagerly at import
 # time. CI (.github/workflows/ci.yml and smoke.yml) copies
 # `config/personal.yaml.example -> config/personal.yaml` before running tests.
 # We replicate that here so this test module always loads — pure-logic tests
@@ -34,7 +39,7 @@ if not _personal_config.exists():
         allow_module_level=True,
     )
 
-from tools.batch_apply_browser import (  # noqa: E402
+from batch_apply_browser import (  # noqa: E402
     GH_FIELDS_BY_SLUG,
     _get_gh_fields_for_slug,
 )
@@ -221,6 +226,6 @@ class TestPreSeededOverlay:
         # When `overlay=` is not passed, the function should consult the
         # module-level GH_FIELDS_BY_SLUG. Patch it to verify the lookup path.
         sentinel = {"meridianlabs-test-slug": [("sentinel-label", "Yes", False)]}
-        with patch("tools.batch_apply_browser.GH_FIELDS_BY_SLUG", sentinel):
+        with patch("batch_apply_browser.GH_FIELDS_BY_SLUG", sentinel):
             result = _get_gh_fields_for_slug(BASELINE, "meridianlabs-test-slug")
         assert ("sentinel-label", "Yes", False) in result
