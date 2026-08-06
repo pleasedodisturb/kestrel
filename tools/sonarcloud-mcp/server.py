@@ -8,8 +8,7 @@ import os
 import sys
 
 from mcp.server.fastmcp import FastMCP
-
-from sonarcloud_client import SonarCloudClient, SonarCloudAPIError
+from sonarcloud_client import SonarCloudAPIError, SonarCloudClient
 
 # ---- Configuration ----
 
