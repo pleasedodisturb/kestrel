@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.26.0](https://github.com/pleasedodisturb/kestrel/compare/v0.25.0...v0.26.0) (2026-08-06)
+
+
+### Features
+
+* **G-1474:** config-driven 7-way geo-eligibility engine (GeoProfile) [upstream: eyas] ([#504](https://github.com/pleasedodisturb/kestrel/issues/504)) ([dea5f7c](https://github.com/pleasedodisturb/kestrel/commit/dea5f7cc892b7aa1f5afa363a5bd4f3ce7d07ecc))
+
+
+### Bug Fixes
+
+* **G-1477:** import batch_apply_browser bare in tests, not via tools package ([#503](https://github.com/pleasedodisturb/kestrel/issues/503)) ([b42a5d9](https://github.com/pleasedodisturb/kestrel/commit/b42a5d91f87684dc0ff6af889cfb366a34e8abbc))
+
+
+### Documentation
+
+* **G-1475:** trim the re-swept v0.25.0 changelog block ([#501](https://github.com/pleasedodisturb/kestrel/issues/501)) ([9ed771a](https://github.com/pleasedodisturb/kestrel/commit/9ed771adde4110ef249dfc2cb64e50136eea5e06))
+
+
+### Dependencies
+
+* bump node from `16e22a5` to `c610fcd` ([#502](https://github.com/pleasedodisturb/kestrel/issues/502)) ([4840983](https://github.com/pleasedodisturb/kestrel/commit/48409831df727232d15fcc77c751f40c5f09c8bb))
+
 ## [0.25.0](https://github.com/pleasedodisturb/kestrel/compare/v0.24.0...v0.25.0) (2026-08-04)
 
 > **Note.** A 2026-08-04 history rewrite (removing personal data committed to a
