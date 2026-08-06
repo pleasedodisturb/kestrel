@@ -17,7 +17,6 @@ Profiles: software-engineer (default), product-manager, data-scientist
 from __future__ import annotations
 
 import argparse
-import hashlib
 import random
 import re
 import sys
@@ -466,7 +465,7 @@ def _build_relevant_description(profile_name: str, rng: random.Random, quality: 
         n_fragments = rng.randint(0, 1)
 
     parts = [
-        f"We are looking for an experienced professional to join our team.",
+        "We are looking for an experienced professional to join our team.",
         f"Requirements: {', '.join(skills[:n_skills])}.",
     ]
     for frag in fragments[:n_fragments]:
