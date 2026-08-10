@@ -14,7 +14,6 @@ from scrape_new_sources import (
     scrape_lever,
     scrape_remotely_de,
     scrape_startupjobs,
-    scrape_thehub,
 )
 
 # ==================== Helper: mock httpx.Client context manager ====================
@@ -425,66 +424,13 @@ class TestScrapeStartupJobs:
         assert jobs == []
 
 
-# ==================== TheHub scraper ====================
-
-
-class TestScrapeTheHub:
-    @patch("scrape_new_sources._random_delay")
-    @patch("scrape_new_sources.httpx.Client")
-    def test_parses_list_response(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(
-            mock_client_cls,
-            {
-                "jobs": [
-                    {
-                        "title": "Founding Engineer",
-                        "company_name": "Berlin Startup",
-                        "location": "Berlin, Germany",
-                        "url": "https://thehub.io/jobs/1",
-                        "description": "Build from scratch.",
-                        "published_at": "2026-03-10",
-                        "remote": False,
-                        "tags": ["engineering"],
-                    },
-                ]
-            },
-        )
-
-        jobs = scrape_thehub(keywords=["engineer"])
-        assert len(jobs) == 1
-        assert jobs[0].title == "Founding Engineer"
-        assert jobs[0].source == "thehub"
-
-    @patch("scrape_new_sources._random_delay")
-    @patch("scrape_new_sources.httpx.Client")
-    def test_handles_data_key(self, mock_client_cls, mock_delay):
-        _mock_httpx_client(
-            mock_client_cls,
-            {
-                "data": [
-                    {
-                        "title": "PM",
-                        "company": {"name": "Startup"},
-                        "location": "Berlin",
-                        "url": "u",
-                    },
-                ]
-            },
-        )
-        jobs = scrape_thehub(keywords=["pm"])
-        assert len(jobs) == 1
-        assert jobs[0].company == "Startup"
-
-    @patch("scrape_new_sources._random_delay")
-    @patch("scrape_new_sources.httpx.Client")
-    def test_handles_api_failure(self, mock_client_cls, mock_delay):
-        mock_client = MagicMock()
-        mock_client.__enter__ = MagicMock(return_value=mock_client)
-        mock_client.__exit__ = MagicMock(return_value=False)
-        mock_client.get.side_effect = Exception("404")
-        mock_client_cls.return_value = mock_client
-        jobs = scrape_thehub(keywords=["test"])
-        assert jobs == []
+# TheHub tests removed with the scraper (G-1564).
+#
+# They passed for a scraper that could never work: each mocked httpx.Client
+# and fed the parser a fabricated JSON dict, while the real endpoint served
+# an HTML page. The tests exercised the parsing branch and never the
+# request, so they asserted a shape the API had never returned. A mock that
+# stands in for the thing that is broken proves only that the mock works.
 
 
 # ==================== Combined orchestrator ====================
@@ -493,7 +439,6 @@ class TestScrapeTheHub:
 class TestScrapeAllNewSources:
     @patch("scrape_new_sources.scrape_remotely_de", return_value=[])
     @patch("scrape_new_sources.scrape_arbeitnow", return_value=[])
-    @patch("scrape_new_sources.scrape_thehub", return_value=[])
     @patch("scrape_new_sources.scrape_startupjobs", return_value=[])
     @patch("scrape_new_sources.scrape_ashby", return_value=[])
     @patch("scrape_new_sources.scrape_lever", return_value=[])
@@ -508,7 +453,6 @@ class TestScrapeAllNewSources:
         mock_lv,
         mock_as,
         mock_sj,
-        mock_th,
         mock_an,
         mock_rd,
     ):
@@ -536,13 +480,11 @@ class TestScrapeAllNewSources:
         mock_lv.assert_called_once()
         mock_as.assert_called_once()
         mock_sj.assert_called_once()
-        mock_th.assert_called_once()
         mock_an.assert_called_once()
         mock_rd.assert_called_once()
 
     @patch("scrape_new_sources.scrape_remotely_de", return_value=[])
     @patch("scrape_new_sources.scrape_arbeitnow", return_value=[])
-    @patch("scrape_new_sources.scrape_thehub", side_effect=Exception("boom"))
     @patch("scrape_new_sources.scrape_startupjobs", return_value=[])
     @patch("scrape_new_sources.scrape_ashby", return_value=[])
     @patch("scrape_new_sources.scrape_lever", return_value=[])
@@ -557,7 +499,6 @@ class TestScrapeAllNewSources:
         mock_lv,
         mock_as,
         mock_sj,
-        mock_th,
         mock_an,
         mock_rd,
     ):
@@ -565,7 +506,6 @@ class TestScrapeAllNewSources:
         result = scrape_all_new_sources()
         assert isinstance(result, list)  # no exception
 
-    @patch("scrape_new_sources.scrape_thehub", return_value=[])
     @patch("scrape_new_sources.scrape_startupjobs", return_value=[])
     @patch("scrape_new_sources.scrape_ashby", return_value=[])
     @patch("scrape_new_sources.scrape_lever", return_value=[])
@@ -584,7 +524,6 @@ class TestScrapeAllNewSources:
         mock_lv,
         mock_as,
         mock_sj,
-        mock_th,
     ):
         """arbeitnow / remotely.de exceptions must not break the orchestrator."""
         result = scrape_all_new_sources()
