@@ -8,7 +8,6 @@ Covers sources not in the original pipeline:
 - Ashby Job Board API (public, per-company, no auth)
 - Workable Job Board API (public v3, per-company, no auth)
 - startup.jobs (Algolia-backed search)
-- TheHub.io (Nordic startup ecosystem, HTML scraping)
 
 All scrapers return list[ScrapedJob] and gracefully return [] on failure.
 """
@@ -887,9 +886,9 @@ _SR_QUERIES: tuple[str, ...] = (
     "program manager",
     "technical program manager",
     "developer advocate",
-    # Both forms: "solutions architect" does not match a board that titles the
-    # role "Solution Architect", and a server-side q= will not forgive the
-    # missing character (G-1564).
+    # Both forms. Whether q= stems is not documented, and the comment above
+    # says it is fuzzy — so this is belt-and-braces rather than a claim that
+    # the singular is required (G-1564). Costs one extra query per company.
     "solution architect",
     "solutions architect",
     "ai engineer",

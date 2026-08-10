@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -82,10 +83,39 @@ GTJ_UNKNOWN_SHAPE = """<?xml version="1.0" encoding="UTF-8"?>
 
 @pytest.fixture
 def feed(monkeypatch):
-    """Serve fixture XML in place of the network."""
+    """Serve fixture XML by mocking the HTTP CLIENT, not `_retry_with_backoff`.
+
+    This distinction is the entire point of this file, so it is worth stating.
+    Patching ``_retry_with_backoff`` would stub out the layer *above* the
+    request, meaning ``_fetch`` never runs — the URL, the verb, the headers and
+    the ``.text`` vs ``.json()`` choice would all go untested. That is precisely
+    how TheHub kept three green tests while GETting an HTML page and calling
+    ``.json()`` on it: its tests mocked away the broken thing and then asserted
+    that the mock worked.
+
+    Patching ``httpx.Client`` keeps the real ``_fetch`` in the loop, so a
+    mutation to the URL or the response accessor fails these tests.
+    """
 
     def _serve(xml: str):
-        monkeypatch.setattr(scrape_resilient, "_retry_with_backoff", lambda fn: xml)
+        response = MagicMock()
+        response.text = xml
+        response.raise_for_status = MagicMock()
+        # .json() must EXPLODE. If production ever calls it on this XML feed —
+        # the TheHub mistake — the test has to fail rather than hand back a mock.
+        response.json = MagicMock(
+            side_effect=ValueError("Expecting value: line 1 column 1 (char 0)")
+        )
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        client.get = MagicMock(return_value=response)
+        # Any non-GET verb is a bug in a feed reader; make it obvious.
+        client.post = MagicMock(side_effect=AssertionError("feed must be fetched with GET"))
+        monkeypatch.setattr(scrape_resilient.httpx, "Client", MagicMock(return_value=client))
+        monkeypatch.setattr(scrape_resilient, "_random_delay", lambda *a, **k: None)
+        monkeypatch.setattr(scrape_resilient.time, "sleep", lambda *a, **k: None)
+        return client
 
     return _serve
 
@@ -97,18 +127,42 @@ class TestGermanTechJobsParser:
         jobs = scrape_germantechjobs()
         assert len(jobs) == 3, "the <jobs><job> shape must yield jobs, not silence"
 
-    def test_old_rss_selector_would_have_found_nothing(self):
-        """Pin the defect itself, so the fix cannot be quietly reverted.
+    def test_fetches_the_feed_url_with_GET_and_reads_text_not_json(self, feed):
+        """Exercise the REQUEST, not just the parse.
 
-        This is the assertion that proves the test is worth having: against the
-        real feed shape the previous selector yields zero, which is exactly why
-        the source sat dead without anyone noticing.
+        Replaces an earlier version of this test that asserted about
+        ElementTree and never touched production code — a fixture self-check
+        masquerading as a regression test. This one fails if the URL, the verb,
+        or the response accessor changes, which is the TheHub failure class.
         """
-        import xml.etree.ElementTree as ET
+        client = feed(GTJ_REAL_SHAPE)
+        scrape_germantechjobs()
+        client.get.assert_called_once()
+        (url,), _ = client.get.call_args
+        assert url == scrape_resilient.GERMANTECHJOBS_RSS
+        client.post.assert_not_called()
 
-        root = ET.fromstring(GTJ_REAL_SHAPE)
-        assert root.findall(".//item") == [], "fixture must reproduce the real shape"
-        assert len(root.findall("job")) == 3
+    def test_nested_job_elements_are_not_silently_skipped(self, feed):
+        """A grouped feed must not lose its entries.
+
+        `findall("job") or findall(".//job")` looks defensive but short-circuits:
+        the direct-child form returns a NON-EMPTY partial list, so the fallback
+        never runs and nested entries vanish with no warning. A silent wrong
+        subset is worse than the zero this module exists to prevent.
+        """
+        grouped = """<?xml version="1.0"?>
+        <jobs>
+          <job><title>Top Level</title><pubdate>01.08.2026</pubdate></job>
+          <category>
+            <job><title>Nested One</title><pubdate>02.08.2026</pubdate></job>
+            <job><title>Nested Two</title><pubdate>03.08.2026</pubdate></job>
+          </category>
+        </jobs>"""
+        feed(grouped)
+        titles = {j.title for j in scrape_germantechjobs()}
+        assert titles == {"Top Level", "Nested One", "Nested Two"}, (
+            f"nested <job> entries were dropped: got {titles}"
+        )
 
     def test_reads_aliased_child_elements(self, feed):
         """The feed uses name/company-name/link/apply_url as aliases."""
@@ -140,11 +194,96 @@ class TestGermanTechJobsParser:
         assert [j.posted for j in jobs] == ["2026-08-10", "2026-08-09"]
         assert all(j.posted != "2020-01-01" for j in jobs)
 
+    def test_an_unparseable_date_cannot_hijack_the_top_slot(self, feed):
+        """A raw string sort ranks garbage above every real date.
+
+        `_gtj_posted` passes anything it cannot parse through verbatim, and under
+        a reverse-lexical sort every string starting above '2' outranks every ISO
+        date. One row reading "Mon, 01 Jan 2010 ..." would take rank 0 and, with a
+        limit applied after, evict a genuinely fresh posting.
+        """
+        xml = """<?xml version="1.0"?>
+        <jobs>
+          <job><title>Garbage Date</title><pubdate>Mon, 01 Jan 2010 00:00:00 GMT</pubdate></job>
+          <job><title>Fresh</title><pubdate>09.08.2026</pubdate></job>
+          <job><title>Fresher</title><pubdate>10.08.2026</pubdate></job>
+        </jobs>"""
+        feed(xml)
+        jobs = scrape_germantechjobs()
+        assert jobs[0].title == "Fresher", f"garbage date hijacked rank 0: {jobs[0].title}"
+        assert [j.title for j in jobs[:2]] == ["Fresher", "Fresh"]
+
+    def test_a_dated_job_is_not_evicted_by_an_undated_one(self, feed):
+        """The mirror failure, and the worse one.
+
+        Under a naive sort an undated job lands dead last and is then
+        DETERMINISTICALLY excluded by `limit` — permanently invisible, which is
+        the silent-loss failure this module exists to prevent. Undated rows must
+        stay reachable while never outranking a real date.
+        """
+        xml = """<?xml version="1.0"?>
+        <jobs>
+          <job><title>No Date</title></job>
+          <job><title>Old</title><pubdate>01.01.2020</pubdate></job>
+        </jobs>"""
+        feed(xml)
+        jobs = scrape_germantechjobs()
+        titles = [j.title for j in jobs]
+        assert titles == ["Old", "No Date"], titles
+        assert "No Date" in titles, "an undated job must not become unreachable"
+
+    def test_explicit_location_beats_a_bare_country(self, feed):
+        """Composing city+country first discards the most specific signal.
+
+        A posting carrying <country>Germany</country> AND
+        <location>Frankfurt am Main, Germany</location> must not collapse to
+        "Germany" — this project's geo classifier reads the bare country as a
+        relocation and the qualified string as a no-move local role.
+        """
+        xml = """<?xml version="1.0"?>
+        <jobs>
+          <job>
+            <title>Local Role</title>
+            <country>Germany</country>
+            <location>Frankfurt am Main, Germany</location>
+            <pubdate>10.08.2026</pubdate>
+          </job>
+        </jobs>"""
+        feed(xml)
+        assert scrape_germantechjobs()[0].location == "Frankfurt am Main, Germany"
+
+    def test_camelcase_pubdate_alias_is_read(self, feed):
+        """pubdate was the one field with no alias; XML is case-sensitive."""
+        xml = """<?xml version="1.0"?>
+        <jobs><job><title>X</title><pubDate>10.08.2026</pubDate></job></jobs>"""
+        feed(xml)
+        assert scrape_germantechjobs()[0].posted == "2026-08-10"
+
     def test_still_accepts_the_legacy_rss_shape(self, feed):
         feed(GTJ_RSS_SHAPE)
         jobs = scrape_germantechjobs()
         assert len(jobs) == 1
         assert jobs[0].title == "Platform Engineer"
+
+    def test_rss_fallback_sorts_and_limits_like_the_primary_branch(self, feed):
+        """One field, one format, one ordering — regardless of which branch fired.
+
+        The fallback used to apply `limit` with no sort and no date
+        normalisation, so `posted` was ISO in one branch and RFC-822 in the
+        other, and `limit` trimmed the HEAD instead of the stale tail. Any
+        downstream date comparison then depended on an invisible condition.
+        """
+        rss = """<?xml version="1.0"?>
+        <rss version="2.0"><channel>
+          <item><title>Oldest</title><pubDate>01.01.2020</pubDate></item>
+          <item><title>Newest</title><pubDate>10.08.2026</pubDate></item>
+        </channel></rss>"""
+        feed(rss)
+        jobs = scrape_germantechjobs(limit=1)
+        assert [j.title for j in jobs] == ["Newest"], "fallback trimmed the head, not the tail"
+        assert jobs[0].posted == "2026-08-10", (
+            "fallback must normalise dates like the primary branch"
+        )
 
     def test_unknown_shape_warns_instead_of_passing_as_empty(self, feed, caplog):
         """The point of the whole exercise.

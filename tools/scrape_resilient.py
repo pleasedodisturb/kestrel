@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import logging
 import random
+import re
 import sys
 import time
 from dataclasses import asdict, dataclass, field
@@ -472,6 +473,33 @@ def _gtj_posted(raw: str) -> str:
         return raw
 
 
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
+
+
+def _freshest_first(jobs: list[ScrapedJob]) -> list[ScrapedJob]:
+    """Sort newest-first, but let ONLY a validated ISO date reorder anything.
+
+    A plain ``sort(key=lambda j: j.posted, reverse=True)`` is wrong here, and
+    wrong in the direction that hurts: ``_gtj_posted`` passes anything it cannot
+    parse through verbatim, and under a reverse-lexical sort every string
+    starting above ``'2'`` outranks every real ISO date. One row reading
+    ``"Mon, 01 Jan 2010 …"`` or ``"vor 3 Tagen"`` takes the top slot, and with a
+    ``limit`` applied afterwards it evicts a genuinely fresh posting.
+
+    The mirror case is worse: a job with no date at all sorts dead last and is
+    then *deterministically* excluded by ``limit`` — permanently invisible,
+    which is exactly the silent-loss failure this module exists to prevent.
+
+    So: rows with a parseable ISO date sort among themselves, newest first;
+    everything else keeps feed order and lands after them. Undated jobs stay
+    reachable, and an unparseable date can no longer hijack rank 1.
+    """
+    dated = [(i, j) for i, j in enumerate(jobs) if _ISO_DATE.match(j.posted or "")]
+    undated = [(i, j) for i, j in enumerate(jobs) if not _ISO_DATE.match(j.posted or "")]
+    dated.sort(key=lambda pair: (pair[1].posted, -pair[0]), reverse=True)
+    return [j for _, j in dated] + [j for _, j in undated]
+
+
 def scrape_germantechjobs(limit: int = 1500) -> list[ScrapedJob]:
     """
     Parse the GermanTechJobs XML job feed. Germany-specific tech jobs, free, no auth.
@@ -513,14 +541,28 @@ def scrape_germantechjobs(limit: int = 1500) -> list[ScrapedJob]:
         logger.error(f"GermanTechJobs feed parse error: {e}")
         return jobs
 
-    entries = root.findall("job") or root.findall(".//job")
+    # `.//job` unconditionally — it is a strict superset of `findall("job")`.
+    # The tempting `findall("job") or findall(".//job")` is wrong: on a grouped
+    # feed (<jobs><category><job>…) the direct-child form returns a NON-EMPTY
+    # partial list, `or` short-circuits, and the nested entries are dropped with
+    # no warning — a silent wrong subset, which is worse than the zero this
+    # function was written to eliminate.
+    entries = root.findall(".//job")
     if entries:
         for job in entries:
+            # Prefer the explicit location string; only compose from city/country
+            # when it is absent. Composing first discards the most specific
+            # signal: a posting with <country>Germany</country> beside
+            # <location>Frankfurt am Main, Germany</location> would yield bare
+            # "Germany", which this project's own geo classifier reads as
+            # home_relocate instead of home_local — downgrading a no-move local
+            # role to a relocation on a parser detail.
             city = _gtj_text(job, "city")
             country = _gtj_text(job, "country")
             location = (
-                ", ".join(p for p in (city, country) if p)
-                or _gtj_text(job, "location", "region")
+                _gtj_text(job, "location")
+                or ", ".join(p for p in (city, country) if p)
+                or _gtj_text(job, "region")
                 or "Germany"
             )
 
@@ -532,18 +574,23 @@ def scrape_germantechjobs(limit: int = 1500) -> list[ScrapedJob]:
                     url=_gtj_text(job, "url", "link", "apply_url"),
                     source="germantechjobs",
                     description=_gtj_text(job, "description")[:MAX_DESCRIPTION_LENGTH],
-                    posted=_gtj_posted(_gtj_text(job, "pubdate")),
+                    # Aliases here too. XML is case-sensitive and this feed has
+                    # already changed shape once; a lone "pubdate" spelling means
+                    # a camelCase <pubDate> silently zeroes every date and
+                    # "freshest-first" degrades to arbitrary feed order.
+                    posted=_gtj_posted(_gtj_text(job, "pubdate", "pubDate", "date", "published")),
                     salary=_gtj_text(job, "salary"),
                     scraped_at=now,
                 )
             )
-        # Freshest first. ISO dates sort lexically; unparseable ones sink.
-        jobs.sort(key=lambda j: j.posted, reverse=True)
-        jobs = jobs[:limit]
+        jobs = _freshest_first(jobs)[:limit]
     else:
         # Legacy/fallback RSS shape, kept in case the board switches back.
+        # Normalized and sorted the SAME way as the primary branch: `posted`
+        # must not be ISO in one branch and RFC-822 in the other, or a
+        # downstream date comparison silently depends on which branch fired.
         items = root.findall(".//item")
-        for item in items[:limit]:
+        for item in items:
             jobs.append(
                 ScrapedJob(
                     title=(item.findtext("title") or "").strip(),
@@ -552,20 +599,27 @@ def scrape_germantechjobs(limit: int = 1500) -> list[ScrapedJob]:
                     url=(item.findtext("link") or "").strip(),
                     source="germantechjobs",
                     description=(item.findtext("description") or "")[:MAX_DESCRIPTION_LENGTH],
-                    posted=(item.findtext("pubDate") or "").strip(),
+                    posted=_gtj_posted((item.findtext("pubDate") or "").strip()),
                     scraped_at=now,
                 )
             )
+        jobs = _freshest_first(jobs)[:limit]
+
         if not items:
-            # Neither shape matched. Say so loudly: an empty return here means the
-            # PARSER is broken, not that the board had nothing. Conflating those
-            # two is how this source sat at zero unnoticed.
+            # Neither shape matched. Report what was actually observed and let the
+            # reader judge — do NOT assert "the schema changed", because a board
+            # that genuinely has no openings serves a well-formed empty document
+            # and would trip this same branch. Claiming a parser failure there is
+            # a false alarm, and an alarm that cries wolf is how a real one gets
+            # ignored.
+            child_count = len(list(root))
             logger.warning(
                 "GermanTechJobs: feed parsed (root <%s>, %d children) but no <job> "
-                "or <item> entries found — the schema probably changed again. This "
-                "is a PARSER failure, not an empty board.",
+                "or <item> entries matched either known schema. If the document is "
+                "non-empty this is a PARSER failure, not an empty board — check the "
+                "feed shape before assuming the source has nothing to offer.",
                 root.tag,
-                len(list(root)),
+                child_count,
             )
 
     logger.info(f"GermanTechJobs: {len(jobs)} jobs")
@@ -858,15 +912,19 @@ def scrape_all_sources(
     _random_delay()
 
     try:
-        gtj_results = scrape_germantechjobs(limit=50)
+        # No limit pin. The fetch is a single request for the whole 4.2 MB feed
+        # either way, so capping at 50 threw away ~95% of what was already
+        # downloaded — and made the parser fix above almost pointless in the one
+        # place it ships.
+        gtj_results = scrape_germantechjobs()
         all_jobs.extend(gtj_results)
     except Exception as e:
         logger.error(f"GermanTechJobs failed: {e}")
 
-    # 8. New sources: Himalayas, Greenhouse, Lever, Ashby, startup.jobs, TheHub
+    # 8. New sources: Himalayas, Greenhouse, Lever, Ashby, startup.jobs
     if NEW_SOURCES_AVAILABLE:
         logger.info(
-            "=== Source 8/9: New Market Sources (Himalayas, ATS boards, startup.jobs, TheHub) ==="
+            "=== Source 8/9: New Market Sources (Himalayas, ATS boards, startup.jobs) ==="
         )
         try:
             new_results = scrape_all_new_sources(keywords=keywords)

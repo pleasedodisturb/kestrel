@@ -20,7 +20,7 @@ Automated daily job discovery: scrape → score → deduplicate → digest.
 │    ├─ JobSpy (LinkedIn, Indeed, Glassdoor)       [HTTP] │ │
 │    ├─ Remotive, RemoteOK, Jobicy              [API]  │ │
 │    ├─ AI-Jobs.net                              [API]  │ │
-│    ├─ WWR, GermanTechJobs                      [RSS]  │ │
+│    ├─ WWR [RSS], GermanTechJobs [XML feed]           │ │
 │    └─ Browser fallback (Playwright)          [optional] │ │
 │                                                          │
 │  Step 2: SCORE ───────────────────────────────────────┐ │

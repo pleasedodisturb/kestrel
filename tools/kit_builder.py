@@ -29,13 +29,12 @@ _ARCHETYPE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "solutions-fde",
         (
+            # "solutions" already substring-matches "Solutions Architect".
+            # What it does NOT match is the singular "Solution Architect" — so
+            # a plural-only list silently drops every employer that titles the
+            # role that way. One character, a whole class of roles (G-1564).
             "solutions",
-            # Singular AND plural. "solutions" does not substring-match
-            # "Solution Architect", so a plural-only list silently drops every
-            # employer that titles the role in the singular — a whole class of
-            # roles lost to one character (G-1564).
             "solution architect",
-            "solutions architect",
             "forward deployed",
             "fde",
             "sales engineer",

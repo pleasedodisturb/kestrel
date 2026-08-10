@@ -143,7 +143,7 @@ STRONG_TITLE_PATTERNS = [
     (r"engineering manager.*ai", 2),
     (r"engineering manager.*product", 2),
     (r"forward deployed engineer", 2),
-    (r"solutions engineer.*ai", 2),
+    (r"solutions? engineer.*ai", 2),  # singular OR plural (G-1564)
     (r"director.*product", 2),
     (r"head of new products", 2),
     (r"ki.*produktmanager", 2),
