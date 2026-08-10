@@ -47,6 +47,7 @@ config/blocklist.yaml
 config/geo.yaml
 # Target-company lists for ATS scrapers (personal; copy from companies.example.yaml)
 config/companies.yaml
+config/scan-sources.yaml
 # Voice corpus (raw personal writing — never commit)
 config/voice-corpus.md
 

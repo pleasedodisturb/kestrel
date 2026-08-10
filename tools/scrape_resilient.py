@@ -23,6 +23,7 @@ import random
 import re
 import sys
 import time
+from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -34,6 +35,7 @@ import xml.etree.ElementTree as ET
 
 import germany_jobs
 import httpx
+import source_registry
 
 logger = logging.getLogger("scrape_resilient")
 
@@ -956,11 +958,38 @@ def scrape_all_sources(
                     )
                 )
 
+    # Per-source health BEFORE dedup — dedup removes cross-posted duplicates and
+    # would understate a source's real contribution, making a healthy board look
+    # like it is fading.
+    report_source_health(all_jobs)
+
     # Deduplicate
     all_jobs = deduplicate(all_jobs)
     logger.info(f"Total after all sources: {len(all_jobs)} jobs")
 
     return all_jobs
+
+
+def report_source_health(jobs: list[ScrapedJob]) -> list[str]:
+    """Log the per-source status table and every non-ok warning.
+
+    Counts come from what actually landed in ``ScrapedJob.source`` rather than
+    from counters threaded through each call site — so a source cannot report a
+    number it did not produce, and a source that returned nothing simply does not
+    appear, which ``source_registry.check`` already treats as ZERO.
+
+    This is the whole point of the registry: without it a broken scraper
+    contributes zero forever while the run looks healthy, which is exactly how
+    two sources in this repo stayed dead for months.
+
+    Returns the warning list (also logged) so callers and tests can assert on it.
+    """
+    counts = Counter(j.source for j in jobs)
+    logger.info("Per-source health:\n%s", source_registry.status_table(counts))
+    warnings = source_registry.check(counts)
+    for line in warnings:
+        logger.warning("SOURCE HEALTH — %s", line)
+    return warnings
 
 
 def save_results(jobs: list[ScrapedJob], output_dir: Path) -> Path:
