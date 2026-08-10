@@ -11,12 +11,14 @@ Three aggressiveness levels:
 Based on validated spike results in tools/spike_prefilter.py.
 
 The 99.5% recall figure describes the keyword filter above. The optional geo
-gate is a SEPARATE signal with its own measured recall of 93.6% (G-1474
-blind set, 47 human-judged GO roles, 3 classified ``foreign``), so it does not
-delete anything by default: it annotates and counts, leaving the cap/review
-decision to the scoring layer, exactly as the engine's own contract defines the
-``foreign`` class. Deletion is available behind ``geo_drop_foreign`` — turning
-it on trades the module's 99.5% recall claim for the geo gate's 93.6%.
+gate is a SEPARATE signal, measured at 93.6% recall against an AUTOMATED judge
+on the G-1474 blind set — and at 81.4% against that set's hand labels, which is
+the more honest figure (see ``tests/eval/geo/fixtures/README.md``). Either way
+it does not delete anything by default: it annotates and counts, leaving the
+cap/review decision to the scoring layer, exactly as the engine's own contract
+defines the ``foreign`` class. Deletion is available behind ``geo_drop_foreign``
+— turning it on trades the module's 99.5% recall claim for the geo gate's, and
+the hand-labelled number is the one to weigh that trade against.
 """
 
 from __future__ import annotations

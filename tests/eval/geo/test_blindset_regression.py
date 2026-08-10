@@ -7,9 +7,26 @@ Three gates over the scrubbed 277-item Frankfurt-preset reference set
    the frozen Eyas class assignment on every item. This is the acceptance
    criterion for the port: byte-identical behaviour, not "close enough".
 2. **Precision/recall floor** — the joint role+geo KEEP decision must hold the
-   set's measured quality (thresholds read from the reference file, published
-   Eyas numbers: 93.6% recall / 74.6% precision). ``role_keep`` is frozen in
-   the reference because only the GEO engine was ported.
+   floor recorded in the reference file (``recall >= 0.93``, ``precision >=
+   0.74``). ``role_keep`` is frozen in the reference because only the GEO engine
+   was ported.
+
+   **Read this before quoting those numbers anywhere.** They are measured
+   against ``judgements.json``, which holds an **automated (LLM) judge's**
+   verdicts — not hand labels. They are a *regression floor for the port*, which
+   is what this fixture exists to prove, and they are **not** the engine's
+   accuracy.
+
+   Against the same contributor's own hand labels (August 2026, all 277 items)
+   the same engine measures **81.4% recall / 59.3% precision**, and **79.1% /
+   53.1%** on the full-description + authoritative-offices path that runs in
+   production. The judge had been flattering the engine by roughly 14 points of
+   precision.
+
+   An earlier version of this docstring described 93.6/74.6 as the "published"
+   numbers, which invited exactly the misreading this paragraph now prevents: a
+   green CI gate is the strongest available signal that something was checked,
+   so it must be unambiguous about *what* it checked.
 3. **Fixture integrity** — the scrub gate stays alive: the committed fixture
    must keep matching zero PII/tracking patterns, and the provenance log's
    ``SCRUB-PROOF: PASS`` line cannot be quietly dropped.
@@ -66,8 +83,14 @@ def test_differential_matches_frozen_eyas_reference():
 # ---------------------------------------------------------------------------
 
 
-def test_precision_recall_hold_published_floor():
-    """Recall/precision on the blind set must hold the thresholds frozen in the reference."""
+def test_precision_recall_hold_the_judge_regression_floor():
+    """Hold the thresholds frozen in the reference.
+
+    Named for what it measures: agreement with the AUTOMATED judge, which is the
+    port-regression signal. It is deliberately NOT called a "published floor" —
+    that phrasing is what let 93.6/74.6 travel onto a CV and a public site as if
+    it were the engine's accuracy.
+    """
     items = load_items()
     judgements = load_judgements()
     reference = load_reference()
@@ -88,11 +111,11 @@ def test_precision_recall_hold_published_floor():
 
     assert recall >= thresholds["recall"], (
         f"recall {recall:.1%} fell below the {thresholds['recall']:.0%} floor "
-        f"(Eyas published 93.6% on this set; kept {go_kept}/{total_go} GO items)"
+        f"(measured vs the AUTOMATED judge, not hand labels; kept {go_kept}/{total_go} GO items)"
     )
     assert precision >= thresholds["precision"], (
         f"precision {precision:.1%} fell below the {thresholds['precision']:.0%} floor "
-        f"(Eyas published 74.6% on this set; {go_kept} GO of {len(keep)} kept)"
+        f"(measured vs the AUTOMATED judge, not hand labels; {go_kept} GO of {len(keep)} kept)"
     )
 
 
