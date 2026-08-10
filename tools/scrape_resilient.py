@@ -449,15 +449,50 @@ def scrape_weworkremotely(limit: int = 50) -> list[ScrapedJob]:
     return jobs
 
 
-# --- Source: GermanTechJobs (RSS feed, Germany-specific) ---
+# --- Source: GermanTechJobs (XML job feed, Germany-specific) ---
 
 GERMANTECHJOBS_RSS = "https://germantechjobs.de/job_feed.xml"
 
 
-def scrape_germantechjobs(limit: int = 50) -> list[ScrapedJob]:
+def _gtj_text(job: ET.Element, *names: str) -> str:
+    """First non-empty child text among `names` (the feed carries aliases)."""
+    for name in names:
+        value = job.findtext(name)
+        if value and value.strip():
+            return value.strip()
+    return ""
+
+
+def _gtj_posted(raw: str) -> str:
+    """GermanTechJobs `pubdate` is DD.MM.YYYY — normalize to ISO, else pass through."""
+    raw = (raw or "").strip()
+    try:
+        return datetime.strptime(raw, "%d.%m.%Y").strftime("%Y-%m-%d")
+    except ValueError:
+        return raw
+
+
+def scrape_germantechjobs(limit: int = 1500) -> list[ScrapedJob]:
     """
-    Parse GermanTechJobs RSS/XML feed.
-    Germany-specific tech jobs. Free, no auth.
+    Parse the GermanTechJobs XML job feed. Germany-specific tech jobs, free, no auth.
+
+    **The feed is NOT RSS.** Its schema is ``<jobs><job>…</job></jobs>`` with flat
+    child elements (``title``/``name``, ``company``/``company-name``, ``city``,
+    ``region``, ``country``, ``location``, ``url``/``link``/``apply_url``,
+    ``salary``, ``pubdate``, ``description``) — no ``<channel>``, no ``<item>``.
+
+    This parser previously looked for ``.//item`` and therefore returned 0
+    forever while the board served a full listing. Measured 2026-08-10 against
+    the live feed: 4.2 MB, **1,011 ``<job>`` elements, 0 ``<item>`` elements**.
+    A source that can never return a row is indistinguishable from a board with
+    nothing to offer, which is precisely the failure mode worth refusing to ship.
+
+    An RSS-shaped feed is still accepted as a fallback in case they switch back,
+    and a feed that matches *neither* shape logs a PARSER failure rather than
+    passing silently as an empty result.
+
+    Entries are returned freshest-first so a `limit` trims the stale tail rather
+    than letting a promoted 2020 listing keep a role from this week out.
     """
     jobs: list[ScrapedJob] = []
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
@@ -474,30 +509,64 @@ def scrape_germantechjobs(limit: int = 50) -> list[ScrapedJob]:
 
     try:
         root = ET.fromstring(xml_text)
-        items = root.findall(".//item")
+    except ET.ParseError as e:
+        logger.error(f"GermanTechJobs feed parse error: {e}")
+        return jobs
 
-        for item in items[:limit]:
-            title_el = item.find("title")
-            link_el = item.find("link")
-            desc_el = item.find("description")
-            pubdate_el = item.find("pubDate")
+    entries = root.findall("job") or root.findall(".//job")
+    if entries:
+        for job in entries:
+            city = _gtj_text(job, "city")
+            country = _gtj_text(job, "country")
+            location = (
+                ", ".join(p for p in (city, country) if p)
+                or _gtj_text(job, "location", "region")
+                or "Germany"
+            )
 
             jobs.append(
                 ScrapedJob(
-                    title=title_el.text if title_el is not None else "",
-                    company="",  # Not always in the feed title
-                    location="Germany",
-                    url=link_el.text if link_el is not None else "",
+                    title=_gtj_text(job, "title", "name"),
+                    company=_gtj_text(job, "company", "company-name"),
+                    location=location,
+                    url=_gtj_text(job, "url", "link", "apply_url"),
                     source="germantechjobs",
-                    description=(desc_el.text or "")[:MAX_DESCRIPTION_LENGTH]
-                    if desc_el is not None
-                    else "",
-                    posted=pubdate_el.text if pubdate_el is not None else "",
+                    description=_gtj_text(job, "description")[:MAX_DESCRIPTION_LENGTH],
+                    posted=_gtj_posted(_gtj_text(job, "pubdate")),
+                    salary=_gtj_text(job, "salary"),
                     scraped_at=now,
                 )
             )
-    except ET.ParseError as e:
-        logger.error(f"GermanTechJobs RSS parse error: {e}")
+        # Freshest first. ISO dates sort lexically; unparseable ones sink.
+        jobs.sort(key=lambda j: j.posted, reverse=True)
+        jobs = jobs[:limit]
+    else:
+        # Legacy/fallback RSS shape, kept in case the board switches back.
+        items = root.findall(".//item")
+        for item in items[:limit]:
+            jobs.append(
+                ScrapedJob(
+                    title=(item.findtext("title") or "").strip(),
+                    company="",
+                    location="Germany",
+                    url=(item.findtext("link") or "").strip(),
+                    source="germantechjobs",
+                    description=(item.findtext("description") or "")[:MAX_DESCRIPTION_LENGTH],
+                    posted=(item.findtext("pubDate") or "").strip(),
+                    scraped_at=now,
+                )
+            )
+        if not items:
+            # Neither shape matched. Say so loudly: an empty return here means the
+            # PARSER is broken, not that the board had nothing. Conflating those
+            # two is how this source sat at zero unnoticed.
+            logger.warning(
+                "GermanTechJobs: feed parsed (root <%s>, %d children) but no <job> "
+                "or <item> entries found — the schema probably changed again. This "
+                "is a PARSER failure, not an empty board.",
+                root.tag,
+                len(list(root)),
+            )
 
     logger.info(f"GermanTechJobs: {len(jobs)} jobs")
     return jobs
@@ -678,7 +747,6 @@ try:
         scrape_lever,
         scrape_remotely_de,
         scrape_startupjobs,
-        scrape_thehub,
     )
 
     NEW_SOURCES_AVAILABLE = True
