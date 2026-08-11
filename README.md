@@ -50,7 +50,7 @@ Kestrel scans job boards, scores every posting against your profile with an LLM,
 Kestrel is a different shape, not a competitor:
 
 - **A running system, not a skill layer.** FastAPI + React + SQLite, a real state machine, and a web UI you operate — rather than commands driven through an AI assistant.
-- **Measurement as a first-class feature.** A golden-set eval harness in nightly CI, a geo-eligibility engine with a committed 277-item reference set, and per-source health floors that make a silently-dead scraper impossible to miss.
+- **Measurement as a first-class feature.** A golden-set eval harness in nightly CI, a geo-eligibility engine with a committed 277-item reference set, and a source registry that reports every scan source on every run — so a dead source shows up as `ZERO` instead of vanishing from the report. It warns; it does not fail the run, and catching *degradation* (rather than a hard zero) needs floors you calibrate yourself.
 - **Provider economics taken seriously.** Ten providers behind one interface, fallback chains, and guards that stop an exhausted cheap tier from quietly billing a premium model.
 
 Pick whichever fits how you work. If you use both, the pieces here that are generic are meant to be portable — issues and PRs in that direction are welcome in either repo.
