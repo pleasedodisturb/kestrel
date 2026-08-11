@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.1](https://github.com/pleasedodisturb/kestrel/compare/v0.27.0...v0.27.1) (2026-08-11)
+
+
+### Documentation
+
+* **readme:** the source registry warns, it does not guarantee ([#514](https://github.com/pleasedodisturb/kestrel/issues/514)) ([30dd811](https://github.com/pleasedodisturb/kestrel/commit/30dd811f31aab2ae031d198682994387f558964a))
+
 ## [0.27.0](https://github.com/pleasedodisturb/kestrel/compare/v0.26.0...v0.27.0) (2026-08-11)
 
 
