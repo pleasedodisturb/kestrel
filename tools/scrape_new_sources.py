@@ -8,7 +8,6 @@ Covers sources not in the original pipeline:
 - Ashby Job Board API (public, per-company, no auth)
 - Workable Job Board API (public v3, per-company, no auth)
 - startup.jobs (Algolia-backed search)
-- TheHub.io (Nordic startup ecosystem, HTML scraping)
 
 All scrapers return list[ScrapedJob] and gracefully return [] on failure.
 """
@@ -553,88 +552,24 @@ def scrape_startupjobs(
 
 
 # ---------------------------------------------------------------------------
-# TheHub.io (Berlin/Nordic startups, HTML scraping fallback)
+# TheHub.io — REMOVED 2026-08-10 (G-1564)
 # ---------------------------------------------------------------------------
-
-THEHUB_API = "https://thehub.io/api/jobs"
-
-
-def scrape_thehub(
-    keywords: list[str] | None = None,
-    location: str = "germany",
-    limit: int = 50,
-) -> list[ScrapedJob]:
-    """
-    Scrape TheHub.io job listings. Tries internal JSON API first,
-    falls back gracefully on failure.
-    """
-    jobs: list[ScrapedJob] = []
-    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
-    search_terms = keywords or ["product manager", "engineer"]
-
-    for term in search_terms:
-
-        def _fetch(query=term):
-            with httpx.Client(
-                timeout=20,
-                headers={
-                    "User-Agent": _get_user_agent(),
-                    "Accept": "application/json",
-                },
-            ) as client:
-                # Try the internal API endpoint
-                r = client.get(
-                    "https://thehub.io/jobs",
-                    params={
-                        "search": query,
-                        "location": location,
-                        "page": 1,
-                        "per_page": min(limit, 50),
-                    },
-                    headers={"Accept": "application/json"},
-                )
-                r.raise_for_status()
-                return r.json()
-
-        data = _retry_with_backoff(_fetch)
-        if not data:
-            continue
-
-        # Handle various response shapes
-        listings = []
-        if isinstance(data, list):
-            listings = data
-        elif isinstance(data, dict):
-            listings = data.get("jobs", data.get("data", data.get("results", [])))
-
-        for j in listings:
-            if not isinstance(j, dict):
-                continue
-            title = j.get("title", "")
-            company = j.get("company_name", j.get("company", ""))
-            if isinstance(company, dict):
-                company = company.get("name", "")
-
-            jobs.append(
-                ScrapedJob(
-                    title=title,
-                    company=str(company),
-                    location=j.get("location", location),
-                    url=j.get("url", j.get("link", "")),
-                    source="thehub",
-                    description=str(j.get("description", ""))[:MAX_DESCRIPTION_LENGTH],
-                    posted=j.get("published_at", j.get("created_at", "")),
-                    remote=j.get("remote", False),
-                    tags=j.get("tags", []) if isinstance(j.get("tags"), list) else [],
-                    scraped_at=now,
-                )
-            )
-
-        _random_delay()
-
-    logger.info(f"TheHub: {len(jobs)} jobs")
-    return jobs
+# `scrape_thehub` GET the HTML page https://thehub.io/jobs (200, text/html) and
+# called .json() on it, failing `Expecting value: line 1 column 1` on all three
+# retries for every search term. It therefore CANNOT EVER have returned a job —
+# dead code contributing a guaranteed zero to every scan since it was written.
+#
+# Probed for a real listing API before removal (browser UA, JSON Accept):
+#     /api/jobs         -> 404 (text/html)
+#     /api/v1/jobs      -> 404 (text/html)
+#     /api/public/jobs  -> 404 (text/html)
+#     /api/jobs/search  -> 404 {"message":"Unable to find job"}
+# The last one IS a real endpoint, but it resolves a SINGLE job by id — there is
+# no public listing API.
+#
+# Removed rather than left in place: a scraper that cannot succeed produces a
+# permanent silent zero, and a source returning nothing must never look like a
+# source with nothing to return. To revive it, find a real endpoint first.
 
 
 # ---------------------------------------------------------------------------
@@ -951,6 +886,10 @@ _SR_QUERIES: tuple[str, ...] = (
     "program manager",
     "technical program manager",
     "developer advocate",
+    # Both forms. Whether q= stems is not documented, and the comment above
+    # says it is fuzzy — so this is belt-and-braces rather than a claim that
+    # the singular is required (G-1564). Costs one extra query per company.
+    "solution architect",
     "solutions architect",
     "ai engineer",
     "founding engineer",
@@ -1202,14 +1141,7 @@ def scrape_all_new_sources(
 
     _random_delay()
 
-    # TheHub
-    logger.info("=== New Source: TheHub.io ===")
-    try:
-        all_jobs.extend(scrape_thehub(keywords=keywords))
-    except Exception as e:
-        logger.error(f"TheHub failed: {e}")
-
-    _random_delay()
+    # TheHub removed 2026-08-10 (G-1564) — see the block above for why.
 
     # arbeitnow (public board, no auth)
     logger.info("=== New Source: arbeitnow.com ===")

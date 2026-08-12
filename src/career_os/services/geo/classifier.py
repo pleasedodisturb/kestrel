@@ -19,14 +19,15 @@ Public classes returned by :func:`geo_eligibility`:
                                  country-locked remote) => cap / review queue.
 - ``unknown``                 -> no geo signal => do NOT bury; let the AI score.
 
-Two contract rules (measured on a 277-item human-judged blind set) survive
+Two contract rules (measured on a 277-item blind set) survive
 verbatim from the source engine:
 
 1. Region tokens in the TITLE bind first — "(AMER)" or ", Korea" name the
    served market regardless of office; an eligible token alongside rescues.
 2. A bare "Remote" location consults the DESCRIPTION before defaulting
    eligible — skipping this consult admitted 10 junk roles (precision
-   74.6% -> 65.2%) before the blind-set regression caught it.
+   74.6% -> 65.2% against the automated judge in use at the time) before the
+   blind-set regression caught it.
 """
 
 from __future__ import annotations

@@ -43,6 +43,18 @@ Kestrel scans job boards, scores every posting against your profile with an LLM,
 | **Privacy** | Your data lives in a local SQLite file. A privacy boundary blocks personal-data features from any provider without a zero-data-retention guarantee; per-provider retention tiers are [documented](docs/reference/AI-PROVIDERS.md) |
 | **Ships as** | [PyPI](https://pypi.org/project/kestrel-app/), npm, Homebrew, Docker, a Railway template, and Codespaces. AGPL-3.0 |
 
+### Looking for something more established?
+
+**[career-ops](https://github.com/santifer/career-ops)** is a bigger, more mature, far more popular take on the same problem — tens of thousands of stars, a large community, and a polished agent-skill workflow that plugs into whichever AI coding CLI you already use. If you want the well-trodden path, start there. It is genuinely good, and it was built independently of this project — we arrived at a lot of the same ideas separately, which is usually a sign the ideas are right.
+
+Kestrel is a different shape, not a competitor:
+
+- **A running system, not a skill layer.** FastAPI + React + SQLite, a real state machine, and a web UI you operate — rather than commands driven through an AI assistant.
+- **Measurement as a first-class feature.** A golden-set eval harness in nightly CI, a geo-eligibility engine with a committed 277-item reference set, and a source registry that reports every scan source on every run — so a dead source shows up as `ZERO` instead of vanishing from the report. It warns; it does not fail the run, and catching *degradation* (rather than a hard zero) needs floors you calibrate yourself.
+- **Provider economics taken seriously.** Ten providers behind one interface, fallback chains, and guards that stop an exhausted cheap tier from quietly billing a premium model.
+
+Pick whichever fits how you work. If you use both, the pieces here that are generic are meant to be portable — issues and PRs in that direction are welcome in either repo.
+
 The scoring pipeline is treated as a measured system, not a prompt that felt right once: the eval harness scores the production code path (never a reimplementation), and a scoring regression fails the nightly build before it ships. How that works, and what is still interim about it, is written up in [tests/eval/README.md](tests/eval/README.md).
 
 ---

@@ -1,5 +1,7 @@
 # German/EMEA Job Market Gaps - Research & Implementation Report
 
+> **Historical record.** Two sources named below have since been found incapable of returning a job and were removed on 2026-08-10 (G-1564): **TheHub.io** (GET an HTML page, called `.json()`) and **AI-Jobs.net**. `scrape_thehub()` no longer exists. Kept as written for the record; do not treat its source table as current.
+
 Generated: 2026-03-30
 
 ## Summary

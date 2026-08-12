@@ -5,9 +5,11 @@ Everything in this module is geographic VOCABULARY, not code: the engine in
 profile swaps the geography.
 
 - ``FRANKFURT_PROFILE`` — the reference preset. Its pattern strings are copied
-  character-for-character from the measured source engine (93.6% recall /
-  74.6% precision on a 277-item human-judged blind set); they ARE the measured
-  artifact, so do not "clean them up".
+  character-for-character from the measured source engine; they ARE the measured
+  artifact, so do not "clean them up". The 93.6% / 74.6% figures previously
+  quoted here were measured against an AUTOMATED judge, not hand labels — see
+  ``tests/eval/geo/fixtures/README.md``. Against hand labels the same engine
+  measures 81.4% / 59.3% (79.1% / 53.1% on the production offices path).
 - ``US_REMOTE_PROFILE`` — an ILLUSTRATIVE contrast preset for a US-based
   remote worker. It exists to prove the engine is config-driven (same input,
   different profile, different verdict). It is demonstration data, not legal

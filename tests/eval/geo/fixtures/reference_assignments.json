@@ -1401,5 +1401,6 @@
       "generic_class": "foreign",
       "role_keep": true
     }
-  }
+  },
+  "thresholds_basis": "Measured against judgements.json — an AUTOMATED (LLM) judge gated at 90% agreement on a control stratum. NOT hand labels, and NOT the engine's accuracy. These are a regression floor proving the port did not change behaviour. Against the same contributor's hand labels the engine measures 81.4%/59.3%, and 79.1%/53.1% on the production offices path (2026-08-10)."
 }

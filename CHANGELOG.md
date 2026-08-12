@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.27.0](https://github.com/pleasedodisturb/kestrel/compare/v0.26.0...v0.27.0) (2026-08-11)
+
+
+### Features
+
+* **scrapers:** source registry — every source reported, every run, with a reason ([#510](https://github.com/pleasedodisturb/kestrel/issues/510)) ([036e206](https://github.com/pleasedodisturb/kestrel/commit/036e20650c7d0ef1ae6557a42d90f5e68ac32621))
+
+
+### Bug Fixes
+
+* **scrapers:** two sources that could never return a job + a plural-only title match ([#508](https://github.com/pleasedodisturb/kestrel/issues/508)) ([b7e2071](https://github.com/pleasedodisturb/kestrel/commit/b7e2071a953404c9035e0af172012d866505c126))
+
+
+### Documentation
+
+* **eval:** say what the blind-set gate actually measures ([#512](https://github.com/pleasedodisturb/kestrel/issues/512)) ([a1c9f6d](https://github.com/pleasedodisturb/kestrel/commit/a1c9f6d56082b29908bdb9001ec21a3b63db16d0))
+* **readme:** point readers at career-ops, and say what Kestrel is for instead ([#513](https://github.com/pleasedodisturb/kestrel/issues/513)) ([42da3c0](https://github.com/pleasedodisturb/kestrel/commit/42da3c0728ae3a45aa218c4e1dfa3e5453949ef4))
+
 ## [0.26.0](https://github.com/pleasedodisturb/kestrel/compare/v0.25.0...v0.26.0) (2026-08-06)
 
 

@@ -69,7 +69,7 @@ foreign country is still `foreign`.
 
 ## The two contract rules
 
-Both rules were measured on a human-judged blind set and survive verbatim:
+Both rules were measured on the 277-item blind set and survive verbatim:
 
 1. **Title region-tokens bind first.** "(AMER)" or ", Korea" in the *title*
    names the served market regardless of which office is listed — but an

@@ -1,0 +1,135 @@
+# Scan source registry -- copy this file to config/scan-sources.yaml and customize.
+#
+#   cp config/scan-sources.example.yaml config/scan-sources.yaml
+#
+# config/scan-sources.yaml is gitignored; only this .example.yaml is tracked.
+# The file is OPTIONAL: with no config at all, every source this repo ships is
+# still reported on every run and a hard ZERO is still loud. The config adds
+# calibrated floors and deliberate exclusions on top of that.
+#
+# TWO JOBS, deliberately in the same file:
+#
+#   1. EXCLUSION.    `enabled: false` turns a source off without deleting code.
+#   2. HEALTH FLOOR. `floor: N` is the count below which the run SHOUTS.
+#
+# THE RULE THAT MAKES THIS SAFE: a disabled source is reported as DISABLED,
+# never as absent and never as zero. If you could silently switch a source off
+# here, this file would recreate the exact bug it exists to kill -- a source
+# contributing nothing while the run looks healthy. Every source appears in
+# every status table with one of:
+#
+#     ok · DISABLED · BLOCKED · ABANDONED · EMPTY-BY-DESIGN · BELOW-FLOOR · ZERO
+#
+# ---------------------------------------------------------------------------
+# `floor` HAS THREE STATES AND THE DIFFERENCE MATTERS
+# ---------------------------------------------------------------------------
+#
+#   floor absent   -> NOT CALIBRATED. No below-floor check. A hard zero is still
+#                     loud. This is the right default until you have measured a
+#                     normal run.
+#   floor: 0 + note -> DOCUMENTED ZERO. You are asserting empty is correct here
+#                     and saying why. Reported as EMPTY-BY-DESIGN, quietly.
+#                     The `note` is REQUIRED -- an undocumented zero-floor is
+#                     indistinguishable from an unnoticed breakage.
+#   floor: N        -> CALIBRATED. Below N shouts.
+#
+# DO NOT copy floors from someone else's install. Volumes depend entirely on
+# your company lists, keywords and region. To calibrate from a real run:
+#
+#     python tools/source_registry.py --calibrate '{"greenhouse": 4042, ...}'
+#
+# It suggests ~1/3 of the observed count, because a floor near the measured
+# value fires on ordinary variance -- and a warning that fires every run is one
+# you learn to ignore, which costs more than no warning at all.
+#
+# NEVER raise a floor to make a broken source look healthy. Fix the source.
+
+sources:
+  # --- ATS boards (per-company; volume depends on YOUR config/companies.yaml) --
+  greenhouse:
+    enabled: true
+    # floor: 300        # uncomment after calibrating against a real run
+
+  lever:
+    enabled: true
+
+  ashby:
+    enabled: true
+
+  workable:
+    enabled: true
+
+  smartrecruiters:
+    enabled: true
+
+  personio:
+    enabled: true
+
+  # --- Aggregators / job boards ---------------------------------------------
+  himalayas:
+    enabled: true
+
+  arbeitnow:
+    enabled: true
+
+  germantechjobs:
+    enabled: true
+    note: >-
+      XML feed at germantechjobs.de/job_feed.xml. NOT RSS -- the schema is
+      <jobs><job>. A parser that looks for <item> returns zero forever while the
+      board serves a full listing; that is exactly what happened before G-1564.
+
+  # JobSpy is a multiplexer: postings are reported under the board they came
+  # from (indeed / linkedin / glassdoor / google / zip_recruiter), so there is
+  # no "jobspy" source name to register. Add the boards you actually scrape:
+  #
+  #   indeed:
+  #     enabled: true
+  #
+  # Registering boards you do not use would give you permanent ZERO warnings.
+
+  aijobs:
+    enabled: true
+    note: >-
+      ai-jobs.net. Its downstream fork found the list-jobs API returning 404 in
+      August 2026 and removed the source there; it is kept here pending
+      re-verification. If this reports ZERO, that finding probably applies.
+
+  remoteok:
+    enabled: true
+
+  weworkremotely:
+    enabled: true
+
+  jobicy:
+    enabled: true
+
+  remotive:
+    enabled: true
+
+  remotely.de:
+    enabled: true
+    note: >-
+      Emits source="remotely.de" (with a dot). The scraper function is
+      scrape_remotely_de -- the names differ, and the registry must match what
+      is EMITTED, not what the function is called.
+
+  startupjobs:
+    enabled: true
+
+# ---------------------------------------------------------------------------
+# Sources REMOVED from this repo, and why. Recorded so nobody restores one
+# without reading the reason first.
+# ---------------------------------------------------------------------------
+removed:
+  thehub:
+    removed: 2026-08-10
+    ticket: G-1564
+    reason: >-
+      scrape_thehub GET the HTML page thehub.io/jobs (200, text/html) and called
+      .json() on it, so it could never return a job. Probed for a real listing
+      API before removal -- /api/jobs, /api/v1/jobs and /api/public/jobs all 404;
+      /api/jobs/search exists but resolves a SINGLE job by id. No public listing
+      endpoint. Its unit tests passed throughout by mocking the HTTP client and
+      feeding the parser fabricated JSON -- a mock standing in for the broken
+      thing proves only that the mock works.
