@@ -27,17 +27,25 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from calibrate import (  # noqa: E402
     bootstrap_ci,
     build_report,
     filter_agreement,
     load_inputs,
+    nearest_rank_percentile,
     precision_recall,
+    repeat_accounting,
     repeat_pairs,
+    response_rates,
     self_consistency,
+    stratified_resample,
     suggest_threshold,
+    usable_labels,
     weighted_confusion,
 )
+from tests.eval.label_store import input_hash  # noqa: E402
 
 
 def _it(index, stratum, *, job_id=None, fit=5.0, repeat=False, repeat_of=None):
@@ -61,9 +69,15 @@ def _it(index, stratum, *, job_id=None, fit=5.0, repeat=False, repeat_of=None):
 
 
 def _lab(index, can_win, wants):
+    # A REAL input_hash. It previously used a placeholder, which meant every
+    # label was silently discarded as stale once the hash gate landed -- and the
+    # report tests kept passing, because they assert static text. Third instance
+    # in this work of a test passing for the wrong reason.
+    # input_hash covers title|company|description, all of which depend only on
+    # the index in _it(), so this matches any _it(index, ...) variant.
     return {
         "index": index,
-        "input_hash": f"sha256:{index}",
+        "input_hash": input_hash(_it(index, "KEEP")),
         "can_win_cold": can_win,
         "wants": wants,
         "labeled_at": "2026-08-17T00:00:00+00:00",
@@ -227,7 +241,17 @@ def _report():
     items.append(_it(99, "REPEAT", job_id=1, repeat=True, repeat_of=1))
     labels = {i: _lab(i, i % 2 == 1, i % 3 != 0) for i in range(1, 13)}
     labels[99] = _lab(99, True, True)
-    return build_report({"items": items, "_meta": _meta()}, labels, n_boot=60)
+
+    # NON-VACUITY GUARD. Every assertion below looks for static text, so they all
+    # pass on an empty report. Prove the fixture's labels actually survive the
+    # hash gate before trusting anything the report says.
+    kept, stale = usable_labels(items, labels)
+    assert stale == 0, f"{stale} fixture labels discarded as stale; the report is vacuous"
+    assert len(kept) == len(labels), "fixture labels did not bind to items"
+
+    text = build_report({"items": items, "_meta": _meta()}, labels, n_boot=60)
+    assert "0 labelled" not in text, "report has no labels; its text assertions prove nothing"
+    return text
 
 
 def test_report_never_calls_agreement_accuracy():
@@ -281,3 +305,209 @@ def test_load_inputs_skips_a_torn_line(tmp_path):
     lab.write_text(json.dumps(_lab(1, True, True)) + '\n{"index": 2, "can_wi')
     _, labels = load_inputs(ls, lab)
     assert set(labels) == {1}
+
+
+# ===================================================================
+# Regressions from the 2026-08-17 adversarial cross-review (codex).
+# ===================================================================
+
+
+def test_stale_labels_are_dropped_and_counted():
+    """DEFECT 1: labels joined to items by index alone, ignoring input_hash."""
+    items = [_it(1, "KEEP"), _it(2, "KEEP")]
+    labels = {1: _lab(1, True, True), 2: {**_lab(2, True, True), "input_hash": "sha256:wrong"}}
+    kept, stale = usable_labels(items, labels)
+    assert set(kept) == {1}
+    assert stale == 1
+
+
+def test_stale_labels_never_reach_the_statistics():
+    items = [_it(1, "KEEP"), _it(2, "DROP")]
+    labels = {1: _lab(1, True, True), 2: {**_lab(2, True, True), "input_hash": "sha256:wrong"}}
+    kept, _ = usable_labels(items, labels)
+    conf = weighted_confusion(items, kept, _meta(), "can_win_cold")
+    assert conf["fn"] == 0.0, "a stale label was counted as a false negative"
+
+
+def test_nearest_rank_percentile_known_vectors():
+    """DEFECT 5, tested against arithmetic rather than against itself.
+
+    The first version of this test asserted `lo <= hi` and then restated the
+    formula, so reverting the fix to the old mixed int() convention left it
+    green. Mutation N8 caught that. These are hand-computed expectations.
+
+    vals = 1..100, so vals[i] == i + 1 and the index is readable in the value.
+      p=0.025 -> ceil(2.5) - 1 = 2      -> 3
+      p=0.975 -> ceil(97.5) - 1 = 97    -> 98
+    The old code gave int(2.5)-1 = 1 -> 2, and int(97.5) = 97 -> 98: wrong at
+    the low end only, for this n.
+
+    vals = 1..200 makes p*n integral at the top, where the old code was wrong:
+      p=0.975 -> ceil(195) - 1 = 194    -> 195
+    The old code gave int(195) = 195 -> 196.
+    """
+    hundred = list(range(1, 101))
+    assert nearest_rank_percentile(hundred, 0.025) == 3
+    assert nearest_rank_percentile(hundred, 0.975) == 98
+
+    two_hundred = list(range(1, 201))
+    assert nearest_rank_percentile(two_hundred, 0.975) == 195, (
+        "integral p*n at the upper endpoint: the old int() convention returned 196"
+    )
+    assert nearest_rank_percentile(two_hundred, 0.025) == 5
+
+    # Endpoints and degenerate sizes must stay in range.
+    assert nearest_rank_percentile([7.0], 0.025) == 7.0
+    assert nearest_rank_percentile([7.0], 0.975) == 7.0
+    assert nearest_rank_percentile([2, 1], 0.0) == 1
+    assert nearest_rank_percentile([2, 1], 1.0) == 2
+
+
+def test_nearest_rank_percentile_sorts_its_input():
+    assert nearest_rank_percentile([9, 1, 5], 0.0) == 1
+
+
+def test_nearest_rank_percentile_rejects_empty():
+    with pytest.raises(ValueError):
+        nearest_rank_percentile([], 0.5)
+
+
+def test_stratified_resample_preserves_every_stratum_count():
+    """DEFECT 3: the bootstrap pooled the strata.
+
+    The design draws a FIXED count from each stratum, so each replicate must
+    too. Pooled resampling can produce a replicate with no DROP items at all,
+    which widens the interval with variance the design never had.
+    """
+    import random as _random
+
+    by_stratum = {
+        "KEEP": [_it(i, "KEEP") for i in range(1, 6)],
+        "DROP": [_it(i, "DROP") for i in range(6, 21)],
+    }
+    for seed in range(20):
+        draw = stratified_resample(by_stratum, _random.Random(seed))
+        counts: dict[str, int] = {}
+        for it in draw:
+            st = it["_hidden"]["stratum"]
+            counts[st] = counts.get(st, 0) + 1
+        assert counts == {"KEEP": 5, "DROP": 15}, (
+            f"seed {seed} produced {counts}; a replicate must keep the design's counts"
+        )
+
+
+def test_stratified_resample_actually_resamples():
+    """It must vary within a stratum, or the interval would be degenerate."""
+    import random as _random
+
+    by_stratum = {"KEEP": [_it(i, "KEEP") for i in range(1, 11)]}
+    seen = set()
+    for seed in range(10):
+        draw = stratified_resample(by_stratum, _random.Random(seed))
+        seen.add(tuple(it["index"] for it in draw))
+    assert len(seen) > 1, "every replicate identical; nothing is being resampled"
+
+
+def test_response_rates_expose_partial_labelling():
+    """DEFECT 4: p_draw alone assumes every drawn item got labelled."""
+    items = [_it(i, "KEEP") for i in range(1, 4)] + [_it(i, "DROP") for i in range(4, 7)]
+    labels = {1: _lab(1, True, True), 4: _lab(4, False, False)}
+    rates = response_rates(items, labels, _meta())
+    assert rates["KEEP"] == {"drawn": 3, "labelled": 1, "rate": pytest.approx(1 / 3)}
+    assert rates["DROP"]["rate"] == pytest.approx(1 / 3)
+
+
+def test_nonresponse_adjustment_changes_the_weight():
+    items = [_it(1, "KEEP"), _it(2, "KEEP")]
+    labels = {1: _lab(1, True, True)}  # half the stratum labelled
+    meta = _meta()
+    plain = weighted_confusion(items, labels, meta, "can_win_cold")
+    adj = weighted_confusion(items, labels, meta, "can_win_cold",
+                             rates=response_rates(items, labels, meta))
+    assert adj["tp"] == pytest.approx(plain["tp"] * 2), "response rate not applied"
+
+
+def test_report_warns_when_a_stratum_is_incomplete():
+    items = [_it(i, "KEEP", fit=float(i)) for i in range(1, 5)]
+    items += [_it(i, "DROP", fit=float(i)) for i in range(5, 9)]
+    labels = {i: _lab(i, i <= 4, i <= 4) for i in (1, 2, 5, 6)}  # half of each
+    text = build_report({"items": items, "_meta": _meta()}, labels, n_boot=40)
+    assert "RESPONSE" in text
+    assert "not fully labelled" in text
+    assert "ASSUMES what you skipped is unrelated" in text
+
+
+def test_duplicate_non_repeat_job_id_is_rejected():
+    """DEFECT 6: whichever duplicate came last silently became the original."""
+    items = [
+        _it(1, "KEEP", job_id=100),
+        _it(7, "KEEP", job_id=100),
+        _it(9, "KEEP", job_id=100, repeat=True, repeat_of=100),
+    ]
+    labels = {i: _lab(i, True, True) for i in (1, 7, 9)}
+    with pytest.raises(SystemExit) as exc:
+        repeat_pairs(items, labels)
+    assert "two non-repeat items" in str(exc.value)
+
+
+def test_repeat_accounting_surfaces_orphans_and_unlabelled():
+    items = [
+        _it(1, "KEEP", job_id=100),                               # original A
+        _it(5, "KEEP", job_id=101),                               # original B
+        _it(2, "KEEP", job_id=100, repeat=True, repeat_of=100),   # pairs with A
+        _it(3, "KEEP", job_id=999, repeat=True, repeat_of=555),   # orphan: no original
+        _it(4, "KEEP", job_id=101, repeat=True, repeat_of=101),   # has B, but unlabelled
+    ]
+    labels = {1: _lab(1, True, True), 2: _lab(2, True, True),
+              3: _lab(3, True, True), 5: _lab(5, True, True)}
+    acc = repeat_accounting(items, labels)
+    assert acc["drawn"] == 3
+    assert acc["labelled"] == 2
+    assert acc["orphaned_no_original"] == 1
+    assert acc["complete_pairs"] == 1
+
+
+def test_threshold_refuses_when_all_scores_are_equal():
+    """DEFECT 7: returned a cutoff with Youden J = 0 and called it suggested."""
+    items = [_it(i, "KEEP", fit=5.0) for i in range(1, 5)]
+    labels = {1: _lab(1, True, True), 2: _lab(2, True, True),
+              3: _lab(3, False, False), 4: _lab(4, False, False)}
+    th = suggest_threshold(items, labels, "can_win_cold")
+    assert th["threshold"] is None
+    assert "same fit_score" in th["note"]
+
+
+def test_threshold_refuses_when_youden_j_is_non_positive():
+    # Scores vary but are anti-correlated in a way that gives no positive J.
+    items = [_it(1, "KEEP", fit=1.0), _it(2, "KEEP", fit=2.0),
+             _it(3, "KEEP", fit=3.0), _it(4, "KEEP", fit=4.0)]
+    labels = {1: _lab(1, True, True), 2: _lab(2, False, False),
+              3: _lab(3, True, True), 4: _lab(4, False, False)}
+    th = suggest_threshold(items, labels, "can_win_cold")
+    if th["threshold"] is None:
+        assert "worse than useless" in th["note"] or "same fit_score" in th["note"]
+    else:
+        assert th["youden_j"] > 0, "returned a cutoff with no discriminatory value"
+
+
+def test_threshold_reports_score_coverage():
+    items = [_it(i, "KEEP", fit=float(i)) for i in range(1, 4)]
+    items.append(_it(4, "KEEP", fit=None))
+    labels = {i: _lab(i, i >= 2, i >= 2) for i in range(1, 5)}
+    th = suggest_threshold(items, labels, "can_win_cold")
+    assert th["n_labelled"] == 4
+    assert th["n_scored"] == 3
+
+
+def test_calibrate_and_annotate_agree_on_corruption(tmp_path):
+    """DEFECT 8: two loaders, same file, different verdicts."""
+    import annotate as ann
+    ls = tmp_path / "ls.json"
+    ls.write_text(json.dumps({"_meta": _meta(), "items": [_it(1, "KEEP")]}))
+    lab = tmp_path / "lab.jsonl"
+    lab.write_text('{"index":1,"can_win_cold":true,"wants":true}\n{"index":2,"corrupt\n')
+
+    with pytest.raises(SystemExit):
+        ann.load_labels(lab)
+    with pytest.raises(SystemExit):
+        load_inputs(ls, lab)

@@ -105,26 +105,52 @@ def load_label_set(path: Path) -> dict:
 
 
 def load_labels(path: Path) -> dict[int, dict]:
-    """Replay the JSONL log. Last write wins; a torn final line is dropped."""
+    """Replay the JSONL log. Last write wins; retractions remove; torn tail dropped.
+
+    Reads the file exactly ONCE. An earlier version called ``read_text()`` again
+    inside the loop to find the last line number, which made a file with many
+    malformed lines quadratic.
+
+    "Torn" means an interrupted write, and the only honest signal for that is a
+    final line with **no trailing newline**. A malformed line that IS newline-
+    terminated was fully written and is therefore corruption, not a torn tail --
+    ``splitlines()`` discards exactly the information needed to tell those apart,
+    which is why the raw text is inspected here.
+    """
     if not path.exists():
         return {}
+    raw = path.read_text(encoding="utf-8")
+    if not raw:
+        return {}
+    ends_with_newline = raw.endswith("\n")
+    lines = raw.split("\n")
+    if ends_with_newline:
+        lines = lines[:-1]
+
     out: dict[int, dict] = {}
-    for line_no, line in enumerate(path.read_text().splitlines(), 1):
-        line = line.strip()
-        if not line:
+    for line_no, line in enumerate(lines, 1):
+        stripped = line.strip()
+        if not stripped:
             continue
         try:
-            rec = json.loads(line)
+            rec = json.loads(stripped)
         except json.JSONDecodeError:
-            # Only the final line can be torn by a kill mid-write. A broken
-            # line anywhere else means real corruption, so say so.
-            if line_no != len(path.read_text().splitlines()):
-                raise SystemExit(
-                    f"{path}:{line_no} is corrupt and is not the last line; refusing to guess"
-                ) from None
-            print(f"  discarded torn final line {line_no} (interrupted write)", file=sys.stderr)
-            continue
-        out[rec["index"]] = rec
+            if line_no == len(lines) and not ends_with_newline:
+                print(
+                    f"  discarded torn final line {line_no} (interrupted write)",
+                    file=sys.stderr,
+                )
+                continue
+            raise SystemExit(
+                f"{path}:{line_no} is corrupt and was fully written "
+                f"(newline-terminated), so it is not a torn tail; refusing to guess"
+            ) from None
+        if rec.get("retracted"):
+            # A durable tombstone from `b` (go back). Without this, a retraction
+            # lived only in memory and the label came back on the next run.
+            out.pop(rec["index"], None)
+        else:
+            out[rec["index"]] = rec
     return out
 
 
@@ -135,6 +161,32 @@ def append_label(path: Path, record: dict) -> None:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
         fh.flush()
         os.fsync(fh.fileno())
+
+
+def append_retraction(path: Path, index: int) -> None:
+    """Append a durable tombstone for a label the user went back on.
+
+    The log is append-only, so a retraction is a record rather than a deletion.
+    ``load_labels`` replays it as a removal. Popping the in-memory dict alone
+    left the original line on disk, and it was resurrected on the next run.
+    """
+    append_label(path, {
+        "index": index,
+        "retracted": True,
+        "retracted_at": datetime.now(UTC).isoformat(),
+    })
+
+
+def label_matches_item(item: dict, rec: dict) -> bool:
+    """Is this stored label still bound to THIS posting's text?
+
+    The whole point of storing ``input_hash`` is that an edited posting must
+    invalidate its label rather than silently re-attach it to different words.
+    Storing the hash without ever comparing it made the binding decorative:
+    labels join to items by ``index``, and indices are reused whenever a label
+    set is rebuilt.
+    """
+    return rec.get("input_hash") == input_hash(item)
 
 
 def make_record(item: dict, *, can_win: bool, wants: bool) -> dict:
@@ -180,9 +232,20 @@ def annotate(
 
     while pos < len(items):
         item = items[pos]
-        if item["index"] in labels:
-            pos += 1
-            continue
+        existing = labels.get(item["index"])
+        if existing is not None:
+            if label_matches_item(item, existing):
+                pos += 1
+                continue
+            # Same index, different posting text: the label set was rebuilt or
+            # edited under this log. Treat as unlabelled rather than crediting
+            # the old answer to new words.
+            print(
+                f"  index {item['index']}: posting text changed since it was "
+                f"labelled; re-asking",
+                file=sys.stderr,
+            )
+            labels.pop(item["index"], None)
 
         print("\n" + "=" * 72)
         print(render_item(item, pos + 1, total))
@@ -196,7 +259,9 @@ def annotate(
             break
         if win is BACK:
             pos = max(0, pos - 1)
-            labels.pop(items[pos]["index"], None)
+            back_index = items[pos]["index"]
+            if labels.pop(back_index, None) is not None:
+                append_retraction(labels_path, back_index)
             continue
         if win is SKIP:
             pos += 1

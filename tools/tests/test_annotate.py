@@ -30,6 +30,7 @@ from annotate import (  # noqa: E402
     annotate,
     append_label,
     cell,
+    label_matches_item,
     load_labels,
     make_record,
     render_item,
@@ -246,3 +247,118 @@ def test_invalid_input_reprompts_rather_than_crashing(tmp_path, capsys):
     written = annotate([_item(1)], {}, log, reader=_reader(["maybe", "?", "y", "y"]))
     assert written == 1
     assert "expected one of" in capsys.readouterr().out
+
+
+# ===================================================================
+# Regressions from the 2026-08-17 adversarial cross-review (codex).
+# Every one of these survived a 20-mutant battery, because mutation
+# testing verifies the guards you wrote, not the ones you never wrote.
+# ===================================================================
+
+
+def test_stale_label_does_not_count_as_labelled(tmp_path):
+    """DEFECT 1: input_hash was stored and never compared.
+
+    Labels join to items by `index`, and indices are reused whenever a label set
+    is rebuilt. So a label written against "Backend Engineer" at index 1 was
+    silently credited to whatever ended up at index 1 next.
+    """
+    log = tmp_path / "labels.jsonl"
+    original = _item(1, title="Backend Engineer")
+    it = iter(["y", "y"])
+    ann_written = annotate([original], {}, log, reader=lambda _p: next(it))
+    assert ann_written == 1
+
+    labels = load_labels(log)
+    rebuilt = _item(1, title="Sales Manager")  # same index, different posting
+
+    assert not label_matches_item(rebuilt, labels[1]), "hash failed to notice new text"
+
+    # The loop must re-ask rather than skip it as already done.
+    it2 = iter(["n", "n"])
+    written = annotate([rebuilt], labels, log, reader=lambda _p: next(it2))
+    assert written == 1, "stale label was treated as still valid"
+    assert cell(load_labels(log)[1]) == "drop"
+
+
+def test_matching_hash_is_still_treated_as_labelled(tmp_path):
+    """The other half of DEFECT 1: the gate must not re-ask everything."""
+    log = tmp_path / "labels.jsonl"
+    items = [_item(1)]
+    it = iter(["y", "y"])
+    annotate(items, {}, log, reader=lambda _p: next(it))
+    labels = load_labels(log)
+    assert annotate(items, labels, log, reader=lambda _p: pytest.fail("re-asked")) == 0
+
+
+def test_retraction_is_durable_across_a_restart(tmp_path):
+    """DEFECT 2: `b` popped the in-memory dict only; the log kept the line.
+
+    Sequence: label item 1, go back from item 2, quit. The old code left label 1
+    on disk, so the next run resurrected it and skipped the item.
+    """
+    log = tmp_path / "labels.jsonl"
+    items = [_item(1), _item(2)]
+    it = iter(["y", "y", "b", "q"])
+    annotate(items, {}, log, reader=lambda _p: next(it))
+
+    assert 1 not in load_labels(log), "retracted label came back after restart"
+
+
+def test_retraction_then_relabel_keeps_the_new_answer(tmp_path):
+    log = tmp_path / "labels.jsonl"
+    items = [_item(1), _item(2)]
+    it = iter(["y", "y", "b", "n", "y", "n", "n"])
+    annotate(items, {}, log, reader=lambda _p: next(it))
+    labels = load_labels(log)
+    assert cell(labels[1]) == "referral_lane", "retraction ate the replacement"
+
+
+def test_retracting_an_unlabelled_item_writes_no_tombstone(tmp_path):
+    log = tmp_path / "labels.jsonl"
+    items = [_item(1), _item(2)]
+    it = iter(["s", "b", "q"])  # skip 1, back from 2, quit
+    annotate(items, {}, log, reader=lambda _p: next(it))
+    assert not log.exists() or log.read_text().strip() == ""
+
+
+def test_terminated_corrupt_last_line_is_fatal_not_torn(tmp_path):
+    """DEFECT 8: a newline-terminated malformed line was fully written.
+
+    Calling it "torn" and discarding it hid real corruption. Only an
+    UNTERMINATED final line can be an interrupted write.
+    """
+    log = tmp_path / "labels.jsonl"
+    append_label(log, make_record(_item(1), can_win=True, wants=True))
+    with log.open("a") as fh:
+        fh.write('{"index": 2, "corrupt\n')  # note: terminated
+    with pytest.raises(SystemExit) as exc:
+        load_labels(log)
+    assert "fully written" in str(exc.value)
+
+
+def test_unterminated_last_line_is_still_treated_as_torn(tmp_path):
+    log = tmp_path / "labels.jsonl"
+    append_label(log, make_record(_item(1), can_win=True, wants=True))
+    with log.open("a") as fh:
+        fh.write('{"index": 2, "torn')  # no newline
+    assert set(load_labels(log)) == {1}
+
+
+def test_load_labels_reads_the_file_once(tmp_path, monkeypatch):
+    """DEFECT 8: read_text() was called again per malformed line -> quadratic."""
+    log = tmp_path / "labels.jsonl"
+    for i in range(1, 6):
+        append_label(log, make_record(_item(i), can_win=True, wants=True))
+
+    calls = {"n": 0}
+    real = Path.read_text
+
+    def counting(self, *a, **k):
+        if self == log:
+            calls["n"] += 1
+        return real(self, *a, **k)
+
+    monkeypatch.setattr(Path, "read_text", counting)
+    load_labels(log)
+    assert calls["n"] == 1, f"read the log {calls['n']} times; should be exactly once"

@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import sys
 from pathlib import Path
@@ -58,6 +59,10 @@ _REPO = _HERE.parent
 sys.path.insert(0, str(_REPO / "src"))
 
 from career_os.services.scoring_eval import weighted_cohen_kappa  # noqa: E402
+
+sys.path.insert(0, str(_HERE))
+from annotate import label_matches_item as _label_matches_item  # noqa: E402
+from annotate import load_labels as _load_labels  # noqa: E402
 
 DEFAULT_LABEL_SET = _REPO / "data" / "label_set.json"
 DEFAULT_LABELS = _REPO / "data" / "labels.jsonl"
@@ -76,19 +81,34 @@ def load_inputs(label_set_path: Path, labels_path: Path) -> tuple[dict, dict[int
             f"no labels at {labels_path}\nlabel some postings first: python tools/annotate.py"
         )
     data = json.loads(label_set_path.read_text())
-    labels: dict[int, dict] = {}
-    for line in labels_path.read_text().splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            rec = json.loads(line)
-        except json.JSONDecodeError:
-            continue  # torn final line; annotate.py owns reporting that
-        labels[rec["index"]] = rec
+    # Reuse annotate's loader rather than reimplementing it. A second, more
+    # permissive parser here meant a corrupt MID-FILE line raised in annotate.py
+    # and vanished silently in calibrate.py -- the same file, two verdicts, and
+    # the quieter one feeding the statistics.
+    labels = _load_labels(labels_path)
     if not labels:
         raise SystemExit(f"{labels_path} holds no usable labels")
     return data, labels
+
+
+def usable_labels(items: list[dict], labels: dict[int, dict]) -> tuple[dict[int, dict], int]:
+    """Drop labels whose posting text has changed. Returns (kept, n_stale).
+
+    Labels join to items by ``index``, and indices are reused whenever a label
+    set is rebuilt, so the stored ``input_hash`` is the only thing that makes the
+    join trustworthy. It was previously stored and never compared.
+    """
+    kept: dict[int, dict] = {}
+    stale = 0
+    for it in items:
+        rec = labels.get(it["index"])
+        if rec is None:
+            continue
+        if _label_matches_item(it, rec):
+            kept[it["index"]] = rec
+        else:
+            stale += 1
+    return kept, stale
 
 
 # ------------------------------------------------------- self-consistency
@@ -99,8 +119,19 @@ def repeat_pairs(items: list[dict], labels: dict[int, dict]) -> list[tuple[dict,
     by_job: dict[int, int] = {}
     for it in items:
         h = it.get("_hidden") or {}
-        if not h.get("repeat") and h.get("job_id") is not None:
-            by_job[h["job_id"]] = it["index"]
+        if h.get("repeat") or h.get("job_id") is None:
+            continue
+        if h["job_id"] in by_job:
+            # Two non-repeat items for one posting: `repeat_of` carries only a
+            # job_id, so there is no way to know which one a repeat pairs with.
+            # Silently taking the last would make self-consistency depend on
+            # list order.
+            raise SystemExit(
+                f"label set has two non-repeat items for job_id {h['job_id']} "
+                f"(indices {by_job[h['job_id']]} and {it['index']}). A repeat "
+                f"cannot be paired unambiguously; rebuild the label set."
+            )
+        by_job[h["job_id"]] = it["index"]
 
     pairs = []
     for it in items:
@@ -114,6 +145,37 @@ def repeat_pairs(items: list[dict], labels: dict[int, dict]) -> list[tuple[dict,
         if a and b:
             pairs.append((a, b))
     return pairs
+
+
+def repeat_accounting(items: list[dict], labels: dict[int, dict]) -> dict:
+    """Where every drawn repeat went.
+
+    Only the final pair count used to be reported, so a repeat that was drawn
+    but never labelled, or whose original was never labelled, vanished from the
+    report. A shrinking denominator that nothing mentions is how a ceiling
+    quietly stops meaning anything.
+    """
+    originals = {
+        (it.get("_hidden") or {}).get("job_id")
+        for it in items
+        if not (it.get("_hidden") or {}).get("repeat")
+    }
+    drawn = labelled = orphaned = 0
+    for it in items:
+        h = it.get("_hidden") or {}
+        if not h.get("repeat"):
+            continue
+        drawn += 1
+        if it["index"] in labels:
+            labelled += 1
+        if h.get("repeat_of") not in originals:
+            orphaned += 1
+    return {
+        "drawn": drawn,
+        "labelled": labelled,
+        "orphaned_no_original": orphaned,
+        "complete_pairs": len(repeat_pairs(items, labels)),
+    }
 
 
 def self_consistency(pairs: list[tuple[dict, dict]]) -> dict:
@@ -195,8 +257,37 @@ def _weight_for(stratum: str, meta: dict) -> float:
     return 1.0 / p
 
 
+def response_rates(items: list[dict], labels: dict[int, dict], meta: dict) -> dict:
+    """Per-stratum share of DRAWN items that actually got labelled.
+
+    Reweighting by ``p_draw`` alone assumes every sampled item was labelled. If
+    a stratum is half-labelled, dividing by the draw probability credits the
+    labelled half with representing the whole stratum. That is only defensible
+    if what got skipped was unrelated to the answer, which for a human skipping
+    the hard ones is exactly the assumption most likely to be false.
+    """
+    out: dict[str, dict] = {}
+    for it in items:
+        h = it.get("_hidden") or {}
+        if h.get("repeat"):
+            continue
+        st = h.get("stratum")
+        row = out.setdefault(st, {"drawn": 0, "labelled": 0})
+        row["drawn"] += 1
+        if it["index"] in labels:
+            row["labelled"] += 1
+    for row in out.values():
+        row["rate"] = (row["labelled"] / row["drawn"]) if row["drawn"] else 0.0
+    return out
+
+
 def weighted_confusion(
-    items: list[dict], labels: dict[int, dict], meta: dict, axis: str
+    items: list[dict],
+    labels: dict[int, dict],
+    meta: dict,
+    axis: str,
+    *,
+    rates: dict | None = None,
 ) -> dict[str, float]:
     """Confusion counts weighted back to the population base rate.
 
@@ -213,6 +304,14 @@ def weighted_confusion(
         if rec is None:
             continue
         w = _weight_for(h.get("stratum"), meta)
+        if rates:
+            # Nonresponse adjustment. Assumes what was skipped within a stratum
+            # is unrelated to the label (MCAR within stratum) -- stated, not
+            # assumed silently, and the report warns whenever it bites.
+            rate = (rates.get(h.get("stratum")) or {}).get("rate") or 0.0
+            if rate <= 0:
+                continue
+            w /= rate
         kept = h.get("stratum") == "KEEP"
         good = bool(rec[axis])
         if kept and good:
@@ -232,6 +331,41 @@ def precision_recall(c: dict[str, float]) -> tuple[float | None, float | None]:
     return p, r
 
 
+def nearest_rank_percentile(vals: list[float], p: float) -> float:
+    """Nearest-rank percentile: idx = ceil(p * n) - 1, clamped.
+
+    ONE convention for both endpoints. The original used ``int(p*n) - 1`` at the
+    low end and ``int(p*n)`` at the high end, which is off by one at the low end
+    when ``p*n`` is non-integral and off by one at the high end when it is. Two
+    conventions inside a single interval is worse than either one alone, and it
+    was invisible because the interval still looked plausible.
+
+    Lives at module level so it can be tested against known vectors. As a closure
+    it could only be reached through a bootstrap, which is how the first attempt
+    at testing it ended up asserting a tautology.
+    """
+    if not vals:
+        raise ValueError("cannot take a percentile of an empty sequence")
+    ordered = sorted(vals)
+    n = len(ordered)
+    return ordered[min(n - 1, max(0, math.ceil(p * n) - 1))]
+
+
+def stratified_resample(by_stratum: dict[str, list[dict]], rng: random.Random) -> list[dict]:
+    """One bootstrap replicate: resample WITH replacement inside each stratum.
+
+    Each stratum contributes exactly as many items as it did in the real sample,
+    because that is what the sampling design does. Pooling the strata and drawing
+    n from the mixture adds variance from random stratum composition that the
+    design never had, and can yield a replicate containing no DROP items at all.
+    """
+    draw: list[dict] = []
+    for members in by_stratum.values():
+        k = len(members)
+        draw.extend(members[rng.randrange(k)] for _ in range(k))
+    return draw
+
+
 def bootstrap_ci(
     items: list[dict],
     labels: dict[int, dict],
@@ -249,20 +383,29 @@ def bootstrap_ci(
     estimate would silently pair a number with an interval for a different
     statistic.
     """
-    pool = [
-        it
-        for it in items
-        if not (it.get("_hidden") or {}).get("repeat") and it["index"] in labels
-    ]
-    if len(pool) < 2:
+    by_stratum: dict[str, list[dict]] = {}
+    for it in items:
+        h = it.get("_hidden") or {}
+        if h.get("repeat") or it["index"] not in labels:
+            continue
+        by_stratum.setdefault(h.get("stratum"), []).append(it)
+
+    pool_size = sum(len(v) for v in by_stratum.values())
+    if pool_size < 2:
         return {"precision": None, "recall": None, "n_boot": 0}
 
+    rates = response_rates(items, labels, meta)
     rng = random.Random(seed)
     ps: list[float] = []
     rs: list[float] = []
     for _ in range(n_boot):
-        draw = [pool[rng.randrange(len(pool))] for _ in range(len(pool))]
-        p, r = precision_recall(weighted_confusion(draw, labels, meta, axis))
+        # Resample WITHIN each stratum, preserving its observed count. Pooling
+        # the strata and drawing n from the mixture injects variance from random
+        # stratum composition that the design never had -- the design always
+        # draws a fixed number from each -- and it can produce a replicate with
+        # no DROP items at all.
+        draw = stratified_resample(by_stratum, rng)
+        p, r = precision_recall(weighted_confusion(draw, labels, meta, axis, rates=rates))
         if p is not None:
             ps.append(p)
         if r is not None:
@@ -271,10 +414,10 @@ def bootstrap_ci(
     def pct(vals: list[float]) -> list[float] | None:
         if not vals:
             return None
-        vals = sorted(vals)
-        lo = vals[max(0, int(0.025 * len(vals)) - 1)]
-        hi = vals[min(len(vals) - 1, int(0.975 * len(vals)))]
-        return [lo, hi]
+        return [
+            nearest_rank_percentile(vals, 0.025),
+            nearest_rank_percentile(vals, 0.975),
+        ]
 
     return {"precision": pct(ps), "recall": pct(rs), "n_boot": n_boot}
 
@@ -299,11 +442,21 @@ def suggest_threshold(items: list[dict], labels: dict[int, dict], axis: str) -> 
             continue
         rows.append((float(h["fit_score"]), bool(rec[axis])))
 
+    n_labelled = sum(1 for it in items if it["index"] in labels
+                     and not (it.get("_hidden") or {}).get("repeat"))
+    coverage = {"n_scored": len(rows), "n_labelled": n_labelled}
+
     if len(rows) < 2 or len({g for _, g in rows}) < 2:
         return {
             "threshold": None,
-            "n": len(rows),
+            **coverage,
             "note": "need labelled items on both sides of the axis to place a cutoff",
+        }
+    if len({s for s, _ in rows}) < 2:
+        return {
+            "threshold": None,
+            **coverage,
+            "note": "every scored item has the same fit_score; no cutoff can separate them",
         }
 
     best = None
@@ -317,7 +470,19 @@ def suggest_threshold(items: list[dict], labels: dict[int, dict], axis: str) -> 
         j = sens + spec - 1
         if best is None or j > best["youden_j"]:
             best = {"threshold": cut, "sensitivity": sens, "specificity": spec, "youden_j": j}
-    return {**best, "n": len(rows)}
+
+    if best is None or best["youden_j"] <= 0:
+        return {
+            "threshold": None,
+            **coverage,
+            "note": (
+                "best Youden J is "
+                f"{(best or {}).get('youden_j', 0):.3f} (<= 0): fit_score carries no "
+                "discriminatory information for this axis, so any cutoff would be "
+                "worse than useless"
+            ),
+        }
+    return {**best, **coverage}
 
 
 # ---------------------------------------------------------------- reporting
@@ -340,14 +505,43 @@ def build_report(data: dict, labels: dict[int, dict], *, n_boot: int) -> str:
     lines: list[str] = []
     add = lines.append
 
+    labels, n_stale = usable_labels(items, labels)
     labelled = sum(1 for it in items if it["index"] in labels)
+    rates = response_rates(items, labels, meta)
+
     add("CALIBRATION REPORT")
     add(f"  label set : {len(items)} items, {labelled} labelled")
+    if n_stale:
+        add(f"  ! {n_stale} label(s) DISCARDED: the posting text changed since they")
+        add("    were written, so their input_hash no longer matches. They are not")
+        add("    counted anywhere below.")
     add(f"  profile   : {meta.get('profile')}   seed: {meta.get('seed')}")
     add(f"  base rate : {_fmt(meta.get('population_base_rate_keep'))} of the population is KEEP")
     add("")
+    add("  RESPONSE (labelled / drawn, per stratum)")
+    incomplete = []
+    for st, row in sorted(rates.items()):
+        add(f"    {st:6} {row['labelled']}/{row['drawn']}  = {_fmt(row['rate'])}")
+        if row["rate"] < 1.0:
+            incomplete.append(st)
+    if incomplete:
+        add(f"  ! {', '.join(incomplete)} not fully labelled. Population figures below are")
+        add("    adjusted by these rates, which ASSUMES what you skipped is unrelated")
+        add("    to the answer. If you skipped the hard ones, that assumption is false")
+        add("    and the population numbers are not trustworthy. Label the rest.")
+    add("")
     add("  This is calibration, not training. These labels are one person's")
     add("  taste and must not enter a shared scoring path.")
+    add("")
+
+    ra = repeat_accounting(items, labels)
+    add("REPEATS  drawn {drawn}, labelled {labelled}, complete pairs {complete_pairs}"
+        .format(**ra) + (f", orphaned {ra['orphaned_no_original']}"
+                         if ra["orphaned_no_original"] else ""))
+    if ra["complete_pairs"] < ra["drawn"]:
+        add(f"  ! {ra['drawn'] - ra['complete_pairs']} drawn repeat(s) did not become a pair")
+        add("    (repeat or original unlabelled). The ceiling below rests on fewer")
+        add("    observations than were drawn for it.")
     add("")
 
     sc = self_consistency(repeat_pairs(items, labels))
@@ -373,7 +567,7 @@ def build_report(data: dict, labels: dict[int, dict], *, n_boot: int) -> str:
         add("")
 
     for axis in AXES:
-        conf = weighted_confusion(items, labels, meta, axis)
+        conf = weighted_confusion(items, labels, meta, axis, rates=rates)
         p, r = precision_recall(conf)
         ci = bootstrap_ci(items, labels, meta, axis, n_boot=n_boot, seed=meta.get("seed", 0))
         add(f"REWEIGHTED TO POPULATION  (filter KEEP as the prediction, {axis} as truth)")
@@ -387,9 +581,16 @@ def build_report(data: dict, labels: dict[int, dict], *, n_boot: int) -> str:
         th = suggest_threshold(items, labels, axis)
         add(f"SUGGESTED CUTOFF for {axis}")
         if th.get("threshold") is None:
-            add(f"  n/a -- {th.get('note')}")
+            add(f"  none -- {th.get('note')}")
+            add(f"  (scored {th.get('n_scored')} of {th.get('n_labelled')} labelled items)")
         else:
-            add(f"  fit_score >= {th['threshold']:.2f}   (n={th['n']})")
+            add(
+                f"  fit_score >= {th['threshold']:.2f}   "
+                f"(scored {th['n_scored']} of {th['n_labelled']} labelled items)"
+            )
+            if th["n_labelled"] and th["n_scored"] / th["n_labelled"] < 0.5:
+                add("  ! fewer than half the labelled items carry a fit_score, so this")
+                add("    cutoff is derived from a minority and may be selectively scored.")
             add(
                 f"  sensitivity {_fmt(th['sensitivity'])}  "
                 f"specificity {_fmt(th['specificity'])}  "
@@ -412,12 +613,17 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.json:
         items, meta = data["items"], data["_meta"]
+        labels, n_stale = usable_labels(items, labels)
+        rates = response_rates(items, labels, meta)
         payload = {
+            "discarded_stale_labels": n_stale,
+            "response_rates": rates,
+            "repeats": repeat_accounting(items, labels),
             "self_consistency": self_consistency(repeat_pairs(items, labels)),
             "filter_agreement": {a: filter_agreement(items, labels, a) for a in AXES},
             "reweighted": {
                 a: {
-                    "confusion": weighted_confusion(items, labels, meta, a),
+                    "confusion": weighted_confusion(items, labels, meta, a, rates=rates),
                     "ci": bootstrap_ci(
                         items, labels, meta, a, n_boot=args.bootstrap, seed=meta.get("seed", 0)
                     ),
