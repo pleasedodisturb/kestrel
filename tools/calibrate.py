@@ -81,6 +81,7 @@ def load_inputs(label_set_path: Path, labels_path: Path) -> tuple[dict, dict[int
             f"no labels at {labels_path}\nlabel some postings first: python tools/annotate.py"
         )
     data = json.loads(label_set_path.read_text())
+    validate_label_set(data, label_set_path)
     # Reuse annotate's loader rather than reimplementing it. A second, more
     # permissive parser here meant a corrupt MID-FILE line raised in annotate.py
     # and vanished silently in calibrate.py -- the same file, two verdicts, and
@@ -89,6 +90,32 @@ def load_inputs(label_set_path: Path, labels_path: Path) -> tuple[dict, dict[int
     if not labels:
         raise SystemExit(f"{labels_path} holds no usable labels")
     return data, labels
+
+
+def validate_label_set(data: object, where: Path) -> None:
+    """Fail loudly on a label set that is not the shape we expect.
+
+    Everything downstream indexes into this structure. Without a check, a
+    malformed or hand-edited file surfaces as an AttributeError deep inside a
+    statistic, or worse, as a report built from silently-skipped items.
+    """
+    if not isinstance(data, dict):
+        raise SystemExit(f"{where}: top level must be an object")
+    if not isinstance(data.get("_meta"), dict):
+        raise SystemExit(f"{where}: _meta must be an object")
+    items = data.get("items")
+    if not isinstance(items, list):
+        raise SystemExit(f"{where}: items must be a list")
+    for n, it in enumerate(items):
+        if not isinstance(it, dict):
+            raise SystemExit(f"{where}: items[{n}] must be an object")
+        if not isinstance(it.get("index"), int) or isinstance(it.get("index"), bool):
+            raise SystemExit(f"{where}: items[{n}].index must be an int")
+        if not isinstance(it.get("_hidden"), dict):
+            raise SystemExit(f"{where}: items[{n}]._hidden must be an object")
+    seen = [it["index"] for it in items]
+    if len(set(seen)) != len(seen):
+        raise SystemExit(f"{where}: duplicate item index values; labels join by index")
 
 
 def usable_labels(items: list[dict], labels: dict[int, dict]) -> tuple[dict[int, dict], int]:
@@ -248,7 +275,23 @@ def _weight_for(stratum: str, meta: dict) -> float:
     """Horvitz-Thompson weight: one over the probability this item was drawn."""
     strata = meta.get("strata") or {}
     p = (strata.get(stratum) or {}).get("p_draw")
-    if not p:
+    # NaN is truthy and Infinity is truthy, so `if not p` waves both through and
+    # 1/NaN silently poisons every downstream statistic as nan -- printed as
+    # "nan%" beside real numbers. Require a real probability in (0, 1].
+    bad = (
+        not isinstance(p, (int, float))
+        or isinstance(p, bool)
+        or not math.isfinite(p)
+        or not (0 < p <= 1)
+    )
+    if bad:
+        raise SystemExit(
+            f"label set _meta has an invalid p_draw for stratum {stratum!r}: {p!r}. "
+            f"It must be a finite number in (0, 1].\n"
+            f"Sample rates cannot be reweighted to the population without it, and "
+            f"it cannot be recovered after the draw. Rebuild the label set."
+        )
+    if False:
         raise SystemExit(
             f"label set _meta has no usable p_draw for stratum {stratum!r}.\n"
             "Sample rates cannot be reweighted to the population without it, and "

@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from annotate import item_hash  # noqa: E402
 from calibrate import (  # noqa: E402
     bootstrap_ci,
     build_report,
@@ -43,9 +44,9 @@ from calibrate import (  # noqa: E402
     stratified_resample,
     suggest_threshold,
     usable_labels,
+    validate_label_set,
     weighted_confusion,
 )
-from tests.eval.label_store import input_hash  # noqa: E402
 
 
 def _it(index, stratum, *, job_id=None, fit=5.0, repeat=False, repeat_of=None):
@@ -77,7 +78,7 @@ def _lab(index, can_win, wants):
     # the index in _it(), so this matches any _it(index, ...) variant.
     return {
         "index": index,
-        "input_hash": input_hash(_it(index, "KEEP")),
+        "item_hash": item_hash(_it(index, "KEEP")),
         "can_win_cold": can_win,
         "wants": wants,
         "labeled_at": "2026-08-17T00:00:00+00:00",
@@ -315,7 +316,7 @@ def test_load_inputs_skips_a_torn_line(tmp_path):
 def test_stale_labels_are_dropped_and_counted():
     """DEFECT 1: labels joined to items by index alone, ignoring input_hash."""
     items = [_it(1, "KEEP"), _it(2, "KEEP")]
-    labels = {1: _lab(1, True, True), 2: {**_lab(2, True, True), "input_hash": "sha256:wrong"}}
+    labels = {1: _lab(1, True, True), 2: {**_lab(2, True, True), "item_hash": "sha256:wrong"}}
     kept, stale = usable_labels(items, labels)
     assert set(kept) == {1}
     assert stale == 1
@@ -323,7 +324,7 @@ def test_stale_labels_are_dropped_and_counted():
 
 def test_stale_labels_never_reach_the_statistics():
     items = [_it(1, "KEEP"), _it(2, "DROP")]
-    labels = {1: _lab(1, True, True), 2: {**_lab(2, True, True), "input_hash": "sha256:wrong"}}
+    labels = {1: _lab(1, True, True), 2: {**_lab(2, True, True), "item_hash": "sha256:wrong"}}
     kept, _ = usable_labels(items, labels)
     conf = weighted_confusion(items, kept, _meta(), "can_win_cold")
     assert conf["fn"] == 0.0, "a stale label was counted as a false negative"
@@ -511,3 +512,75 @@ def test_calibrate_and_annotate_agree_on_corruption(tmp_path):
         ann.load_labels(lab)
     with pytest.raises(SystemExit):
         load_inputs(ls, lab)
+
+
+
+# ===================================================================
+# Regressions from the 2026-08-18 adversarial security review (codex).
+# ===================================================================
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -1.0, 0.0, 1.5, "0.5", True, None])
+def test_invalid_p_draw_is_rejected(bad):
+    """`if not p:` waved NaN and Infinity through, because both are truthy.
+
+    1/NaN is nan, which then propagates into every statistic and prints as
+    "nan%" beside real numbers -- a corrupted report that looks like a report.
+    Python's json accepts NaN and Infinity by default, so a label set can carry
+    them without being malformed.
+    """
+    items = [_it(1, "KEEP")]
+    labels = {1: _lab(1, True, True)}
+    meta = {"strata": {"KEEP": {"p_draw": bad}}}
+    with pytest.raises(SystemExit) as exc:
+        weighted_confusion(items, labels, meta, "can_win_cold")
+    assert "p_draw" in str(exc.value)
+
+
+def test_valid_p_draw_still_accepted():
+    items = [_it(1, "KEEP")]
+    labels = {1: _lab(1, True, True)}
+    conf = weighted_confusion(items, labels, {"strata": {"KEEP": {"p_draw": 0.25}}}, "can_win_cold")
+    assert conf["tp"] == pytest.approx(4.0)
+
+
+@pytest.mark.parametrize("payload,expect", [
+    ([], "top level"),
+    ({"_meta": [], "items": []}, "_meta"),
+    ({"_meta": {}, "items": {}}, "items must be a list"),
+    ({"_meta": {}, "items": [[]]}, "must be an object"),
+    ({"_meta": {}, "items": [{"index": "1", "_hidden": {}}]}, "index must be an int"),
+    ({"_meta": {}, "items": [{"index": 1, "_hidden": []}]}, "_hidden must be an object"),
+    ({"_meta": {}, "items": [{"index": 1, "_hidden": {}},
+                              {"index": 1, "_hidden": {}}]}, "duplicate"),
+])
+def test_malformed_label_set_is_rejected(payload, expect, tmp_path):
+    """Without this, a bad file surfaces as an AttributeError inside a statistic."""
+    with pytest.raises(SystemExit) as exc:
+        validate_label_set(payload, tmp_path / "ls.json")
+    assert expect in str(exc.value)
+
+
+def test_wellformed_label_set_passes(tmp_path):
+    validate_label_set({"_meta": _meta(), "items": [_it(1, "KEEP"), _it(2, "DROP")]},
+                       tmp_path / "ls.json")
+
+
+def test_load_inputs_actually_validates(tmp_path):
+    """The validator must be WIRED IN, not merely present.
+
+    The earlier tests called validate_label_set() directly, so deleting its call
+    site in load_inputs() left them all green. Same shape as the blindness test
+    that passed with the projection removed: a guard tested in isolation proves
+    the guard works, never that anything invokes it.
+    """
+    ls = tmp_path / "ls.json"
+    ls.write_text(json.dumps({"_meta": _meta(), "items": [{"index": "not-an-int", "_hidden": {}}]}))
+    lab = tmp_path / "lab.jsonl"
+    lab.write_text(json.dumps(_lab(1, True, True)) + "\n")
+
+    with pytest.raises(SystemExit) as exc:
+        load_inputs(ls, lab)
+    assert "index must be an int" in str(exc.value), (
+        "load_inputs accepted a malformed label set; the validator is not wired in"
+    )

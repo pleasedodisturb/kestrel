@@ -30,10 +30,12 @@ from annotate import (  # noqa: E402
     annotate,
     append_label,
     cell,
+    item_hash,
     label_matches_item,
     load_labels,
     make_record,
     render_item,
+    sanitize_for_terminal,
     visible_projection,
 )
 
@@ -157,8 +159,8 @@ def test_record_stores_the_pair_not_the_cell():
 def test_record_binds_the_label_to_the_job_text():
     a = make_record(_item(), can_win=True, wants=True)
     b = make_record(_item(title="Different Title"), can_win=True, wants=True)
-    assert a["input_hash"].startswith("sha256:")
-    assert a["input_hash"] != b["input_hash"], "edited text must invalidate the label"
+    assert a["item_hash"].startswith("sha256:")
+    assert a["item_hash"] != b["item_hash"], "edited text must invalidate the label"
 
 
 # ----------------------------------------------------------- resume / durability
@@ -362,3 +364,92 @@ def test_load_labels_reads_the_file_once(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "read_text", counting)
     load_labels(log)
     assert calls["n"] == 1, f"read the log {calls['n']} times; should be exactly once"
+
+
+
+# ===================================================================
+# Regressions from the 2026-08-18 adversarial security review (codex).
+# ===================================================================
+
+
+def test_hash_covers_every_displayed_field():
+    """The hash must bind what the annotator SAW, not a subset of it.
+
+    label_store.input_hash covers title|company|description and omits
+    `location`, which this tool displays. A posting could move from Berlin to
+    Austin and keep its label -- on a geo-eligibility tool. item_hash hashes the
+    visible projection itself, so the two cannot drift apart.
+    """
+    base = _item()
+    for field in ("title", "company", "location", "description"):
+        changed = _item(**{field: "SOMETHING ELSE ENTIRELY"})
+        assert item_hash(base) != item_hash(changed), (
+            f"changing {field!r} left the hash unchanged, but it is rendered"
+        )
+
+
+def test_hash_covers_fields_added_to_the_visible_set():
+    """By construction, not by a hand-maintained list."""
+    shown = set(VISIBLE_FIELDS) - {"index"}
+    hashed_input = {k: v for k, v in visible_projection(_item()).items() if k != "index"}
+    assert set(hashed_input) == shown & set(hashed_input.keys() | shown)
+
+
+def test_index_alone_does_not_change_the_hash():
+    """Position in the set is not a property of the posting."""
+    assert item_hash(_item(index=1)) == item_hash(_item(index=99))
+
+
+def test_hidden_block_does_not_change_the_hash():
+    a = _item()
+    b = _item()
+    b["_hidden"] = {**b["_hidden"], "fit_score": 0.0, "stratum": "DROP"}
+    assert item_hash(a) == item_hash(b), "filter output must not affect the binding"
+
+
+def test_delimiter_collision_is_gone():
+    """Concatenating fields with a bare separator makes boundaries ambiguous.
+
+    The fields must be ADJACENT in whatever order a naive join would use, or the
+    test does not actually construct a collision. An earlier version of this
+    test picked non-adjacent fields, so reverting to a pipe-join left it green.
+    Sorted key order is company, description, location, title -- so moving the
+    boundary between `company` and `description` is the real collision.
+    """
+    x = _item(company="A|B", description="D")
+    y = _item(company="A", description="B|D")
+    assert item_hash(x) != item_hash(y), (
+        "distinct postings share a hash: field boundaries are ambiguous"
+    )
+
+
+def test_control_characters_are_stripped_before_display():
+    """Untrusted scraped text must not be able to repaint the terminal.
+
+    This is a blindness defect, not a cosmetic one: a posting that can clear the
+    screen or reposition the cursor can hide part of itself or forge content,
+    corrupting the label while every string-level blindness test stays green.
+    """
+    evil = _item(description="visible\x1b[2J\x1b[H hidden\rOVERWRITE\x07")
+    out = render_item(evil, 1, 1)
+    for bad in ("\x1b", "\r", "\x07"):
+        assert bad not in out, f"{bad!r} reached the terminal"
+    assert "visible" in out and "hidden" in out, "real text was destroyed, not just controls"
+
+
+def test_sanitizer_keeps_newlines_and_tabs():
+    """They carry real layout in a job description."""
+    assert sanitize_for_terminal("a\nb\tc") == "a\nb\tc"
+
+
+def test_sanitizer_strips_c1_range():
+    assert "\x9b" not in sanitize_for_terminal("a\x9bb")
+
+
+def test_labels_log_is_created_private(tmp_path):
+    """It records private judgements about named employers."""
+    import stat
+    log = tmp_path / "labels.jsonl"
+    append_label(log, make_record(_item(1), can_win=True, wants=True))
+    mode = stat.S_IMODE(log.stat().st_mode)
+    assert mode == 0o600, f"labels log is {oct(mode)}, expected 0o600"

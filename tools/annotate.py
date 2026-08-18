@@ -48,6 +48,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -59,7 +60,6 @@ _REPO = _HERE.parent
 sys.path.insert(0, str(_REPO))
 sys.path.insert(0, str(_REPO / "src"))
 
-from tests.eval.label_store import input_hash  # noqa: E402
 
 DEFAULT_LABEL_SET = _REPO / "data" / "label_set.json"
 DEFAULT_LABELS = _REPO / "data" / "labels.jsonl"
@@ -83,9 +83,65 @@ def visible_projection(item: dict) -> dict:
     return {k: item[k] for k in VISIBLE_FIELDS if k in item}
 
 
+# Characters that are safe to emit verbatim. Everything else in the C0/C1
+# ranges is stripped, because a posting is arbitrary third-party text scraped
+# from the open web and this tool's correctness depends on the annotator seeing
+# it accurately.
+_ALLOWED_CONTROL = {"\n", "\t"}
+
+
+def sanitize_for_terminal(text: str) -> str:
+    """Strip control characters from untrusted posting text before display.
+
+    A job description is scraped from the public internet: anyone can publish a
+    listing containing anything. Rendered raw, an ESC sequence can clear the
+    screen, reposition the cursor, recolour text, or set the window title -- and
+    a bare CR can overwrite the line just printed.
+
+    That is not a cosmetic problem here. This tool exists to show the annotator
+    the posting and NOTHING derived from the model, and to record what they
+    judged. Text that can repaint the screen can hide part of a posting or forge
+    content that was never in it, which corrupts the labels while leaving every
+    blindness test green -- they assert on the returned string, not on what a
+    terminal does with it.
+
+    Newlines and tabs are kept; they carry real layout. Everything else in the
+    C0 and C1 control ranges is dropped rather than escaped, since the annotator
+    needs to read the posting, not a debug rendering of it.
+    """
+    return "".join(
+        ch for ch in text
+        if ch in _ALLOWED_CONTROL or not (ord(ch) < 0x20 or 0x7F <= ord(ch) <= 0x9F)
+    )
+
+
+def item_hash(item: dict) -> str:
+    """Bind a label to EVERYTHING the annotator was shown.
+
+    Deliberately NOT ``tests/eval/label_store.input_hash``. That one hashes
+    title|company|description and is already committed against the golden-set
+    label files, so it cannot change. But it omits ``location`` -- which this
+    tool displays -- so a posting could move from "Berlin, Germany" to "Austin,
+    Texas, USA" and keep its label. On a geo-eligibility tool that is the one
+    field most worth catching.
+
+    It also joins with a bare pipe, so ("A|B", "C") and ("A", "B|C") hash
+    identically.
+
+    Both problems are avoided by hashing the visible projection itself, encoded
+    canonically. "What is hashed" is then equal to "what is shown" by
+    construction, and stays equal if VISIBLE_FIELDS ever grows -- rather than by
+    a hand-maintained list that silently drifts.
+    """
+    shown = {k: v for k, v in visible_projection(item).items() if k != "index"}
+    payload = json.dumps(shown, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def render_item(item: dict, position: int, total: int) -> str:
     """Format one posting for display. Pure; takes the visible projection only."""
-    v = visible_projection(item)
+    v = {k: (sanitize_for_terminal(x) if isinstance(x, str) else x)
+         for k, x in visible_projection(item).items()}
     head = f"[ {position}/{total} ]  {v.get('title', '')}"
     sub = f"            {v.get('company', '')}  ·  {v.get('location', '')}"
     body = (v.get("description") or "").strip()
@@ -157,6 +213,10 @@ def load_labels(path: Path) -> dict[int, dict]:
 def append_label(path: Path, record: dict) -> None:
     """Append one decision durably. fsync so a kill cannot lose an acked label."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    # The log records private judgements about named employers ("could I win
+    # this", "do I want it"). Create it 0600 rather than inheriting the umask.
+    if not path.exists():
+        path.touch(mode=0o600)
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
         fh.flush()
@@ -186,14 +246,14 @@ def label_matches_item(item: dict, rec: dict) -> bool:
     labels join to items by ``index``, and indices are reused whenever a label
     set is rebuilt.
     """
-    return rec.get("input_hash") == input_hash(item)
+    return rec.get("item_hash") == item_hash(item)
 
 
 def make_record(item: dict, *, can_win: bool, wants: bool) -> dict:
     """Build the stored label. Carries the two axes separately, never merged."""
     return {
         "index": item["index"],
-        "input_hash": input_hash(item),
+        "item_hash": item_hash(item),
         "can_win_cold": can_win,
         "wants": wants,
         "labeled_at": datetime.now(UTC).isoformat(),
