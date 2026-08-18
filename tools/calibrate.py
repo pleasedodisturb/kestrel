@@ -63,6 +63,7 @@ from career_os.services.scoring_eval import weighted_cohen_kappa  # noqa: E402
 sys.path.insert(0, str(_HERE))
 from annotate import label_matches_item as _label_matches_item  # noqa: E402
 from annotate import load_labels as _load_labels  # noqa: E402
+from annotate import validate_label_set  # noqa: E402
 
 DEFAULT_LABEL_SET = _REPO / "data" / "label_set.json"
 DEFAULT_LABELS = _REPO / "data" / "labels.jsonl"
@@ -90,32 +91,6 @@ def load_inputs(label_set_path: Path, labels_path: Path) -> tuple[dict, dict[int
     if not labels:
         raise SystemExit(f"{labels_path} holds no usable labels")
     return data, labels
-
-
-def validate_label_set(data: object, where: Path) -> None:
-    """Fail loudly on a label set that is not the shape we expect.
-
-    Everything downstream indexes into this structure. Without a check, a
-    malformed or hand-edited file surfaces as an AttributeError deep inside a
-    statistic, or worse, as a report built from silently-skipped items.
-    """
-    if not isinstance(data, dict):
-        raise SystemExit(f"{where}: top level must be an object")
-    if not isinstance(data.get("_meta"), dict):
-        raise SystemExit(f"{where}: _meta must be an object")
-    items = data.get("items")
-    if not isinstance(items, list):
-        raise SystemExit(f"{where}: items must be a list")
-    for n, it in enumerate(items):
-        if not isinstance(it, dict):
-            raise SystemExit(f"{where}: items[{n}] must be an object")
-        if not isinstance(it.get("index"), int) or isinstance(it.get("index"), bool):
-            raise SystemExit(f"{where}: items[{n}].index must be an int")
-        if not isinstance(it.get("_hidden"), dict):
-            raise SystemExit(f"{where}: items[{n}]._hidden must be an object")
-    seen = [it["index"] for it in items]
-    if len(set(seen)) != len(seen):
-        raise SystemExit(f"{where}: duplicate item index values; labels join by index")
 
 
 def usable_labels(items: list[dict], labels: dict[int, dict]) -> tuple[dict[int, dict], int]:

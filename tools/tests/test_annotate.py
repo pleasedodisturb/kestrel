@@ -32,6 +32,7 @@ from annotate import (  # noqa: E402
     cell,
     item_hash,
     label_matches_item,
+    load_label_set,
     load_labels,
     make_record,
     render_item,
@@ -453,3 +454,67 @@ def test_labels_log_is_created_private(tmp_path):
     append_label(log, make_record(_item(1), can_win=True, wants=True))
     mode = stat.S_IMODE(log.stat().st_mode)
     assert mode == 0o600, f"labels log is {oct(mode)}, expected 0o600"
+
+
+def test_annotate_refuses_a_set_calibrate_would_reject(tmp_path):
+    """The 15th defect: two readers, one file, different verdicts.
+
+    annotate.load_label_set checked only that `items` and `_meta` existed, while
+    calibrate ran a stricter validator. A set whose items lacked `_hidden`
+    annotated perfectly and was then categorically rejected at calibration --
+    an hour of labelling wasted, with no warning at the time.
+
+    Both readers must now refuse the same file, and annotate must refuse it
+    BEFORE anything is displayed or recorded.
+    """
+    import json as _json
+    ls = tmp_path / "ls.json"
+    ls.write_text(_json.dumps({"_meta": {}, "items": [
+        {"index": 1, "title": "Engineer", "company": "Ex",
+         "location": "Berlin", "description": "looks fine."}]}))   # no _hidden
+    with pytest.raises(SystemExit) as exc:
+        load_label_set(ls)
+    assert "_hidden" in str(exc.value)
+
+
+def test_both_readers_agree_on_the_same_file(tmp_path):
+    """Explicitly pin the agreement, not just each side's behaviour."""
+    import json as _json
+
+    import calibrate as cal
+    ls = tmp_path / "ls.json"
+    lab = tmp_path / "l.jsonl"
+    lab.write_text(_json.dumps({"index": 1, "item_hash": "x",
+                                "can_win_cold": True, "wants": True}) + "\n")
+    ls.write_text(_json.dumps({"_meta": {}, "items": [
+        {"index": 1, "title": "E", "company": "C",
+         "location": "L", "description": "d"}]}))
+    annotate_refused = calibrate_refused = False
+    try:
+        load_label_set(ls)
+    except SystemExit:
+        annotate_refused = True
+    try:
+        cal.load_inputs(ls, lab)
+    except SystemExit:
+        calibrate_refused = True
+    assert annotate_refused == calibrate_refused, (
+        "the two readers disagree about the same label set"
+    )
+
+
+def test_bidi_and_zero_width_are_stripped():
+    """Not C0/C1, so the codepoint filter missed them entirely.
+
+    A right-to-left override can make a line render as something other than what
+    it says -- the same forgery risk as an escape sequence, reached differently.
+    """
+    for ch in ("‮", "‭", "​", "‍", "﻿", "⁦"):
+        assert ch not in sanitize_for_terminal(f"a{ch}b"), f"{ch!r} survived"
+    assert sanitize_for_terminal("a‮b") == "ab", "surrounding text was damaged"
+
+
+def test_sanitizer_keeps_ordinary_non_ascii():
+    """Stripping must not mangle real postings: umlauts, CJK, emoji."""
+    for good in ("Müller", "東京", "Zürich", "naïve", "café"):
+        assert sanitize_for_terminal(good) == good

@@ -89,6 +89,18 @@ def visible_projection(item: dict) -> dict:
 # it accurately.
 _ALLOWED_CONTROL = {"\n", "\t"}
 
+# Not control characters by codepoint, so the C0/C1 filter misses them entirely.
+# Bidi overrides can reverse how a line renders, which means a posting could
+# display text that is not what it says -- the same forgery risk as an escape
+# sequence, reached a different way. Zero-width characters can hide content
+# inside an apparently innocent string.
+_BIDI_AND_INVISIBLE = {
+    "\u200b", "\u200c", "\u200d", "\u200e", "\u200f",   # ZWSP, ZWNJ, ZWJ, LRM, RLM
+    "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",   # LRE, RLE, PDF, LRO, RLO
+    "\u2066", "\u2067", "\u2068", "\u2069",             # LRI, RLI, FSI, PDI
+    "\ufeff",                                            # BOM / ZWNBSP
+}
+
 
 def sanitize_for_terminal(text: str) -> str:
     """Strip control characters from untrusted posting text before display.
@@ -109,10 +121,18 @@ def sanitize_for_terminal(text: str) -> str:
     C0 and C1 control ranges is dropped rather than escaped, since the annotator
     needs to read the posting, not a debug rendering of it.
     """
-    return "".join(
-        ch for ch in text
-        if ch in _ALLOWED_CONTROL or not (ord(ch) < 0x20 or 0x7F <= ord(ch) <= 0x9F)
-    )
+    out = []
+    for ch in text:
+        if ch in _ALLOWED_CONTROL:
+            out.append(ch)
+            continue
+        o = ord(ch)
+        if o < 0x20 or 0x7F <= o <= 0x9F:
+            continue                      # C0 / C1 controls
+        if ch in _BIDI_AND_INVISIBLE:
+            continue                      # direction overrides, zero-width joiners
+        out.append(ch)
+    return "".join(out)
 
 
 def item_hash(item: dict) -> str:
@@ -148,6 +168,39 @@ def render_item(item: dict, position: int, total: int) -> str:
     return f"{head}\n{sub}\n\n{body}\n"
 
 
+def validate_label_set(data: object, where: Path) -> None:
+    """The single schema check, called by EVERY reader of a label set.
+
+    It lives here because annotate.py is the first thing to touch a label set,
+    and a set that cannot be analysed later must be refused BEFORE someone
+    spends an hour labelling it.
+
+    That was the bug: annotate checked only that the keys ``items`` and ``_meta``
+    existed, while calibrate ran a stricter check. A set whose items lacked
+    ``_hidden`` annotated perfectly and was then categorically rejected at
+    calibration, with the labelling session wasted and nothing having warned at
+    the time. The labels-log readers had already been unified for exactly this
+    reason; the label-set readers had not.
+    """
+    if not isinstance(data, dict):
+        raise SystemExit(f"{where}: top level must be an object")
+    if not isinstance(data.get("_meta"), dict):
+        raise SystemExit(f"{where}: _meta must be an object")
+    items = data.get("items")
+    if not isinstance(items, list):
+        raise SystemExit(f"{where}: items must be a list")
+    for n, it in enumerate(items):
+        if not isinstance(it, dict):
+            raise SystemExit(f"{where}: items[{n}] must be an object")
+        if not isinstance(it.get("index"), int) or isinstance(it.get("index"), bool):
+            raise SystemExit(f"{where}: items[{n}].index must be an int")
+        if not isinstance(it.get("_hidden"), dict):
+            raise SystemExit(f"{where}: items[{n}]._hidden must be an object")
+    seen = [it["index"] for it in items]
+    if len(set(seen)) != len(seen):
+        raise SystemExit(f"{where}: duplicate item index values; labels join by index")
+
+
 def load_label_set(path: Path) -> dict:
     if not path.exists():
         raise SystemExit(
@@ -155,8 +208,7 @@ def load_label_set(path: Path) -> dict:
             f"build one first: python tools/build_label_set.py --profile <name>"
         )
     data = json.loads(path.read_text())
-    if "items" not in data or "_meta" not in data:
-        raise SystemExit(f"{path} is not a label set (missing items/_meta)")
+    validate_label_set(data, path)
     return data
 
 
