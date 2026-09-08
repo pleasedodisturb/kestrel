@@ -138,8 +138,8 @@ def test_meta_records_draw_probability_per_stratum(tmp_path, profile, capsys):
     computation with the constant 0.5 passed. The assertion was fine; the
     fixture could not discriminate. Do not "simplify" these counts.
     """
-    rows = [_row(i, "Frankfurt, Germany") for i in range(1, 26)]          # 25
-    rows += [_row(i, "Austin, Texas, USA") for i in range(26, 106)]        # 80
+    rows = [_row(i, "Frankfurt am Main, Germany") for i in range(1, 26)]          # 25
+    rows += [_row(i, "Austin, Texas") for i in range(26, 106)]        # 80
     db = _make_db(tmp_path, rows)
     out = tmp_path / "ls.json"
 
@@ -164,7 +164,7 @@ def test_meta_records_draw_probability_per_stratum(tmp_path, profile, capsys):
 
 
 def test_population_split_uses_the_supplied_profile(tmp_path, profile):
-    rows = [_row(1, "Frankfurt, Germany"), _row(2, "Austin, Texas, USA")]
+    rows = [_row(1, "Frankfurt am Main, Germany"), _row(2, "Austin, Texas")]
     db = _make_db(tmp_path, rows)
     keep, drop = load_population(db, profile, min_desc=100)
     assert [r["job_id"] for r in keep] == [1]
@@ -213,8 +213,8 @@ def test_repeat_shortfall_is_reported_not_silent(capsys):
 
 
 def test_same_seed_produces_identical_output(tmp_path, profile):
-    rows = [_row(i, "Frankfurt, Germany") for i in range(1, 16)]
-    rows += [_row(i, "Austin, Texas, USA") for i in range(16, 31)]
+    rows = [_row(i, "Frankfurt am Main, Germany") for i in range(1, 16)]
+    rows += [_row(i, "Austin, Texas") for i in range(16, 31)]
     db = _make_db(tmp_path, rows)
     a, b = tmp_path / "a.json", tmp_path / "b.json"
     for out in (a, b):
@@ -225,8 +225,8 @@ def test_same_seed_produces_identical_output(tmp_path, profile):
 
 
 def test_short_descriptions_are_excluded(tmp_path, profile, capsys):
-    rows = [_row(1, "Frankfurt, Germany", desc_len=10),
-            _row(2, "Frankfurt, Germany", desc_len=600)]
+    rows = [_row(1, "Frankfurt am Main, Germany", desc_len=10),
+            _row(2, "Frankfurt am Main, Germany", desc_len=600)]
     db = _make_db(tmp_path, rows)
     keep, _ = load_population(db, profile, min_desc=500)
     assert [r["job_id"] for r in keep] == [2]
@@ -254,8 +254,8 @@ def test_missing_database_fails_loudly(tmp_path, profile):
 
 def test_indices_are_assigned_after_shuffle(tmp_path, profile):
     """Order must not leak the stratum: strata are interleaved, not blocked."""
-    rows = [_row(i, "Frankfurt, Germany") for i in range(1, 21)]
-    rows += [_row(i, "Austin, Texas, USA") for i in range(21, 41)]
+    rows = [_row(i, "Frankfurt am Main, Germany") for i in range(1, 21)]
+    rows += [_row(i, "Austin, Texas") for i in range(21, 41)]
     db = _make_db(tmp_path, rows)
     out = tmp_path / "ls.json"
     main(["--profile", "frankfurt", "--db", str(db), "--out", str(out),
