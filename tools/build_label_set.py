@@ -300,7 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     }
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(payload, indent=2, ensure_ascii=False))
+    args.out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
     meta = payload["_meta"]
     print(f"wrote {args.out}")

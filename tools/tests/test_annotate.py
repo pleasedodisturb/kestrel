@@ -18,6 +18,7 @@ clean resume, a re-label superseding an earlier one, and a torn final line from
 a kill mid-write, which must be discarded rather than crash or corrupt.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -346,6 +347,60 @@ def test_unterminated_last_line_is_still_treated_as_torn(tmp_path):
     with log.open("a") as fh:
         fh.write('{"index": 2, "torn')  # no newline
     assert set(load_labels(log)) == {1}
+
+
+def test_torn_tail_that_happens_to_parse_is_still_discarded(tmp_path, capsys):
+    """A crash can land exactly after the closing brace, before the newline.
+
+    The writer's commit unit is ``json + "\\n"`` + fsync. A prefix that parses
+    is still an interrupted write; accepting it would make the label depend on
+    where the kill landed. Drop it and re-ask, same as any other torn tail.
+    """
+    log = tmp_path / "labels.jsonl"
+    append_label(log, make_record(_item(1), can_win=True, wants=True))
+    with log.open("a") as fh:
+        fh.write(json.dumps(make_record(_item(2), can_win=False, wants=True)))  # no newline
+    labels = load_labels(log)
+    assert set(labels) == {1}
+    assert "discarded torn final line 2" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "torn",
+    ['{"index": 2, "can_win_c', '{"index": 2, "can_win_cold": true, "wants": true}'],
+    ids=["unparseable", "parses"],
+)
+def test_append_after_torn_tail_does_not_fuse_records(tmp_path, torn):
+    """The run after a crash must not turn the log unloadable.
+
+    Before: the torn bytes stayed on disk, the next append wrote straight after
+    them, and the two fused into one newline-terminated corrupt line -- which
+    the loader then (correctly) refused as fully-written corruption. One
+    interrupted session poisoned every later run.
+    """
+    log = tmp_path / "labels.jsonl"
+    append_label(log, make_record(_item(1), can_win=True, wants=True))
+    with log.open("a") as fh:
+        fh.write(torn)
+    load_labels(log)  # discards the tail in memory, as any resume would
+    append_label(log, make_record(_item(3), can_win=False, wants=False))
+
+    text = log.read_text()
+    assert text.endswith("\n")
+    assert text.count("\n") == 2, text  # exactly two complete records on disk
+    labels = load_labels(log)  # must not raise "corrupt and was fully written"
+    assert set(labels) == {1, 3}
+    assert 2 not in labels
+
+
+def test_append_to_clean_log_leaves_it_untouched(tmp_path):
+    """The tail repair must be a no-op on a healthy file (and on an empty one)."""
+    log = tmp_path / "labels.jsonl"
+    append_label(log, make_record(_item(1), can_win=True, wants=True))
+    before = log.read_text()
+    append_label(log, make_record(_item(2), can_win=True, wants=False))
+    assert log.read_text().startswith(before)
+    assert set(load_labels(log)) == {1, 2}
 
 
 def test_load_labels_reads_the_file_once(tmp_path, monkeypatch):

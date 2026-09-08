@@ -207,7 +207,7 @@ def load_label_set(path: Path) -> dict:
             f"no label set at {path}\n"
             f"build one first: python tools/build_label_set.py --profile <name>"
         )
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     validate_label_set(data, path)
     return data
 
@@ -224,15 +224,27 @@ def load_labels(path: Path) -> dict[int, dict]:
     terminated was fully written and is therefore corruption, not a torn tail --
     ``splitlines()`` discards exactly the information needed to tell those apart,
     which is why the raw text is inspected here.
+
+    An unterminated final line is discarded *whether or not it parses*. The
+    writer's unit of commit is ``json + "\\n"`` followed by fsync; a prefix that
+    happens to stop exactly after the closing brace is still an interrupted
+    write, and treating it as a label would make the outcome depend on where
+    the crash landed. Dropping it costs one re-asked item. ``append_label``
+    truncates the same tail before writing, so disk and memory agree.
     """
     if not path.exists():
         return {}
     raw = path.read_text(encoding="utf-8")
     if not raw:
         return {}
-    ends_with_newline = raw.endswith("\n")
     lines = raw.split("\n")
-    if ends_with_newline:
+    if raw.endswith("\n"):
+        lines = lines[:-1]
+    elif lines[-1].strip():
+        print(
+            f"  discarded torn final line {len(lines)} (interrupted write)",
+            file=sys.stderr,
+        )
         lines = lines[:-1]
 
     out: dict[int, dict] = {}
@@ -243,12 +255,6 @@ def load_labels(path: Path) -> dict[int, dict]:
         try:
             rec = json.loads(stripped)
         except json.JSONDecodeError:
-            if line_no == len(lines) and not ends_with_newline:
-                print(
-                    f"  discarded torn final line {line_no} (interrupted write)",
-                    file=sys.stderr,
-                )
-                continue
             raise SystemExit(
                 f"{path}:{line_no} is corrupt and was fully written "
                 f"(newline-terminated), so it is not a torn tail; refusing to guess"
@@ -262,6 +268,30 @@ def load_labels(path: Path) -> dict[int, dict]:
     return out
 
 
+def _truncate_torn_tail(path: Path) -> None:
+    """Cut an unterminated final line so the next append starts on a fresh line.
+
+    ``load_labels`` discards a torn tail in memory, but the bytes stayed on
+    disk, and the next ``append_label`` wrote straight after them. The torn
+    fragment and the new record fused into ONE newline-terminated line, which
+    the loader then correctly refused as "fully written corruption" -- a single
+    interrupted session made the log unloadable on the run after next.
+    """
+    with path.open("r+b") as fh:
+        fh.seek(0, os.SEEK_END)
+        size = fh.tell()
+        if size == 0:
+            return
+        fh.seek(size - 1)
+        if fh.read(1) == b"\n":
+            return
+        fh.seek(0)
+        data = fh.read()
+        fh.truncate(data.rfind(b"\n") + 1)
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
 def append_label(path: Path, record: dict) -> None:
     """Append one decision durably. fsync so a kill cannot lose an acked label."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -269,6 +299,7 @@ def append_label(path: Path, record: dict) -> None:
     # this", "do I want it"). Create it 0600 rather than inheriting the umask.
     if not path.exists():
         path.touch(mode=0o600)
+    _truncate_torn_tail(path)
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
         fh.flush()

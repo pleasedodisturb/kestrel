@@ -81,7 +81,7 @@ def load_inputs(label_set_path: Path, labels_path: Path) -> tuple[dict, dict[int
         raise SystemExit(
             f"no labels at {labels_path}\nlabel some postings first: python tools/annotate.py"
         )
-    data = json.loads(label_set_path.read_text())
+    data = json.loads(label_set_path.read_text(encoding="utf-8"))
     validate_label_set(data, label_set_path)
     # Reuse annotate's loader rather than reimplementing it. A second, more
     # permissive parser here meant a corrupt MID-FILE line raised in annotate.py
@@ -265,12 +265,6 @@ def _weight_for(stratum: str, meta: dict) -> float:
             f"It must be a finite number in (0, 1].\n"
             f"Sample rates cannot be reweighted to the population without it, and "
             f"it cannot be recovered after the draw. Rebuild the label set."
-        )
-    if False:
-        raise SystemExit(
-            f"label set _meta has no usable p_draw for stratum {stratum!r}.\n"
-            "Sample rates cannot be reweighted to the population without it, and "
-            "it cannot be recovered after the draw. Rebuild the label set."
         )
     return 1.0 / p
 

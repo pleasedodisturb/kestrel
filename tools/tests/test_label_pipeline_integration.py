@@ -38,7 +38,8 @@ def synthetic_db(tmp_path: Path) -> Path:
            location TEXT, url TEXT, description TEXT, remote INTEGER, fit_score REAL)"""
     )
     rows = [
-        (i, f"Engineer {i}", "Co DE", "Frankfurt am Main, Germany", f"u{i}", "x" * 700, 0, 4.0 + i * 0.2)
+        (i, f"Engineer {i}", "Co DE", "Frankfurt am Main, Germany", f"u{i}", "x" * 700, 0,
+         4.0 + i * 0.2)
         for i in range(1, N_DE + 1)
     ] + [
         (i, f"Engineer {i}", "Co US", "Austin, Texas", f"u{i}", "y" * 700, 0, 3.0 + i * 0.05)
