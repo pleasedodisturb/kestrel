@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.28.0](https://github.com/pleasedodisturb/kestrel/compare/v0.27.1...v0.28.0) (2026-09-08)
+
+
+### Features
+
+* **G-1507:** build your own label set — blind annotation and honest calibration ([#517](https://github.com/pleasedodisturb/kestrel/issues/517)) ([1093ae7](https://github.com/pleasedodisturb/kestrel/commit/1093ae77216f822cf093752c429d5c7985285cb8))
+
+
+### Dependencies
+
+* bump @tanstack/react-query in /frontend in the tanstack group ([#523](https://github.com/pleasedodisturb/kestrel/issues/523)) ([70e6e0a](https://github.com/pleasedodisturb/kestrel/commit/70e6e0a4ec77900e2dccee890dcf26c6fc894e0e))
+* bump nginx from `4a73073` to `db35bfc` ([#519](https://github.com/pleasedodisturb/kestrel/issues/519)) ([6273517](https://github.com/pleasedodisturb/kestrel/commit/6273517af0a08a2e38ea30871997c145a0ed238c))
+* bump python from `90744cf` to `9c900de` ([#518](https://github.com/pleasedodisturb/kestrel/issues/518)) ([8308ccb](https://github.com/pleasedodisturb/kestrel/commit/8308ccbbf4aa83bacc15999dbd552924a909e3c7))
+* bump the eslint group in /frontend with 3 updates ([#522](https://github.com/pleasedodisturb/kestrel/issues/522)) ([4f3f076](https://github.com/pleasedodisturb/kestrel/commit/4f3f0768d0be8dd10c0ab3e55054f035138ccb10))
+* bump the react group in /frontend with 2 updates ([#521](https://github.com/pleasedodisturb/kestrel/issues/521)) ([9d83f3a](https://github.com/pleasedodisturb/kestrel/commit/9d83f3a064fbc52f2f43ede5ec35cea90ce653c6))
+* bump the vitest group across 1 directory with 4 updates ([#525](https://github.com/pleasedodisturb/kestrel/issues/525)) ([5d36297](https://github.com/pleasedodisturb/kestrel/commit/5d362979b212b9d68fe81bed2e08702763f89f0c))
+* **G-1715:** fix browserslist HIGH + @humanfs/node advisories, size-limit 13 ([#534](https://github.com/pleasedodisturb/kestrel/issues/534)) ([1c3e8f6](https://github.com/pleasedodisturb/kestrel/commit/1c3e8f68a0095bb0eeb2566d09e9a4e5cf5191b7))
+* update openai requirement from &gt;=2.50.0 to &gt;=3.6.0 ([#524](https://github.com/pleasedodisturb/kestrel/issues/524)) ([21df59b](https://github.com/pleasedodisturb/kestrel/commit/21df59b5dd4b9d1235d9e5ff239309b19bcca560))
+
 ## [0.27.1](https://github.com/pleasedodisturb/kestrel/compare/v0.27.0...v0.27.1) (2026-08-11)
 
 
