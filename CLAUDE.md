@@ -129,6 +129,7 @@ When an *agent session* needs to navigate, scrape, or fill a web page, use these
 - **Commit messages must have a body** — title + blank line + explanation of what changed and why
 - **Commit after every logical unit of work** — don't batch unrelated changes
 - **Push after committing on non-main branches** — work happens across multiple machines/sessions
+- **Every PR commit carries a review-bound trailer** — `Reviewed-by: <reviewer> patch:<git patch-id> run:<id>`, written by `review-push sign` after an independent review with every medium+ finding answered (flow: `~/.claude/docs/pr-review-standard.md`). CI job `Review trailers` (G-1726, `tools/check_review_trailers.py`) fails the PR if a trailer's patch-id does not match its commit, or if the PR range contains a merge commit — so never amend a commit's content after signing without re-running `review-push`, and rebase rather than merge main into a branch. Only commits GitHub attributes to a verified bot account are exempt, per commit — a human commit on a Dependabot branch is still checked.
 
 ### Testing
 - Every piece of code must have tests. Write tests alongside the code, not after.
