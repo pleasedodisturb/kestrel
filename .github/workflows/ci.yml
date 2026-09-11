@@ -310,11 +310,57 @@ jobs:
       - name: Verify npm package signatures
         run: npm audit signatures
 
+  review-trailers:
+    # G-1726: every PR commit's `Reviewed-by: … patch:<id>` trailer must name
+    # the commit's own `git patch-id`. The local pre-push gate (terminal-craft
+    # review-push, G-1725) writes that trailer only after an independent
+    # reviewer record exists with every medium+ finding answered; this job
+    # proves, from any machine or cloud run, that the trailer still belongs to
+    # the diff it sits on (not copied, not amended after review).
+    #
+    # Bot commits (Dependabot, release-please's app, github-actions) have no
+    # local reviewer and are gated by automerge policy + CI instead. The
+    # exemption is PER COMMIT, decided by GitHub's own attribution: the commit's
+    # author resolves to a Bot account AND the commit is GitHub-verified
+    # (bots' commits are signed by GitHub). A human commit pushed onto a bot's
+    # branch is still checked, and a forged "dependabot[bot]" author email
+    # yields an unverified commit, which does not qualify. A per-PR skip on
+    # the PR author, or a branch-name prefix, could be inherited or spoofed.
+    name: Review trailers
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+      - name: List commits GitHub attributes to a verified bot
+        id: exempt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          shas=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" \
+            --jq '.[] | select(.author.type == "Bot" and .commit.verification.verified == true) | .sha' \
+            | tr '\n' ' ')
+          echo "exempt: ${shas:-none}"
+          echo "shas=${shas}" >> "$GITHUB_OUTPUT"
+      - name: Verify patch-id binding on PR commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXEMPT: ${{ steps.exempt.outputs.shas }}
+        run: |
+          read -ra exempt <<< "$EXEMPT"
+          python tools/check_review_trailers.py --base "$BASE_SHA" --head "$HEAD_SHA" --exempt "${exempt[@]}"
+
   ci-complete:
     name: CI Complete
     runs-on: ubuntu-latest
     if: always()
-    needs: [backend, frontend, extension, actionlint]
+    needs: [backend, frontend, extension, actionlint, review-trailers]
     steps:
       - name: Check required jobs
         env:
@@ -322,19 +368,24 @@ jobs:
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           EXTENSION_RESULT: ${{ needs.extension.result }}
           ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
+          REVIEW_TRAILERS_RESULT: ${{ needs.review-trailers.result }}
         run: |
-          # All four jobs are hard gates. Backend was advisory while the
+          # All jobs below are hard gates. Backend was advisory while the
           # golden-set failures were being resolved; those are fixed (main
           # has been fully green since 2026-06) and CI Complete is now a
           # required status check gating Dependabot automerge (G-1277) —
           # a soft gate would let a broken bump auto-merge.
+          # review-trailers runs on every pull_request (bot commits are
+          # exempted per commit inside the job); it is skipped on
+          # push/merge_group, and a skip passes here.
           failed=0
-          for job in backend frontend extension actionlint; do
+          for job in backend frontend extension actionlint review-trailers; do
             case "$job" in
               backend) result="$BACKEND_RESULT" ;;
               frontend) result="$FRONTEND_RESULT" ;;
               extension) result="$EXTENSION_RESULT" ;;
               actionlint) result="$ACTIONLINT_RESULT" ;;
+              review-trailers) result="$REVIEW_TRAILERS_RESULT" ;;
             esac
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
               echo "::error::Required job '$job' failed or was cancelled: $result"
