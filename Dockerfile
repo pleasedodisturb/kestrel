@@ -23,7 +23,7 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 # Stage 2: Python runtime — FastAPI + static frontend
 # ---------------------------------------------------------------------------
-FROM python:3.11-slim@sha256:9c900dea9e8fb7e16277c179b555cc72d29a352dbc33cff48ad5a0412fd5bfc7 AS runtime
+FROM python:3.11-slim@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534 AS runtime
 
 # Prevent Python from writing .pyc files and enable unbuffered output
 ENV PYTHONDONTWRITEBYTECODE=1 \
