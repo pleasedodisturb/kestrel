@@ -63,6 +63,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -131,6 +132,10 @@ BROWSER_DISABLED_HOSTS: dict[str, str] = {
 }
 
 
+_HOSTNAME_RE = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*", re.I)
+UNPARSEABLE_URL_REASON = "no hostname could be parsed from the URL; browser fallback refused"
+
+
 def browser_disabled_reason(url: str) -> str | None:
     """Return the disable reason if `url`'s host matches BROWSER_DISABLED_HOSTS.
 
@@ -138,7 +143,10 @@ def browser_disabled_reason(url: str) -> str | None:
     "indeed" in "de.indeed.com" or "indeed.co.uk") and case-insensitive. A
     scheme-less URL (no netloc) is re-parsed with "//" prepended so it is
     still caught — this must fail closed, not silently allow through.
-    Returns None when the URL cannot be parsed at all or matches nothing.
+    Returns None only when a host was found and it matches nothing. A value
+    with no host at all is refused too (UNPARSEABLE_URL_REASON): the browser
+    fallback must fail closed, and a string we cannot attribute to a host
+    cannot be shown not to be one of the disabled ones.
     """
     try:
         split = urlsplit(url)
@@ -147,9 +155,11 @@ def browser_disabled_reason(url: str) -> str | None:
             split = urlsplit(f"//{url}")
             hostname = split.hostname
     except ValueError:
-        return None
-    if not hostname:
-        return None
+        return UNPARSEABLE_URL_REASON
+    # urlsplit accepts almost anything as a host ("//not a url" -> "not a url");
+    # only a plausible DNS name counts as attributable to a host.
+    if not hostname or not _HOSTNAME_RE.fullmatch(hostname):
+        return UNPARSEABLE_URL_REASON
 
     labels = hostname.lower().split(".")
     for label in labels:

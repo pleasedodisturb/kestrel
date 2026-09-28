@@ -6,7 +6,7 @@ browser_disabled_reason / BROWSER_DISABLED_HOSTS — the rest of the module
 pre-existing gap flagged, not fixed, by this ticket.
 """
 
-from source_registry import BROWSER_DISABLED_HOSTS, browser_disabled_reason
+from source_registry import BROWSER_DISABLED_HOSTS, UNPARSEABLE_URL_REASON, browser_disabled_reason
 
 
 class TestBrowserDisabledReason:
@@ -55,9 +55,11 @@ class TestBrowserDisabledReason:
         """A query string mentioning indeed does not trigger a false match."""
         assert browser_disabled_reason("https://example.com/?q=indeed") is None
 
-    def test_returns_none_for_garbage_input(self):
-        """Non-URL input is handled without raising, returning None."""
-        assert browser_disabled_reason("not a url") is None
+    def test_refuses_garbage_input(self):
+        """Non-URL input is handled without raising and is refused (fail closed)."""
+        assert browser_disabled_reason("not a url") == UNPARSEABLE_URL_REASON
+        assert browser_disabled_reason("") == UNPARSEABLE_URL_REASON
+        assert browser_disabled_reason("http://[bad") == UNPARSEABLE_URL_REASON
 
 
 class TestBrowserDisabledHostsContent:
