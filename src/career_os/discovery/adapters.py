@@ -420,12 +420,18 @@ class JobSpyAdapter(ScraperAdapter):
     _hung_lock = threading.Lock()
 
     @classmethod
-    def _submit(cls, fn) -> Future:
-        """Run fn on a daemon thread; the Future resolves like an executor's."""
+    def _submit(cls, fn, on_skip) -> Future:
+        """Run fn on a daemon thread; the Future resolves like an executor's.
+
+        on_skip runs instead of fn when the future was cancelled before the
+        thread got going (the awaiting task gave up first), so the caller can
+        release whatever it reserved for the call.
+        """
         fut: Future = Future()
 
         def worker():
             if not fut.set_running_or_notify_cancel():
+                on_skip()
                 return
             try:
                 fut.set_result(fn())
@@ -550,9 +556,11 @@ class JobSpyAdapter(ScraperAdapter):
                     f"{cls.MAX_WORKERS}); not starting more until they return"
                 )
             cls._running += 1
-        state = {"finished": False, "abandoned": False}
+        state = {"started": False, "finished": False, "abandoned": False}
 
         def run():
+            with cls._hung_lock:
+                state["started"] = True
             try:
                 return scrape_jobs(
                     site_name=[site],
@@ -569,15 +577,20 @@ class JobSpyAdapter(ScraperAdapter):
                     if state["abandoned"]:
                         cls._hung -= 1
 
-        cf = cls._submit(run)
+        def release_slot():
+            with cls._hung_lock:
+                cls._running -= 1
+
+        cf = cls._submit(run, release_slot)
         try:
             jobs_df = await asyncio.wait_for(asyncio.wrap_future(cf), timeout=timeout)
         except TimeoutError:
-            # The thread has always started by now (no queue), so a timed-out
-            # unfinished call is a hung one; its own finally undoes both
-            # counters whenever jobspy finally returns.
+            # A call whose thread is running and has not finished is hung; its
+            # own finally undoes both counters whenever jobspy returns. One
+            # whose thread never got going is cancelled instead (on_skip
+            # releases the slot) and is not counted.
             with cls._hung_lock:
-                if not state["finished"]:
+                if state["started"] and not state["finished"]:
                     state["abandoned"] = True
                     cls._hung += 1
             raise

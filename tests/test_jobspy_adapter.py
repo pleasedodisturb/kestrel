@@ -241,6 +241,41 @@ class TestJobSpyTimeout:
         assert JobSpyAdapter._running == 0
 
     @pytest.mark.asyncio
+    async def test_cancelled_before_thread_start_releases_the_slot(self, monkeypatch):
+        """If the awaiting task gives up before the daemon thread runs, the
+        reserved slot is released and jobspy is never called."""
+        from career_os.discovery import adapters as adapters_module
+
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 1)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+        captured: list = []
+
+        class LazyThread:
+            """Records the target instead of starting it, so the test controls when it runs."""
+
+            def __init__(self, target, name=None, daemon=None):
+                captured.append(target)
+
+            def start(self):
+                pass
+
+        monkeypatch.setattr(adapters_module.threading, "Thread", LazyThread)
+        calls = []
+
+        def fake_scrape_jobs(**kwargs):
+            calls.append(1)
+            return _FakeFrame()
+
+        with pytest.raises(TimeoutError):
+            await JobSpyAdapter()._scrape_site(fake_scrape_jobs, "indeed", "pm", "Germany", 5, 0.01)
+        assert JobSpyAdapter._running == 1, "slot reserved while the submission is pending"
+        captured[0]()  # the thread body finally runs: the future is already cancelled
+        assert calls == []
+        assert JobSpyAdapter._running == 0
+        assert JobSpyAdapter.hung_calls() == 0
+
+    @pytest.mark.asyncio
     async def test_partial_timeout_keeps_other_sites_row(self, monkeypatch, caplog):
         """One board timing out does not drop another board's row."""
         monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
