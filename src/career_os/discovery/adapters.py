@@ -12,7 +12,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import threading
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from urllib.parse import quote_plus
@@ -403,6 +405,31 @@ class JobSpyAdapter(ScraperAdapter):
     #     fix that independently of the board list.
     SITES: tuple[str, ...] = ("indeed",)
 
+    # A timed-out jobspy thread cannot be cancelled; it keeps running until
+    # jobspy returns. Left on the default executor, every hang occupied a
+    # shared worker until the pool was exhausted and every later discovery
+    # call queued behind them (Codex on G-1802). So jobspy runs on its own
+    # bounded pool and the adapter counts calls it has abandoned: once that
+    # reaches the pool size, new calls fail fast ("quarantined") instead of
+    # queueing, and the count drops again as abandoned threads finish.
+    MAX_WORKERS = 4
+    _executor: ThreadPoolExecutor | None = None
+    _hung = 0
+    _hung_lock = threading.Lock()
+
+    @classmethod
+    def _pool(cls) -> ThreadPoolExecutor:
+        if cls._executor is None:
+            cls._executor = ThreadPoolExecutor(
+                max_workers=cls.MAX_WORKERS, thread_name_prefix="jobspy"
+            )
+        return cls._executor
+
+    @classmethod
+    def hung_calls(cls) -> int:
+        with cls._hung_lock:
+            return cls._hung
+
     @property
     def source_name(self) -> str:
         return "jobspy"
@@ -501,23 +528,44 @@ class JobSpyAdapter(ScraperAdapter):
 
         A timed-out executor thread cannot be cancelled (Python threads run to
         completion): it keeps running jobspy until it returns, and this simply
-        stops waiting for it.
+        stops waiting for it, counting it as hung until it does. When as many
+        calls are hung as the pool has workers, the call is refused up front.
         """
-        loop = asyncio.get_running_loop()
-        jobs_df = await asyncio.wait_for(
-            loop.run_in_executor(
-                None,
-                lambda: scrape_jobs(
+        cls = type(self)
+        with cls._hung_lock:
+            if cls._hung >= cls.MAX_WORKERS:
+                raise RuntimeError(
+                    f"quarantined: {cls._hung} abandoned jobspy call(s) still running "
+                    f"(pool of {cls.MAX_WORKERS}); not scheduling more until they return"
+                )
+        state = {"finished": False, "abandoned": False}
+
+        def run():
+            try:
+                return scrape_jobs(
                     site_name=[site],
                     search_term=keyword,
                     location=location,
                     results_wanted=limit,
                     hours_old=168,
                     country_indeed="Germany",
-                ),
-            ),
-            timeout=timeout,
-        )
+                )
+            finally:
+                with cls._hung_lock:
+                    state["finished"] = True
+                    if state["abandoned"]:
+                        cls._hung -= 1
+
+        loop = asyncio.get_running_loop()
+        future = loop.run_in_executor(cls._pool(), run)
+        try:
+            jobs_df = await asyncio.wait_for(future, timeout=timeout)
+        except TimeoutError:
+            with cls._hung_lock:
+                if not state["finished"]:
+                    state["abandoned"] = True
+                    cls._hung += 1
+            raise
 
         if jobs_df is None or jobs_df.empty:
             return []

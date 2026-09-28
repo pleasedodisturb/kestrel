@@ -6,6 +6,7 @@ touches the network.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 import threading
@@ -159,6 +160,44 @@ class TestJobSpyTimeout:
             assert "timed out" in warnings[0]["error"] and "indeed" in warnings[0]["error"]
         finally:
             event.set()
+
+    @pytest.mark.asyncio
+    async def test_hung_calls_are_bounded_and_quarantine_new_calls(self, monkeypatch):
+        """Abandoned threads are counted; at the pool size new calls fail fast
+        instead of queueing, and the count drops once the threads return."""
+        monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 2)
+        monkeypatch.setattr(JobSpyAdapter, "_executor", None)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+        release = threading.Event()
+
+        def fake_scrape_jobs(**kwargs):
+            release.wait(5)
+            return _FakeFrame()
+
+        adapter = JobSpyAdapter()
+        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
+        try:
+            for _ in range(2):
+                _, warnings, _ = await _scrape_all_adapters(
+                    [adapter], ScrapeParams(keywords=["pm"])
+                )
+                assert "timed out" in warnings[0]["error"]
+            assert JobSpyAdapter.hung_calls() == 2
+            start = time.monotonic()
+            _, warnings, _ = await _scrape_all_adapters([adapter], ScrapeParams(keywords=["pm"]))
+            assert time.monotonic() - start < 0.05, "refused up front, not after a timeout"
+            assert "quarantined" in warnings[0]["error"]
+            assert JobSpyAdapter.hung_calls() == 2
+        finally:
+            release.set()
+        for _ in range(50):
+            if JobSpyAdapter.hung_calls() == 0:
+                break
+            await asyncio.sleep(0.02)
+        assert JobSpyAdapter.hung_calls() == 0
+        _, warnings, _ = await _scrape_all_adapters([adapter], ScrapeParams(keywords=["pm"]))
+        assert warnings == []
 
     @pytest.mark.asyncio
     async def test_partial_timeout_keeps_other_sites_row(self, monkeypatch, caplog):
