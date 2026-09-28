@@ -231,7 +231,7 @@ Not necessarily better - structurally different in ways that matter to some user
 
 **Custom scoring rubric.** Huntr and Teal score resume-vs-JD (a useful but narrow signal). Kestrel scores against a user-defined profile that can encode priorities like location preference, tech stack alignment, company stage, compensation range, and role fit. You define what "good match" means.
 
-**Full data sovereignty.** Everything runs locally or on your own infrastructure. No account to create, no data sent to a vendor, no risk of a service shutting down or raising prices. Your SQLite database is yours to query, export, back up, or migrate however you want.
+**Full data sovereignty.** The application and its database run locally or on your own infrastructure. No account to create, no data sent to a vendor beyond the AI requests you configure (none at all with Ollama), no risk of a service shutting down or raising prices. Your SQLite database is yours to query, export, back up, or migrate however you want.
 
 **Deepest EU eligibility handling.** A 7-way geo classifier with a committed 277-item reference set decides home / relocate / visa / remote-eligible per posting; Arbeitsagentur and Arbeitnow feeds included. Career-Ops covers more EU boards; Kestrel decides eligibility per posting.
 
