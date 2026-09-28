@@ -336,6 +336,19 @@ class TestFetchArbeitsagentur:
         assert [j["url"].rsplit("/", 1)[1] for j in jobs] == ["b-0"]
 
     @patch("germany_jobs.httpx.Client")
+    def test_non_object_publication_period_is_absent(self, mock_client_cls):
+        base = _load_v6_fixture()["ergebnisliste"][0]
+        rows = [
+            {**base, "veroeffentlichungszeitraum": "unknown"},
+            {**base, "veroeffentlichungszeitraum": [1]},
+        ]
+        _mock_arbeitsagentur_client(mock_client_cls, {"ergebnisliste": rows})
+
+        jobs = fetch_arbeitsagentur(keywords="Manager")
+
+        assert len(jobs) == 2
+
+    @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):
         """A raised exception from client.get is swallowed and returns []."""
         mock_client = MagicMock()

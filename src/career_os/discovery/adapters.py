@@ -254,6 +254,19 @@ def _resolve_arbeitsagentur_url(job_dict: dict) -> str:
     return _text(job_dict.get("externeURL"))
 
 
+def _parse_arbeitsagentur_rows(rows: list[dict], source_name: str) -> list[RawJobResult]:
+    """Parse each v6 row on its own: one malformed third-party row is logged and
+    skipped, never allowed to abort the page (field guards above cover the
+    shapes seen so far; this is the backstop for the ones not seen yet)."""
+    results: list[RawJobResult] = []
+    for row in rows:
+        try:
+            results.append(_parse_arbeitsagentur_job(row, source_name))
+        except Exception as exc:
+            logger.warning("Arbeitsagentur row skipped (%s): %r", exc, row.get("referenznummer"))
+    return results
+
+
 def _parse_arbeitsagentur_job(job_dict: dict, source_name: str) -> RawJobResult:
     """Parse a single v6 Arbeitsagentur job dict into a RawJobResult."""
     firma = _text(job_dict.get("firma"))
@@ -266,10 +279,10 @@ def _parse_arbeitsagentur_job(job_dict: dict, source_name: str) -> RawJobResult:
     city, country = _resolve_arbeitsagentur_location(job_dict)
     location_str = f"{city}, {country}" if city else country
 
-    veroeffentlichungszeitraum = job_dict.get("veroeffentlichungszeitraum") or {}
-    posted_raw = veroeffentlichungszeitraum.get("von") or job_dict.get(
-        "datumErsteVeroeffentlichung", ""
-    )
+    zeitraum = job_dict.get("veroeffentlichungszeitraum")
+    if not isinstance(zeitraum, dict):
+        zeitraum = {}
+    posted_raw = _text(zeitraum.get("von")) or _text(job_dict.get("datumErsteVeroeffentlichung"))
 
     return RawJobResult(
         source=source_name,
@@ -337,7 +350,7 @@ class ArbeitsagenturAdapter(ScraperAdapter):
         if not remote_only:
             data = await self._get_page(client, url, headers, query_params)
             rows = _dict_rows(_raw_rows(data))
-            return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows]
+            return _parse_arbeitsagentur_rows(rows, self.source_name)
 
         # Client-side remote filter: walk the largest pages v6 serves until
         # `limit` remote rows are collected, a page comes back short (the
@@ -363,7 +376,7 @@ class ArbeitsagenturAdapter(ScraperAdapter):
             # a full page with one null entry is not the last page.
             if len(rows) >= limit or len(raw) < ARBEITSAGENTUR_PAGE_SIZE:
                 break
-        return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows[:limit]]
+        return _parse_arbeitsagentur_rows(rows[:limit], self.source_name)
 
     async def _get_page(
         self, client: httpx.AsyncClient, url: str, headers: dict, query_params: dict

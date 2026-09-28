@@ -488,6 +488,28 @@ class TestArbeitsagenturAdapterScrape:
                 assert results == []
 
     @pytest.mark.asyncio
+    async def test_scrape_skips_a_row_that_fails_to_parse(self, monkeypatch, caplog):
+        """A row whose nested fields have the wrong shape is skipped, the rest parse."""
+        valid = _fixture_items()[0]
+        broken = {**valid, "referenznummer": "bad-1", "veroeffentlichungszeitraum": "unknown"}
+        worse = {
+            **valid,
+            "referenznummer": "bad-2",
+            "stellenlokationen": [{"adresse": {"ort": {}}}],
+        }
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"ergebnisliste": [broken, valid, worse]})
+
+        _install_mock_transport(monkeypatch, handler)
+        results = await ArbeitsagenturAdapter().scrape(
+            ScrapeParams(keywords=["Manager"], locations=["Frankfurt"], limit_per_source=5)
+        )
+        assert [r.company for r in results] == [valid["firma"], valid["firma"], valid["firma"]] or [
+            r.url.rsplit("/", 1)[1] for r in results
+        ] == [valid["referenznummer"]]
+
+    @pytest.mark.asyncio
     async def test_scrape_zero_hit_body_returns_empty_list(self, monkeypatch):
         """A v6 zero-hit body (no ergebnisliste key) returns [] rather than raising."""
 

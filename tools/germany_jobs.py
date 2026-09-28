@@ -298,31 +298,37 @@ def fetch_arbeitsagentur(
 
     result = []
     for j in jobs:
-        firma = _text(j.get("firma"))
-        referenznummer = _text(j.get("referenznummer"))
-        title = (
-            _text(j.get("stellenangebotsTitel"))
-            or _text(j.get("hauptberuf"))
-            or f"Stelle {referenznummer}"
-        )
-        city, country = _resolve_arbeitsagentur_location(j)
-        veroeffentlichungszeitraum = j.get("veroeffentlichungszeitraum") or {}
-        posted = veroeffentlichungszeitraum.get("von") or j.get("datumErsteVeroeffentlichung", "")
+        try:
+            firma = _text(j.get("firma"))
+            referenznummer = _text(j.get("referenznummer"))
+            title = (
+                _text(j.get("stellenangebotsTitel"))
+                or _text(j.get("hauptberuf"))
+                or f"Stelle {referenznummer}"
+            )
+            city, country = _resolve_arbeitsagentur_location(j)
+            zeitraum = j.get("veroeffentlichungszeitraum")
+            if not isinstance(zeitraum, dict):
+                zeitraum = {}
+            posted = _text(zeitraum.get("von")) or _text(j.get("datumErsteVeroeffentlichung"))
 
-        result.append(
-            {
-                "source": "arbeitsagentur",
-                "title": title,
-                "company": firma,
-                "location": f"{city}, {country}" if city else country,
-                "country": country,
-                "remote": j.get("homeofficemoeglich") is True,
-                "url": _resolve_arbeitsagentur_url(j),
-                "refnr": referenznummer,
-                "posted": posted,
-                "tags": [],
-            }
-        )
+            result.append(
+                {
+                    "source": "arbeitsagentur",
+                    "title": title,
+                    "company": firma,
+                    "location": f"{city}, {country}" if city else country,
+                    "country": country,
+                    "remote": j.get("homeofficemoeglich") is True,
+                    "url": _resolve_arbeitsagentur_url(j),
+                    "refnr": referenznummer,
+                    "posted": posted,
+                    "tags": [],
+                }
+            )
+        except Exception as e:
+            # One malformed third-party row must not abort the whole fetch.
+            print(f"Arbeitsagentur row skipped ({e}): {j.get('referenznummer')!r}", file=sys.stderr)
     return result
 
 
