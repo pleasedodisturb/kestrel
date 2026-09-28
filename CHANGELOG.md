@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.28.2](https://github.com/pleasedodisturb/kestrel/compare/v0.28.1...v0.28.2) (2026-09-28)
+
+
+### Bug Fixes
+
+* **G-1717:** migrate the Arbeitsagentur adapter and tool to jobsuche API v6 ([#548](https://github.com/pleasedodisturb/kestrel/issues/548)) ([db480a3](https://github.com/pleasedodisturb/kestrel/commit/db480a3ce5968b2a12153c58b0bdfd6ebc045e18))
+* **G-1802:** Indeed-only JobSpy sweep with per-site calls, a hard timeout, and no Google/Glassdoor ([#549](https://github.com/pleasedodisturb/kestrel/issues/549)) ([a68239c](https://github.com/pleasedodisturb/kestrel/commit/a68239cc9d1f1fd962e738aa6cd71f35dd6d3604))
+
+
+### Documentation
+
+* **G-1790:** start GSD milestone v1.1 Geo gate to production (phases 6-10) ([#545](https://github.com/pleasedodisturb/kestrel/issues/545)) ([0cde483](https://github.com/pleasedodisturb/kestrel/commit/0cde48380da49be33bacb791220984dcbc0fc8d9))
+* **G-1843:** truth pass over COMPARISON, README, ROADMAP, PROJECT and tools docs ([#547](https://github.com/pleasedodisturb/kestrel/issues/547)) ([ede2975](https://github.com/pleasedodisturb/kestrel/commit/ede2975f7ae728b6fd374dc74275c2fb8b279942))
+
 ## [0.28.1](https://github.com/pleasedodisturb/kestrel/compare/v0.28.0...v0.28.1) (2026-09-28)
 
 
