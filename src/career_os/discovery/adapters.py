@@ -14,7 +14,7 @@ import contextlib
 import logging
 import threading
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from datetime import datetime
 from urllib.parse import quote_plus
@@ -406,24 +406,34 @@ class JobSpyAdapter(ScraperAdapter):
     SITES: tuple[str, ...] = ("indeed",)
 
     # A timed-out jobspy thread cannot be cancelled; it keeps running until
-    # jobspy returns. Left on the default executor, every hang occupied a
-    # shared worker until the pool was exhausted and every later discovery
-    # call queued behind them (Codex on G-1802). So jobspy runs on its own
-    # bounded pool and the adapter counts calls it has abandoned: once that
-    # reaches the pool size, new calls fail fast ("quarantined") instead of
-    # queueing, and the count drops again as abandoned threads finish.
+    # jobspy returns. On the default executor every hang occupied a shared
+    # worker until the pool was exhausted and every later discovery call
+    # queued behind them; a ThreadPoolExecutor of its own would still be
+    # joined at interpreter exit, so one permanent hang blocked shutdown
+    # (Codex on G-1802). jobspy therefore runs on daemon threads that the
+    # interpreter does not wait for, at most MAX_WORKERS at once: when that
+    # many are running (working or hung) a new call is refused up front
+    # ("quarantined", a sweep warning) instead of queueing.
     MAX_WORKERS = 4
-    _executor: ThreadPoolExecutor | None = None
+    _running = 0
     _hung = 0
     _hung_lock = threading.Lock()
 
     @classmethod
-    def _pool(cls) -> ThreadPoolExecutor:
-        if cls._executor is None:
-            cls._executor = ThreadPoolExecutor(
-                max_workers=cls.MAX_WORKERS, thread_name_prefix="jobspy"
-            )
-        return cls._executor
+    def _submit(cls, fn) -> Future:
+        """Run fn on a daemon thread; the Future resolves like an executor's."""
+        fut: Future = Future()
+
+        def worker():
+            if not fut.set_running_or_notify_cancel():
+                return
+            try:
+                fut.set_result(fn())
+            except BaseException as exc:  # noqa: BLE001 - relayed to the awaiting caller
+                fut.set_exception(exc)
+
+        threading.Thread(target=worker, name="jobspy", daemon=True).start()
+        return fut
 
     @classmethod
     def hung_calls(cls) -> int:
@@ -533,16 +543,16 @@ class JobSpyAdapter(ScraperAdapter):
         """
         cls = type(self)
         with cls._hung_lock:
-            if cls._hung >= cls.MAX_WORKERS:
+            if cls._running >= cls.MAX_WORKERS:
                 raise RuntimeError(
-                    f"quarantined: {cls._hung} abandoned jobspy call(s) still running "
-                    f"(pool of {cls.MAX_WORKERS}); not scheduling more until they return"
+                    f"quarantined: {cls._running} jobspy call(s) still running, "
+                    f"{cls._hung} of them abandoned after a timeout (limit "
+                    f"{cls.MAX_WORKERS}); not starting more until they return"
                 )
-        state = {"started": False, "finished": False, "abandoned": False}
+            cls._running += 1
+        state = {"finished": False, "abandoned": False}
 
         def run():
-            with cls._hung_lock:
-                state["started"] = True
             try:
                 return scrape_jobs(
                     site_name=[site],
@@ -555,19 +565,19 @@ class JobSpyAdapter(ScraperAdapter):
             finally:
                 with cls._hung_lock:
                     state["finished"] = True
+                    cls._running -= 1
                     if state["abandoned"]:
                         cls._hung -= 1
 
-        cf = cls._pool().submit(run)
+        cf = cls._submit(run)
         try:
             jobs_df = await asyncio.wait_for(asyncio.wrap_future(cf), timeout=timeout)
         except TimeoutError:
-            # wait_for cancels the wrapped future, which cancels queued work
-            # that never started; only a call that is actually running on a
-            # worker is hung. Counting a cancelled-before-start submission
-            # would inflate the counter forever (Codex on G-1802).
+            # The thread has always started by now (no queue), so a timed-out
+            # unfinished call is a hung one; its own finally undoes both
+            # counters whenever jobspy finally returns.
             with cls._hung_lock:
-                if state["started"] and not state["finished"]:
+                if not state["finished"]:
                     state["abandoned"] = True
                     cls._hung += 1
             raise

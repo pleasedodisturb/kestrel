@@ -167,7 +167,7 @@ class TestJobSpyTimeout:
         instead of queueing, and the count drops once the threads return."""
         monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
         monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 2)
-        monkeypatch.setattr(JobSpyAdapter, "_executor", None)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
         monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
         release = threading.Event()
 
@@ -200,13 +200,12 @@ class TestJobSpyTimeout:
         assert warnings == []
 
     @pytest.mark.asyncio
-    async def test_queued_calls_cancelled_before_start_do_not_count_as_hung(self, monkeypatch):
-        """Pool of 1, three concurrent calls: one runs and hangs, two are
-        cancelled while queued; only the running one is counted, and the
-        counter returns to zero when it finishes."""
-        monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
+    async def test_concurrent_calls_beyond_the_limit_are_refused_not_queued(self, monkeypatch):
+        """Limit of 1, three concurrent calls: one runs (and hangs), two are refused
+        immediately; the hung one is counted alone, on a daemon thread the
+        interpreter will not join, and both counters return to zero on release."""
         monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 1)
-        monkeypatch.setattr(JobSpyAdapter, "_executor", None)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
         monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
         release = threading.Event()
         started = []
@@ -217,7 +216,6 @@ class TestJobSpyTimeout:
             return _FakeFrame()
 
         adapter = JobSpyAdapter()
-        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
         try:
             results = await asyncio.gather(
                 *[
@@ -226,16 +224,21 @@ class TestJobSpyTimeout:
                 ],
                 return_exceptions=True,
             )
-            assert all(isinstance(r, TimeoutError) for r in results)
+            kinds = sorted(type(r).__name__ for r in results)
+            assert kinds == ["RuntimeError", "RuntimeError", "TimeoutError"]
+            assert all("quarantined" in str(r) for r in results if isinstance(r, RuntimeError))
             assert len(started) == 1
             assert JobSpyAdapter.hung_calls() == 1
+            hung_threads = [t for t in threading.enumerate() if t.name == "jobspy" and t.is_alive()]
+            assert hung_threads and all(t.daemon for t in hung_threads)
         finally:
             release.set()
         for _ in range(50):
-            if JobSpyAdapter.hung_calls() == 0:
+            if JobSpyAdapter.hung_calls() == 0 and JobSpyAdapter._running == 0:
                 break
             await asyncio.sleep(0.02)
         assert JobSpyAdapter.hung_calls() == 0
+        assert JobSpyAdapter._running == 0
 
     @pytest.mark.asyncio
     async def test_partial_timeout_keeps_other_sites_row(self, monkeypatch, caplog):
