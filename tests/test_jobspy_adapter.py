@@ -276,6 +276,25 @@ class TestJobSpyTimeout:
         assert JobSpyAdapter.hung_calls() == 0
 
     @pytest.mark.asyncio
+    async def test_thread_start_failure_releases_the_slot(self, monkeypatch):
+        """OS thread exhaustion at start() must not consume a slot forever."""
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 1)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+
+        def cannot_start(self):
+            raise RuntimeError("can't start new thread")
+
+        monkeypatch.setattr(threading.Thread, "start", cannot_start)
+        for _ in range(2):
+            with pytest.raises(RuntimeError, match="can't start new thread"):
+                await JobSpyAdapter()._scrape_site(
+                    lambda **kw: _FakeFrame(), "indeed", "pm", "Germany", 5, 1
+                )
+            assert JobSpyAdapter._running == 0
+        assert JobSpyAdapter.hung_calls() == 0
+
+    @pytest.mark.asyncio
     async def test_partial_timeout_keeps_other_sites_row(self, monkeypatch, caplog):
         """One board timing out does not drop another board's row."""
         monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)

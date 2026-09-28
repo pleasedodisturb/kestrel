@@ -438,7 +438,11 @@ class JobSpyAdapter(ScraperAdapter):
             except BaseException as exc:  # noqa: BLE001 - relayed to the awaiting caller
                 fut.set_exception(exc)
 
-        threading.Thread(target=worker, name="jobspy", daemon=True).start()
+        try:
+            threading.Thread(target=worker, name="jobspy", daemon=True).start()
+        except BaseException:
+            on_skip()  # the thread never existed; give the reservation back
+            raise
         return fut
 
     @classmethod
