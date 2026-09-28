@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.28.1](https://github.com/pleasedodisturb/kestrel/compare/v0.28.0...v0.28.1) (2026-09-28)
+
+
+### Dependencies
+
+* bump nginx from `72ba65e` to `17ad11d` ([#542](https://github.com/pleasedodisturb/kestrel/issues/542)) ([4587105](https://github.com/pleasedodisturb/kestrel/commit/4587105a322219b9a46ab560b1653ab9412cce82))
+* bump nginx from `db35bfc` to `72ba65e` ([#537](https://github.com/pleasedodisturb/kestrel/issues/537)) ([a136248](https://github.com/pleasedodisturb/kestrel/commit/a13624822215b23bef0646a3726f451e7ecc8932))
+* bump node from `c610fcd` to `b6f26b3` ([#543](https://github.com/pleasedodisturb/kestrel/issues/543)) ([dd59261](https://github.com/pleasedodisturb/kestrel/commit/dd59261812c96c934ba35a183a47d79b7b8c8d65))
+* bump python from `9534e5a` to `da047cb` ([#544](https://github.com/pleasedodisturb/kestrel/issues/544)) ([e0b9688](https://github.com/pleasedodisturb/kestrel/commit/e0b968864f938e91d295a4ed29c8162976088825))
+* bump python from `9c900de` to `9534e5a` ([#536](https://github.com/pleasedodisturb/kestrel/issues/536)) ([89a5c98](https://github.com/pleasedodisturb/kestrel/commit/89a5c982b30fdeeb85f92a107ca2579f894db4a1))
+* **G-1735:** sharp 0.35.4 (worker HIGH), vitest 5 + adm-zip 0.6.1 (extension) ([#540](https://github.com/pleasedodisturb/kestrel/issues/540)) ([cd4bd24](https://github.com/pleasedodisturb/kestrel/commit/cd4bd247b4637b6fc40ba3ea13fe934a94e79d2d))
+
 ## [0.28.0](https://github.com/pleasedodisturb/kestrel/compare/v0.27.1...v0.28.0) (2026-09-08)
 
 
