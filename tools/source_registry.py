@@ -140,7 +140,9 @@ BROWSER_DISABLED_HOSTS: dict[str, str] = {
 
 
 _HOSTNAME_RE = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*", re.I)
-UNPARSEABLE_URL_REASON = "no hostname could be parsed from the URL; browser fallback refused"
+UNPARSEABLE_URL_REASON = (
+    "no http(s) hostname could be parsed from the URL; browser fallback refused"
+)
 
 
 def browser_disabled_reason(url: str) -> str | None:
@@ -148,8 +150,8 @@ def browser_disabled_reason(url: str) -> str | None:
 
     Matching is label-based (any dot-separated hostname label, e.g. the
     "indeed" in "de.indeed.com" or "indeed.co.uk") and case-insensitive. A
-    scheme-less URL (no netloc) is re-parsed with "//" prepended so it is
-    still caught — this must fail closed, not silently allow through.
+    scheme-less URL is re-parsed with "//" prepended so it is still caught;
+    a non-http(s) scheme is refused outright. This must fail closed.
     Returns None only when a host was found and it matches nothing. A value
     with no host at all is refused too (UNPARSEABLE_URL_REASON): the browser
     fallback must fail closed, and a string we cannot attribute to a host
@@ -157,10 +159,14 @@ def browser_disabled_reason(url: str) -> str | None:
     """
     try:
         split = urlsplit(url)
-        hostname = split.hostname
-        if hostname is None:
+        if not split.scheme and split.hostname is None:
+            # Scheme-less "de.indeed.com/jobs": re-parse as a network location.
             split = urlsplit(f"//{url}")
-            hostname = split.hostname
+        if split.scheme and split.scheme.lower() not in ("http", "https"):
+            # file:, javascript:, data: and friends have no network host to
+            # attribute and must never reach the browser either.
+            return UNPARSEABLE_URL_REASON
+        hostname = split.hostname
     except ValueError:
         return UNPARSEABLE_URL_REASON
     # urlsplit accepts almost anything as a host ("//not a url" -> "not a url");

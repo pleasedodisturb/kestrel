@@ -70,6 +70,18 @@ class TestBrowserDisabledReason:
         assert browser_disabled_reason("") == UNPARSEABLE_URL_REASON
         assert browser_disabled_reason("http://[bad") == UNPARSEABLE_URL_REASON
 
+    def test_non_http_schemes_are_refused(self):
+        for url in (
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "data:text/html,<script>1</script>",
+            "ftp://example.com/x",
+            "localhost:8080/x",
+        ):
+            assert browser_disabled_reason(url) == UNPARSEABLE_URL_REASON, url
+        assert browser_disabled_reason("de.indeed.com/jobs") is not None
+        assert browser_disabled_reason("example.com/careers") is None
+
 
 class TestBrowserDisabledHostsContent:
     """BROWSER_DISABLED_HOSTS["indeed"] records why and points at the alternative."""
