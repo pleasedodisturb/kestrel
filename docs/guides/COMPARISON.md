@@ -55,7 +55,7 @@ Job search tools fall into five categories:
 | **Scoring eval gate in CI** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (golden set, nightly) | Not advertised | No |
 | **Source registry** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (every source reported every run) | Not advertised | No |
 | **Provider privacy tiers** | Single vendor | Single vendor | Single vendor | Not advertised | Not advertised | Yes (per-provider tier) | Single vendor | Single vendor |
-| **PII boundary enforcement** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (personal-data features refuse non-ZDR providers) | Not advertised | No |
+| **PII boundary enforcement** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (personal-data features refuse providers outside a by-name allowlist: Ollama, Anthropic, mock) | Not advertised | No |
 | **Encrypted local response cache** | Vendor-held | Vendor-held | Vendor-held | Not advertised | Not advertised | Yes (Fernet at rest) | Vendor-held | No |
 
 <sup>1</sup> Career-Ops has no Chrome extension today, but its web API already allowlists a `chrome-extension://` origin, so one is being prepared.
@@ -239,7 +239,7 @@ Not necessarily better - structurally different in ways that matter to some user
 
 **AI provider flexibility.** Works with a mock provider (free, no AI key needed), or any model via OpenRouter at minimal cost. No mandatory $20+/month AI subscription.
 
-**A measured system.** A golden-set scoring eval runs in nightly CI and fails the build on regression, the geo engine is checked against a committed 277-item reference set, a source registry reports every scan source on every run, and personal-data features refuse to run on a provider without zero-data-retention guarantees. The AI response cache is encrypted at rest.
+**A measured system.** A golden-set scoring eval runs in nightly CI and fails the build on regression, the geo engine is checked against a committed 277-item reference set, a source registry reports every scan source on every run, and personal-data features refuse to run on any provider outside a by-name allowlist (Ollama, Anthropic, mock); the allowlist reflects published retention policies, it does not verify your account's ZDR arrangement. The AI response cache is encrypted at rest.
 
 **No auto-apply in the app or the extension, by design.** Indeed tried blind auto-apply in July 2026 and pulled it within four weeks; LinkedIn's own Apply Assistant makes you press submit. Kestrel drafts, you send. The experimental Playwright scripts under `tools/` (see the table above and "Auto-apply is experimental") are maintainer batch tooling outside the app and the extension; whether they stay submit-capable is still being decided. <!-- DECISION #95 -->
 
