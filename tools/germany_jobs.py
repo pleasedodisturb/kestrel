@@ -31,7 +31,7 @@ import argparse
 import json
 import sys
 from datetime import datetime
-from urllib.parse import quote_plus, urlencode
+from urllib.parse import quote, urlencode
 
 try:
     import httpx
@@ -172,6 +172,39 @@ def stars(score: int) -> str:
     return "★" * score + "☆" * (5 - score)
 
 
+def _title_case_if_all_upper(value: str) -> str:
+    """Convert an ALL-CAPS string to title case; pass mixed-case values through unchanged."""
+    if value and value == value.upper():
+        return value.title()
+    return value
+
+
+def _resolve_arbeitsagentur_location(job: dict) -> tuple[str, str]:
+    """Resolve (city, country) from stellenlokationen[0].adresse.
+
+    Tolerates a missing/empty stellenlokationen list and a None adresse.
+    City falls back from ort to region; country falls back to "Deutschland".
+    """
+    lokationen = job.get("stellenlokationen") or []
+    adresse = (lokationen[0].get("adresse") if lokationen else None) or {}
+
+    region = _title_case_if_all_upper(adresse.get("region", "") or "")
+    city = adresse.get("ort", "") or region
+    country = _title_case_if_all_upper(adresse.get("land", "") or "") or "Deutschland"
+    return city, country
+
+
+def _resolve_arbeitsagentur_url(job: dict) -> str:
+    """Resolve the job URL from referenznummer (v6 jobdetail page), then externeURL."""
+    referenznummer = job.get("referenznummer", "")
+    if referenznummer:
+        return "https://www.arbeitsagentur.de/jobsuche/jobdetail/" + quote(referenznummer, safe="")
+    externe_url = job.get("externeURL", "")
+    if externe_url:
+        return externe_url
+    return ""
+
+
 def fetch_arbeitsagentur(
     keywords: str = "",
     location: str = "",
@@ -179,8 +212,12 @@ def fetch_arbeitsagentur(
     days_old: int = 30,
     remote: bool = False,
 ) -> list[dict]:
-    """Fetch jobs from Arbeitsagentur (Germany's Federal Employment Agency)."""
-    params: dict[str, str | int | bool] = {
+    """Fetch jobs from Arbeitsagentur (Germany's Federal Employment Agency, v6 API).
+
+    v6 has no working remote filter (arbeitszeit=ho returns zero rows), so
+    remote=True filters client-side on homeofficemoeglich instead.
+    """
+    params: dict[str, str | int] = {
         "size": min(limit, 100),
         "page": 1,
         "veroeffentlichtseit": days_old,
@@ -190,10 +227,8 @@ def fetch_arbeitsagentur(
         params["was"] = keywords
     if location:
         params["wo"] = location
-    if remote:
-        params["arbeitszeit"] = "ho"  # HEIM_TELEARBEIT
 
-    url = f"{ARBEITSAGENTUR_BASE}/pc/v4/jobs?{urlencode(params)}"
+    url = f"{ARBEITSAGENTUR_BASE}/pc/v6/jobs?{urlencode(params)}"
     headers = {"X-API-Key": ARBEITSAGENTUR_API_KEY}
 
     try:
@@ -205,34 +240,30 @@ def fetch_arbeitsagentur(
         print(f"Arbeitsagentur API error: {e}", file=sys.stderr)
         return []
 
-    jobs = data.get("stellenangebote", [])
+    jobs = data.get("ergebnisliste") or []
+    if remote:
+        jobs = [j for j in jobs if j.get("homeofficemoeglich") is True]
+
     result = []
     for j in jobs:
-        arbeitgeber = j.get("arbeitgeber", "")
-        beruf = j.get("beruf", "")
-        refnr = j.get("refnr", "")
-        ar = j.get("arbeitsort", {}) or {}
-        ort = ar.get("ort", "") or ar.get("region", "") or ""
-        land = ar.get("land", "Deutschland")
-        hash_id = j.get("hashId", "")
-
-        # Fix URL generation: prefer hashId detail URL, fall back to search by refnr
-        if hash_id:
-            job_url = f"https://www.arbeitsagentur.de/jobboerse/jobsuche/detail/{hash_id}"
-        elif refnr:
-            job_url = f"https://www.arbeitsagentur.de/jobsuche/suche?was={quote_plus(refnr)}"
-        else:
-            job_url = ""
+        firma = j.get("firma", "")
+        referenznummer = j.get("referenznummer", "")
+        title = j.get("stellenangebotsTitel") or j.get("hauptberuf") or f"Stelle {referenznummer}"
+        city, country = _resolve_arbeitsagentur_location(j)
+        veroeffentlichungszeitraum = j.get("veroeffentlichungszeitraum") or {}
+        posted = veroeffentlichungszeitraum.get("von") or j.get("datumErsteVeroeffentlichung", "")
 
         result.append(
             {
                 "source": "arbeitsagentur",
-                "title": beruf or f"Stelle {refnr}",
-                "company": arbeitgeber,
-                "location": f"{ort}, {land}".strip(", ") if ort or land else "Deutschland",
-                "url": job_url,
-                "refnr": refnr,
-                "posted": j.get("aktuelleVeroeffentlichungsdatum", ""),
+                "title": title,
+                "company": firma,
+                "location": f"{city}, {country}" if city else country,
+                "country": country,
+                "remote": j.get("homeofficemoeglich") is True,
+                "url": _resolve_arbeitsagentur_url(j),
+                "refnr": referenznummer,
+                "posted": posted,
                 "tags": [],
             }
         )

@@ -1,5 +1,7 @@
 """Tests for tools/germany_jobs.py — Germany API scrapers and scoring."""
 
+import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from germany_jobs import (
@@ -10,6 +12,14 @@ from germany_jobs import (
     score_job,
     stars,
 )
+
+FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures" / "arbeitsagentur_v6_jobs.json"
+
+
+def _load_v6_fixture() -> dict:
+    """Load the recorded real v6 Arbeitsagentur payload (shared with the adapter tests)."""
+    return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+
 
 # ==================== is_likely_german_only ====================
 
@@ -119,38 +129,85 @@ class TestPresets:
 # ==================== fetch_arbeitsagentur ====================
 
 
-class TestFetchArbeitsagentur:
-    @patch("germany_jobs.httpx.Client")
-    def test_parses_response(self, mock_client_cls):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "stellenangebote": [
-                {
-                    "beruf": "Software Engineer",
-                    "arbeitgeber": "Tech GmbH",
-                    "arbeitsort": {"ort": "Berlin", "land": "Deutschland"},
-                    "refnr": "REF123",
-                    "hashId": "abc123",
-                    "aktuelleVeroeffentlichungsdatum": "2026-03-10",
-                }
-            ]
-        }
-        mock_response.raise_for_status = MagicMock()
-        mock_client = MagicMock()
-        mock_client.__enter__ = MagicMock(return_value=mock_client)
-        mock_client.__exit__ = MagicMock(return_value=False)
-        mock_client.get.return_value = mock_response
-        mock_client_cls.return_value = mock_client
+def _mock_arbeitsagentur_client(mock_client_cls, payload):
+    """Wire mock_client_cls (a patched germany_jobs.httpx.Client) to return payload as JSON."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = payload
+    mock_response.raise_for_status = MagicMock()
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get.return_value = mock_response
+    mock_client_cls.return_value = mock_client
+    return mock_client
 
-        jobs = fetch_arbeitsagentur(keywords="Software", location="Berlin")
-        assert len(jobs) == 1
-        assert jobs[0]["title"] == "Software Engineer"
-        assert jobs[0]["company"] == "Tech GmbH"
+
+class TestFetchArbeitsagentur:
+    """fetch_arbeitsagentur against the recorded real v6 fixture (shared drift guard)."""
+
+    @patch("germany_jobs.httpx.Client")
+    def test_parses_response_with_exact_literal_values(self, mock_client_cls):
+        """All 3 fixture rows parse to the exact literal fields asserted for the adapter."""
+        _mock_arbeitsagentur_client(mock_client_cls, _load_v6_fixture())
+
+        jobs = fetch_arbeitsagentur(keywords="Manager", location="Frankfurt")
+
+        assert len(jobs) == 3
+        assert jobs[0]["title"] == "Bid Manager (m/w/d)"
+        assert jobs[0]["company"] == "SD Worx GmbH"
+        assert jobs[0]["location"] == "Frankfurt am Main, Deutschland"
+        assert jobs[0]["country"] == "Deutschland"
+        assert jobs[0]["remote"] is True
+        assert jobs[0]["url"] == (
+            "https://www.arbeitsagentur.de/jobsuche/jobdetail/10001-1003645841-S"
+        )
+        assert jobs[0]["refnr"] == "10001-1003645841-S"
+        assert jobs[0]["posted"] == "2026-09-03"
         assert jobs[0]["source"] == "arbeitsagentur"
-        assert "abc123" in jobs[0]["url"]
+        assert jobs[0]["tags"] == []
+
+        assert jobs[1]["company"] == "BWI GmbH"
+        assert jobs[1]["remote"] is False
+        assert jobs[1]["url"] == (
+            "https://www.arbeitsagentur.de/jobsuche/jobdetail/12336-a26f539j0448996-S"
+        )
+
+        assert jobs[2]["company"] == "CANCOM SE"
+        assert jobs[2]["remote"] is False
+
+    @patch("germany_jobs.httpx.Client")
+    def test_request_targets_v6_endpoint_with_no_arbeitszeit_param(self, mock_client_cls):
+        """The single client.get call hits /pc/v6/jobs, sends the API key, no arbeitszeit."""
+        mock_client = _mock_arbeitsagentur_client(mock_client_cls, _load_v6_fixture())
+
+        fetch_arbeitsagentur(keywords="Manager", location="Frankfurt")
+
+        assert mock_client.get.call_count == 1
+        call_args = mock_client.get.call_args
+        url = call_args[0][0]
+        headers = call_args[1]["headers"]
+        assert "/pc/v6/jobs" in url
+        assert "was=Manager" in url
+        assert "wo=Frankfurt" in url
+        assert "arbeitszeit" not in url
+        assert headers["X-API-Key"] == "jobboerse-jobsuche"
+
+    @patch("germany_jobs.httpx.Client")
+    def test_remote_true_filters_client_side_and_sends_no_arbeitszeit(self, mock_client_cls):
+        """remote=True returns only the homeofficemoeglich-true row, no arbeitszeit param."""
+        mock_client = _mock_arbeitsagentur_client(mock_client_cls, _load_v6_fixture())
+
+        jobs = fetch_arbeitsagentur(keywords="Manager", location="Frankfurt", remote=True)
+
+        assert len(jobs) == 1
+        assert jobs[0]["company"] == "SD Worx GmbH"
+        assert jobs[0]["remote"] is True
+        url = mock_client.get.call_args[0][0]
+        assert "arbeitszeit" not in url
 
     @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):
+        """A raised exception from client.get is swallowed and returns []."""
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
@@ -159,20 +216,18 @@ class TestFetchArbeitsagentur:
 
         jobs = fetch_arbeitsagentur()
         assert jobs == []
+        assert isinstance(jobs, list)
 
     @patch("germany_jobs.httpx.Client")
-    def test_handles_empty_response(self, mock_client_cls):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"stellenangebote": []}
-        mock_response.raise_for_status = MagicMock()
-        mock_client = MagicMock()
-        mock_client.__enter__ = MagicMock(return_value=mock_client)
-        mock_client.__exit__ = MagicMock(return_value=False)
-        mock_client.get.return_value = mock_response
-        mock_client_cls.return_value = mock_client
+    def test_zero_hit_v6_body_returns_empty_list(self, mock_client_cls):
+        """A v6 zero-hit body (no ergebnisliste key at all) returns []."""
+        _mock_arbeitsagentur_client(
+            mock_client_cls, {"maxErgebnisse": 0, "page": 1, "size": 25, "woOutput": {}}
+        )
 
         jobs = fetch_arbeitsagentur()
         assert jobs == []
+        assert isinstance(jobs, list)
 
 
 # ==================== fetch_arbeitnow ====================
