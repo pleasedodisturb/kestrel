@@ -376,9 +376,10 @@ class ArbeitsagenturAdapter(ScraperAdapter):
             try:
                 data = await self._get_page(client, url, headers, query_params)
             except Exception:
-                # Page 1 failing is a failed search (propagate, as before); a
+                # A failure with nothing collected yet is a failed search
+                # (propagate, so the run records the adapter warning); a
                 # later page failing must not discard rows already collected.
-                if page == 1:
+                if not results:
                     raise
                 logger.warning("Arbeitsagentur page %d failed; keeping %d rows", page, len(results))
                 break

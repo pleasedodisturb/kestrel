@@ -457,6 +457,33 @@ class TestArbeitsagenturAdapterScrape:
         assert [r.url.rsplit("/", 1)[1] for r in results] == ["good-1"]
 
     @pytest.mark.asyncio
+    async def test_scrape_remote_only_later_page_failure_with_nothing_collected_raises(
+        self, monkeypatch
+    ):
+        """Page 1 full but no remote rows, page 2 fails: that is a failed search, not an empty one."""
+        base = _fixture_items()[0]
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            n = parse_qs(urlparse(str(request.url)).query)["page"][0]
+            if n != "1":
+                return httpx.Response(500, text="upstream fault")
+            rows = [
+                {**base, "referenznummer": f"a-{i}", "homeofficemoeglich": False}
+                for i in range(100)
+            ]
+            return httpx.Response(200, json={"ergebnisliste": rows})
+
+        _install_mock_transport(monkeypatch, handler)
+        with pytest.raises(Exception):
+            await ArbeitsagenturAdapter()._fetch_arbeitsagentur_page(
+                httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+                "Manager",
+                "Frankfurt",
+                True,
+                5,
+            )
+
+    @pytest.mark.asyncio
     async def test_scrape_remote_only_stops_at_the_page_cap(self, monkeypatch):
         """With no remote rows anywhere, the walk gives up after the page cap."""
         base = _fixture_items()[0]
