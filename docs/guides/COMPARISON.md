@@ -241,7 +241,7 @@ Not necessarily better - structurally different in ways that matter to some user
 
 **A measured system.** A golden-set scoring eval runs in nightly CI and fails the build on regression, the geo engine is checked against a committed 277-item reference set, a source registry reports every scan source on every run, and personal-data features refuse to run on a provider without zero-data-retention guarantees. The AI response cache is encrypted at rest.
 
-**No auto-apply, by design.** Indeed tried blind auto-apply in July 2026 and pulled it within four weeks; LinkedIn's own Apply Assistant makes you press submit. Kestrel drafts, you send.
+**No auto-apply in the app or the extension, by design.** Indeed tried blind auto-apply in July 2026 and pulled it within four weeks; LinkedIn's own Apply Assistant makes you press submit. Kestrel drafts, you send. The experimental Playwright scripts under `tools/` (see the table above and "Auto-apply is experimental") are maintainer batch tooling outside the app and the extension; whether they stay submit-capable is still being decided. <!-- DECISION #95 -->
 
 ## Who Should Use What
 
