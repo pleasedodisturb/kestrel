@@ -10,7 +10,7 @@ title: Competitive Landscape
 
 ## TL;DR
 
-The job search tool space splits into two camps: polished SaaS trackers that help you organize and auto-fill applications (Huntr, Teal, Simplify), and open-source tools that give you control over your data and pipeline (Career-Ops, JobSync, Kestrel). Kestrel occupies a specific niche - it is the only open-source option that combines automated multi-board discovery, AI scoring against your profile, and a full tracking pipeline in a single self-hosted package. If you want a Chrome extension that fills forms on 1000+ sites today, use Huntr or Simplify. If you want to own your data and automate the discovery-to-application pipeline without paying $30+/month, Kestrel is worth evaluating - but it is new, unproven, and requires Docker to run.
+The job search tool space splits into two camps: polished SaaS trackers that help you organize and auto-fill applications (Huntr, Teal, Simplify), and open-source tools that give you control over your data and pipeline (Career-Ops, JobSync, JobOps, Kestrel). Several open-source projects now combine multi-board discovery, AI scoring against your profile and a tracking pipeline in one self-hosted package. What sets Kestrel apart is that it is built as a measured system: a scoring eval gate in nightly CI, a 7-way geo-eligibility engine with a committed 277-item reference set, a source registry that reports every scan source on every run, provider privacy tiers with an enforced personal-data boundary, EU eligibility depth, and no auto-apply by design. <!-- DECISION #99: positioning one-liner; the differentiator list above is interim wording --> If you want a Chrome extension that fills forms on 1000+ sites today, use Huntr or Simplify. If you want to own your data and automate the discovery-to-application pipeline without paying $30+/month, Kestrel is worth evaluating - but it is new, unproven, and requires a terminal or a Docker/Railway/Codespaces click.
 
 ## The Landscape
 
@@ -20,34 +20,47 @@ Job search tools fall into five categories:
 
 **Commercial auto-fill tools** (Simplify) - Laser-focused on filling out applications fast via browser extension. Less pipeline management, more speed-of-apply.
 
-**Open source tools** (Career-Ops, JobSync, Kestrel) - Self-hosted, data stays with you, free or near-free. Each takes a different approach: Career-Ops is a prompt framework, JobSync is a tracker with AI review, Kestrel adds automated discovery and scoring.
+**Open source tools** (Career-Ops, JobSync, Kestrel) - Self-hosted, data stays with you, free or near-free. Each takes a different approach: Career-Ops is an agent-skill framework with a ~140-script layer, a Go TUI, an opt-in web UI and 93 scanners, JobSync is a tracker with AI review, Kestrel adds automated discovery and scoring.
 
-**AI assistants** (ChatGPT, Claude, vanilla Perplexity) - Can do any individual task well (evaluate a JD, draft a cover letter) but cannot maintain state across sessions, run daily scans, or manage a pipeline over weeks.
+**Agent-skill frameworks** (ai-job-search, Career-Ops) - Skill bundles that run inside Claude Code, Codex or another agent CLI rather than as a standalone app. ai-job-search (44.3k stars as of 2026-09-28) is a Claude Code framework; Career-Ops is the larger and broader of the two. Elsewhere in the open-source camp: JobOps (about 4k stars) combines 13 boards, scoring and a tracker but is source-available under the Commons Clause, not MIT; freehire is an MIT aggregator with an API and an MCP server; JobNavigator polls 11 ATS endpoints and ships an extension and a tracker.
 
-**Agentic AI** (Perplexity Computer) - The new middle ground: a cloud-hosted multi-model agent with persistent memory, scheduled tasks, and a companion browser (Comet) that can auto-fill applications. Covers most of Kestrel's workflow at a premium price ($200/month), but closed, US-centric, and has no structured scoring rubric or pipeline/kanban model.
+**AI assistants** (ChatGPT, Claude, vanilla Perplexity) - Can do any individual task well (evaluate a JD, draft a cover letter) but cannot maintain state across sessions, run daily scans, or manage a pipeline over weeks. ChatGPT now has an Indeed app for discovery; LinkedIn Premium drafts and prefills but you submit.
+
+**Agentic AI** (Perplexity Computer) - The new middle ground: a cloud-hosted multi-model agent with persistent memory, scheduled tasks, and a companion browser (Comet) that can auto-fill applications. Covers most of Kestrel's workflow at $20/mo Pro entry (credit-metered, one-time grant) or $200/mo Max, but closed, US-centric, credit-metered, and has no structured scoring rubric or pipeline/kanban model.
 
 ## Comparison Table
 
 | Dimension | Huntr | Teal | Simplify | Career-Ops | JobSync | Kestrel | Perplexity Computer | AI Assistants |
 |-----------|-------|------|----------|------------|---------|---------|---------------------|---------------|
-| **Cost** | $40/mo | $29/mo | $25-39/mo | Free (needs Claude sub ~$20/mo) | Free | Free (AI: $0-3/mo) | $200/mo (Max) | $0-20/mo |
+| **Cost** | $40/mo | $29/mo | $25-39/mo | Free; runs on ten-plus agent CLIs including free tiers (Antigravity, Ollama, DeepSeek via OpenRouter); the agent path loads ~26K tokens of instructions per evaluation and one user reported $14 for a single run | Free | Free (AI: $0-3/mo) | $20/mo Pro entry (credit-metered, one-time grant) or $200/mo Max | $0-20/mo |
 | **Self-hosted** | No | No | No | Yes (terminal) | Yes (Docker) | Yes (Docker) | No (cloud sandbox) | No |
 | **Data ownership** | Vendor-held | Vendor-held | Vendor-held | Local files | Local SQLite | Local SQLite | Vendor-held (no training) | Session-only |
-| **Web UI** | Yes (polished) | Yes (polished) | Minimal | No (TUI only) | Yes (Shadcn) | Yes (React) | Yes (Max app) | Chat interface |
+| **Web UI** | Yes (polished) | Yes (polished) | Minimal | Go TUI plus an opt-in local Next.js web UI (alpha) | Yes (Shadcn) | Yes (React) | Yes (Max app) | Chat interface |
 | **Mobile app** | Yes | No | No | No | No | No | Yes | Yes (chat) |
-| **Chrome extension** | Yes (1000+ ATS) | Yes | Yes (1000+ ATS) | No | No | No | Comet browser (integrated) | No |
-| **Job discovery** | Manual clip | Manual clip | Curated board | Company pages only | Basic | Multi-board automated | Ad-hoc (web + LinkedIn via Comet) | Ad-hoc search |
-| **Daily auto-scan** | No | No | No | No | No | Yes (GitHub Actions) | Yes (scheduled tasks) | No |
-| **AI scoring** | Resume-vs-JD | Job match score | No | A-F evaluation (6 blocks) | Job matching | Custom profile rubric | Conversational | Conversational |
-| **Custom scoring rubric** | No | No | No | Yes (prompt-based) | No | Yes (profile YAML) | No (prompt-based) | Sort of |
-| **Cover letter gen** | No | No | No | Yes | No | Yes | Yes | Yes (one-off) |
-| **CV tailoring** | AI resume builder | AI resume builder | AI resume (premium) | Yes (excellent) | Resume review | Yes | Yes | Yes (one-off) |
-| **Auto-fill/apply** | Yes (killer feature) | No | Yes (killer feature) | No | No | Experimental (Playwright) | Yes (Comet, killer feature) | No |
+| **Chrome extension** | Yes (1000+ ATS) | Yes | Yes (1000+ ATS) | No <sup>1</sup> | No | Yes (capture, inline score, consented auto-log on LinkedIn jobs, Greenhouse, Lever, Ashby; no auto-fill) | Comet browser (integrated) | No |
+| **Job discovery** | Manual clip | Manual clip | Curated board | 93 provider modules (zero-auth ATS APIs, national job banks incl. Arbeitsagentur, aggregators, HN Who is Hiring), reverse-ATS company sweep | Basic | Multi-board automated | Ad-hoc (web + LinkedIn via Comet) | Ad-hoc search |
+| **Scheduled auto-scan** | No | No | No | Yes (cron/launchd/Task Scheduler recipes, zero-token scans) | No | On a schedule (weekly by default in the app; daily via the optional GitHub Actions workflow) | Yes (scheduled tasks) | No |
+| **AI scoring** | Resume-vs-JD | Job match score | No | A-H evaluation (8 blocks) plus Risk Summary; 5 dimensions to one 1-5 score; evidence-tiered requirement importance | Job matching | Custom profile rubric | Conversational | Conversational |
+| **Custom scoring rubric** | No | No | No | Yes (prompt-based) | No | Yes (per-profile weights in the app, 288 job-family presets, feedback calibration) | No (prompt-based) | Sort of |
+| **Cover letter gen** | No | No | No | Yes | No | Brainstorm mode (conversational text); rendering in tools/ | Yes | Yes (one-off) |
+| **CV tailoring** | AI resume builder | AI resume builder | AI resume (premium) | Yes (excellent) | Resume review | Keyword checklist in-app; RenderCV tooling in tools/ | Yes | Yes (one-off) |
+| **Auto-fill/apply** | Yes (killer feature) | No | Yes (killer feature) | Pre-fill on Greenhouse/Ashby/Lever/Workable, never submits, knock-out pre-scan | No | Experimental (Playwright) | Yes (Comet, killer feature) | No |
 | **Interview prep** | No | No | No | Yes | No | Yes | Yes | Yes (one-off) |
-| **EU job boards** | No | No | No (US-focused) | No | No | Yes (Arbeitsagentur) | No | No |
+| **EU job boards** | No | No | No (US-focused) | Yes (Arbeitsagentur, Interamt, Arbeitnow, VDAB, join.com, WTTJ and more) | No | Yes (Arbeitsagentur, Arbeitnow; Arbeitsagentur adapter being migrated to API v6) | No | No |
 | **REST API** | No | No | No | No | Yes | Yes | No (closed platform) | API exists but different |
-| **Setup effort** | 2 min | 2 min | 2 min | 15 min | 10 min (Docker) | 10 min (Docker) | 0 min | 0 min |
-| **Community** | Large (commercial) | Large (commercial) | Large (commercial) | 23k GitHub stars | 499 stars | 0 stars (new) | Massive (Perplexity) | Massive |
+| **Setup effort** | 2 min | 2 min | 2 min | 15 min | 10 min (Docker) | 5-10 min (pip, npm, Homebrew, Docker, Railway button, Codespaces) | 0 min | 0 min |
+| **Community** | Large (commercial) | Large (commercial) | Large (commercial) | ~73k stars, 13.7k forks, 427 contributors (as of 2026-09-28) | 1.3k stars (as of 2026-09-28) | 7 stars (new, as of 2026-09-28) | Massive (Perplexity) | Massive |
+| **Geo-eligibility engine** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (7 classes, 277-item committed reference set) | Not advertised | No |
+| **Rule-based red flags** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (10 detectors incl. WARN Act layoffs) | Not advertised | No |
+| **Scoring eval gate in CI** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (golden set, nightly) | Not advertised | No |
+| **Source registry** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (every source reported every run) | Not advertised | No |
+| **Provider privacy tiers** | Single vendor | Single vendor | Single vendor | Not advertised | Not advertised | Yes (per-provider tier) | Single vendor | Single vendor |
+| **PII boundary enforcement** | Not advertised | Not advertised | Not advertised | Not advertised | Not advertised | Yes (personal-data features refuse non-ZDR providers) | Not advertised | No |
+| **Encrypted local response cache** | Vendor-held | Vendor-held | Vendor-held | Not advertised | Not advertised | Yes (Fernet at rest) | Vendor-held | No |
+
+<sup>1</sup> Career-Ops has no Chrome extension today, but its web API already allowlists a `chrome-extension://` origin, so one is being prepared.
+
+<!-- DECISION #95: the Kestrel "Auto-fill/apply" cell stays "Experimental (Playwright)" until the public auto-apply stance is decided -->
 
 ## "Can't ChatGPT/Perplexity Do This?"
 
@@ -59,15 +72,15 @@ Honest answer: for any single task, yes. AI assistants are excellent at one-off 
 | Draft a cover letter | Great | Great | Good to great |
 | Search for jobs right now | Good (web search) | Good (Comet + LinkedIn) | Good (board APIs) |
 | Remember your pipeline state tomorrow | No | Yes (persistent memory) | Yes |
-| Run a daily scan while you sleep | No | Yes (scheduled tasks) | Some (Kestrel yes) |
+| Run a daily scan while you sleep | No | Yes (scheduled tasks) | Some (Kestrel via the optional GitHub Actions workflow; weekly by default in the app) |
 | Track 50 applications across stages | No (resets each session) | Partial (memory, no kanban) | Yes |
 | Score 20 new postings against your profile automatically | No | Partial (no structured rubric) | Some (Kestrel yes) |
 | Auto-fill application forms | No | Yes (Comet browser) | Some (Huntr, Simplify) |
 | Export your history for analysis | No persistent history | No (closed sandbox) | Yes |
-| EU job board coverage (Arbeitsagentur) | No | No | Some (Kestrel yes) |
-| Monthly cost | $0-20 | $200 | $0-40 |
+| EU job board coverage (Arbeitsagentur) | No | No | Some (Kestrel, Career-Ops) |
+| Monthly cost | $0-20 | $20 (Pro, credit-metered) or $200 (Max) | $0-40 |
 
-The gap is not intelligence - it is persistence, domain-specific rubrics, data ownership, and price. Vanilla AI chatbots are stateless. Perplexity Computer fixes persistence and even automates recurring tasks, but it runs in a vendor sandbox at $200/month, has no structured rubric scoring, no pipeline/kanban model, and no EU board coverage. Job searching is a weeks-long stateful process that rewards a tool shaped for it.
+The gap is not intelligence - it is persistence, domain-specific rubrics, data ownership, and price. Vanilla AI chatbots are stateless. Perplexity Computer fixes persistence and even automates recurring tasks, but it runs in a vendor sandbox at $20/mo Pro entry (credit-metered, one-time grant) or $200/mo Max, has no structured rubric scoring, no pipeline/kanban model, no EU board coverage, no data ownership, and now a credit meter. Job searching is a weeks-long stateful process that rewards a tool shaped for it.
 
 If you are applying to fewer than 10 jobs total, ChatGPT is probably enough. If you are running a sustained search across dozens of positions over weeks and want a SaaS agent with zero setup, Perplexity Computer will cover most of the workflow at a premium. If you want ownership of your data, rubric-driven scoring, EU board support, or near-zero cost, a dedicated tool is the better fit.
 
@@ -196,9 +209,9 @@ When you outgrow this and want persistence, automation, and daily scans — that
 
 Being honest about the gaps:
 
-**No Chrome extension.** Huntr and Simplify can auto-fill application forms on 1000+ ATS sites with one click. This is their killer feature and Kestrel has nothing comparable. If speed-of-applying is your bottleneck, those tools win outright.
+**No auto-fill.** THE EYE captures and scores; Huntr and Simplify fill forms on 1000+ ATS sites and Kestrel does not (extension v2 will, review-first). If speed-of-applying is your bottleneck, those tools win outright.
 
-**Zero community.** Career-Ops has 23k stars and active contributors. Kestrel has zero. If you hit a problem, you are largely on your own. There is no ecosystem of plugins, no Stack Overflow answers, no YouTube tutorials.
+**Small community.** Career-Ops has ~73k stars (as of 2026-09-28) and active contributors. Kestrel has a handful. If you hit a problem, you are largely on your own. There is no ecosystem of plugins, no Stack Overflow answers, no YouTube tutorials.
 
 **New and unproven.** Every tool listed above has been used by thousands of people. Kestrel has not. Expect rough edges, undocumented behaviors, and bugs that established tools have already fixed.
 
@@ -208,23 +221,27 @@ Being honest about the gaps:
 
 **Auto-apply is experimental.** Kestrel's Playwright-based auto-apply exists but is fragile - CAPTCHAs, dynamic forms, and ATS variations make this unreliable compared to Huntr/Simplify's mature Chrome extensions that work within the browser context.
 
-**CV tailoring is not as refined as Career-Ops.** Career-Ops has invested heavily in prompt engineering for evaluation and CV tailoring. Their A-F 6-block evaluation system is more structured than Kestrel's scoring approach.
+**CV tailoring is not as refined as Career-Ops.** Career-Ops has invested heavily in prompt engineering for evaluation and CV tailoring. Their A-H 8-block evaluation system is more structured than Kestrel's scoring approach.
 
 ## Where Kestrel Is Different
 
 Not necessarily better - structurally different in ways that matter to some users:
 
-**Automated discovery pipeline.** Most tools assume you find jobs yourself and then track them. Kestrel scans multiple job boards daily, scores results against your profile, and surfaces matches - turning discovery from a manual task into a background process.
+**Automated discovery pipeline.** Most tools assume you find jobs yourself and then track them. Kestrel scans multiple job boards on a schedule (weekly by default in the app; daily via the optional GitHub Actions workflow), scores results against your profile, and surfaces matches - turning discovery from a manual task into a background process.
 
 **Custom scoring rubric.** Huntr and Teal score resume-vs-JD (a useful but narrow signal). Kestrel scores against a user-defined profile that can encode priorities like location preference, tech stack alignment, company stage, compensation range, and role fit. You define what "good match" means.
 
 **Full data sovereignty.** Everything runs locally or on your own infrastructure. No account to create, no data sent to a vendor, no risk of a service shutting down or raising prices. Your SQLite database is yours to query, export, back up, or migrate however you want.
 
-**EU job market support.** Arbeitsagentur (German Federal Employment Agency) integration is not glamorous, but if you are job searching in Germany, no other tool in this list supports it. Most tools are US-centric.
+**Deepest EU eligibility handling.** A 7-way geo classifier with a committed 277-item reference set decides home / relocate / visa / remote-eligible per posting; Arbeitsagentur and Arbeitnow feeds included. Career-Ops covers more EU boards; Kestrel decides eligibility per posting.
 
 **Zero vendor lock-in.** Standard SQLite database, REST API, Docker deployment. If Kestrel does not work out, your data is trivially exportable. SaaS tools vary widely on data portability.
 
 **AI provider flexibility.** Works with a mock provider (free, no AI key needed), or any model via OpenRouter at minimal cost. No mandatory $20+/month AI subscription.
+
+**A measured system.** A golden-set scoring eval runs in nightly CI and fails the build on regression, the geo engine is checked against a committed 277-item reference set, a source registry reports every scan source on every run, and personal-data features refuse to run on a provider without zero-data-retention guarantees. The AI response cache is encrypted at rest.
+
+**No auto-apply, by design.** Indeed tried blind auto-apply in July 2026 and pulled it within four weeks; LinkedIn's own Apply Assistant makes you press submit. Kestrel drafts, you send.
 
 ## Who Should Use What
 
@@ -234,10 +251,10 @@ Not necessarily better - structurally different in ways that matter to some user
 | Applying to many jobs fast, US market | **Simplify** or **Huntr** | Chrome auto-fill on 1000+ sites is unmatched |
 | Technical, want data ownership | **Kestrel** or **JobSync** | Self-hosted, local database, full control |
 | Privacy-conscious, anti-cloud | **Kestrel** or **Career-Ops** | Nothing leaves your machine |
-| Searching in EU/Germany specifically | **Kestrel** | Only tool with Arbeitsagentur + EU board support |
-| Already using Claude Code daily | **Career-Ops** | Excellent prompt engineering, leverages your existing subscription |
-| Want automated daily scanning | **Kestrel** | Only open-source tool with scheduled multi-board discovery |
+| Searching in EU/Germany specifically | **Kestrel** or **Career-Ops** | Kestrel: 7-way geo-eligibility classifier with a 277-item reference set, Arbeitsagentur and Arbeitnow feeds. Career-Ops: more EU boards |
+| Already using any agent CLI (Claude Code, Codex, Cursor, Gemini, Copilot, Hermes and more) | **Career-Ops** | Excellent prompt engineering, leverages your existing subscription |
+| Want automated scheduled scanning | **Kestrel** or **Career-Ops** | Kestrel: in-app scheduler plus optional GitHub Actions daily scan. Career-Ops: cron/launchd/Task Scheduler recipes |
 | Applying to fewer than 10 jobs | **ChatGPT/Claude** | A dedicated tool is overkill - just use AI directly |
 | Want a proven tool with community support | **Huntr**, **Teal**, or **Career-Ops** | Established, documented, battle-tested |
 | Want maximum automation end-to-end | **Kestrel** (with caveats) | Discovery + scoring + tracking + apply in one pipeline, but auto-apply is experimental |
-| Willing to pay premium for an all-in-one cloud agent | **Perplexity Computer** ($200/mo) | Persistent memory, scheduled tasks, and Comet browser auto-fill in one product - closest SaaS analog to Kestrel's pipeline, minus the rubric, EU boards, and data ownership |
+| Willing to pay premium for an all-in-one cloud agent | **Perplexity Computer** ($20/mo Pro or $200/mo Max) | Persistent memory, scheduled tasks, and Comet browser auto-fill in one product - closest SaaS analog to Kestrel's pipeline, minus the rubric, EU boards, and data ownership |
