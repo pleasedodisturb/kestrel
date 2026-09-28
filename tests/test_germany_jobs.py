@@ -223,6 +223,45 @@ class TestFetchArbeitsagentur:
         assert jobs[0]["url"].endswith("10000-4-S")
 
     @patch("germany_jobs.httpx.Client")
+    def test_remote_true_walks_pages_until_limit_or_short_page(self, mock_client_cls):
+        """Remote rows on page 2 are found; a short page stops the walk."""
+        base = _load_v6_fixture()["ergebnisliste"][0]
+
+        def page(n, flags):
+            return {
+                "ergebnisliste": [
+                    {**base, "referenznummer": f"1{n}-{i}-S", "homeofficemoeglich": f}
+                    for i, f in enumerate(flags)
+                ]
+            }
+
+        payloads = [
+            page(1, [False] * 100),
+            page(2, [False] * 98 + [True, True]),
+            page(3, [True] * 3),
+        ]
+        mock_client = _mock_arbeitsagentur_client(mock_client_cls, payloads[0])
+        responses = []
+        for p in payloads:
+            r = MagicMock()
+            r.json.return_value = p
+            r.raise_for_status = MagicMock()
+            responses.append(r)
+        mock_client.get.side_effect = responses
+
+        jobs = fetch_arbeitsagentur(keywords="Manager", limit=4, remote=True)
+
+        assert [c[0][0] for c in mock_client.get.call_args_list].__len__() == 3
+        assert ["page=1" in c[0][0] for c in mock_client.get.call_args_list][0]
+        assert "page=3" in mock_client.get.call_args_list[2][0][0]
+        assert [j["url"].rsplit("/", 1)[1] for j in jobs] == [
+            "12-98-S",
+            "12-99-S",
+            "13-0-S",
+            "13-1-S",
+        ]
+
+    @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):
         """A raised exception from client.get is swallowed and returns []."""
         mock_client = MagicMock()

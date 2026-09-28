@@ -290,6 +290,69 @@ class TestArbeitsagenturAdapterScrape:
         assert all(r.remote for r in results)
 
     @pytest.mark.asyncio
+    async def test_scrape_remote_only_walks_pages_until_limit_or_short_page(self, monkeypatch):
+        """Remote rows on page 2 are found; a short page stops the walk."""
+        base = _fixture_items()[0]
+
+        def page(n: int, remote_flags: list[bool]) -> dict:
+            return {
+                "ergebnisliste": [
+                    {**base, "referenznummer": f"1{n}-{i}-S", "homeofficemoeglich": flag}
+                    for i, flag in enumerate(remote_flags)
+                ]
+            }
+
+        pages = {
+            "1": page(1, [False] * 100),  # full page, no remote rows
+            "2": page(2, [False] * 98 + [True, True]),  # full page, two remote rows
+            "3": page(3, [True] * 3),  # short page: result set exhausted
+            "4": page(4, [True] * 100),  # never requested
+        }
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            n = parse_qs(urlparse(str(request.url)).query)["page"][0]
+            seen.append(n)
+            return httpx.Response(200, json=pages[n])
+
+        _install_mock_transport(monkeypatch, handler)
+        results = await ArbeitsagenturAdapter().scrape(
+            ScrapeParams(
+                keywords=["Manager"], locations=["Frankfurt"], limit_per_source=4, remote_only=True
+            )
+        )
+        assert seen == ["1", "2", "3"]
+        assert [r.url.rsplit("/", 1)[1] for r in results] == [
+            "12-98-S",
+            "12-99-S",
+            "13-0-S",
+            "13-1-S",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_scrape_remote_only_stops_at_the_page_cap(self, monkeypatch):
+        """With no remote rows anywhere, the walk gives up after the page cap."""
+        base = _fixture_items()[0]
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(parse_qs(urlparse(str(request.url)).query)["page"][0])
+            rows = [
+                {**base, "referenznummer": f"x-{i}", "homeofficemoeglich": False}
+                for i in range(100)
+            ]
+            return httpx.Response(200, json={"ergebnisliste": rows})
+
+        _install_mock_transport(monkeypatch, handler)
+        results = await ArbeitsagenturAdapter().scrape(
+            ScrapeParams(
+                keywords=["Manager"], locations=["Frankfurt"], limit_per_source=5, remote_only=True
+            )
+        )
+        assert results == []
+        assert seen == ["1", "2", "3", "4", "5"]
+
+    @pytest.mark.asyncio
     async def test_scrape_zero_hit_body_returns_empty_list(self, monkeypatch):
         """A v6 zero-hit body (no ergebnisliste key) returns [] rather than raising."""
 

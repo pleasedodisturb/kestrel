@@ -40,6 +40,9 @@ except ImportError:
 
 ARBEITSAGENTUR_BASE = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
 ARBEITSAGENTUR_API_KEY = "jobboerse-jobsuche"
+# v6 serves at most 100 rows per page; remote searches walk up to 5 pages.
+ARBEITSAGENTUR_PAGE_SIZE = 100
+ARBEITSAGENTUR_MAX_PAGES = 5
 ARBEITNOW_API = "https://www.arbeitnow.com/api/job-board-api"
 
 # Keyword presets
@@ -218,9 +221,10 @@ def fetch_arbeitsagentur(
     remote=True filters client-side on homeofficemoeglich instead.
     """
     params: dict[str, str | int] = {
-        # Client-side remote filtering needs the largest page v6 serves, or a
-        # remote search returns only the remote rows among the first `limit`.
-        "size": 100 if remote else min(limit, 100),
+        # Client-side remote filtering walks the largest pages v6 serves (see
+        # below), or a remote search returns only the remote rows among the
+        # first `limit` results.
+        "size": ARBEITSAGENTUR_PAGE_SIZE if remote else min(limit, 100),
         "page": 1,
         "veroeffentlichtseit": days_old,
         "angebotsart": 1,  # ARBEIT
@@ -230,21 +234,39 @@ def fetch_arbeitsagentur(
     if location:
         params["wo"] = location
 
-    url = f"{ARBEITSAGENTUR_BASE}/pc/v6/jobs?{urlencode(params)}"
     headers = {"X-API-Key": ARBEITSAGENTUR_API_KEY}
 
-    try:
-        with httpx.Client(timeout=30) as client:
-            r = client.get(url, headers=headers)
-            r.raise_for_status()
-            data = r.json()
-    except Exception as e:
-        print(f"Arbeitsagentur API error: {e}", file=sys.stderr)
-        return []
+    def get_page() -> dict | None:
+        url = f"{ARBEITSAGENTUR_BASE}/pc/v6/jobs?{urlencode(params)}"
+        try:
+            with httpx.Client(timeout=30) as client:
+                r = client.get(url, headers=headers)
+                r.raise_for_status()
+                return r.json()
+        except Exception as e:
+            print(f"Arbeitsagentur API error: {e}", file=sys.stderr)
+            return None
 
-    jobs = data.get("ergebnisliste") or []
-    if remote:
-        jobs = [j for j in jobs if j.get("homeofficemoeglich") is True][:limit]
+    if not remote:
+        data = get_page()
+        if data is None:
+            return []
+        jobs = data.get("ergebnisliste") or []
+    else:
+        # Walk pages until `limit` remote rows are collected, a page comes back
+        # short (result set exhausted), or the page cap is hit; a single page
+        # can miss remote jobs that sit on later pages.
+        jobs = []
+        for page in range(1, ARBEITSAGENTUR_MAX_PAGES + 1):
+            params["page"] = page
+            data = get_page()
+            if data is None:
+                return []
+            page_rows = data.get("ergebnisliste") or []
+            jobs += [j for j in page_rows if j.get("homeofficemoeglich") is True]
+            if len(jobs) >= limit or len(page_rows) < ARBEITSAGENTUR_PAGE_SIZE:
+                break
+        jobs = jobs[:limit]
 
     result = []
     for j in jobs:

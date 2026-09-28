@@ -257,6 +257,12 @@ def _parse_arbeitsagentur_job(job_dict: dict, source_name: str) -> RawJobResult:
     )
 
 
+# v6 serves at most 100 rows per page; remote-only searches walk up to this
+# many pages (500 rows) before giving up, bounding the request count.
+ARBEITSAGENTUR_PAGE_SIZE = 100
+ARBEITSAGENTUR_MAX_PAGES = 5
+
+
 class ArbeitsagenturAdapter(ScraperAdapter):
     """Scraper for Germany's Federal Employment Agency API (v6 jobsuche-service)."""
 
@@ -300,29 +306,41 @@ class ArbeitsagenturAdapter(ScraperAdapter):
         remote filter.
         """
         query_params = _build_arbeitsagentur_params(keyword, location, limit)
-        if remote_only:
-            # The filter runs client-side on one page, so ask for the largest
-            # page v6 serves and truncate after filtering; otherwise a
-            # remote-only search returns only the remote rows among the first
-            # `limit` results, usually far fewer than asked for.
-            query_params["size"] = 100
         url = f"{self.ARBEITSAGENTUR_BASE}/pc/v6/jobs"
         headers = {"X-API-Key": self.ARBEITSAGENTUR_API_KEY}
 
+        if not remote_only:
+            data = await self._get_page(client, url, headers, query_params)
+            rows = data.get("ergebnisliste") or []
+            return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows]
+
+        # Client-side remote filter: walk the largest pages v6 serves until
+        # `limit` remote rows are collected, a page comes back short (the
+        # result set is exhausted), or the page cap is hit. A single page of
+        # `limit` rows would return only the remote jobs among them, and a
+        # single page of 100 can still miss remote jobs on later pages.
+        query_params["size"] = ARBEITSAGENTUR_PAGE_SIZE
+        rows = []
+        for page in range(1, ARBEITSAGENTUR_MAX_PAGES + 1):
+            query_params["page"] = page
+            data = await self._get_page(client, url, headers, query_params)
+            page_rows = data.get("ergebnisliste") or []
+            rows += [r for r in page_rows if r.get("homeofficemoeglich") is True]
+            if len(rows) >= limit or len(page_rows) < ARBEITSAGENTUR_PAGE_SIZE:
+                break
+        return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows[:limit]]
+
+    async def _get_page(
+        self, client: httpx.AsyncClient, url: str, headers: dict, query_params: dict
+    ) -> dict:
         try:
             response = await _request_with_backoff(
                 client, "GET", url, headers=headers, params=query_params
             )
-            data = response.json()
+            return response.json()
         except Exception as exc:
             logger.warning("Arbeitsagentur API error: %s", exc)
             raise
-
-        rows = data.get("ergebnisliste") or []
-        if remote_only:
-            rows = [r for r in rows if r.get("homeofficemoeglich") is True][:limit]
-
-        return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows]
 
 
 # ---------------------------------------------------------------------------
