@@ -71,7 +71,16 @@ class TestParseArbeitsagenturJob:
     def test_null_or_non_object_location_entries_fall_back(self):
         """{"stellenlokationen": [null]} and a null adresse must not crash the page."""
         base = _fixture_items()[0]
-        for bad in ([None], [{"adresse": None}], ["Frankfurt"], [{"adresse": "x"}]):
+        for bad in (
+            [None],
+            [{"adresse": None}],
+            ["Frankfurt"],
+            [{"adresse": "x"}],
+            {},
+            {"x": 1},
+            1,
+            "x",
+        ):
             job = _parse_arbeitsagentur_job({**base, "stellenlokationen": bad}, "arbeitsagentur")
             assert job.location == "Deutschland"
 

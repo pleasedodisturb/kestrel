@@ -188,9 +188,12 @@ def _resolve_arbeitsagentur_location(job: dict) -> tuple[str, str]:
     Tolerates a missing/empty stellenlokationen list and a None adresse.
     City falls back from ort to region; country falls back to "Deutschland".
     """
-    lokationen = job.get("stellenlokationen") or []
-    # Third-party data: the first entry or its adresse can be null or a
-    # non-object; treat anything that is not a dict as absent.
+    lokationen = job.get("stellenlokationen")
+    # Third-party data: the collection, its first entry or the adresse can be
+    # null or the wrong type; treat anything that is not the expected shape as
+    # absent rather than aborting the whole page.
+    if not isinstance(lokationen, list):
+        lokationen = []
     first = lokationen[0] if lokationen and isinstance(lokationen[0], dict) else {}
     adresse = first.get("adresse")
     if not isinstance(adresse, dict):
