@@ -447,6 +447,24 @@ class TestArbeitsagenturAdapterScrape:
             )
 
     @pytest.mark.asyncio
+    async def test_scrape_non_object_json_body_is_empty(self, monkeypatch):
+        """A 200 with `null`, a list or a scalar body is an empty page, not a crash."""
+        for body in (None, [], 3, "x"):
+            _install_mock_transport(
+                monkeypatch, lambda request, b=body: httpx.Response(200, json=b)
+            )
+            for remote_only in (False, True):
+                results = await ArbeitsagenturAdapter().scrape(
+                    ScrapeParams(
+                        keywords=["Manager"],
+                        locations=["Frankfurt"],
+                        limit_per_source=5,
+                        remote_only=remote_only,
+                    )
+                )
+                assert results == []
+
+    @pytest.mark.asyncio
     async def test_scrape_zero_hit_body_returns_empty_list(self, monkeypatch):
         """A v6 zero-hit body (no ergebnisliste key) returns [] rather than raising."""
 

@@ -285,6 +285,13 @@ class TestFetchArbeitsagentur:
         assert fetch_arbeitsagentur(keywords="Manager") == []
 
     @patch("germany_jobs.httpx.Client")
+    def test_non_object_json_body_is_empty(self, mock_client_cls):
+        for body in (None, [], 3, "x"):
+            _mock_arbeitsagentur_client(mock_client_cls, body)
+            assert fetch_arbeitsagentur(keywords="Manager") == []
+            assert fetch_arbeitsagentur(keywords="Manager", remote=True) == []
+
+    @patch("germany_jobs.httpx.Client")
     def test_remote_true_keeps_rows_when_a_later_page_fails(self, mock_client_cls):
         base = _load_v6_fixture()["ergebnisliste"][0]
         page1 = {

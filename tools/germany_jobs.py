@@ -186,6 +186,8 @@ def _raw_rows(data: dict) -> list:
     """v6 ergebnisliste as served (a non-list, including the key being absent
     on a zero-hit response, is empty). Its length is what pagination uses to
     detect a short, final page; sanitising must not shorten it."""
+    if not isinstance(data, dict):
+        return []  # valid JSON that is not an object (null, list, scalar): empty
     rows = data.get("ergebnisliste")
     return rows if isinstance(rows, list) else []
 
