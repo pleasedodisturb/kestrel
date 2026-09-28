@@ -1,17 +1,18 @@
 ---
-gsd_state_version: 1.0
-milestone: roadmap-m1
-milestone_name: milestone
-status: milestone_complete
-stopped_at: Phase 5 complete. Milestone phases 2-5 done (Phase 1 skipped).
-last_updated: "2026-05-07T17:40:00.000Z"
-last_activity: 2026-05-07 — roadmap-m1 (Public Roadmap) milestone archived
+gsd_state_version: "1.0"
+milestone: v1.1
+milestone_name: Geo gate to production
+current_phase_name: "Phase 6: Test honesty"
+status: planning
+stopped_at: "ROADMAP.md created for v1.1 (Phases 6-10, 20/20 requirements mapped); ready for /gsd-plan-phase 6"
+last_updated: "2026-09-28T15:12:54.789Z"
+last_activity: 2026-09-28
+state_head: cad0cb20bcc3752e4f78c6e9505ce064fa13411d
 progress:
   total_phases: 5
-  completed_phases: 5
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -21,22 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-21)
 
 **Core value:** Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
-**Current focus:** Phase 5 complete. Milestone phases 2-5 done. Phase 1 (Feature Inventory) skipped.
+**Current focus:** Milestone v1.1 (Geo gate to production) roadmapped: Phases 6-10, 20/20 requirements mapped. Phase 6 (Test honesty) ready to plan.
 
 ## Current Position
 
-Phase: 5 of 5 (Contributor Experience) — Complete
-Plan: 2 of 2 in phase 5 (both plans complete, verified)
-Status: Phase 5 complete. All requirements verified (CONT-01, CONT-02, CONT-03). 3 items in human UAT.
-Last activity: 2026-08-06 — G-1477 (red-main fix, #503 → `b42a5d9`) and G-1474 (geo engine, #504 → `dea5f7c`) merged + closed; **v0.26.0 released** (#500 → `7184230`, PyPI/npm green); **`PII_PATTERNS` secret populated** → the G-1449 gate is armed for the first time (6 patterns, was silently fail-open at 0) and its first run cleared the new geo fixture. Follow-ups filed: G-1483/1484/1485 (geo, Backlog + route/agent), G-1491 (tools/ ruff autofixes, merged `bea7f2d`), G-1492 (linear cheatsheet, terminal-craft #160 merged), **G-1493 (P2 — `pr-review-standard.md` claims a pre-push `Reviewed-by` hook that does not exist; G-579 never landed)**.
-
-> **NOTE (2026-08-06):** this file's quick-task table was rebuilt after a hard reset discarded ~1 month of uncommitted working-tree state in `.planning/`. Rows were reconstructed from the surviving untracked `.planning/quick/*/` dirs + git log; `ROADMAP.md` and `config.json` could not be reconstructed and sit at their committed state.
->
-> **Partial fix only — the exposure is not closed.** This file is now committed, so it survives a working-tree reset. The 17 untracked `.planning/quick/*/` and `.planning/phases/*/` directories are **still untracked and still at risk** from the same commands (`reset --hard`, `clean -fd`) — they are what made this reconstruction possible, and nothing protects them. Committing them to this public repo is a separate decision (they contain planning and review artifacts that need a scrub pass first); tracked under **G-1494**.
->
-> COE (local, not in this repo — it is cross-cutting): `~/Projects/command-center/coe/2026-08-06_git-reset-hard-destroyed-uncommitted-planning-state.md`. Pre-flight rule: run `git status --porcelain | grep -v '^??'` before any working-tree-clearing command; prefer `git restore --source=<ref> -- <paths>`.
-
-Progress: [██████████] 100%
+Phase: 6 of 10 (Test honesty) - first phase of milestone v1.1
+Plan: - (not yet planned; run /gsd-plan-phase 6)
+Status: Ready to plan
+Last activity: 2026-09-28 - ROADMAP.md created for v1.1 (Phases 6-10, 20/20 requirements mapped)
 
 ## Performance Metrics
 
@@ -83,6 +76,8 @@ Recent decisions affecting current work:
 - Planned template adaptation: Design Considerations, Open Questions, Research Needed replace shipped sections
 - Feature Flags deep dive satisfies ROAD-15 without ROADMAP.md entry (internal infrastructure)
 - All Mermaid diagrams synced with Phase 3 prose: Know Me added, Voice Mode renamed, Feature Flags edge added
+- v1.1 roadmap: Phases 6-10 continue numbering from roadmap-m1 (ended at Phase 5); every phase ships as its own PR through the review-push gate (branch, signed review, merge only on green CI)
+- Phase 8 (Over-admission rule, RULE-01..04) requires /gsd-discuss-phase before planning; the rule is a design decision to be re-measured against the 277-item blind set
 
 ### Pending Todos
 
@@ -129,6 +124,6 @@ Items acknowledged and deferred at roadmap-m1 milestone close on 2026-05-07:
 
 ## Session Continuity
 
-Last session: 2026-04-27T17:16:00.000Z
-Stopped at: Completed 04-02-PLAN.md (Phase 4 complete: all deep dives, ROADMAP.md links, Mermaid fixes)
-Resume file: None (Phase 4 complete)
+Last session: 2026-09-28T15:12:54.789Z
+Stopped at: ROADMAP.md created for v1.1 (Phases 6-10, 20/20 requirements mapped); ready to run /gsd-plan-phase 6
+Resume file: None (roadmap complete, ready for phase planning)

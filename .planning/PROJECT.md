@@ -2,14 +2,22 @@
 
 ## Current State
 
-**roadmap-m1 (Public Roadmap) shipped 2026-05-07.** The repo now has a public roadmap at root, 20 milestone deep dives in `docs/roadmap/`, contributor callouts pointing to concrete contribution areas, a Finding Work section in CONTRIBUTING.md, and a Codespaces one-click dev environment. Phase 1 (Feature Inventory) was deferred to v1.1 — its intent was naturally absorbed into deep dives + `docs/roadmap/inventory.md`.
+**roadmap-m1 (Public Roadmap) shipped 2026-05-07.** Since then the codebase moved on outside GSD: Scoring Engine v2 (G-1335..G-1338, July), the browser extension "the eye" (v0.24.0, August), the generic 7-way geo engine (G-1474, `src/career_os/services/geo/`, August), an evidence-bound pre-push review gate (G-1725/G-1726, September) and a Dependabot/CodeQL intake (September). Main is at v0.28.x with 0 open security alerts.
 
-## Next Milestone Goals
+## Current Milestone: v1.1 Geo gate to production
 
-To be defined via `/gsd-new-milestone`. Carry-over candidates:
-- **Feature Inventory deferred (INV-01..08)** — only worth picking up if a unified standalone inventory.md is wanted
-- **Deployment/packaging milestone** — highest-priority forward work per Phase 3 (PWA → native desktop app)
-- **BMAD PRD process** — 5/13 steps complete from earlier work, could be picked back up
+**Linear epic:** G-1790 (children G-1382, G-1383, G-1483, G-1496, G-1484, G-1485, G-1440).
+
+**Goal:** Make the shipped geo engine actually decide something in production, with one classifier, honest tests and provider failures that are told apart.
+
+**Target features:**
+- Test honesty: no import-masking module-level skips; one ruff version for dev and CI with a drift assert (G-1382, G-1383)
+- Wire the geo gate: `SearchProfile.filters` enables it, `geo_class` is persisted and visible in the discovery API, default behaviour byte-identical (G-1483)
+- Over-admission rule for multi-office companies, chosen on the 277-item blind set while keeping the secondary-location rescue (G-1496)
+- Single authority: `tools/batch_probe.py` delegates to the package engine; blind-set fixture trimmed with a behaviour-neutrality proof (G-1485, G-1484)
+- Provider preflight tool and 402-vs-429 discrimination with distinct retry/fallback (remaining half of G-1440)
+
+**Key context:** Every phase is a PR on its own `<ticket>/<slug>` branch, commits signed by `review-push` after a Codex review, merged only on green CI. Excluded on purpose because they need a human decision: G-1448 (PII in public history), G-1759 (ungated MacBook), G-1449 (partly met PII gate), G-1734 (cross-repo review-record publishing).
 
 ## What This Is
 
@@ -45,7 +53,12 @@ Make Kestrel's direction visible and structured so users can evaluate the produc
 
 ### Active
 
-- [ ] Define epic structure within milestones that links to Linear tickets
+- [ ] Test suite is honest: no ImportError-masking module skips, one ruff version governs dev and CI (v1.1)
+- [ ] A user can enable the geo gate per search profile and see each job's `geo_class` in discovery results, with defaults unchanged (v1.1)
+- [ ] Multi-office global companies no longer pass the gate on the strength of one eligible desk; the secondary-location rescue still works (v1.1)
+- [ ] One geo classifier: `batch_probe` delegates to `services/geo`; the public blind-set fixture carries no full-text JDs (v1.1)
+- [ ] Providers tell "no credits" (402) from "rate limited" (429) and a preflight tool reports provider readiness (v1.1)
+- [ ] Define epic structure within milestones that links to Linear tickets — done in practice: each GSD milestone is a Linear epic with phase tickets as children (G-1790)
 
 ### Validated in roadmap-m1 (Public Roadmap) (2026-05-07)
 
@@ -163,4 +176,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 after roadmap-m1 (Public Roadmap) milestone completion*
+*Last updated: 2026-09-28 after starting milestone v1.1 (Geo gate to production)*
