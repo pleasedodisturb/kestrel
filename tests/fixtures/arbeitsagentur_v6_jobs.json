@@ -1,0 +1,144 @@
+{
+  "ergebnisliste": [
+    {
+      "stellenangebotsart": "ARBEIT",
+      "stellenangebotsTitel": "Bid Manager (m/w/d)",
+      "arbeitszeitVollzeit": true,
+      "eintrittszeitraum": {
+        "von": "2026-09-03"
+      },
+      "verguetungsangabe": "KEINE_ANGABEN",
+      "vertragsdauer": "UNBEFRISTET",
+      "stellenlokationen": [
+        {
+          "adresse": {
+            "strasse": "Herriotstraße",
+            "hausnummer": "1",
+            "plz": "60528",
+            "ort": "Frankfurt am Main",
+            "region": "HESSEN",
+            "land": "DEUTSCHLAND"
+          },
+          "breite": 50.08104,
+          "laenge": 8.6292045
+        }
+      ],
+      "homeofficemoeglich": true,
+      "homeofficetyp": "NACH_VEREINBARUNG",
+      "veroeffentlichungszeitraum": {
+        "von": "2026-09-03"
+      },
+      "datumErsteVeroeffentlichung": "2026-09-03",
+      "aenderungsdatum": "2026-09-03T09:47:59.830",
+      "hauptberuf": "Tender-Manager/in",
+      "alternativBeruf1": "Tender-Manager/in",
+      "firma": "SD Worx GmbH",
+      "referenznummer": "10001-1003645841-S",
+      "entfernung": 6,
+      "alleBerufe": [
+        "Tender-Manager/in",
+        "Tender-Manager/in"
+      ]
+    },
+    {
+      "stellenangebotsart": "ARBEIT",
+      "stellenangebotsTitel": "Release Manager (m/w/d)",
+      "quereinstiegGeeignet": false,
+      "arbeitszeitSchichtNachtWochenende": false,
+      "arbeitszeitTeilzeitAbend": false,
+      "arbeitszeitTeilzeitNachmittag": false,
+      "arbeitszeitTeilzeitVormittag": false,
+      "arbeitszeitTeilzeitFlexibel": false,
+      "arbeitszeitVollzeit": true,
+      "eintrittszeitraum": {
+        "von": "2026-09-18"
+      },
+      "verguetungsangabe": "KEINE_ANGABEN",
+      "vertragsdauer": "KEINE_ANGABE",
+      "istGeringfuegigeBeschaeftigung": false,
+      "stellenlokationen": [
+        {
+          "adresse": {
+            "plz": "60486",
+            "ort": "Frankfurt am Main",
+            "region": "HESSEN",
+            "land": "DEUTSCHLAND"
+          },
+          "breite": 50.1143251,
+          "laenge": 8.629914
+        }
+      ],
+      "homeofficemoeglich": false,
+      "veroeffentlichungszeitraum": {
+        "von": "2026-09-18"
+      },
+      "datumErsteVeroeffentlichung": "2026-09-18",
+      "aenderungsdatum": "2026-09-18T07:03:02.363",
+      "externeURL": "https://gute-jobs.de/viewjob-zahdp?utm_source=jsba-premium&utm_medium=n-a&utm_campaign=jsba-premium&utm_term=release-manager-m-w-d",
+      "hauptberuf": "Deployment-/Release-Manager/in",
+      "firma": "BWI GmbH",
+      "referenznummer": "12336-a26f539j0448996-S",
+      "entfernung": 3,
+      "alleBerufe": [
+        "Deployment-/Release-Manager/in"
+      ]
+    },
+    {
+      "stellenangebotsart": "ARBEIT",
+      "stellenangebotsTitel": "Bid Manager (m/w/d)",
+      "quereinstiegGeeignet": false,
+      "arbeitszeitSchichtNachtWochenende": false,
+      "arbeitszeitTeilzeitAbend": false,
+      "arbeitszeitTeilzeitNachmittag": false,
+      "arbeitszeitTeilzeitVormittag": false,
+      "arbeitszeitTeilzeitFlexibel": false,
+      "arbeitszeitVollzeit": true,
+      "eintrittszeitraum": {
+        "von": "2026-01-27"
+      },
+      "verguetungsangabe": "KEINE_ANGABEN",
+      "vertragsdauer": "UNBEFRISTET",
+      "istGeringfuegigeBeschaeftigung": false,
+      "stellenlokationen": [
+        {
+          "adresse": {
+            "strasse": "Franklinstraße 61-63",
+            "plz": "60486",
+            "ort": "Frankfurt am Main",
+            "region": "HESSEN",
+            "land": "DEUTSCHLAND"
+          },
+          "breite": 50.116752,
+          "laenge": 8.628588
+        }
+      ],
+      "veroeffentlichungszeitraum": {
+        "von": "2026-01-27"
+      },
+      "datumErsteVeroeffentlichung": "2026-01-27",
+      "aenderungsdatum": "2026-01-27T17:36:08.762",
+      "hauptberuf": "Tender-Manager/in",
+      "alternativBeruf1": "Fachkaufmann/-frau - Vertrieb",
+      "firma": "CANCOM SE",
+      "referenznummer": "18935-2114075-S",
+      "entfernung": 2,
+      "alleBerufe": [
+        "Tender-Manager/in",
+        "Fachkaufmann/-frau - Vertrieb"
+      ]
+    }
+  ],
+  "maxErgebnisse": 1270,
+  "page": 1,
+  "size": 100,
+  "woOutput": {
+    "bereinigterOrt": "Frankfurt am Main",
+    "suchmodus": "UMKREISSUCHE",
+    "koordinaten": [
+      {
+        "lat": 50.139159,
+        "lon": 8.62992965
+      }
+    ]
+  }
+}

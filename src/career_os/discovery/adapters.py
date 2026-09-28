@@ -15,7 +15,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
 import httpx
 
@@ -172,10 +172,15 @@ def _log_retry(exc: Exception, _url: str, backoff: float, attempt: int, max_retr
 def _build_arbeitsagentur_params(
     keyword: str,
     location: str,
-    remote_only: bool,
     limit: int,
 ) -> dict[str, str | int]:
-    """Build query params dict for the Arbeitsagentur API."""
+    """Build query params dict for the Arbeitsagentur v6 API.
+
+    v6 has no working remote filter (`arbeitszeit=ho` returns zero rows; every
+    tried value of the `homeoffice` param is rejected with a 400). Remote
+    filtering happens client-side on `homeofficemoeglich` in
+    `_fetch_arbeitsagentur_page` instead.
+    """
     query_params: dict[str, str | int] = {
         "size": min(limit, 100),
         "page": 1,
@@ -186,45 +191,74 @@ def _build_arbeitsagentur_params(
         query_params["was"] = keyword
     if location:
         query_params["wo"] = location
-    if remote_only:
-        query_params["arbeitszeit"] = "ho"
     return query_params
 
 
+def _title_case_if_all_upper(value: str) -> str:
+    """Convert an ALL-CAPS string to title case; pass mixed-case values through unchanged."""
+    if value and value == value.upper():
+        return value.title()
+    return value
+
+
+def _resolve_arbeitsagentur_location(job_dict: dict) -> tuple[str, str]:
+    """Resolve (city, country) from stellenlokationen[0].adresse.
+
+    Tolerates a missing/empty stellenlokationen list and a None adresse.
+    City falls back from ort to region; country falls back to "Deutschland".
+    An ALL-CAPS land/region value is de-capitalised with str.title(); mixed-case
+    values pass through unchanged.
+    """
+    lokationen = job_dict.get("stellenlokationen") or []
+    adresse = (lokationen[0].get("adresse") if lokationen else None) or {}
+
+    region = _title_case_if_all_upper(adresse.get("region", "") or "")
+    city = adresse.get("ort", "") or region
+    country = _title_case_if_all_upper(adresse.get("land", "") or "") or "Deutschland"
+    return city, country
+
+
 def _resolve_arbeitsagentur_url(job_dict: dict) -> str:
-    """Resolve the job URL from hashId, refnr, or return empty string."""
-    hash_id = job_dict.get("hashId", "")
-    if hash_id:
-        return f"https://www.arbeitsagentur.de/jobboerse/jobsuche/detail/{hash_id}"
-    refnr = job_dict.get("refnr", "")
-    if refnr:
-        return f"https://www.arbeitsagentur.de/jobsuche/suche?was={quote_plus(refnr)}"
+    """Resolve the job URL from referenznummer (v6 jobdetail page), then externeURL."""
+    referenznummer = job_dict.get("referenznummer", "")
+    if referenznummer:
+        return "https://www.arbeitsagentur.de/jobsuche/jobdetail/" + quote(referenznummer, safe="")
+    externe_url = job_dict.get("externeURL", "")
+    if externe_url:
+        return externe_url
     return ""
 
 
 def _parse_arbeitsagentur_job(job_dict: dict, source_name: str) -> RawJobResult:
-    """Parse a single Arbeitsagentur job dict into a RawJobResult."""
-    arbeitgeber = job_dict.get("arbeitgeber", "")
-    beruf = job_dict.get("beruf", "")
-    refnr = job_dict.get("refnr", "")
-    ar = job_dict.get("arbeitsort", {}) or {}
-    ort = ar.get("ort", "") or ar.get("region", "") or ""
-    land = ar.get("land", "Deutschland")
+    """Parse a single v6 Arbeitsagentur job dict into a RawJobResult."""
+    firma = job_dict.get("firma", "")
+    referenznummer = job_dict.get("referenznummer", "")
+    title = (
+        job_dict.get("stellenangebotsTitel")
+        or job_dict.get("hauptberuf")
+        or f"Stelle {referenznummer}"
+    )
+    city, country = _resolve_arbeitsagentur_location(job_dict)
+    location_str = f"{city}, {country}" if city else country
 
-    location_str = f"{ort}, {land}".strip(", ") if ort or land else "Deutschland"
+    veroeffentlichungszeitraum = job_dict.get("veroeffentlichungszeitraum") or {}
+    posted_raw = veroeffentlichungszeitraum.get("von") or job_dict.get(
+        "datumErsteVeroeffentlichung", ""
+    )
 
     return RawJobResult(
         source=source_name,
-        title=beruf or f"Stelle {refnr}",
-        company=arbeitgeber,
+        title=title,
+        company=firma,
         location=location_str,
+        remote=job_dict.get("homeofficemoeglich") is True,
         url=_resolve_arbeitsagentur_url(job_dict),
-        posted_at=_parse_date(job_dict.get("aktuelleVeroeffentlichungsdatum", "")),
+        posted_at=_parse_date(posted_raw),
     )
 
 
 class ArbeitsagenturAdapter(ScraperAdapter):
-    """Scraper for Germany's Federal Employment Agency API."""
+    """Scraper for Germany's Federal Employment Agency API (v6 jobsuche-service)."""
 
     ARBEITSAGENTUR_BASE = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
     ARBEITSAGENTUR_API_KEY = "jobboerse-jobsuche"
@@ -257,9 +291,16 @@ class ArbeitsagenturAdapter(ScraperAdapter):
         remote_only: bool,
         limit: int,
     ) -> list[RawJobResult]:
-        """Fetch and parse a single keyword/location combination."""
-        query_params = _build_arbeitsagentur_params(keyword, location, remote_only, limit)
-        url = f"{self.ARBEITSAGENTUR_BASE}/pc/v4/jobs"
+        """Fetch and parse a single keyword/location combination.
+
+        v6's `ergebnisliste` key is absent entirely on a zero-hit response, so
+        it is read with `.get(...) or []`. `remote_only` filters client-side on
+        `homeofficemoeglich` (an identity check against True, so a string or a
+        missing key never counts as remote) since v6 has no working server-side
+        remote filter.
+        """
+        query_params = _build_arbeitsagentur_params(keyword, location, limit)
+        url = f"{self.ARBEITSAGENTUR_BASE}/pc/v6/jobs"
         headers = {"X-API-Key": self.ARBEITSAGENTUR_API_KEY}
 
         try:
@@ -271,9 +312,11 @@ class ArbeitsagenturAdapter(ScraperAdapter):
             logger.warning("Arbeitsagentur API error: %s", exc)
             raise
 
-        return [
-            _parse_arbeitsagentur_job(j, self.source_name) for j in data.get("stellenangebote", [])
-        ]
+        rows = data.get("ergebnisliste") or []
+        if remote_only:
+            rows = [r for r in rows if r.get("homeofficemoeglich") is True]
+
+        return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows]
 
 
 # ---------------------------------------------------------------------------
