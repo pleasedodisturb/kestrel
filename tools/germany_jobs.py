@@ -182,12 +182,17 @@ def _title_case_if_all_upper(value: str) -> str:
     return value
 
 
-def _dict_rows(data: dict) -> list[dict]:
-    """v6 ergebnisliste rows that are objects; null or scalar entries are skipped."""
+def _raw_rows(data: dict) -> list:
+    """v6 ergebnisliste as served (a non-list, including the key being absent
+    on a zero-hit response, is empty). Its length is what pagination uses to
+    detect a short, final page; sanitising must not shorten it."""
     rows = data.get("ergebnisliste")
-    if not isinstance(rows, list):
-        return []
-    return [r for r in rows if isinstance(r, dict)]
+    return rows if isinstance(rows, list) else []
+
+
+def _dict_rows(raw: list) -> list[dict]:
+    """Rows that are objects; a null or scalar entry is skipped, not fatal."""
+    return [r for r in raw if isinstance(r, dict)]
 
 
 def _resolve_arbeitsagentur_location(job: dict) -> tuple[str, str]:
@@ -267,7 +272,7 @@ def fetch_arbeitsagentur(
         data = get_page()
         if data is None:
             return []
-        jobs = _dict_rows(data)
+        jobs = _dict_rows(_raw_rows(data))
     else:
         # Walk pages until `limit` remote rows are collected, a page comes back
         # short (result set exhausted), or the page cap is hit; a single page
@@ -280,9 +285,10 @@ def fetch_arbeitsagentur(
                 # A failing later page must not discard rows already collected;
                 # a failing first page is still an empty result.
                 break
-            page_rows = _dict_rows(data)
-            jobs += [j for j in page_rows if j.get("homeofficemoeglich") is True]
-            if len(jobs) >= limit or len(page_rows) < ARBEITSAGENTUR_PAGE_SIZE:
+            raw = _raw_rows(data)
+            jobs += [j for j in _dict_rows(raw) if j.get("homeofficemoeglich") is True]
+            # Exhaustion is judged on the page as served, not after sanitising.
+            if len(jobs) >= limit or len(raw) < ARBEITSAGENTUR_PAGE_SIZE:
                 break
         jobs = jobs[:limit]
 

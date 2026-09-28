@@ -369,6 +369,37 @@ class TestArbeitsagenturAdapterScrape:
         assert [r.url.rsplit("/", 1)[1] for r in results] == ["11-7-S"]
 
     @pytest.mark.asyncio
+    async def test_scrape_remote_only_null_row_on_a_full_page_is_not_exhaustion(self, monkeypatch):
+        """99 objects plus one null is still a full page: page 2 must be requested."""
+        base = _fixture_items()[0]
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            n = parse_qs(urlparse(str(request.url)).query)["page"][0]
+            seen.append(n)
+            if n == "1":
+                rows = [
+                    {**base, "referenznummer": f"a-{i}", "homeofficemoeglich": False}
+                    for i in range(99)
+                ]
+                return httpx.Response(200, json={"ergebnisliste": [*rows, None]})
+            return httpx.Response(
+                200,
+                json={
+                    "ergebnisliste": [{**base, "referenznummer": "b-0", "homeofficemoeglich": True}]
+                },
+            )
+
+        _install_mock_transport(monkeypatch, handler)
+        results = await ArbeitsagenturAdapter().scrape(
+            ScrapeParams(
+                keywords=["Manager"], locations=["Frankfurt"], limit_per_source=1, remote_only=True
+            )
+        )
+        assert seen == ["1", "2"]
+        assert [r.url.rsplit("/", 1)[1] for r in results] == ["b-0"]
+
+    @pytest.mark.asyncio
     async def test_scrape_remote_only_stops_at_the_page_cap(self, monkeypatch):
         """With no remote rows anywhere, the walk gives up after the page cap."""
         base = _fixture_items()[0]

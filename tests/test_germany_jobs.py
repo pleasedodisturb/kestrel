@@ -304,6 +304,30 @@ class TestFetchArbeitsagentur:
         assert [j["url"].rsplit("/", 1)[1] for j in jobs] == ["11-7-S"]
 
     @patch("germany_jobs.httpx.Client")
+    def test_remote_true_null_row_on_a_full_page_is_not_exhaustion(self, mock_client_cls):
+        base = _load_v6_fixture()["ergebnisliste"][0]
+        page1 = {
+            "ergebnisliste": [
+                {**base, "referenznummer": f"a-{i}", "homeofficemoeglich": False} for i in range(99)
+            ]
+            + [None]
+        }
+        page2 = {"ergebnisliste": [{**base, "referenznummer": "b-0", "homeofficemoeglich": True}]}
+        mock_client = _mock_arbeitsagentur_client(mock_client_cls, page1)
+        responses = []
+        for p in (page1, page2):
+            r = MagicMock()
+            r.json.return_value = p
+            r.raise_for_status = MagicMock()
+            responses.append(r)
+        mock_client.get.side_effect = responses
+
+        jobs = fetch_arbeitsagentur(keywords="Manager", limit=1, remote=True)
+
+        assert mock_client.get.call_count == 2
+        assert [j["url"].rsplit("/", 1)[1] for j in jobs] == ["b-0"]
+
+    @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):
         """A raised exception from client.get is swallowed and returns []."""
         mock_client = MagicMock()

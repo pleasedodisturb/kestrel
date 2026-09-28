@@ -194,14 +194,17 @@ def _build_arbeitsagentur_params(
     return query_params
 
 
-def _dict_rows(data: dict) -> list[dict]:
-    """v6 `ergebnisliste` rows that are objects; a null or scalar entry in the
-    third-party list is skipped rather than aborting the whole page. The key
-    is absent entirely on a zero-hit response."""
+def _raw_rows(data: dict) -> list:
+    """v6 ergebnisliste as served (a non-list, including the key being absent
+    on a zero-hit response, is empty). Its length is what pagination uses to
+    detect a short, final page; sanitising must not shorten it."""
     rows = data.get("ergebnisliste")
-    if not isinstance(rows, list):
-        return []
-    return [r for r in rows if isinstance(r, dict)]
+    return rows if isinstance(rows, list) else []
+
+
+def _dict_rows(raw: list) -> list[dict]:
+    """Rows that are objects; a null or scalar entry is skipped, not fatal."""
+    return [r for r in raw if isinstance(r, dict)]
 
 
 def _title_case_if_all_upper(value: str) -> str:
@@ -329,7 +332,7 @@ class ArbeitsagenturAdapter(ScraperAdapter):
 
         if not remote_only:
             data = await self._get_page(client, url, headers, query_params)
-            rows = _dict_rows(data)
+            rows = _dict_rows(_raw_rows(data))
             return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows]
 
         # Client-side remote filter: walk the largest pages v6 serves until
@@ -350,9 +353,11 @@ class ArbeitsagenturAdapter(ScraperAdapter):
                     raise
                 logger.warning("Arbeitsagentur page %d failed; keeping %d rows", page, len(rows))
                 break
-            page_rows = _dict_rows(data)
-            rows += [r for r in page_rows if r.get("homeofficemoeglich") is True]
-            if len(rows) >= limit or len(page_rows) < ARBEITSAGENTUR_PAGE_SIZE:
+            raw = _raw_rows(data)
+            rows += [r for r in _dict_rows(raw) if r.get("homeofficemoeglich") is True]
+            # Exhaustion is judged on the page as served, not after sanitising:
+            # a full page with one null entry is not the last page.
+            if len(rows) >= limit or len(raw) < ARBEITSAGENTUR_PAGE_SIZE:
                 break
         return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows[:limit]]
 
