@@ -80,9 +80,27 @@ class TestParseArbeitsagenturJob:
             {"x": 1},
             1,
             "x",
+            [{"adresse": {"region": 123, "land": ["DE"], "ort": None}}],
         ):
             job = _parse_arbeitsagentur_job({**base, "stellenlokationen": bad}, "arbeitsagentur")
             assert job.location == "Deutschland"
+
+    def test_non_string_text_fields_are_treated_as_absent(self):
+        base = _fixture_items()[0]
+        job = _parse_arbeitsagentur_job(
+            {
+                **base,
+                "firma": 5,
+                "stellenangebotsTitel": None,
+                "hauptberuf": ["x"],
+                "referenznummer": 7,
+                "externeURL": 1,
+            },
+            "arbeitsagentur",
+        )
+        assert job.company == ""
+        assert job.title == "Stelle "
+        assert job.url == ""
 
     def test_parses_absent_remote_key_item(self):
         """A fixture item with no homeofficemoeglich key at all maps to remote=False."""
@@ -451,7 +469,12 @@ class TestArbeitsagenturAdapterScrape:
         """A 200 with `null`, a list or a scalar body is an empty page, not a crash."""
         for body in (None, [], 3, "x"):
             _install_mock_transport(
-                monkeypatch, lambda request, b=body: httpx.Response(200, json=b)
+                monkeypatch,
+                lambda request, b=body: httpx.Response(
+                    200,
+                    content=json.dumps(b).encode(),
+                    headers={"content-type": "application/json"},
+                ),
             )
             for remote_only in (False, True):
                 results = await ArbeitsagenturAdapter().scrape(

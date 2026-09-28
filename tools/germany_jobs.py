@@ -175,6 +175,11 @@ def stars(score: int) -> str:
     return "★" * score + "☆" * (5 - score)
 
 
+def _text(value: object) -> str:
+    """A third-party field as text: strings pass through, anything else is absent."""
+    return value if isinstance(value, str) else ""
+
+
 def _title_case_if_all_upper(value: str) -> str:
     """Convert an ALL-CAPS string to title case; pass mixed-case values through unchanged."""
     if value and value == value.upper():
@@ -214,21 +219,18 @@ def _resolve_arbeitsagentur_location(job: dict) -> tuple[str, str]:
     if not isinstance(adresse, dict):
         adresse = {}
 
-    region = _title_case_if_all_upper(adresse.get("region", "") or "")
-    city = adresse.get("ort", "") or region
-    country = _title_case_if_all_upper(adresse.get("land", "") or "") or "Deutschland"
+    region = _title_case_if_all_upper(_text(adresse.get("region")))
+    city = _text(adresse.get("ort")) or region
+    country = _title_case_if_all_upper(_text(adresse.get("land"))) or "Deutschland"
     return city, country
 
 
 def _resolve_arbeitsagentur_url(job: dict) -> str:
     """Resolve the job URL from referenznummer (v6 jobdetail page), then externeURL."""
-    referenznummer = job.get("referenznummer", "")
+    referenznummer = _text(job.get("referenznummer"))
     if referenznummer:
         return "https://www.arbeitsagentur.de/jobsuche/jobdetail/" + quote(referenznummer, safe="")
-    externe_url = job.get("externeURL", "")
-    if externe_url:
-        return externe_url
-    return ""
+    return _text(job.get("externeURL"))
 
 
 def fetch_arbeitsagentur(
@@ -296,9 +298,13 @@ def fetch_arbeitsagentur(
 
     result = []
     for j in jobs:
-        firma = j.get("firma", "")
-        referenznummer = j.get("referenznummer", "")
-        title = j.get("stellenangebotsTitel") or j.get("hauptberuf") or f"Stelle {referenznummer}"
+        firma = _text(j.get("firma"))
+        referenznummer = _text(j.get("referenznummer"))
+        title = (
+            _text(j.get("stellenangebotsTitel"))
+            or _text(j.get("hauptberuf"))
+            or f"Stelle {referenznummer}"
+        )
         city, country = _resolve_arbeitsagentur_location(j)
         veroeffentlichungszeitraum = j.get("veroeffentlichungszeitraum") or {}
         posted = veroeffentlichungszeitraum.get("von") or j.get("datumErsteVeroeffentlichung", "")

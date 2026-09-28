@@ -209,6 +209,11 @@ def _dict_rows(raw: list) -> list[dict]:
     return [r for r in raw if isinstance(r, dict)]
 
 
+def _text(value: object) -> str:
+    """A third-party field as text: strings pass through, anything else is absent."""
+    return value if isinstance(value, str) else ""
+
+
 def _title_case_if_all_upper(value: str) -> str:
     """Convert an ALL-CAPS string to title case; pass mixed-case values through unchanged."""
     if value and value == value.upper():
@@ -235,30 +240,27 @@ def _resolve_arbeitsagentur_location(job_dict: dict) -> tuple[str, str]:
     if not isinstance(adresse, dict):
         adresse = {}
 
-    region = _title_case_if_all_upper(adresse.get("region", "") or "")
-    city = adresse.get("ort", "") or region
-    country = _title_case_if_all_upper(adresse.get("land", "") or "") or "Deutschland"
+    region = _title_case_if_all_upper(_text(adresse.get("region")))
+    city = _text(adresse.get("ort")) or region
+    country = _title_case_if_all_upper(_text(adresse.get("land"))) or "Deutschland"
     return city, country
 
 
 def _resolve_arbeitsagentur_url(job_dict: dict) -> str:
     """Resolve the job URL from referenznummer (v6 jobdetail page), then externeURL."""
-    referenznummer = job_dict.get("referenznummer", "")
+    referenznummer = _text(job_dict.get("referenznummer"))
     if referenznummer:
         return "https://www.arbeitsagentur.de/jobsuche/jobdetail/" + quote(referenznummer, safe="")
-    externe_url = job_dict.get("externeURL", "")
-    if externe_url:
-        return externe_url
-    return ""
+    return _text(job_dict.get("externeURL"))
 
 
 def _parse_arbeitsagentur_job(job_dict: dict, source_name: str) -> RawJobResult:
     """Parse a single v6 Arbeitsagentur job dict into a RawJobResult."""
-    firma = job_dict.get("firma", "")
-    referenznummer = job_dict.get("referenznummer", "")
+    firma = _text(job_dict.get("firma"))
+    referenznummer = _text(job_dict.get("referenznummer"))
     title = (
-        job_dict.get("stellenangebotsTitel")
-        or job_dict.get("hauptberuf")
+        _text(job_dict.get("stellenangebotsTitel"))
+        or _text(job_dict.get("hauptberuf"))
         or f"Stelle {referenznummer}"
     )
     city, country = _resolve_arbeitsagentur_location(job_dict)

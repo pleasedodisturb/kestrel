@@ -270,6 +270,7 @@ class TestFetchArbeitsagentur:
             {**base, "stellenlokationen": [{"adresse": None}]},
             {**base, "stellenlokationen": {"adresse": None}},
             {**base, "stellenlokationen": 1},
+            {**base, "stellenlokationen": [{"adresse": {"region": 123, "land": ["DE"]}}]},
             None,  # a null row is skipped, not fatal
             "x",
         ]
@@ -277,7 +278,7 @@ class TestFetchArbeitsagentur:
 
         jobs = fetch_arbeitsagentur(keywords="Manager")
 
-        assert [j["location"] for j in jobs] == ["Deutschland"] * 4
+        assert [j["location"] for j in jobs] == ["Deutschland"] * 5
 
     @patch("germany_jobs.httpx.Client")
     def test_non_list_ergebnisliste_is_empty(self, mock_client_cls):
