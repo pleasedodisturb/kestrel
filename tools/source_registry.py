@@ -117,7 +117,7 @@ FLOOR_SOURCES: tuple[str, ...] = (
 JOBSPY_BOARDS: tuple[str, ...] = ("indeed", "linkedin", "glassdoor", "google", "zip_recruiter")
 
 # Hosts the headless-browser fallback (tools/scrape_resilient.scrape_with_browser)
-# must never visit, keyed by hostname label. G-1802: Indeed HTML scraping via
+# must never visit, keyed by hostname label (Indeed and LinkedIn). G-1802: Indeed HTML scraping via
 # headless Playwright is dead — every request gets a Cloudflare 403 from a
 # bot-fingerprint check before any listing HTML is served (verified
 # 2026-09-28). Indeed postings still arrive through the python-jobspy HTTP
@@ -128,6 +128,13 @@ BROWSER_DISABLED_HOSTS: dict[str, str] = {
         "a Cloudflare 403 from a bot-fingerprint check before any listing HTML is "
         "served (verified 2026-09-28, G-1802). Indeed postings still arrive "
         "through the python-jobspy HTTP path (board 'indeed')."
+    ),
+    "linkedin": (
+        "Kestrel never drives a browser against LinkedIn: it detects and blocks "
+        "headless browsers, and browsing it from a real session would mean "
+        "scraping from an authenticated account, which this project rules out "
+        "(tools/README.md). LinkedIn public listings arrive through the "
+        "python-jobspy HTTP path (board 'linkedin') only."
     ),
 }
 

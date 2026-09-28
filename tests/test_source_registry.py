@@ -47,6 +47,15 @@ class TestBrowserDisabledReason:
         """A non-Indeed host is allowed through."""
         assert browser_disabled_reason("https://example.com/careers") is None
 
+    def test_linkedin_hosts_are_refused(self):
+        for url in (
+            "https://www.linkedin.com/jobs/view/123",
+            "https://de.linkedin.com/jobs/search/?keywords=x",
+            "LINKEDIN.COM/jobs",
+        ):
+            reason = browser_disabled_reason(url)
+            assert reason is not None and "LinkedIn" in reason, url
+
     def test_returns_none_for_notindeed_com(self):
         """A host that merely contains "indeed" as a substring is NOT matched."""
         assert browser_disabled_reason("https://notindeed.com/") is None

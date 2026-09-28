@@ -486,7 +486,7 @@ class TestBrowserFallback:
         assert result == []
 
     def test_refuses_indeed_urls_without_importing_playwright(self, monkeypatch):
-        """Indeed URLs are refused before Playwright is imported (G-1802, AC7)."""
+        """Indeed and LinkedIn URLs are refused before Playwright is imported (G-1802, AC7)."""
         import source_registry
         from scrape_resilient import scrape_with_browser
 
@@ -497,10 +497,14 @@ class TestBrowserFallback:
         monkeypatch.setitem(sys.modules, "playwright", playwright_stub)
         monkeypatch.setitem(sys.modules, "playwright.sync_api", sync_api_stub)
 
-        urls = ["https://de.indeed.com/jobs?q=pm", "https://www.indeed.com/viewjob?jk=1"]
+        urls = [
+            "https://de.indeed.com/jobs?q=pm",
+            "https://www.indeed.com/viewjob?jk=1",
+            "https://www.linkedin.com/jobs/view/123",  # LinkedIn is refused too
+        ]
         results = scrape_with_browser(urls)
 
-        assert len(results) == 2
+        assert len(results) == 3
         assert sync_playwright_mock.call_count == 0
         for entry, url in zip(results, urls, strict=True):
             assert entry["url"] == url
