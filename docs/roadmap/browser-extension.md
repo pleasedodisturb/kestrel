@@ -4,11 +4,11 @@
 
 ## Goal
 
-Add any job from any website to your scoring queue with one click.
+Add a job to your scoring queue with one click from the browser. Shipped today for LinkedIn jobs, Greenhouse, Lever and Ashby; any-site capture is the longer goal.
 
 ## What This Delivers
 
-Kestrel's built-in discovery engine scans major job boards automatically, but it cannot reach every posting. Some jobs appear on company career pages, niche boards, or platforms the scrapers do not cover. The browser extension fills that gap. When you find a job posting anywhere on the web, you click a button and it goes straight into your Kestrel pipeline for scoring.
+Kestrel's built-in discovery engine scans major job boards automatically, but it cannot reach every posting. Some jobs appear on company career pages, niche boards, or platforms the scrapers do not cover. The browser extension is meant to fill that gap. Today it runs on four hosts (LinkedIn jobs, Greenhouse, Lever, Ashby): on one of those pages you click a button and the posting goes straight into your Kestrel pipeline for scoring. Capture from arbitrary career pages and niche boards is planned, not shipped.
 
 The extension is built for Chrome today (Manifest V3, WXT + React 19; a Firefox build is not yet produced). It reads the page you are on, extracts the relevant job details (title, company, description, location), and sends them to your local Kestrel instance. You keep browsing. Behind the scenes, the job enters your scoring queue and gets evaluated like any other discovered position.
 
