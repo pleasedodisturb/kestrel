@@ -15,7 +15,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -214,6 +214,15 @@ def _text(value: object) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _http_url(value: str) -> str:
+    """Only an absolute http(s) URL from third-party data may become a link;
+    javascript:, data:, file: and relative values are dropped."""
+    parts = urlsplit(value.strip()) if value else None
+    if parts and parts.scheme in ("http", "https") and parts.netloc:
+        return value.strip()
+    return ""
+
+
 def _title_case_if_all_upper(value: str) -> str:
     """Convert an ALL-CAPS string to title case; pass mixed-case values through unchanged."""
     if value and value == value.upper():
@@ -251,7 +260,7 @@ def _resolve_arbeitsagentur_url(job_dict: dict) -> str:
     referenznummer = _text(job_dict.get("referenznummer"))
     if referenznummer:
         return "https://www.arbeitsagentur.de/jobsuche/jobdetail/" + quote(referenznummer, safe="")
-    return _text(job_dict.get("externeURL"))
+    return _http_url(_text(job_dict.get("externeURL")))
 
 
 def _parse_arbeitsagentur_rows(rows: list[dict], source_name: str) -> list[RawJobResult]:

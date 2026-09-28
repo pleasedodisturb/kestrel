@@ -102,6 +102,19 @@ class TestParseArbeitsagenturJob:
         assert job.title == "Stelle "
         assert job.url == ""
 
+    def test_externe_url_only_when_http_scheme(self):
+        base = {k: v for k, v in _fixture_items()[0].items() if k != "referenznummer"}
+        ok = _parse_arbeitsagentur_job({**base, "externeURL": "https://jobs.example.com/1"}, "a")
+        assert ok.url == "https://jobs.example.com/1"
+        for bad in (
+            "javascript:alert(1)",
+            "data:text/html,x",
+            "file:///etc/passwd",
+            "/relative",
+            "ftp://x/y",
+        ):
+            assert _parse_arbeitsagentur_job({**base, "externeURL": bad}, "a").url == ""
+
     def test_parses_absent_remote_key_item(self):
         """A fixture item with no homeofficemoeglich key at all maps to remote=False."""
         item = _fixture_items()[2]

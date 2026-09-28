@@ -349,6 +349,21 @@ class TestFetchArbeitsagentur:
         assert len(jobs) == 2
 
     @patch("germany_jobs.httpx.Client")
+    def test_externe_url_only_when_http_scheme(self, mock_client_cls):
+        base = {
+            k: v for k, v in _load_v6_fixture()["ergebnisliste"][0].items() if k != "referenznummer"
+        }
+        rows = [
+            {**base, "externeURL": "https://jobs.example.com/1"},
+            {**base, "externeURL": "javascript:alert(1)"},
+        ]
+        _mock_arbeitsagentur_client(mock_client_cls, {"ergebnisliste": rows})
+
+        jobs = fetch_arbeitsagentur(keywords="Manager")
+
+        assert [j["url"] for j in jobs] == ["https://jobs.example.com/1", ""]
+
+    @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):
         """A raised exception from client.get is swallowed and returns []."""
         mock_client = MagicMock()
