@@ -86,6 +86,7 @@ def test_score_calculation():
 | `@pytest.mark.integration` | Database, HTTP, file I/O | `test_create_application_api` |
 | `@pytest.mark.slow` | > 5 seconds execution | `test_full_discovery_sweep` |
 | `@pytest.mark.smoke` | Critical path sanity | `test_health_endpoint` |
+| `@pytest.mark.live` | Test calls a real external API | opt-in with `KESTREL_LIVE_TESTS=1`, skipped in CI; `test_arbeitsagentur_live` |
 
 Auto-marking: Tests using fixtures in `INTEGRATION_FIXTURES` (conftest.py) are automatically marked `integration`. Others default to `unit`.
 
