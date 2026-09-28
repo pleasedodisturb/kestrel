@@ -295,6 +295,41 @@ class TestJobSpyTimeout:
         assert JobSpyAdapter.hung_calls() == 0
 
     @pytest.mark.asyncio
+    async def test_late_completion_after_timeout_raises_nothing_in_the_thread(self, monkeypatch):
+        """A call that finishes (or raises) after the awaiting task timed out
+        must publish quietly: the Future is RUNNING, so wait_for's cancel()
+        did not take, set_result/set_exception succeed and no thread
+        exception is emitted."""
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 2)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+        hooked: list = []
+        monkeypatch.setattr(threading, "excepthook", lambda args: hooked.append(args))
+        release = threading.Event()
+
+        def late_return(**kwargs):
+            release.wait(5)
+            return _FakeFrame()
+
+        def late_raise(**kwargs):
+            release.wait(5)
+            raise ValueError("late boom")
+
+        adapter = JobSpyAdapter()
+        for fn in (late_return, late_raise):
+            with pytest.raises(TimeoutError):
+                await adapter._scrape_site(fn, "indeed", "pm", "Germany", 5, 0.02)
+        assert JobSpyAdapter.hung_calls() == 2
+        release.set()
+        for _ in range(100):
+            if JobSpyAdapter._running == 0:
+                break
+            await asyncio.sleep(0.02)
+        assert JobSpyAdapter._running == 0
+        assert JobSpyAdapter.hung_calls() == 0
+        assert hooked == [], [str(h.exc_value) for h in hooked]
+
+    @pytest.mark.asyncio
     async def test_partial_timeout_keeps_other_sites_row(self, monkeypatch, caplog):
         """One board timing out does not drop another board's row."""
         monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
