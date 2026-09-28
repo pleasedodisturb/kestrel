@@ -204,6 +204,23 @@ class TestFetchArbeitsagentur:
         assert jobs[0]["remote"] is True
         url = mock_client.get.call_args[0][0]
         assert "arbeitszeit" not in url
+        assert "size=100" in url, "client-side filtering asks for the largest page"
+
+    @patch("germany_jobs.httpx.Client")
+    def test_remote_true_truncates_to_limit_after_filtering(self, mock_client_cls):
+        """Qualifying rows beyond `limit` on the widened page are kept up to `limit`."""
+        base = _load_v6_fixture()["ergebnisliste"][0]
+        items = [
+            {**base, "referenznummer": f"10000-{i}-S", "homeofficemoeglich": i >= 4}
+            for i in range(9)
+        ]
+        _mock_arbeitsagentur_client(mock_client_cls, {"ergebnisliste": items})
+
+        jobs = fetch_arbeitsagentur(keywords="Manager", limit=3, remote=True)
+
+        assert len(jobs) == 3
+        assert all(j["remote"] for j in jobs)
+        assert jobs[0]["url"].endswith("10000-4-S")
 
     @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):

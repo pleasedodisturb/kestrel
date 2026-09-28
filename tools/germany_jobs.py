@@ -218,7 +218,9 @@ def fetch_arbeitsagentur(
     remote=True filters client-side on homeofficemoeglich instead.
     """
     params: dict[str, str | int] = {
-        "size": min(limit, 100),
+        # Client-side remote filtering needs the largest page v6 serves, or a
+        # remote search returns only the remote rows among the first `limit`.
+        "size": 100 if remote else min(limit, 100),
         "page": 1,
         "veroeffentlichtseit": days_old,
         "angebotsart": 1,  # ARBEIT
@@ -242,7 +244,7 @@ def fetch_arbeitsagentur(
 
     jobs = data.get("ergebnisliste") or []
     if remote:
-        jobs = [j for j in jobs if j.get("homeofficemoeglich") is True]
+        jobs = [j for j in jobs if j.get("homeofficemoeglich") is True][:limit]
 
     result = []
     for j in jobs:
