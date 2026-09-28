@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import httpx
 from germany_jobs import (
     PRESETS,
     fetch_arbeitnow,
@@ -273,6 +274,25 @@ class TestFetchArbeitsagentur:
         jobs = fetch_arbeitsagentur(keywords="Manager")
 
         assert [j["location"] for j in jobs] == ["Deutschland", "Deutschland"]
+
+    @patch("germany_jobs.httpx.Client")
+    def test_remote_true_keeps_rows_when_a_later_page_fails(self, mock_client_cls):
+        base = _load_v6_fixture()["ergebnisliste"][0]
+        page1 = {
+            "ergebnisliste": [
+                {**base, "referenznummer": f"11-{i}-S", "homeofficemoeglich": i == 7}
+                for i in range(100)
+            ]
+        }
+        mock_client = _mock_arbeitsagentur_client(mock_client_cls, page1)
+        ok = MagicMock()
+        ok.json.return_value = page1
+        ok.raise_for_status = MagicMock()
+        mock_client.get.side_effect = [ok, httpx.ReadTimeout("page 2 timed out")]
+
+        jobs = fetch_arbeitsagentur(keywords="Manager", limit=2, remote=True)
+
+        assert [j["url"].rsplit("/", 1)[1] for j in jobs] == ["11-7-S"]
 
     @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):

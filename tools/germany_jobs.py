@@ -266,7 +266,9 @@ def fetch_arbeitsagentur(
             params["page"] = page
             data = get_page()
             if data is None:
-                return []
+                # A failing later page must not discard rows already collected;
+                # a failing first page is still an empty result.
+                break
             page_rows = data.get("ergebnisliste") or []
             jobs += [j for j in page_rows if j.get("homeofficemoeglich") is True]
             if len(jobs) >= limit or len(page_rows) < ARBEITSAGENTUR_PAGE_SIZE:
