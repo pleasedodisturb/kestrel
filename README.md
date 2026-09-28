@@ -444,7 +444,7 @@ Free and cheap AI models often train on your data or have weaker privacy guarant
 
 **Enforced:** personal-data features (conversation mode, interview prep) refuse to run on a provider outside the allowlist in `src/career_os/ai/privacy.py` (Ollama, Anthropic, mock); job-description scoring is allowed on any provider. The check is by provider name: Anthropic is allowlisted on the strength of its published retention policy, not by verifying your account's ZDR arrangement, so confirm that on your own account if it matters to you. OpenRouter with ZDR routing is not yet whitelisted. <!-- G-1449 (fail-closed PII CI gate, prod-default CORS/auth) hardens the same boundary; keep the two consistent -->
 
-**Rule of thumb:** If it's about the job market, cheap models are fine. If it's about *you*, use Ollama (local), Anthropic (strong privacy), or a provider with ZDR enabled.
+**Rule of thumb:** If it's about the job market, cheap models are fine. If it's about *you*, use Ollama (local) or Anthropic, the two real providers on the allowlist today. A provider with ZDR enabled elsewhere (Together's toggle, OpenRouter ZDR routing) is a good choice for scoring, but personal-data features will refuse it until it is added to the allowlist in `src/career_os/ai/privacy.py`.
 
 ---
 
