@@ -1,6 +1,9 @@
 """Tests for tools/scrape_resilient.py — all scrapers, dedup, retry logic."""
 
 import json
+import logging
+import sys
+import types
 from dataclasses import asdict
 from unittest.mock import MagicMock, patch
 
@@ -481,3 +484,62 @@ class TestBrowserFallback:
         # Playwright is not installed in test env, so should return []
         result = scrape_with_browser(["https://example.com"])
         assert result == []
+
+    def test_refuses_indeed_urls_without_importing_playwright(self, monkeypatch):
+        """Indeed URLs are refused before Playwright is imported (G-1802, AC7)."""
+        import source_registry
+        from scrape_resilient import scrape_with_browser
+
+        playwright_stub = types.ModuleType("playwright")
+        sync_api_stub = types.ModuleType("playwright.sync_api")
+        sync_playwright_mock = MagicMock()
+        sync_api_stub.sync_playwright = sync_playwright_mock
+        monkeypatch.setitem(sys.modules, "playwright", playwright_stub)
+        monkeypatch.setitem(sys.modules, "playwright.sync_api", sync_api_stub)
+
+        urls = ["https://de.indeed.com/jobs?q=pm", "https://www.indeed.com/viewjob?jk=1"]
+        results = scrape_with_browser(urls)
+
+        assert len(results) == 2
+        assert sync_playwright_mock.call_count == 0
+        for entry, url in zip(results, urls, strict=True):
+            assert entry["url"] == url
+            assert entry["content"] == ""
+            assert entry["error"].startswith("disabled: ")
+            assert source_registry.browser_disabled_reason(url) in entry["error"]
+
+    def test_mixed_urls_with_playwright_absent_returns_only_indeed_refusal(self, monkeypatch):
+        """A mixed URL list with Playwright genuinely absent returns only the
+        refused Indeed entry; the allowed non-Indeed URL is dropped by the
+        ImportError path, never silently scraped."""
+        from scrape_resilient import scrape_with_browser
+
+        monkeypatch.setitem(sys.modules, "playwright.sync_api", None)
+
+        results = scrape_with_browser(["https://de.indeed.com/jobs", "https://example.com"])
+
+        assert len(results) == 1
+        assert results[0]["url"] == "https://de.indeed.com/jobs"
+        assert results[0]["error"].startswith("disabled: ")
+
+
+# ==================== JobSpy site validation ====================
+
+
+class TestJobspySiteValidation:
+    """A rejected jobspy site must not be retried (G-1802)."""
+
+    @patch("scraper.scrape_jobs")
+    @patch("scrape_resilient.time.sleep")
+    def test_rejected_site_is_not_retried(self, mock_sleep, mock_scrape_jobs, caplog):
+        """scrape_jobspy(sites=["google"]) returns [] without calling scrape_jobs
+        or sleeping, and logs an ERROR naming google."""
+        from scrape_resilient import scrape_jobspy
+
+        with caplog.at_level(logging.ERROR):
+            result = scrape_jobspy(keywords=["pm"], sites=["google"])
+
+        assert result == []
+        mock_scrape_jobs.assert_not_called()
+        mock_sleep.assert_not_called()
+        assert any(rec.levelname == "ERROR" and "google" in rec.message for rec in caplog.records)

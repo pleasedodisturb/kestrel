@@ -5,7 +5,7 @@ Wraps existing scrapers (scraper.py, germany_jobs.py) and adds:
 - Rate limiting with configurable delays between requests
 - User-agent rotation
 - Retry with exponential backoff on transient failures
-- Optional headless browser fallback via Playwright
+- Optional headless browser fallback via Playwright (never for Indeed, hard-disabled)
 - Source prioritization (API-first, browser as fallback)
 - Structured output for the daily pipeline
 
@@ -170,7 +170,7 @@ def scrape_germany_apis(
     return jobs
 
 
-# --- Source: JobSpy (LinkedIn, Indeed, Glassdoor, Google) ---
+# --- Source: JobSpy (LinkedIn + Indeed by default, per scraper.DEFAULT_SITES) ---
 
 
 def scrape_jobspy(
@@ -182,7 +182,7 @@ def scrape_jobspy(
 ) -> list[ScrapedJob]:
     """
     Scrape via python-jobspy. This uses HTTP requests (not a browser)
-    to search LinkedIn, Indeed, Glassdoor, and Google Jobs.
+    to search LinkedIn + Indeed by default (see scraper.DEFAULT_SITES).
 
     NOTE: LinkedIn scraping via jobspy uses public listing pages. For
     authenticated access (saved jobs, Easy Apply), you'd need browser
@@ -194,9 +194,19 @@ def scrape_jobspy(
 
     try:
         from scraper import scrape_all as jobspy_scrape
+        from scraper import validate_sites
     except ImportError:
         logger.warning("scraper.py not available — skipping JobSpy source")
         return jobs
+
+    if sites:
+        try:
+            validate_sites(sites)
+        except ValueError as exc:
+            # A deterministic rejection (e.g. "google") is not a transient
+            # failure — retrying it with backoff sleeps just wastes time.
+            logger.error(f"JobSpy: {exc}")
+            return jobs
 
     def _fetch():
         return jobspy_scrape(
@@ -704,19 +714,33 @@ def scrape_with_browser(
     - Stealth mode (no webdriver flag)
     - Random user agents
 
-    IMPORTANT: This should NOT be used for LinkedIn or Indeed at scale.
-    Those sites actively detect and block headless browsers. Use their
-    public listings via python-jobspy instead.
+    IMPORTANT: Indeed hosts are hard-refused (see
+    source_registry.BROWSER_DISABLED_HOSTS); LinkedIn must not be browsed
+    either.
     """
+    refused: list[dict] = []
+    allowed: list[str] = []
+    for url in urls:
+        reason = source_registry.browser_disabled_reason(url)
+        if reason is None:
+            allowed.append(url)
+            continue
+        logger.warning(f"Browser fallback refused for {url}: {reason}")
+        refused.append({"url": url, "content": "", "error": f"disabled: {reason}"})
+
+    if not allowed:
+        return refused
+
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
         logger.warning(
             "Playwright not installed. Skipping browser scraping. Install: pip install playwright && playwright install chromium"
         )
-        return []
+        return refused
 
-    results = []
+    results = list(refused)
+    urls = allowed
     viewports = [
         {"width": 1920, "height": 1080},
         {"width": 1366, "height": 768},
@@ -846,7 +870,7 @@ def scrape_all_sources(
 
     _random_delay()
 
-    # 2. JobSpy HTTP scraper (LinkedIn, Indeed, Glassdoor, Google)
+    # 2. JobSpy HTTP scraper (LinkedIn + Indeed by default, per scraper.DEFAULT_SITES)
     logger.info("=== Source 2/9: JobSpy ===")
     try:
         jobspy_results = scrape_jobspy(

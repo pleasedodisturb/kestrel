@@ -66,6 +66,7 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -113,6 +114,49 @@ FLOOR_SOURCES: tuple[str, ...] = (
 # user who scrapes Indeed alone would get four permanent ZEROs for boards they
 # never asked for.
 JOBSPY_BOARDS: tuple[str, ...] = ("indeed", "linkedin", "glassdoor", "google", "zip_recruiter")
+
+# Hosts the headless-browser fallback (tools/scrape_resilient.scrape_with_browser)
+# must never visit, keyed by hostname label. G-1802: Indeed HTML scraping via
+# headless Playwright is dead — every request gets a Cloudflare 403 from a
+# bot-fingerprint check before any listing HTML is served (verified
+# 2026-09-28). Indeed postings still arrive through the python-jobspy HTTP
+# path (board "indeed"), so this is not a loss of coverage.
+BROWSER_DISABLED_HOSTS: dict[str, str] = {
+    "indeed": (
+        "Indeed HTML scraping via headless Playwright is dead: every request gets "
+        "a Cloudflare 403 from a bot-fingerprint check before any listing HTML is "
+        "served (verified 2026-09-28, G-1802). Indeed postings still arrive "
+        "through the python-jobspy HTTP path (board 'indeed')."
+    ),
+}
+
+
+def browser_disabled_reason(url: str) -> str | None:
+    """Return the disable reason if `url`'s host matches BROWSER_DISABLED_HOSTS.
+
+    Matching is label-based (any dot-separated hostname label, e.g. the
+    "indeed" in "de.indeed.com" or "indeed.co.uk") and case-insensitive. A
+    scheme-less URL (no netloc) is re-parsed with "//" prepended so it is
+    still caught — this must fail closed, not silently allow through.
+    Returns None when the URL cannot be parsed at all or matches nothing.
+    """
+    try:
+        split = urlsplit(url)
+        hostname = split.hostname
+        if hostname is None:
+            split = urlsplit(f"//{url}")
+            hostname = split.hostname
+    except ValueError:
+        return None
+    if not hostname:
+        return None
+
+    labels = hostname.lower().split(".")
+    for label in labels:
+        if label in BROWSER_DISABLED_HOSTS:
+            return BROWSER_DISABLED_HOSTS[label]
+    return None
+
 
 # Status vocabulary.
 OK = "ok"
