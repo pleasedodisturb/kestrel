@@ -15,7 +15,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from urllib.parse import quote_plus
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -172,10 +172,15 @@ def _log_retry(exc: Exception, _url: str, backoff: float, attempt: int, max_retr
 def _build_arbeitsagentur_params(
     keyword: str,
     location: str,
-    remote_only: bool,
     limit: int,
 ) -> dict[str, str | int]:
-    """Build query params dict for the Arbeitsagentur API."""
+    """Build query params dict for the Arbeitsagentur v6 API.
+
+    v6 has no working remote filter (`arbeitszeit=ho` returns zero rows; every
+    tried value of the `homeoffice` param is rejected with a 400). Remote
+    filtering happens client-side on `homeofficemoeglich` in
+    `_fetch_arbeitsagentur_page` instead.
+    """
     query_params: dict[str, str | int] = {
         "size": min(limit, 100),
         "page": 1,
@@ -186,45 +191,130 @@ def _build_arbeitsagentur_params(
         query_params["was"] = keyword
     if location:
         query_params["wo"] = location
-    if remote_only:
-        query_params["arbeitszeit"] = "ho"
     return query_params
 
 
-def _resolve_arbeitsagentur_url(job_dict: dict) -> str:
-    """Resolve the job URL from hashId, refnr, or return empty string."""
-    hash_id = job_dict.get("hashId", "")
-    if hash_id:
-        return f"https://www.arbeitsagentur.de/jobboerse/jobsuche/detail/{hash_id}"
-    refnr = job_dict.get("refnr", "")
-    if refnr:
-        return f"https://www.arbeitsagentur.de/jobsuche/suche?was={quote_plus(refnr)}"
+def _raw_rows(data: dict) -> list:
+    """v6 ergebnisliste as served (a non-list, including the key being absent
+    on a zero-hit response, is empty). Its length is what pagination uses to
+    detect a short, final page; sanitising must not shorten it."""
+    if not isinstance(data, dict):
+        return []  # valid JSON that is not an object (null, list, scalar): empty
+    rows = data.get("ergebnisliste")
+    return rows if isinstance(rows, list) else []
+
+
+def _dict_rows(raw: list) -> list[dict]:
+    """Rows that are objects; a null or scalar entry is skipped, not fatal."""
+    return [r for r in raw if isinstance(r, dict)]
+
+
+def _text(value: object) -> str:
+    """A third-party field as text: strings pass through, anything else is absent."""
+    return value if isinstance(value, str) else ""
+
+
+def _http_url(value: str) -> str:
+    """Only an absolute http(s) URL from third-party data may become a link;
+    javascript:, data:, file: and relative values are dropped."""
+    try:
+        parts = urlsplit(value.strip()) if value else None
+    except ValueError:  # e.g. "http://[invalid"
+        return ""
+    if parts and parts.scheme in ("http", "https") and parts.netloc:
+        return value.strip()
     return ""
 
 
-def _parse_arbeitsagentur_job(job_dict: dict, source_name: str) -> RawJobResult:
-    """Parse a single Arbeitsagentur job dict into a RawJobResult."""
-    arbeitgeber = job_dict.get("arbeitgeber", "")
-    beruf = job_dict.get("beruf", "")
-    refnr = job_dict.get("refnr", "")
-    ar = job_dict.get("arbeitsort", {}) or {}
-    ort = ar.get("ort", "") or ar.get("region", "") or ""
-    land = ar.get("land", "Deutschland")
+def _title_case_if_all_upper(value: str) -> str:
+    """Convert an ALL-CAPS string to title case; pass mixed-case values through unchanged."""
+    if value and value == value.upper():
+        return value.title()
+    return value
 
-    location_str = f"{ort}, {land}".strip(", ") if ort or land else "Deutschland"
+
+def _resolve_arbeitsagentur_location(job_dict: dict) -> tuple[str, str]:
+    """Resolve (city, country) from stellenlokationen[0].adresse.
+
+    Tolerates a missing/empty stellenlokationen list and a None adresse.
+    City falls back from ort to region; country falls back to "Deutschland".
+    An ALL-CAPS land/region value is de-capitalised with str.title(); mixed-case
+    values pass through unchanged.
+    """
+    lokationen = job_dict.get("stellenlokationen")
+    # Third-party data: the collection, its first entry or the adresse can be
+    # null or the wrong type; treat anything that is not the expected shape as
+    # absent rather than aborting the whole page.
+    if not isinstance(lokationen, list):
+        lokationen = []
+    first = lokationen[0] if lokationen and isinstance(lokationen[0], dict) else {}
+    adresse = first.get("adresse")
+    if not isinstance(adresse, dict):
+        adresse = {}
+
+    region = _title_case_if_all_upper(_text(adresse.get("region")))
+    city = _text(adresse.get("ort")) or region
+    country = _title_case_if_all_upper(_text(adresse.get("land"))) or "Deutschland"
+    return city, country
+
+
+def _resolve_arbeitsagentur_url(job_dict: dict) -> str:
+    """Resolve the job URL from referenznummer (v6 jobdetail page), then externeURL."""
+    referenznummer = _text(job_dict.get("referenznummer"))
+    if referenznummer:
+        return "https://www.arbeitsagentur.de/jobsuche/jobdetail/" + quote(referenznummer, safe="")
+    return _http_url(_text(job_dict.get("externeURL")))
+
+
+def _parse_arbeitsagentur_rows(rows: list[dict], source_name: str) -> list[RawJobResult]:
+    """Parse each v6 row on its own: one malformed third-party row is logged and
+    skipped, never allowed to abort the page (field guards above cover the
+    shapes seen so far; this is the backstop for the ones not seen yet)."""
+    results: list[RawJobResult] = []
+    for row in rows:
+        try:
+            results.append(_parse_arbeitsagentur_job(row, source_name))
+        except Exception as exc:
+            logger.warning("Arbeitsagentur row skipped (%s): %r", exc, row.get("referenznummer"))
+    return results
+
+
+def _parse_arbeitsagentur_job(job_dict: dict, source_name: str) -> RawJobResult:
+    """Parse a single v6 Arbeitsagentur job dict into a RawJobResult."""
+    firma = _text(job_dict.get("firma"))
+    referenznummer = _text(job_dict.get("referenznummer"))
+    title = (
+        _text(job_dict.get("stellenangebotsTitel"))
+        or _text(job_dict.get("hauptberuf"))
+        or f"Stelle {referenznummer}"
+    )
+    city, country = _resolve_arbeitsagentur_location(job_dict)
+    location_str = f"{city}, {country}" if city else country
+
+    zeitraum = job_dict.get("veroeffentlichungszeitraum")
+    if not isinstance(zeitraum, dict):
+        zeitraum = {}
+    posted_raw = _text(zeitraum.get("von")) or _text(job_dict.get("datumErsteVeroeffentlichung"))
 
     return RawJobResult(
         source=source_name,
-        title=beruf or f"Stelle {refnr}",
-        company=arbeitgeber,
+        title=title,
+        company=firma,
         location=location_str,
+        remote=job_dict.get("homeofficemoeglich") is True,
         url=_resolve_arbeitsagentur_url(job_dict),
-        posted_at=_parse_date(job_dict.get("aktuelleVeroeffentlichungsdatum", "")),
+        posted_at=_parse_date(posted_raw),
     )
 
 
+# v6 serves at most 100 rows per page; remote-only searches walk up to this
+# many pages (500 rows) before giving up, bounding the request count.
+ARBEITSAGENTUR_PAGE_SIZE = 100
+ARBEITSAGENTUR_MAX_PAGES = 5
+
+
 class ArbeitsagenturAdapter(ScraperAdapter):
-    """Scraper for Germany's Federal Employment Agency API."""
+    """Scraper for Germany's Federal Employment Agency API (v6 jobsuche-service)."""
 
     ARBEITSAGENTUR_BASE = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
     ARBEITSAGENTUR_API_KEY = "jobboerse-jobsuche"
@@ -257,23 +347,64 @@ class ArbeitsagenturAdapter(ScraperAdapter):
         remote_only: bool,
         limit: int,
     ) -> list[RawJobResult]:
-        """Fetch and parse a single keyword/location combination."""
-        query_params = _build_arbeitsagentur_params(keyword, location, remote_only, limit)
-        url = f"{self.ARBEITSAGENTUR_BASE}/pc/v4/jobs"
+        """Fetch and parse a single keyword/location combination.
+
+        v6's `ergebnisliste` key is absent entirely on a zero-hit response, so
+        it is read with `.get(...) or []`. `remote_only` filters client-side on
+        `homeofficemoeglich` (an identity check against True, so a string or a
+        missing key never counts as remote) since v6 has no working server-side
+        remote filter.
+        """
+        query_params = _build_arbeitsagentur_params(keyword, location, limit)
+        url = f"{self.ARBEITSAGENTUR_BASE}/pc/v6/jobs"
         headers = {"X-API-Key": self.ARBEITSAGENTUR_API_KEY}
 
+        if not remote_only:
+            data = await self._get_page(client, url, headers, query_params)
+            rows = _dict_rows(_raw_rows(data))
+            return _parse_arbeitsagentur_rows(rows, self.source_name)
+
+        # Client-side remote filter: walk the largest pages v6 serves until
+        # `limit` remote rows are collected, a page comes back short (the
+        # result set is exhausted), or the page cap is hit. A single page of
+        # `limit` rows would return only the remote jobs among them, and a
+        # single page of 100 can still miss remote jobs on later pages.
+        query_params["size"] = ARBEITSAGENTUR_PAGE_SIZE
+        results: list[RawJobResult] = []
+        for page in range(1, ARBEITSAGENTUR_MAX_PAGES + 1):
+            query_params["page"] = page
+            try:
+                data = await self._get_page(client, url, headers, query_params)
+            except Exception:
+                # A failure with nothing collected yet is a failed search
+                # (propagate, so the run records the adapter warning); a
+                # later page failing must not discard rows already collected.
+                if not results:
+                    raise
+                logger.warning("Arbeitsagentur page %d failed; keeping %d rows", page, len(results))
+                break
+            raw = _raw_rows(data)
+            remote_rows = [r for r in _dict_rows(raw) if r.get("homeofficemoeglich") is True]
+            # Parse before counting: a row that fails to parse is skipped and
+            # must not consume the limit ahead of a valid row behind it.
+            results += _parse_arbeitsagentur_rows(remote_rows, self.source_name)
+            # Exhaustion is judged on the page as served, not after sanitising:
+            # a full page with one null entry is not the last page.
+            if len(results) >= limit or len(raw) < ARBEITSAGENTUR_PAGE_SIZE:
+                break
+        return results[:limit]
+
+    async def _get_page(
+        self, client: httpx.AsyncClient, url: str, headers: dict, query_params: dict
+    ) -> dict:
         try:
             response = await _request_with_backoff(
                 client, "GET", url, headers=headers, params=query_params
             )
-            data = response.json()
+            return response.json()
         except Exception as exc:
             logger.warning("Arbeitsagentur API error: %s", exc)
             raise
-
-        return [
-            _parse_arbeitsagentur_job(j, self.source_name) for j in data.get("stellenangebote", [])
-        ]
 
 
 # ---------------------------------------------------------------------------

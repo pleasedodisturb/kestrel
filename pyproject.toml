@@ -122,6 +122,7 @@ markers = [
     "regression: golden-set fit-score band regression tests",
     "property: property-based tests",
     "fuzz: fuzzing tests",
+    "live: hits a real external API over the network (G-1717); skipped unless KESTREL_LIVE_TESTS=1, never runs in CI",
 ]
 
 [tool.coverage.run]
