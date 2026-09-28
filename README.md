@@ -435,7 +435,7 @@ Free and cheap AI models often train on your data or have weaker privacy guarant
 - Career preferences (target roles, salary range, location)
 - Scoring criteria and rubrics
 
-**Never sent without ZDR** (personally identifying):
+**Only sent to an allowlisted provider** (personally identifying; Ollama, Anthropic or mock today, matched by provider name):
 - Your name, email, phone number, or address
 - CV/resume content and work history
 - Cover letters and application materials
