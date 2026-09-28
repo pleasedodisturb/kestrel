@@ -45,13 +45,16 @@ Kestrel scans job boards, scores every posting against your profile with an LLM,
 
 ### Looking for something more established?
 
-**[career-ops](https://github.com/santifer/career-ops)** is a bigger, more mature, far more popular take on the same problem — tens of thousands of stars, a large community, and a polished agent-skill workflow that plugs into whichever AI coding CLI you already use. If you want the well-trodden path, start there. It is genuinely good, and it was built independently of this project — we arrived at a lot of the same ideas separately, which is usually a sign the ideas are right.
+**[career-ops](https://github.com/career-ops-hq/career-ops)** is a bigger, more mature, far more popular take on the same problem — 70k+ stars, 400+ contributors, a release every few days (as of 2026-09-28), and a polished agent-skill workflow that plugs into whichever AI coding CLI you already use. If you want the well-trodden path, start there. It is genuinely good, and it was built independently of this project — we arrived at a lot of the same ideas separately, which is usually a sign the ideas are right.
 
 Kestrel is a different shape, not a competitor:
 
 - **A running system, not a skill layer.** FastAPI + React + SQLite, a real state machine, and a web UI you operate — rather than commands driven through an AI assistant.
 - **Measurement as a first-class feature.** A golden-set eval harness in nightly CI, a geo-eligibility engine with a committed 277-item reference set, and a source registry that reports every scan source on every run — so a dead source shows up as `ZERO` instead of vanishing from the report. It warns; it does not fail the run, and catching *degradation* (rather than a hard zero) needs floors you calibrate yourself.
 - **Provider economics taken seriously.** Ten providers behind one interface, fallback chains, and guards that stop an exhausted cheap tier from quietly billing a premium model.
+- **No auto-apply, by design.** Indeed tried blind auto-apply in July 2026 and pulled it within four weeks; LinkedIn's own Apply Assistant makes you press submit. Kestrel drafts, you send. LinkedIn's under-qualified warning is platform-side fit gating; Kestrel's role-fit gate is the same idea, run by you with your own rubric.
+
+Things Kestrel will never do: opt-out telemetry with a public dashboard, an hourly auto-updater, blind auto-apply across boards, logged-in-session LinkedIn scraping, or sharing candidate-attributable behavioural signals with anyone.
 
 Pick whichever fits how you work. If you use both, the pieces here that are generic are meant to be portable — issues and PRs in that direction are welcome in either repo.
 
@@ -75,7 +78,7 @@ Answer six questions — name, location, target role, salary range, skills, expe
 
 ### 2. Discover jobs automatically
 
-Kestrel scans Indeed, LinkedIn, Glassdoor, and Arbeitsagentur. Every result gets an AI fit score — A+ means "apply today", C means "probably not worth your time". Stop scrolling job boards. Let the jobs come to you.
+In the app: Indeed, Arbeitnow and Arbeitsagentur (German federal job board, API v6 migration in progress). The maintainer batch pipeline additionally covers LinkedIn, RemoteOK, WeWorkRemotely, Himalayas and direct Greenhouse/Lever/Ashby boards. Every result gets an AI fit score — A+ means "apply today", C means "probably not worth your time". Stop scrolling job boards. Let the jobs come to you.
 
 <p align="center">
   <img src="docs/images/screenshots/discovery.png" alt="Discovery: search for jobs across multiple boards, every result scored" width="820">
@@ -135,7 +138,7 @@ STAR story library — your best professional moments, tagged by skill. When you
 
 ### 10. Brainstorm cover letters out loud
 
-Voice mode turns your messy thoughts into structured cover letter drafts. Pick an application, start talking about why you want the role, and Kestrel shapes your stream-of-consciousness into something you'd actually send. Three modes: cover letter brainstorming, career coaching Q&A, and job evaluation — all conversational.
+Conversation mode (text chat today; speech input is future work) turns your messy thoughts into structured cover letter drafts. Pick an application, start typing about why you want the role, and Kestrel shapes your stream-of-consciousness into something you'd actually send. Three modes: cover letter brainstorming, career coaching Q&A, and job evaluation — all conversational.
 
 ### 11. Track referrals from intro to offer
 
@@ -201,25 +204,35 @@ Job descriptions are public data — safe to send anywhere. Your personal inform
 
 | Core | What it does |
 |------|-------------|
-| **Job discovery** | Scans Indeed, LinkedIn, Glassdoor, Arbeitsagentur — AI-scores every result against your profile |
+| **Job discovery** | In the app: Indeed, Arbeitnow and Arbeitsagentur (German federal job board, API v6 migration in progress); the maintainer batch pipeline adds LinkedIn, RemoteOK, WeWorkRemotely, Himalayas and direct Greenhouse/Lever/Ashby boards. AI-scores every result against your profile |
 | **Pipeline tracking** | Kanban board from Discovered to Offer — drag applications between stages |
 | **Deep application view** | Fit score, salary range, follow-ups, activity log, interview prep, timeline |
 | **Analytics** | Conversion funnel, response rate, time-in-stage, score distribution |
 | **Follow-up engine** | Due dates, urgency tracking, multiple channels (email, phone, LinkedIn) |
 | **Skills inventory** | Technical, tools, domain, soft skills — proficiency tracking and gap analysis |
 | **Networking CRM** | Contacts with warmth, referral tracking, interaction history, intro pipeline |
-| **Daily auto-scans** | GitHub Actions runs discovery overnight — wake up to scored results |
+| **Scheduled scans** | Weekly by default in the app; daily via the optional GitHub Actions workflow (`DAILY_SCAN_ENABLED`) so you wake up to scored results |
+
+<!-- DECISION #102: "Conversation mode" is interim naming for the shipped text-chat feature -->
 
 | Also built | What it does |
 |------------|-------------|
 | **STAR story library** | Tag stories by skill, get recommendations per application, gap analysis for missing skills |
-| **Voice mode** | Cover letter brainstorming, career coaching, job evaluation — all conversational |
+| **Conversation mode** | Cover letter brainstorming, coaching, job evaluation as text chat (speech input is future work) |
 | **Interview prep** | Company research, mock questions, behavioral round preparation |
-| **Learning paths** | AI-generated recommendations for skill gaps |
+| **Learning paths** | Curated learning resources per skill gap |
 | **Calendar sync** | Export interviews and follow-ups to .ics |
 | **Mobile alerts** | Pushover notifications for new matches and due follow-ups |
 | **TickTick sync** | Bidirectional task management |
 | **AI Health Dashboard** | Monitor provider connectivity, quotas, and rate limits |
+| **Market intelligence** | Salary trends, skill trends, hiring patterns and an opportunity radar, computed locally from the jobs you discovered |
+| **Goals and reality map** | Career goals with progress, recalibration and alternatives when the map and the territory disagree |
+| **Company research** | Funding, news, Glassdoor signals and ATS platform detection per company |
+| **Red flags** | Ten rule-based detectors, including WARN Act layoff notices and multi-city blast postings |
+| **Geo-eligibility engine** | Seven classes (home, relocate, visa-free, visa-required, remote-eligible, foreign, unknown) checked against a committed 277-item reference set |
+| **Browser extension (v1, THE EYE)** | Capture a posting on LinkedIn jobs, Greenhouse, Lever or Ashby, see the fit score inline, one click to the pipeline. Chrome, no form filling |
+| **Scoring Engine v2** | Role-fit hard gate, confidence-routed cascade, drift canary, per-provider calibration, relative scoring, ESCO occupation signals, nightly eval gate |
+| **Auto-log with consent** | When you submit on Greenhouse, Lever or Ashby, the extension shows a banner and logs the application only after you confirm |
 
 ---
 
@@ -230,11 +243,11 @@ Kestrel is under active development. Here's what's next:
 | Feature | What it will do |
 |---------|----------------|
 | **Writing style flywheel** | Kestrel learns your voice from your past writing. Cover letters and messages start sounding like *you*, not a template. The more you write, the better it gets. |
-| **CV + cover letter generation** | One click: tailored resume and cover letter for any application, matched to the job description and your STAR stories. Export as PDF. |
+| **One-click tailored CV and cover letter rendering** | Brainstorm mode exists today; this adds one-click rendering of a tailored resume and cover letter for any application, matched to the job description and your STAR stories. Export as PDF. |
 | **Cover letter review** | Paste a draft, get structural and tone feedback. "This paragraph buries the lede." "Your closer is generic — reference the team's recent launch." |
 | **LinkedIn network scanner** | Connect via browser tool and surface mutual connections at target companies. "You have 3 second-degree connections at Stripe — here's who to ask for an intro." |
 | **Intro message drafts** | For each warm contact, Kestrel drafts the ask: referral request, informational interview, or reconnection — in your voice, not a template. |
-| **Browser extension** | See a job posting anywhere? One click saves it to your local Kestrel database with full details. No copy-paste, no tab-switching. |
+| **Extension v2: review-first autofill** | v1 capture + score shipped in 0.24. v2 pre-fills application forms and stops at the submit button; you review, you send. |
 | **Hosted version** | Don't want to run anything? A subscription-hosted Kestrel instance — same features, zero setup. Your data encrypted at rest, deletable on demand. |
 
 Everything above will follow the same principle: **your data, your machine, your choice.** The hosted version will be the only exception — and even there, you'll own your data with full export and delete.
@@ -376,11 +389,13 @@ AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get exp
 | **Compact serialization** | Your profile is sent without pretty-printing whitespace. `{"name":"Jane"}` instead of `{ "name": "Jane" }`. | 23% on profile data |
 | **Response caching** | Asked the same question twice? Kestrel serves it from local encrypted cache. Zero API calls. | 100% (free) |
 | **Token-efficient tool use** | When Kestrel calls AI tools, it uses a compact format that cuts output size. | [70% off output tokens](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/token-efficient-tool-use) |
-| **Smart model selection** | Not every task needs the biggest brain. Simple classification uses a smaller model. Deep analysis uses the full thing. | [60-95% on simple tasks](https://github.com/lm-sys/RouteLLM) |
+| **Cascade routing** | When enabled (`CASCADE_ROUTING_ENABLED`, shadow-first, off by default), confident rejects skip the LLM entirely. No per-task model switching yet. | Zero tokens on skipped jobs |
 | **Batch scoring** | Scoring a big backlog overnight? Batch APIs give a flat 50% discount for non-urgent work. | [50% off everything](https://docs.anthropic.com/en/api/creating-message-batches) |
 | **Provider fallback** | If one provider's quota runs out, Kestrel automatically tries the next one. No failed scores, no wasted retries. **Order matters:** cheap-first, premium-last (see note above). | Resilience — and cost, ordered right |
 
 **Benchmarked on a real profile + real job posting:** Naive approach = ≈$16/month. With all optimizations = **≈$1-5/month** for the same results. [How it works →](docs/guides/how-token-optimization-works.md)
+
+For scale: a prompt-framework run can cost $14 (career-ops discussion #3014, and its own README says one evaluation loads ~26K tokens of instructions); Kestrel's Budget preset scores a month of discovery for under a dollar.
 
 <details>
 <summary>Benchmark: 50-job scoring batch, same user</summary>
@@ -427,9 +442,7 @@ Free and cheap AI models often train on your data or have weaker privacy guarant
 - Interview preparation with personal STAR stories
 - Contact details and networking notes
 
-**Currently:** Kestrel does not enforce this boundary automatically - it's your responsibility to choose an appropriate provider for sensitive features. If you disable ZDR for cheap scoring, be mindful of which features you use with that provider.
-
-**Planned:** Automatic routing that blocks personal data from reaching non-ZDR providers, so you can use free models for scoring without worrying about accidentally leaking personal data through other features.
+**Enforced:** personal-data features (conversation mode, interview prep) refuse to run on a provider outside the ZDR-safe set (Ollama, Anthropic, mock); job-description scoring is allowed on any provider. OpenRouter with ZDR routing is not yet whitelisted. <!-- G-1449 (fail-closed PII CI gate, prod-default CORS/auth) hardens the same boundary; keep the two consistent -->
 
 **Rule of thumb:** If it's about the job market, cheap models are fine. If it's about *you*, use Ollama (local), Anthropic (strong privacy), or a provider with ZDR enabled.
 

@@ -10,7 +10,7 @@ Add any job from any website to your scoring queue with one click.
 
 Kestrel's built-in discovery engine scans major job boards automatically, but it cannot reach every posting. Some jobs appear on company career pages, niche boards, or platforms the scrapers do not cover. The browser extension fills that gap. When you find a job posting anywhere on the web, you click a button and it goes straight into your Kestrel pipeline for scoring.
 
-The extension targets Chrome and Firefox (Manifest V3, built with WXT + React 19). It reads the page you are on, extracts the relevant job details (title, company, description, location), and sends them to your local Kestrel instance. You keep browsing. Behind the scenes, the job enters your scoring queue and gets evaluated like any other discovered position.
+The extension is built for Chrome today (Manifest V3, WXT + React 19; a Firefox build is not yet produced). It reads the page you are on, extracts the relevant job details (title, company, description, location), and sends them to your local Kestrel instance. You keep browsing. Behind the scenes, the job enters your scoring queue and gets evaluated like any other discovered position.
 
 ## Design Considerations
 
@@ -25,6 +25,8 @@ The extension communicates with a Kestrel instance running on your machine. This
 The extension is implemented with WXT + React 19 on Manifest V3. Shipped entrypoints: a background service worker, page content scripts, an auto-log content script, a popup, a side panel, and an options page. Authentication is handled by a pairing flow (`PairingForm`) that exchanges a locally generated token with your Kestrel instance, and a `HealthBadge` surfaces backend connectivity. A `ScorePanel` shows the fit/desire score inline. The suite runs under Vitest (`extension/__tests__/`: extraction, autolog, background, options, score panel).
 
 What remains before a public release: store submission (Chrome Web Store + Firefox Add-ons review), and the offline queue-and-sync behavior for when Kestrel is not running.
+
+On linkedin.com the extension is read-only capture: no DOM injection beyond the capture button and the side panel, no timed actions, no authenticated scraping. Capture fires only on your click. Things the extension will never do: opt-out telemetry, an auto-updater, blind auto-apply across boards, logged-in-session LinkedIn scraping, or sharing candidate-attributable behavioural signals.
 
 ## Related Milestones
 
