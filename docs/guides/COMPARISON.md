@@ -250,7 +250,7 @@ Not necessarily better - structurally different in ways that matter to some user
 | Non-technical, want the easiest start | **Teal** (free tier) or **Huntr** ($40/mo) | Polished UI, Chrome extension, zero setup |
 | Applying to many jobs fast, US market | **Simplify** or **Huntr** | Chrome auto-fill on 1000+ sites is unmatched |
 | Technical, want data ownership | **Kestrel** or **JobSync** | Self-hosted, local database, full control |
-| Privacy-conscious, anti-cloud | **Kestrel** or **Career-Ops** | Local database; with Ollama and no integrations nothing leaves your machine, otherwise only the AI requests and integrations you configure do |
+| Privacy-conscious, anti-cloud | **Kestrel** or **Career-Ops** | Local database; your data goes only to the AI provider and integrations you configure, and with Ollama no AI request leaves your machine (job-board scans still fetch public postings) |
 | Searching in EU/Germany specifically | **Kestrel** or **Career-Ops** | Kestrel: 7-way geo-eligibility classifier with a 277-item reference set, Arbeitsagentur and Arbeitnow feeds. Career-Ops: more EU boards |
 | Already using any agent CLI (Claude Code, Codex, Cursor, Gemini, Copilot, Hermes and more) | **Career-Ops** | Excellent prompt engineering, leverages your existing subscription |
 | Want automated scheduled scanning | **Kestrel** or **Career-Ops** | Kestrel: in-app scheduler plus optional GitHub Actions daily scan. Career-Ops: cron/launchd/Task Scheduler recipes |
