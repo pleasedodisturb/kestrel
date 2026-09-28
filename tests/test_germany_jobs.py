@@ -364,6 +364,26 @@ class TestFetchArbeitsagentur:
         assert [j["url"] for j in jobs] == ["https://jobs.example.com/1", ""]
 
     @patch("germany_jobs.httpx.Client")
+    def test_remote_true_unparseable_row_does_not_consume_the_limit(self, mock_client_cls):
+        import germany_jobs
+
+        base = _load_v6_fixture()["ergebnisliste"][0]
+        broken = {**base, "referenznummer": "broken-1", "homeofficemoeglich": True}
+        good = {**base, "referenznummer": "good-1", "homeofficemoeglich": True}
+        _mock_arbeitsagentur_client(mock_client_cls, {"ergebnisliste": [broken, good]})
+        real = germany_jobs._resolve_arbeitsagentur_location
+
+        def exploding(job):
+            if job.get("referenznummer") == "broken-1":
+                raise ValueError("shape not seen before")
+            return real(job)
+
+        with patch.object(germany_jobs, "_resolve_arbeitsagentur_location", exploding):
+            jobs = fetch_arbeitsagentur(keywords="Manager", limit=1, remote=True)
+
+        assert [j["url"].rsplit("/", 1)[1] for j in jobs] == ["good-1"]
+
+    @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):
         """A raised exception from client.get is swallowed and returns []."""
         mock_client = MagicMock()

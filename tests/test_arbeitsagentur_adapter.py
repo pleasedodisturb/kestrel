@@ -431,6 +431,32 @@ class TestArbeitsagenturAdapterScrape:
         assert [r.url.rsplit("/", 1)[1] for r in results] == ["b-0"]
 
     @pytest.mark.asyncio
+    async def test_scrape_remote_only_unparseable_row_does_not_consume_the_limit(self, monkeypatch):
+        """limit=1: a remote row whose parse raises is skipped and the valid row behind it is returned."""
+        base = _fixture_items()[0]
+        broken = {**base, "referenznummer": "broken-1", "homeofficemoeglich": True}
+        good = {**base, "referenznummer": "good-1", "homeofficemoeglich": True}
+        real = adapters_module._parse_arbeitsagentur_job
+
+        def exploding(job_dict, source_name):
+            if job_dict.get("referenznummer") == "broken-1":
+                raise ValueError("shape not seen before")
+            return real(job_dict, source_name)
+
+        monkeypatch.setattr(adapters_module, "_parse_arbeitsagentur_job", exploding)
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"ergebnisliste": [broken, good]})
+
+        _install_mock_transport(monkeypatch, handler)
+        results = await ArbeitsagenturAdapter().scrape(
+            ScrapeParams(
+                keywords=["Manager"], locations=["Frankfurt"], limit_per_source=1, remote_only=True
+            )
+        )
+        assert [r.url.rsplit("/", 1)[1] for r in results] == ["good-1"]
+
+    @pytest.mark.asyncio
     async def test_scrape_remote_only_stops_at_the_page_cap(self, monkeypatch):
         """With no remote rows anywhere, the walk gives up after the page cap."""
         base = _fixture_items()[0]

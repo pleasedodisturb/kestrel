@@ -183,7 +183,10 @@ def _text(value: object) -> str:
 def _http_url(value: str) -> str:
     """Only an absolute http(s) URL from third-party data may become a link;
     javascript:, data:, file: and relative values are dropped."""
-    parts = urlsplit(value.strip()) if value else None
+    try:
+        parts = urlsplit(value.strip()) if value else None
+    except ValueError:  # e.g. "http://[invalid"
+        return ""
     if parts and parts.scheme in ("http", "https") and parts.netloc:
         return value.strip()
     return ""
@@ -242,6 +245,44 @@ def _resolve_arbeitsagentur_url(job: dict) -> str:
     return _http_url(_text(job.get("externeURL")))
 
 
+def _parse_arbeitsagentur_rows(rows: list[dict]) -> list[dict]:
+    """Parse each v6 row on its own: a malformed row is reported and skipped."""
+    result = []
+    for j in rows:
+        try:
+            firma = _text(j.get("firma"))
+            referenznummer = _text(j.get("referenznummer"))
+            title = (
+                _text(j.get("stellenangebotsTitel"))
+                or _text(j.get("hauptberuf"))
+                or f"Stelle {referenznummer}"
+            )
+            city, country = _resolve_arbeitsagentur_location(j)
+            zeitraum = j.get("veroeffentlichungszeitraum")
+            if not isinstance(zeitraum, dict):
+                zeitraum = {}
+            posted = _text(zeitraum.get("von")) or _text(j.get("datumErsteVeroeffentlichung"))
+
+            result.append(
+                {
+                    "source": "arbeitsagentur",
+                    "title": title,
+                    "company": firma,
+                    "location": f"{city}, {country}" if city else country,
+                    "country": country,
+                    "remote": j.get("homeofficemoeglich") is True,
+                    "url": _resolve_arbeitsagentur_url(j),
+                    "refnr": referenznummer,
+                    "posted": posted,
+                    "tags": [],
+                }
+            )
+        except Exception as e:
+            # One malformed third-party row must not abort the whole fetch.
+            print(f"Arbeitsagentur row skipped ({e}): {j.get('referenznummer')!r}", file=sys.stderr)
+    return result
+
+
 def fetch_arbeitsagentur(
     keywords: str = "",
     location: str = "",
@@ -290,7 +331,7 @@ def fetch_arbeitsagentur(
         # Walk pages until `limit` remote rows are collected, a page comes back
         # short (result set exhausted), or the page cap is hit; a single page
         # can miss remote jobs that sit on later pages.
-        jobs = []
+        parsed: list[dict] = []
         for page in range(1, ARBEITSAGENTUR_MAX_PAGES + 1):
             params["page"] = page
             data = get_page()
@@ -299,46 +340,16 @@ def fetch_arbeitsagentur(
                 # a failing first page is still an empty result.
                 break
             raw = _raw_rows(data)
-            jobs += [j for j in _dict_rows(raw) if j.get("homeofficemoeglich") is True]
+            remote_rows = [j for j in _dict_rows(raw) if j.get("homeofficemoeglich") is True]
+            # Parse before counting so a row that fails to parse does not
+            # consume the limit ahead of a valid row behind it.
+            parsed += _parse_arbeitsagentur_rows(remote_rows)
             # Exhaustion is judged on the page as served, not after sanitising.
-            if len(jobs) >= limit or len(raw) < ARBEITSAGENTUR_PAGE_SIZE:
+            if len(parsed) >= limit or len(raw) < ARBEITSAGENTUR_PAGE_SIZE:
                 break
-        jobs = jobs[:limit]
+        return parsed[:limit]
 
-    result = []
-    for j in jobs:
-        try:
-            firma = _text(j.get("firma"))
-            referenznummer = _text(j.get("referenznummer"))
-            title = (
-                _text(j.get("stellenangebotsTitel"))
-                or _text(j.get("hauptberuf"))
-                or f"Stelle {referenznummer}"
-            )
-            city, country = _resolve_arbeitsagentur_location(j)
-            zeitraum = j.get("veroeffentlichungszeitraum")
-            if not isinstance(zeitraum, dict):
-                zeitraum = {}
-            posted = _text(zeitraum.get("von")) or _text(j.get("datumErsteVeroeffentlichung"))
-
-            result.append(
-                {
-                    "source": "arbeitsagentur",
-                    "title": title,
-                    "company": firma,
-                    "location": f"{city}, {country}" if city else country,
-                    "country": country,
-                    "remote": j.get("homeofficemoeglich") is True,
-                    "url": _resolve_arbeitsagentur_url(j),
-                    "refnr": referenznummer,
-                    "posted": posted,
-                    "tags": [],
-                }
-            )
-        except Exception as e:
-            # One malformed third-party row must not abort the whole fetch.
-            print(f"Arbeitsagentur row skipped ({e}): {j.get('referenznummer')!r}", file=sys.stderr)
-    return result
+    return _parse_arbeitsagentur_rows(jobs)
 
 
 def fetch_arbeitnow(

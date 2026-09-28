@@ -217,7 +217,10 @@ def _text(value: object) -> str:
 def _http_url(value: str) -> str:
     """Only an absolute http(s) URL from third-party data may become a link;
     javascript:, data:, file: and relative values are dropped."""
-    parts = urlsplit(value.strip()) if value else None
+    try:
+        parts = urlsplit(value.strip()) if value else None
+    except ValueError:  # e.g. "http://[invalid"
+        return ""
     if parts and parts.scheme in ("http", "https") and parts.netloc:
         return value.strip()
     return ""
@@ -367,7 +370,7 @@ class ArbeitsagenturAdapter(ScraperAdapter):
         # `limit` rows would return only the remote jobs among them, and a
         # single page of 100 can still miss remote jobs on later pages.
         query_params["size"] = ARBEITSAGENTUR_PAGE_SIZE
-        rows = []
+        results: list[RawJobResult] = []
         for page in range(1, ARBEITSAGENTUR_MAX_PAGES + 1):
             query_params["page"] = page
             try:
@@ -377,15 +380,18 @@ class ArbeitsagenturAdapter(ScraperAdapter):
                 # later page failing must not discard rows already collected.
                 if page == 1:
                     raise
-                logger.warning("Arbeitsagentur page %d failed; keeping %d rows", page, len(rows))
+                logger.warning("Arbeitsagentur page %d failed; keeping %d rows", page, len(results))
                 break
             raw = _raw_rows(data)
-            rows += [r for r in _dict_rows(raw) if r.get("homeofficemoeglich") is True]
+            remote_rows = [r for r in _dict_rows(raw) if r.get("homeofficemoeglich") is True]
+            # Parse before counting: a row that fails to parse is skipped and
+            # must not consume the limit ahead of a valid row behind it.
+            results += _parse_arbeitsagentur_rows(remote_rows, self.source_name)
             # Exhaustion is judged on the page as served, not after sanitising:
             # a full page with one null entry is not the last page.
-            if len(rows) >= limit or len(raw) < ARBEITSAGENTUR_PAGE_SIZE:
+            if len(results) >= limit or len(raw) < ARBEITSAGENTUR_PAGE_SIZE:
                 break
-        return _parse_arbeitsagentur_rows(rows[:limit], self.source_name)
+        return results[:limit]
 
     async def _get_page(
         self, client: httpx.AsyncClient, url: str, headers: dict, query_params: dict
