@@ -24,11 +24,19 @@ AI scores every job against your profile with dual fit and desire scores, 288 jo
 
 > **Want to help?** Improve scoring accuracy for non-tech roles, add new job family presets, or help calibrate the red flag detector. See the [Scoring Engine deep dive](docs/roadmap/scoring-engine.md) for how scoring works and where it can improve.
 
+#### Scoring Engine v2 (v0.21 to v0.23)
+
+*Status: Shipped* | [Deep dive](docs/roadmap/scoring-engine.md) <!-- G-1335 to G-1351; a user-facing explainer is tracked as G-374 -->
+
+A role-fit hard gate with a company-prestige cap stops a famous name from inflating a poor fit. A confidence-routed cascade (shadow-first, off by default) lets confident rejects skip the LLM entirely, a drift canary and per-provider calibration on a 0-5 judge scale keep scores comparable across models, relative batch scoring ranks a batch against itself, and ESCO occupation signals add a taxonomy-backed view of the role. A golden-set eval gates nightly CI. [v0.21.0](CHANGELOG.md#0210-2026-07-15), [v0.22.0](CHANGELOG.md#0220-2026-07-17), [v0.23.0](CHANGELOG.md#0230-2026-07-22)
+
+> **Want to help?** Label the golden set (the current labels are interim and model-derived), or run the eval against a provider we have not calibrated yet. See [tests/eval/README.md](tests/eval/README.md).
+
 #### Discovery Engine (v0.3 Osprey)
 
 *Status: Shipped* | [Deep dive](docs/roadmap/discovery-engine.md)
 
-Scans Indeed, LinkedIn, Glassdoor, and Arbeitsagentur automatically on a schedule. A pre-filter eliminates roughly 60% of irrelevant results before AI scoring, so you only spend tokens on jobs worth evaluating. [v0.3.0](CHANGELOG.md#030-2026-04-13)
+In the app: Indeed, Arbeitnow and Arbeitsagentur (German federal job board, API v6 migration in progress), on a schedule (weekly by default in the app; daily via the optional GitHub Actions workflow). The maintainer batch pipeline additionally covers LinkedIn, RemoteOK, WeWorkRemotely, Himalayas and direct Greenhouse/Lever/Ashby boards. A pre-filter eliminates roughly 60% of irrelevant results before AI scoring, so you only spend tokens on jobs worth evaluating. [v0.3.0](CHANGELOG.md#030-2026-04-13)
 
 > **Want to help?** Add a new job board adapter, improve pre-filter accuracy, or fix edge cases in result normalization. The [Discovery Engine deep dive](docs/roadmap/discovery-engine.md) covers the adapter architecture and known gaps.
 
@@ -104,7 +112,7 @@ Personal data is blocked from providers without zero-data-retention guarantees. 
 
 #### Public Roadmap (v0.12 Wagtail)
 
-*Status: In Progress* | [Deep dive](docs/roadmap/public-roadmap.md)
+*Status: Shipped 2026-05-07* | [Deep dive](docs/roadmap/public-roadmap.md)
 
 Making Kestrel's direction visible and structured so users can evaluate the product and contributors can find meaningful work.
 
@@ -122,11 +130,11 @@ Download Kestrel, double-click, and start scoring jobs. No terminal, no Docker, 
 
 #### Browser Extension (v0.14 Kingfisher)
 
-*Status: Planned* | [Deep dive](docs/roadmap/browser-extension.md)
+*Status: Shipped v0.24 (capture + score + consented auto-log); v2 autofill planned* | [Deep dive](docs/roadmap/browser-extension.md)
 
-Browse job boards the way you normally do, and add any posting to your Kestrel scoring queue with one click. The extension works on any site, even ones the built-in scrapers do not cover. Available for Chrome and Firefox.
+Capture a posting on LinkedIn jobs, Greenhouse, Lever or Ashby with one click, see the fit score inline, and log the application with your consent when you submit on one of those ATS sites. Chrome (Manifest V3) today, no form filling, no telemetry. v2 adds review-first autofill that stops at the submit button. [v0.24.0](CHANGELOG.md#0240-2026-08-02)
 
-> **Want to help?** Research Chrome and Firefox extension APIs, prototype the one-click save flow, or explore how to extract structured job data from arbitrary pages. The [Browser Extension deep dive](docs/roadmap/browser-extension.md) covers the planned approach and open questions.
+> **Want to help?** Add extraction rules for another job host, prototype the offline queue for when Kestrel is not running, or work through the Chrome Web Store submission checklist. The [Browser Extension deep dive](docs/roadmap/browser-extension.md) covers what shipped and what is still open.
 
 #### Mobile App (v0.15 Sparrowhawk)
 
@@ -164,7 +172,7 @@ Once Kestrel understands what matters to you, it can show you what to work on.
 
 #### Gap Analysis and Coaching (v1.0 Woodpecker)
 
-*Status: Considering* | [Deep dive](docs/roadmap/gap-analysis-coaching.md)
+*Status: Foundations shipped (gaps, coaching, learning, goals); richer version under consideration* | [Deep dive](docs/roadmap/gap-analysis-coaching.md)
 
 Pick a target role and see exactly what's missing. Kestrel maps the gap between where you are and where you want to be, then suggests concrete steps to close it, from free resources to structured learning paths.
 
@@ -174,7 +182,7 @@ Sometimes the best way to think through your career is to talk it out.
 
 #### Voice Mode (v1.0 Lark)
 
-*Status: Considering* | [Deep dive](docs/roadmap/voice-mode.md)
+*Status: Text conversation mode shipped; speech input under consideration* | <!-- DECISION #102: feature naming --> [Deep dive](docs/roadmap/voice-mode.md)
 
 Talk to Kestrel instead of typing. Dictate pipeline updates, rehearse interview answers out loud, or think through career decisions by voice. Speech becomes another way to interact with everything Kestrel already does.
 
@@ -212,18 +220,21 @@ gantt
     Web Frontend             :done, web,   2026-01-15, 75d
     Cost Control             :done, cost,  2026-03-15, 30d
     Onboarding               :done, onb,   2026-03-01, 45d
+    Public Roadmap           :done, pub,   2026-04-20, 17d
+    Scoring Engine v2        :done, score2, 2026-07-01, 22d
+    Browser Extension v1     :done, bext,  2026-07-15, 18d
 
     section Next
-    Desktop App              :active, desk, 2026-04-15, 90d
-    Browser Extension        :bext, 2026-07-01, 60d
-    Mobile App               :mob,  2026-08-01, 60d
+    Desktop App              :desk, 2026-11-01, 90d
+    Extension v2 autofill    :bext2, 2027-01-01, 60d
+    Mobile App               :mob,  2027-03-01, 60d
 
     section Later
-    Profile and Skills       :prof, 2026-10-01, 90d
-    Know Me                  :know, 2027-01-01, 60d
-    Gap Analysis             :gap,  2027-02-01, 90d
-    Voice Mode               :voice, 2027-04-01, 60d
-    Hosted Version           :hosted, 2027-05-01, 60d
+    Profile and Skills       :prof, 2027-04-01, 90d
+    Know Me                  :know, 2027-07-01, 60d
+    Gap Analysis             :gap,  2027-08-01, 90d
+    Voice Mode               :voice, 2027-10-01, 60d
+    Hosted Version           :hosted, 2027-11-01, 60d
 ```
 
 ### How Milestones Connect

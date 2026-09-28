@@ -31,9 +31,9 @@ Make Kestrel's direction visible and structured so users can evaluate the produc
 
 ### Validated
 
-- ✓ Backend API with 27 routes, 36 services, layered architecture — existing
+- ✓ Backend API with 31 routers (150 endpoints), 50 service modules plus the geo package, layered architecture — existing (counts as of 2026-09-28)
 - ✓ Web frontend (React 19, Vite, TanStack Query, Tailwind CSS) — existing
-- ✓ AI provider abstraction (5 providers: Mock, OpenRouter, Anthropic, Ollama, Together) — existing
+- ✓ AI provider abstraction (10 real providers plus mock: OpenRouter, Anthropic, OpenAI, Together, Groq, xAI, Gemini, Ollama, Mistral, Hugging Face) — existing
 - ✓ AI-powered job scoring with multi-factor rubric, borderline re-scoring, feedback calibration — existing
 - ✓ Job discovery engine with scraper adapters and background scheduling — existing
 - ✓ Application state machine with enforced transitions — existing

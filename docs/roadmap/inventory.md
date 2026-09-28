@@ -39,14 +39,14 @@ Most contributors enter at the deep dive level. Find a milestone that interests 
 | [Infrastructure](infrastructure.md) | v0.12 | CI/CD, testing, and release automation |
 | [Onboarding Flow](onboarding-flow.md) | v0.11 | Six-step guided first-run setup |
 | [PII Safety Boundary](pii-safety-boundary.md) | v0.12 | Privacy controls for AI provider data |
+| [Public Roadmap](public-roadmap.md) | v0.12 | Making the project's direction visible (shipped 2026-05-07) |
+| [Browser Extension](browser-extension.md) | v0.24 | One-click capture and inline score on LinkedIn jobs, Greenhouse, Lever and Ashby; v2 autofill planned |
 
 ## Planned
 
 | Milestone | Version | Description |
 |-----------|---------|-------------|
-| [Public Roadmap](public-roadmap.md) | v0.12 | Making the project's direction visible |
 | [Desktop App](desktop-app.md) | v0.13 | Download, double-click, and start scoring |
-| [Browser Extension](browser-extension.md) | v0.14 | One-click job save from any site |
 | [Mobile App](mobile-app.md) | v0.15 | Pipeline and scores from your phone |
 | [Profile and Skills](profile-and-skills.md) | v1.0 | Honest visual map of where you stand |
 | [Know Me](know-me.md) | v1.0 | Deep personal understanding beyond resume |

@@ -45,6 +45,31 @@ Scores jobs using a local LLM (Ollama). No API key needed.
 python tools/local_scorer.py
 ```
 
+### source_registry.py
+Scan-source registry: every source is reported on every run with a count or a `ZERO` plus reason, so a broken source never looks like a source with nothing to return. Called from `scrape_resilient.py`.
+
+### tier0_ats_poller.py
+Polls the public Greenhouse, Lever and Ashby JSON endpoints of your dream companies directly, ahead of aggregator lag.
+
+### batch_probe.py
+Authoritative geo-eligibility gate plus ATS office introspection for a batch of scored jobs.
+
+### blocklist.py
+Word-boundary company blocklist and soft flags from `config/blocklist.yaml` (copy `config/blocklist.example.yaml`).
+
+## Labelling & Calibration (stable)
+
+Measure the pre-filter against your own ground truth. Two to five hundred labels is calibration, not training.
+
+### build_label_set.py
+Builds a stratified, blind label set from your own discovered jobs.
+
+### annotate.py
+Blind two-axis annotation of that set: could you win it cold, and do you want it.
+
+### calibrate.py
+Precision and recall report for the filter against your labels, and a sanity check on the labels themselves.
+
 ## CV & Cover Letter Tools (stable)
 
 ### render_tailored_cvs.py
@@ -85,6 +110,17 @@ Hybrid API + browser auto-apply. Attempts API submission first, falls back to br
 ### scrape_form_questions.py
 Scrapes ATS form fields before submission to prepare answers in advance.
 
+## Apply Kit (tiered operating model)
+
+### kit_builder.py
+Builds T2 rapid-fire application kits: one numbered folder per application with a `SUBMIT.txt` and rendered cover PDFs.
+
+### t3_lane.py
+T3 lane: auto-fills an apply form up to, but never past, the submit button, then queues it for a human to confirm.
+
+### open_question_probe.py
+Detects required free-text questions on an ATS apply form (authoritative for Greenhouse) so those roles are routed away from the T3 lane.
+
 ## Data Tools (stable)
 
 ### update_sheet.py / validate_sheet.py
@@ -92,3 +128,13 @@ Google Sheets integration for daily scan logging. Requires Google service accoun
 
 ### research_jobs.py / research_remotely.py
 Research tools for finding jobs on specific platforms.
+
+## Ops
+
+### snapshot_db.py
+Atomic, rotating SQLite online-backup snapshots of the Kestrel database.
+
+## Agent
+
+### kestrel-mcp/
+MCP server that exposes `list_pipeline`, `pipeline_stats`, `score_job` and `discover_jobs` to Claude Code. See `tools/kestrel-mcp/README.md`.
