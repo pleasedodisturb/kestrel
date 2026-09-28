@@ -68,6 +68,13 @@ class TestParseArbeitsagenturJob:
             result.url == "https://www.arbeitsagentur.de/jobsuche/jobdetail/12336-a26f539j0448996-S"
         )
 
+    def test_null_or_non_object_location_entries_fall_back(self):
+        """{"stellenlokationen": [null]} and a null adresse must not crash the page."""
+        base = _fixture_items()[0]
+        for bad in ([None], [{"adresse": None}], ["Frankfurt"], [{"adresse": "x"}]):
+            job = _parse_arbeitsagentur_job({**base, "stellenlokationen": bad}, "arbeitsagentur")
+            assert job.location == "Deutschland"
+
     def test_parses_absent_remote_key_item(self):
         """A fixture item with no homeofficemoeglich key at all maps to remote=False."""
         item = _fixture_items()[2]

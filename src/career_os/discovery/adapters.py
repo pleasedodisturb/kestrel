@@ -210,7 +210,12 @@ def _resolve_arbeitsagentur_location(job_dict: dict) -> tuple[str, str]:
     values pass through unchanged.
     """
     lokationen = job_dict.get("stellenlokationen") or []
-    adresse = (lokationen[0].get("adresse") if lokationen else None) or {}
+    # Third-party data: the first entry or its adresse can be null or a
+    # non-object; treat anything that is not a dict as absent.
+    first = lokationen[0] if lokationen and isinstance(lokationen[0], dict) else {}
+    adresse = first.get("adresse")
+    if not isinstance(adresse, dict):
+        adresse = {}
 
     region = _title_case_if_all_upper(adresse.get("region", "") or "")
     city = adresse.get("ort", "") or region

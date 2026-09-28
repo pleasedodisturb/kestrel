@@ -262,6 +262,19 @@ class TestFetchArbeitsagentur:
         ]
 
     @patch("germany_jobs.httpx.Client")
+    def test_null_location_entry_does_not_abort_the_fetch(self, mock_client_cls):
+        base = _load_v6_fixture()["ergebnisliste"][0]
+        rows = [
+            {**base, "stellenlokationen": [None]},
+            {**base, "stellenlokationen": [{"adresse": None}]},
+        ]
+        _mock_arbeitsagentur_client(mock_client_cls, {"ergebnisliste": rows})
+
+        jobs = fetch_arbeitsagentur(keywords="Manager")
+
+        assert [j["location"] for j in jobs] == ["Deutschland", "Deutschland"]
+
+    @patch("germany_jobs.httpx.Client")
     def test_handles_api_error(self, mock_client_cls):
         """A raised exception from client.get is swallowed and returns []."""
         mock_client = MagicMock()
