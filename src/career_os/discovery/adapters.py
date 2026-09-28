@@ -387,29 +387,59 @@ def _parse_jobspy_row(row: object, source_name: str) -> RawJobResult:
 
 
 class JobSpyAdapter(ScraperAdapter):
-    """Scraper using python-jobspy for LinkedIn, Indeed, Glassdoor, Google Jobs."""
+    """Scraper wrapping python-jobspy — requests only the boards in SITES.
+
+    One scrape_jobs call is made per board in SITES so that one board raising
+    never costs another board's rows (see SITES for why only Indeed is here).
+    """
+
+    # Indeed only (G-1802), verified live on 2026-09-28 against python-jobspy
+    # 1.1.82:
+    #   - Glassdoor answers with HTTP 400 and 0 rows (upstream PRs #384, #347)
+    #   - Google Jobs answers with 0 rows: the page is a JavaScript bootstrap
+    #     shell, not server-rendered listings (upstream issue #302)
+    #   - A single multi-board scrape_jobs call loses EVERY board's rows when
+    #     one board raises (upstream PR #388, unmerged); per-board calls below
+    #     fix that independently of the board list.
+    SITES: tuple[str, ...] = ("indeed",)
 
     @property
     def source_name(self) -> str:
         return "jobspy"
 
     async def scrape(self, params: ScrapeParams) -> list[RawJobResult]:
-        """Scrape multiple job boards via python-jobspy.
+        """Scrape python-jobspy, one call per board in SITES per keyword.
 
-        This runs synchronous jobspy code in a thread executor.
+        This runs synchronous jobspy code in a thread executor, bounded by
+        settings.jobspy_timeout_seconds. A board or keyword failing is logged
+        and skipped; if every attempt fails, raises RuntimeError so the sweep
+        records it as a warning (career_os.services.discovery).
         """
+        from career_os.config import settings
+
         scrape_jobs = self._import_jobspy()
 
         keywords = params.keywords or [""]
         location = params.locations[0] if params.locations else "Germany"
-        loop = asyncio.get_event_loop()
+        timeout = settings.jobspy_timeout_seconds
 
         results: list[RawJobResult] = []
+        failures: list[str] = []
+        attempts = 0
         for kw in keywords:
-            rows = await self._scrape_keyword(
-                loop, scrape_jobs, kw, location, params.limit_per_source
+            rows, kw_failures, kw_attempts = await self._scrape_keyword(
+                scrape_jobs, kw, location, params.limit_per_source, timeout
             )
             results.extend(rows)
+            failures.extend(kw_failures)
+            attempts += kw_attempts
+
+        if attempts and len(failures) == attempts:
+            raise RuntimeError(
+                f"JobSpy: all {attempts} site call(s) failed: " + "; ".join(failures)
+            )
+        if failures:
+            logger.warning("JobSpy: %d of %d site call(s) failed", len(failures), attempts)
         return results
 
     @staticmethod
@@ -424,24 +454,70 @@ class JobSpyAdapter(ScraperAdapter):
         return scrape_jobs
 
     async def _scrape_keyword(
-        self, loop, scrape_jobs, keyword: str, location: str, limit: int
+        self,
+        scrape_jobs,
+        keyword: str,
+        location: str,
+        limit: int,
+        timeout: float,
+    ) -> tuple[list[RawJobResult], list[str], int]:
+        """Scrape one keyword across every board in SITES.
+
+        Each board is its own call: one board raising or timing out never
+        costs another board's rows (does NOT re-raise, unlike the old
+        multi-board call this replaces). Returns (rows, failure strings,
+        attempts made).
+        """
+        rows: list[RawJobResult] = []
+        failures: list[str] = []
+        attempts = 0
+        for site in self.SITES:
+            attempts += 1
+            try:
+                rows.extend(
+                    await self._scrape_site(scrape_jobs, site, keyword, location, limit, timeout)
+                )
+            except TimeoutError:
+                failure = f"{site} ('{keyword}'): timed out after {timeout:g}s"
+                failures.append(failure)
+                logger.warning("JobSpy %s", failure)
+            except Exception as exc:
+                failures.append(f"{site} ('{keyword}'): {type(exc).__name__}: {exc}")
+                logger.warning(
+                    "JobSpy scrape error for site '%s', keyword '%s': %s", site, keyword, exc
+                )
+        return rows, failures, attempts
+
+    async def _scrape_site(
+        self,
+        scrape_jobs,
+        site: str,
+        keyword: str,
+        location: str,
+        limit: int,
+        timeout: float,
     ) -> list[RawJobResult]:
-        """Scrape a single keyword via python-jobspy and return parsed results."""
-        try:
-            jobs_df = await loop.run_in_executor(
+        """Scrape a single (site, keyword) pair via python-jobspy, timeout-bound.
+
+        A timed-out executor thread cannot be cancelled (Python threads run to
+        completion): it keeps running jobspy until it returns, and this simply
+        stops waiting for it.
+        """
+        loop = asyncio.get_running_loop()
+        jobs_df = await asyncio.wait_for(
+            loop.run_in_executor(
                 None,
-                lambda k=keyword: scrape_jobs(
-                    site_name=["indeed", "glassdoor"],
-                    search_term=k,
+                lambda: scrape_jobs(
+                    site_name=[site],
+                    search_term=keyword,
                     location=location,
                     results_wanted=limit,
                     hours_old=168,
                     country_indeed="Germany",
                 ),
-            )
-        except Exception as exc:
-            logger.warning("JobSpy scrape error for '%s': %s", keyword, exc)
-            raise
+            ),
+            timeout=timeout,
+        )
 
         if jobs_df is None or jobs_df.empty:
             return []

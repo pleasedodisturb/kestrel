@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # 413 BEFORE any LLM extraction or scoring call, bounding paid-LLM cost/DoS.
     extension_max_jd_chars: int = 30000
 
+    # Per-call wall-clock limit for each python-jobspy scrape_jobs call made by
+    # the discovery sweep (G-1802). Upstream issue #385: the Indeed page-2
+    # request from CI IPs hangs and jobspy's own timeout=10 never fires. Env
+    # JOBSPY_TIMEOUT_SECONDS; must be > 0.
+    jobspy_timeout_seconds: float = Field(default=60.0, gt=0)
+
     # Cache settings
     cache_enabled: bool = True
     cache_encryption_key: str = ""  # User-provided Fernet key; auto-generated if empty
