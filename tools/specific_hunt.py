@@ -1,3 +1,17 @@
+"""Targeted python-jobspy searches over LinkedIn and Indeed; JSON to stdout.
+
+Runs a small set of hand-picked keyword/location searches (see SEARCHES) and
+prints the combined results as a JSON array.
+
+LinkedIn note (G-1802): python-jobspy returns LinkedIn rows with a blank
+description by default (upstream issue #374), because this script does not
+pass linkedin_fetch_description. Passing linkedin_fetch_description=True
+fills descriptions in, but costs one extra guest request per LinkedIn
+posting and makes LinkedIn's guest rate limit (HTTP 429) more likely. This
+script only reads LinkedIn's public guest listings and never uses a
+logged-in session or cookies.
+"""
+
 import asyncio
 import sys
 

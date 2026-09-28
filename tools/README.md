@@ -11,7 +11,9 @@ pip install -r requirements.txt
 ## Discovery & Scoring (stable)
 
 ### scraper.py
-Multi-board job scraper using [python-jobspy](https://github.com/cullenwatson/JobSpy). Searches Indeed, LinkedIn, Glassdoor.
+Multi-board job scraper using [python-jobspy](https://github.com/cullenwatson/JobSpy). Searches LinkedIn and Indeed by default; `google` is rejected (python-jobspy returns 0 rows for Google Jobs), and Glassdoor is off by default (jobspy 1.1.82 answers it with HTTP 400) but can still be requested explicitly.
+
+Kestrel never scrapes LinkedIn from an authenticated session: python-jobspy and every tool here read LinkedIn's public guest listings only, with no login or cookies.
 
 ```bash
 python tools/scraper.py

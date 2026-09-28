@@ -1,6 +1,12 @@
 """
 Job scraper for TPM/Product/AI roles using python-jobspy.
-Searches LinkedIn, Indeed, Glassdoor, and Google Jobs.
+Searches LinkedIn and Indeed by default.
+
+google is rejected (see UNSUPPORTED_SITES): python-jobspy 1.1.x returns 0
+rows for Google Jobs because the page is a JavaScript bootstrap shell
+(upstream issue #302). Glassdoor is off by default because jobspy 1.1.82
+answers it with HTTP 400 (upstream PRs #384, #347) — it can still be
+requested explicitly via --sites.
 
 Usage:
     python tools/scraper.py
@@ -24,10 +30,40 @@ DEFAULT_KEYWORDS = [
     "Technical Program Manager remote",
 ]
 
-DEFAULT_SITES = ["linkedin", "indeed", "glassdoor", "google"]
+# Glassdoor dropped from the default list (not just google): python-jobspy
+# 1.1.82 answers it with HTTP 400 and 0 rows (upstream PRs #384, #347), the
+# same verified silent zero as Google Jobs. Still accepted when requested
+# explicitly via --sites; only google is rejected outright (see below).
+DEFAULT_SITES = ["linkedin", "indeed"]
 DEFAULT_LOCATION = "Berlin, Germany"
 DEFAULT_HOURS_OLD = 72
 DEFAULT_RESULTS_PER_KEYWORD = 30
+
+# Sites that cannot return real results via python-jobspy 1.1.x, and why
+# (G-1802). Checked case-insensitively by validate_sites.
+UNSUPPORTED_SITES: dict[str, str] = {
+    "google": (
+        "python-jobspy 1.1.x returns 0 rows for Google Jobs — the page is a "
+        "JavaScript bootstrap shell, not server-rendered listings (upstream "
+        "issue #302)"
+    ),
+}
+
+
+def validate_sites(sites: list[str]) -> None:
+    """Reject any site in `sites` that UNSUPPORTED_SITES names as dead.
+
+    Case-insensitive. Raises ValueError naming each rejected site with its
+    reason and the supported defaults, so a caller cannot reach scrape_jobs
+    with a site that is known to return nothing.
+    """
+    rejected = [s for s in sites if s.strip().lower() in UNSUPPORTED_SITES]
+    if not rejected:
+        return
+    reasons = "; ".join(f"{s!r}: {UNSUPPORTED_SITES[s.strip().lower()]}" for s in rejected)
+    raise ValueError(
+        f"Unsupported site(s) rejected: {reasons}. Supported defaults: {DEFAULT_SITES}."
+    )
 
 
 def scrape_all(
@@ -41,6 +77,7 @@ def scrape_all(
 
     keywords = keywords or DEFAULT_KEYWORDS
     sites = sites or DEFAULT_SITES
+    validate_sites(sites)
     all_jobs = []
 
     for kw in keywords:
@@ -80,6 +117,11 @@ def main():
     )
     parser.add_argument("--sites", nargs="+", default=DEFAULT_SITES, help="Sites to scrape")
     args = parser.parse_args()
+
+    try:
+        validate_sites(args.sites)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     jobs = scrape_all(
         keywords=args.keywords,

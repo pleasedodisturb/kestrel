@@ -1,15 +1,19 @@
 """Unit tests for tools/scraper.py."""
 
+import sys
 from unittest.mock import patch
 
 import pandas as pd
+import pytest
 from scraper import (
     DEFAULT_HOURS_OLD,
     DEFAULT_KEYWORDS,
     DEFAULT_LOCATION,
     DEFAULT_RESULTS_PER_KEYWORD,
     DEFAULT_SITES,
+    main,
     scrape_all,
+    validate_sites,
 )
 
 # ---------------------------------------------------------------------------
@@ -25,7 +29,8 @@ class TestDefaults:
         assert all(isinstance(kw, str) for kw in DEFAULT_KEYWORDS)
 
     def test_default_sites(self):
-        assert DEFAULT_SITES == ["linkedin", "indeed", "glassdoor", "google"]
+        assert DEFAULT_SITES == ["linkedin", "indeed"]
+        assert "google" not in DEFAULT_SITES
 
     def test_default_location(self):
         assert DEFAULT_LOCATION == "Berlin, Germany"
@@ -197,3 +202,51 @@ class TestScrapeAll:
         scrape_all(keywords=["kw1"])
 
         assert mock_scrape.call_args.kwargs["country_indeed"] == "Germany"
+
+
+# ---------------------------------------------------------------------------
+# Site validation (G-1802): google is rejected up front
+# ---------------------------------------------------------------------------
+
+
+class TestSiteValidation:
+    def test_validate_sites_accepts_defaults(self):
+        """linkedin + indeed pass validation without raising."""
+        validate_sites(["linkedin", "indeed"])
+
+    def test_validate_sites_accepts_explicit_glassdoor(self):
+        """Glassdoor is off by default but still accepted when requested explicitly."""
+        validate_sites(["glassdoor"])
+
+    @patch("scraper.scrape_jobs")
+    def test_scrape_all_rejects_google(self, mock_scrape):
+        """scrape_all raises ValueError naming google and the upstream issue; never calls scrape_jobs."""
+        with pytest.raises(ValueError) as exc_info:
+            scrape_all(keywords=["kw"], sites=["indeed", "google"])
+
+        assert "google" in str(exc_info.value)
+        assert "#302" in str(exc_info.value)
+        mock_scrape.assert_not_called()
+
+    @patch("scraper.scrape_jobs")
+    def test_scrape_all_rejects_google_case_insensitive(self, mock_scrape):
+        """A capitalized "Google" is rejected the same way as lowercase."""
+        with pytest.raises(ValueError) as exc_info:
+            scrape_all(keywords=["kw"], sites=["Google"])
+
+        assert "google" in str(exc_info.value).lower()
+        mock_scrape.assert_not_called()
+
+    @patch("scraper.scrape_jobs")
+    def test_main_rejects_google_with_exit_code_2(self, mock_scrape, monkeypatch, capsys):
+        """The CLI exits 2 with a stderr message naming google and #302."""
+        monkeypatch.setattr(sys, "argv", ["scraper.py", "--sites", "indeed", "google"])
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 2
+        captured = capsys.readouterr()
+        assert "google" in captured.err
+        assert "#302" in captured.err
+        mock_scrape.assert_not_called()
