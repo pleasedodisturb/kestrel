@@ -68,8 +68,9 @@ class Settings(BaseSettings):
     # Per-call wall-clock limit for each python-jobspy scrape_jobs call made by
     # the discovery sweep (G-1802). Upstream issue #385: the Indeed page-2
     # request from CI IPs hangs and jobspy's own timeout=10 never fires. Env
-    # JOBSPY_TIMEOUT_SECONDS; must be > 0.
-    jobspy_timeout_seconds: float = Field(default=60.0, gt=0)
+    # JOBSPY_TIMEOUT_SECONDS; must be > 0 and finite (inf would make the
+    # "hard" timeout unbounded).
+    jobspy_timeout_seconds: float = Field(default=60.0, gt=0, allow_inf_nan=False)
 
     # Cache settings
     cache_enabled: bool = True

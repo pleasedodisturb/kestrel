@@ -241,3 +241,10 @@ class TestJobSpyTimeoutSetting:
         errors = exc_info.value.errors()
         assert any(e["loc"] == ("jobspy_timeout_seconds",) for e in errors)
         assert any("greater than" in e["msg"] for e in errors)
+
+    @pytest.mark.parametrize("value", ["inf", "+inf", "-inf", "nan", "Infinity", "NaN"])
+    def test_non_finite_is_rejected(self, monkeypatch, value):
+        """inf would make the 'hard' timeout unbounded; nan is never a duration."""
+        monkeypatch.setenv("JOBSPY_TIMEOUT_SECONDS", value)
+        with pytest.raises(ValidationError):
+            Settings(_env_file=None)
