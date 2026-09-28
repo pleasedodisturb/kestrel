@@ -538,9 +538,11 @@ class JobSpyAdapter(ScraperAdapter):
                     f"quarantined: {cls._hung} abandoned jobspy call(s) still running "
                     f"(pool of {cls.MAX_WORKERS}); not scheduling more until they return"
                 )
-        state = {"finished": False, "abandoned": False}
+        state = {"started": False, "finished": False, "abandoned": False}
 
         def run():
+            with cls._hung_lock:
+                state["started"] = True
             try:
                 return scrape_jobs(
                     site_name=[site],
@@ -556,13 +558,16 @@ class JobSpyAdapter(ScraperAdapter):
                     if state["abandoned"]:
                         cls._hung -= 1
 
-        loop = asyncio.get_running_loop()
-        future = loop.run_in_executor(cls._pool(), run)
+        cf = cls._pool().submit(run)
         try:
-            jobs_df = await asyncio.wait_for(future, timeout=timeout)
+            jobs_df = await asyncio.wait_for(asyncio.wrap_future(cf), timeout=timeout)
         except TimeoutError:
+            # wait_for cancels the wrapped future, which cancels queued work
+            # that never started; only a call that is actually running on a
+            # worker is hung. Counting a cancelled-before-start submission
+            # would inflate the counter forever (Codex on G-1802).
             with cls._hung_lock:
-                if not state["finished"]:
+                if state["started"] and not state["finished"]:
                     state["abandoned"] = True
                     cls._hung += 1
             raise

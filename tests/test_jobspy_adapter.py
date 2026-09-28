@@ -200,6 +200,44 @@ class TestJobSpyTimeout:
         assert warnings == []
 
     @pytest.mark.asyncio
+    async def test_queued_calls_cancelled_before_start_do_not_count_as_hung(self, monkeypatch):
+        """Pool of 1, three concurrent calls: one runs and hangs, two are
+        cancelled while queued; only the running one is counted, and the
+        counter returns to zero when it finishes."""
+        monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 1)
+        monkeypatch.setattr(JobSpyAdapter, "_executor", None)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+        release = threading.Event()
+        started = []
+
+        def fake_scrape_jobs(**kwargs):
+            started.append(1)
+            release.wait(5)
+            return _FakeFrame()
+
+        adapter = JobSpyAdapter()
+        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
+        try:
+            results = await asyncio.gather(
+                *[
+                    adapter._scrape_site(fake_scrape_jobs, "indeed", "pm", "Germany", 5, 0.05)
+                    for _ in range(3)
+                ],
+                return_exceptions=True,
+            )
+            assert all(isinstance(r, TimeoutError) for r in results)
+            assert len(started) == 1
+            assert JobSpyAdapter.hung_calls() == 1
+        finally:
+            release.set()
+        for _ in range(50):
+            if JobSpyAdapter.hung_calls() == 0:
+                break
+            await asyncio.sleep(0.02)
+        assert JobSpyAdapter.hung_calls() == 0
+
+    @pytest.mark.asyncio
     async def test_partial_timeout_keeps_other_sites_row(self, monkeypatch, caplog):
         """One board timing out does not drop another board's row."""
         monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
