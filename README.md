@@ -360,7 +360,7 @@ Kestrel works out of the box in Demo Mode — free, offline, no account needed. 
 | **OpenRouter (paid models)** | $1-30+/mo | Good | Varies | Premium models (Claude, GPT). Cost depends on model and volume — see note below |
 | **Anthropic (Claude)** | $1-10/mo | Excellent | ~200ms | Best quality + prompt caching savings. Can spike if scoring high volumes without caching |
 | **Together AI** | ~$1-5/mo | Good ([ZDR available](https://www.together.ai/blog/soc-2-compliance)) | ~213ms | Budget-friendly bulk scoring |
-| **Ollama** | Free | Perfect | Depends on hardware | Nothing leaves your machine, ever |
+| **Ollama** | Free | Perfect | Depends on hardware | No AI request ever leaves your machine |
 
 > **Cost depends on model and volume.** A typical daily scan scrapes 1,000-1,500 jobs from multiple boards. That's a lot of AI calls. Here's what it actually costs:
 >

@@ -231,7 +231,7 @@ Not necessarily better - structurally different in ways that matter to some user
 
 **Custom scoring rubric.** Huntr and Teal score resume-vs-JD (a useful but narrow signal). Kestrel scores against a user-defined profile that can encode priorities like location preference, tech stack alignment, company stage, compensation range, and role fit. You define what "good match" means.
 
-**Full data sovereignty.** The application and its database run locally or on your own infrastructure. No account to create, no data sent to a vendor beyond the AI requests you configure (none at all with Ollama), no risk of a service shutting down or raising prices. Your SQLite database is yours to query, export, back up, or migrate however you want.
+**Full data sovereignty.** The application and its database run locally or on your own infrastructure. No account to create, nothing sent to a vendor except the AI requests and optional integrations (TickTick, calendar export, Pushover) you choose to configure, and no risk of a service shutting down or raising prices. Your SQLite database is yours to query, export, back up, or migrate however you want.
 
 **Deepest EU eligibility handling.** A 7-way geo classifier with a committed 277-item reference set decides home / relocate / visa / remote-eligible per posting; Arbeitsagentur and Arbeitnow feeds included. Career-Ops covers more EU boards; Kestrel decides eligibility per posting.
 
@@ -250,7 +250,7 @@ Not necessarily better - structurally different in ways that matter to some user
 | Non-technical, want the easiest start | **Teal** (free tier) or **Huntr** ($40/mo) | Polished UI, Chrome extension, zero setup |
 | Applying to many jobs fast, US market | **Simplify** or **Huntr** | Chrome auto-fill on 1000+ sites is unmatched |
 | Technical, want data ownership | **Kestrel** or **JobSync** | Self-hosted, local database, full control |
-| Privacy-conscious, anti-cloud | **Kestrel** or **Career-Ops** | Local database; with Ollama nothing leaves your machine, with a remote provider only the AI requests you configure do |
+| Privacy-conscious, anti-cloud | **Kestrel** or **Career-Ops** | Local database; with Ollama and no integrations nothing leaves your machine, otherwise only the AI requests and integrations you configure do |
 | Searching in EU/Germany specifically | **Kestrel** or **Career-Ops** | Kestrel: 7-way geo-eligibility classifier with a 277-item reference set, Arbeitsagentur and Arbeitnow feeds. Career-Ops: more EU boards |
 | Already using any agent CLI (Claude Code, Codex, Cursor, Gemini, Copilot, Hermes and more) | **Career-Ops** | Excellent prompt engineering, leverages your existing subscription |
 | Want automated scheduled scanning | **Kestrel** or **Career-Ops** | Kestrel: in-app scheduler plus optional GitHub Actions daily scan. Career-Ops: cron/launchd/Task Scheduler recipes |
