@@ -337,6 +337,29 @@ class TestArbeitsagenturAdapterScrape:
         ]
 
     @pytest.mark.asyncio
+    async def test_scrape_remote_only_keeps_rows_when_a_later_page_fails(self, monkeypatch):
+        """Page 1 yields one remote row, page 2 times out: the row survives."""
+        base = _fixture_items()[0]
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            n = parse_qs(urlparse(str(request.url)).query)["page"][0]
+            if n != "1":
+                raise httpx.ReadTimeout("page 2 timed out", request=request)
+            rows = [
+                {**base, "referenznummer": f"11-{i}-S", "homeofficemoeglich": i == 7}
+                for i in range(100)
+            ]
+            return httpx.Response(200, json={"ergebnisliste": rows})
+
+        _install_mock_transport(monkeypatch, handler)
+        results = await ArbeitsagenturAdapter().scrape(
+            ScrapeParams(
+                keywords=["Manager"], locations=["Frankfurt"], limit_per_source=2, remote_only=True
+            )
+        )
+        assert [r.url.rsplit("/", 1)[1] for r in results] == ["11-7-S"]
+
+    @pytest.mark.asyncio
     async def test_scrape_remote_only_stops_at_the_page_cap(self, monkeypatch):
         """With no remote rows anywhere, the walk gives up after the page cap."""
         base = _fixture_items()[0]

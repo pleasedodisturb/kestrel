@@ -328,7 +328,15 @@ class ArbeitsagenturAdapter(ScraperAdapter):
         rows = []
         for page in range(1, ARBEITSAGENTUR_MAX_PAGES + 1):
             query_params["page"] = page
-            data = await self._get_page(client, url, headers, query_params)
+            try:
+                data = await self._get_page(client, url, headers, query_params)
+            except Exception:
+                # Page 1 failing is a failed search (propagate, as before); a
+                # later page failing must not discard rows already collected.
+                if page == 1:
+                    raise
+                logger.warning("Arbeitsagentur page %d failed; keeping %d rows", page, len(rows))
+                break
             page_rows = data.get("ergebnisliste") or []
             rows += [r for r in page_rows if r.get("homeofficemoeglich") is True]
             if len(rows) >= limit or len(page_rows) < ARBEITSAGENTUR_PAGE_SIZE:
