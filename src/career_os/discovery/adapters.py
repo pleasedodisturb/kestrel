@@ -194,6 +194,16 @@ def _build_arbeitsagentur_params(
     return query_params
 
 
+def _dict_rows(data: dict) -> list[dict]:
+    """v6 `ergebnisliste` rows that are objects; a null or scalar entry in the
+    third-party list is skipped rather than aborting the whole page. The key
+    is absent entirely on a zero-hit response."""
+    rows = data.get("ergebnisliste")
+    if not isinstance(rows, list):
+        return []
+    return [r for r in rows if isinstance(r, dict)]
+
+
 def _title_case_if_all_upper(value: str) -> str:
     """Convert an ALL-CAPS string to title case; pass mixed-case values through unchanged."""
     if value and value == value.upper():
@@ -319,7 +329,7 @@ class ArbeitsagenturAdapter(ScraperAdapter):
 
         if not remote_only:
             data = await self._get_page(client, url, headers, query_params)
-            rows = data.get("ergebnisliste") or []
+            rows = _dict_rows(data)
             return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows]
 
         # Client-side remote filter: walk the largest pages v6 serves until
@@ -340,7 +350,7 @@ class ArbeitsagenturAdapter(ScraperAdapter):
                     raise
                 logger.warning("Arbeitsagentur page %d failed; keeping %d rows", page, len(rows))
                 break
-            page_rows = data.get("ergebnisliste") or []
+            page_rows = _dict_rows(data)
             rows += [r for r in page_rows if r.get("homeofficemoeglich") is True]
             if len(rows) >= limit or len(page_rows) < ARBEITSAGENTUR_PAGE_SIZE:
                 break

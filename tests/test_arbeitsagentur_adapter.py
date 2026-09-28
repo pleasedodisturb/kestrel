@@ -392,6 +392,30 @@ class TestArbeitsagenturAdapterScrape:
         assert seen == ["1", "2", "3", "4", "5"]
 
     @pytest.mark.asyncio
+    async def test_scrape_skips_null_and_scalar_rows(self, monkeypatch):
+        """{"ergebnisliste": [null, valid, "x"]} yields the valid row only."""
+        valid = _fixture_items()[0]
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"ergebnisliste": [None, valid, "x", 3]})
+
+        _install_mock_transport(monkeypatch, handler)
+        for remote_only in (False, True):
+            results = await ArbeitsagenturAdapter().scrape(
+                ScrapeParams(
+                    keywords=["Manager"],
+                    locations=["Frankfurt"],
+                    limit_per_source=5,
+                    remote_only=remote_only,
+                )
+            )
+            assert [r.company for r in results] == (
+                [valid["firma"]]
+                if not remote_only
+                else [valid["firma"]] * bool(valid.get("homeofficemoeglich") is True)
+            )
+
+    @pytest.mark.asyncio
     async def test_scrape_zero_hit_body_returns_empty_list(self, monkeypatch):
         """A v6 zero-hit body (no ergebnisliste key) returns [] rather than raising."""
 

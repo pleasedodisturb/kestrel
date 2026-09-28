@@ -268,12 +268,21 @@ class TestFetchArbeitsagentur:
         rows = [
             {**base, "stellenlokationen": [None]},
             {**base, "stellenlokationen": [{"adresse": None}]},
+            {**base, "stellenlokationen": {"adresse": None}},
+            {**base, "stellenlokationen": 1},
+            None,  # a null row is skipped, not fatal
+            "x",
         ]
         _mock_arbeitsagentur_client(mock_client_cls, {"ergebnisliste": rows})
 
         jobs = fetch_arbeitsagentur(keywords="Manager")
 
-        assert [j["location"] for j in jobs] == ["Deutschland", "Deutschland"]
+        assert [j["location"] for j in jobs] == ["Deutschland"] * 4
+
+    @patch("germany_jobs.httpx.Client")
+    def test_non_list_ergebnisliste_is_empty(self, mock_client_cls):
+        _mock_arbeitsagentur_client(mock_client_cls, {"ergebnisliste": {"oops": 1}})
+        assert fetch_arbeitsagentur(keywords="Manager") == []
 
     @patch("germany_jobs.httpx.Client")
     def test_remote_true_keeps_rows_when_a_later_page_fails(self, mock_client_cls):

@@ -182,6 +182,14 @@ def _title_case_if_all_upper(value: str) -> str:
     return value
 
 
+def _dict_rows(data: dict) -> list[dict]:
+    """v6 ergebnisliste rows that are objects; null or scalar entries are skipped."""
+    rows = data.get("ergebnisliste")
+    if not isinstance(rows, list):
+        return []
+    return [r for r in rows if isinstance(r, dict)]
+
+
 def _resolve_arbeitsagentur_location(job: dict) -> tuple[str, str]:
     """Resolve (city, country) from stellenlokationen[0].adresse.
 
@@ -259,7 +267,7 @@ def fetch_arbeitsagentur(
         data = get_page()
         if data is None:
             return []
-        jobs = data.get("ergebnisliste") or []
+        jobs = _dict_rows(data)
     else:
         # Walk pages until `limit` remote rows are collected, a page comes back
         # short (result set exhausted), or the page cap is hit; a single page
@@ -272,7 +280,7 @@ def fetch_arbeitsagentur(
                 # A failing later page must not discard rows already collected;
                 # a failing first page is still an empty result.
                 break
-            page_rows = data.get("ergebnisliste") or []
+            page_rows = _dict_rows(data)
             jobs += [j for j in page_rows if j.get("homeofficemoeglich") is True]
             if len(jobs) >= limit or len(page_rows) < ARBEITSAGENTUR_PAGE_SIZE:
                 break
