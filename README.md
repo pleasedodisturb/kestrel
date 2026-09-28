@@ -435,14 +435,14 @@ Free and cheap AI models often train on your data or have weaker privacy guarant
 - Career preferences (target roles, salary range, location)
 - Scoring criteria and rubrics
 
-**Only sent to an allowlisted provider** (personally identifying; Ollama, Anthropic or mock today, matched by provider name):
+**Personal** (identifying you):
 - Your name, email, phone number, or address
 - CV/resume content and work history
 - Cover letters and application materials
 - Interview preparation with personal STAR stories
 - Contact details and networking notes
 
-**Enforced:** personal-data features (conversation mode, interview prep) refuse to run on a provider outside the allowlist in `src/career_os/ai/privacy.py` (Ollama, Anthropic, mock); job-description scoring is allowed on any provider. The check is by provider name: Anthropic is allowlisted on the strength of its published retention policy, not by verifying your account's ZDR arrangement, so confirm that on your own account if it matters to you. OpenRouter with ZDR routing is not yet whitelisted. <!-- G-1449 (fail-closed PII CI gate, prod-default CORS/auth) hardens the same boundary; keep the two consistent -->
+**What is enforced today:** the two AI features that send personal data to a model, conversation mode (cover letter, coaching, job evaluation) and interview prep, call `check_privacy_boundary` and refuse to run on a provider outside the allowlist in `src/career_os/ai/privacy.py` (Ollama, Anthropic, mock). Every other AI-backed feature (scoring, company research, goal recalibration, role intelligence, extension capture) is classed as job-market data in that file's `FEATURE_SENSITIVITY` map and is allowed on any provider. The check is by provider name: Anthropic is allowlisted on the strength of its published retention policy, not by verifying your account's ZDR arrangement, so confirm that on your own account if it matters to you. OpenRouter with ZDR routing is not yet whitelisted. Data you enter outside an AI feature (contacts, notes, application records) never leaves the local database. <!-- G-1449 (fail-closed PII CI gate, prod-default CORS/auth) hardens the same boundary; keep the two consistent -->
 
 **Rule of thumb:** If it's about the job market, cheap models are fine. If it's about *you*, use Ollama (local) or Anthropic, the two real providers on the allowlist today. A provider with ZDR enabled elsewhere (Together's toggle, OpenRouter ZDR routing) is a good choice for scoring, but personal-data features will refuse it until it is added to the allowlist in `src/career_os/ai/privacy.py`.
 
