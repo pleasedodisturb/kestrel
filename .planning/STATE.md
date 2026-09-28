@@ -2,15 +2,17 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Geo gate to production
+current_phase_name: "Phase 6: Test honesty"
 status: planning
-last_updated: "2026-09-28T15:07:54.075Z"
+stopped_at: "ROADMAP.md created for v1.1 (Phases 6-10, 20/20 requirements mapped); ready for /gsd-plan-phase 6"
+last_updated: "2026-09-28T15:12:54.789Z"
 last_activity: 2026-09-28
+state_head: cad0cb20bcc3752e4f78c6e9505ce064fa13411d
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -20,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-21)
 
 **Core value:** Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
-**Current focus:** Phase 5 complete. Milestone phases 2-5 done. Phase 1 (Feature Inventory) skipped.
+**Current focus:** Milestone v1.1 (Geo gate to production) roadmapped: Phases 6-10, 20/20 requirements mapped. Phase 6 (Test honesty) ready to plan.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-09-28 — Milestone v1.1 started
+Phase: 6 of 10 (Test honesty) - first phase of milestone v1.1
+Plan: - (not yet planned; run /gsd-plan-phase 6)
+Status: Ready to plan
+Last activity: 2026-09-28 - ROADMAP.md created for v1.1 (Phases 6-10, 20/20 requirements mapped)
 
 ## Performance Metrics
 
@@ -74,6 +76,8 @@ Recent decisions affecting current work:
 - Planned template adaptation: Design Considerations, Open Questions, Research Needed replace shipped sections
 - Feature Flags deep dive satisfies ROAD-15 without ROADMAP.md entry (internal infrastructure)
 - All Mermaid diagrams synced with Phase 3 prose: Know Me added, Voice Mode renamed, Feature Flags edge added
+- v1.1 roadmap: Phases 6-10 continue numbering from roadmap-m1 (ended at Phase 5); every phase ships as its own PR through the review-push gate (branch, signed review, merge only on green CI)
+- Phase 8 (Over-admission rule, RULE-01..04) requires /gsd-discuss-phase before planning; the rule is a design decision to be re-measured against the 277-item blind set
 
 ### Pending Todos
 
@@ -120,6 +124,6 @@ Items acknowledged and deferred at roadmap-m1 milestone close on 2026-05-07:
 
 ## Session Continuity
 
-Last session: 2026-04-27T17:16:00.000Z
-Stopped at: Completed 04-02-PLAN.md (Phase 4 complete: all deep dives, ROADMAP.md links, Mermaid fixes)
-Resume file: None (Phase 4 complete)
+Last session: 2026-09-28T15:12:54.789Z
+Stopped at: ROADMAP.md created for v1.1 (Phases 6-10, 20/20 requirements mapped); ready to run /gsd-plan-phase 6
+Resume file: None (roadmap complete, ready for phase planning)
