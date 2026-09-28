@@ -254,9 +254,40 @@ class TestArbeitsagenturAdapterScrape:
 
         qs = parse_qs(urlparse(str(requests[0].url)).query)
         assert "arbeitszeit" not in qs
+        # Client-side filtering asks for the largest v6 page, not `limit`,
+        # so a remote-only search does not shrink to the remote rows among
+        # the first five results.
+        assert qs["size"] == ["100"]
         assert len(results) == 1
         assert results[0].remote is True
         assert results[0].company == "SD Worx GmbH"
+
+    @pytest.mark.asyncio
+    async def test_scrape_remote_only_truncates_to_limit_after_filtering(self, monkeypatch):
+        """More remote rows than `limit` on the widened page are cut to `limit`."""
+        base = _fixture_items()[0]
+        payload = {
+            "ergebnisliste": [
+                {**base, "referenznummer": f"10000-{i}-S", "homeofficemoeglich": True}
+                for i in range(7)
+            ]
+        }
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json=payload)
+
+        _install_mock_transport(monkeypatch, handler)
+
+        results = await ArbeitsagenturAdapter().scrape(
+            ScrapeParams(
+                keywords=["Manager"],
+                locations=["Frankfurt"],
+                limit_per_source=3,
+                remote_only=True,
+            )
+        )
+        assert len(results) == 3
+        assert all(r.remote for r in results)
 
     @pytest.mark.asyncio
     async def test_scrape_zero_hit_body_returns_empty_list(self, monkeypatch):

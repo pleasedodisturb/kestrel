@@ -300,6 +300,12 @@ class ArbeitsagenturAdapter(ScraperAdapter):
         remote filter.
         """
         query_params = _build_arbeitsagentur_params(keyword, location, limit)
+        if remote_only:
+            # The filter runs client-side on one page, so ask for the largest
+            # page v6 serves and truncate after filtering; otherwise a
+            # remote-only search returns only the remote rows among the first
+            # `limit` results, usually far fewer than asked for.
+            query_params["size"] = 100
         url = f"{self.ARBEITSAGENTUR_BASE}/pc/v6/jobs"
         headers = {"X-API-Key": self.ARBEITSAGENTUR_API_KEY}
 
@@ -314,7 +320,7 @@ class ArbeitsagenturAdapter(ScraperAdapter):
 
         rows = data.get("ergebnisliste") or []
         if remote_only:
-            rows = [r for r in rows if r.get("homeofficemoeglich") is True]
+            rows = [r for r in rows if r.get("homeofficemoeglich") is True][:limit]
 
         return [_parse_arbeitsagentur_job(j, self.source_name) for j in rows]
 
