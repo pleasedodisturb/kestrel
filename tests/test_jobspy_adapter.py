@@ -1,0 +1,419 @@
+"""Offline tests for JobSpyAdapter — per-site JobSpy sweep hardening (G-1802).
+
+Offline: fake scrape_jobs injected via _import_jobspy, never imports jobspy or
+touches the network.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import sys
+import threading
+import time
+
+import pytest
+from pydantic import ValidationError
+
+from career_os.config import Settings, settings
+from career_os.discovery.adapters import JobSpyAdapter, ScrapeParams
+from career_os.services.discovery import _scrape_all_adapters
+
+
+class _FakeFrame:
+    """Minimal stand-in for a pandas DataFrame: .empty and .iterrows()."""
+
+    def __init__(self, rows: list[dict] | None = None):
+        self._rows = rows or []
+
+    @property
+    def empty(self) -> bool:
+        return not self._rows
+
+    def iterrows(self):
+        return iter(enumerate(self._rows))
+
+
+class TestJobSpySiteRequests:
+    """Default config talks to Indeed only, one scrape_jobs call per keyword."""
+
+    @pytest.mark.asyncio
+    async def test_default_config_requests_indeed_only(self, monkeypatch):
+        """Two keywords produce exactly 2 scrape_jobs calls, each Indeed-only."""
+        calls = []
+
+        def fake_scrape_jobs(**kwargs):
+            calls.append(kwargs)
+            return _FakeFrame()
+
+        adapter = JobSpyAdapter()
+        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
+
+        params = ScrapeParams(keywords=["pm", "tpm"], locations=["Berlin"], limit_per_source=25)
+        await adapter.scrape(params)
+
+        assert len(calls) == 2
+        assert calls[0] == {
+            "site_name": ["indeed"],
+            "search_term": "pm",
+            "location": "Berlin",
+            "results_wanted": 25,
+            "hours_old": 168,
+            "country_indeed": "Germany",
+        }
+        assert calls[1]["search_term"] == "tpm"
+
+    def test_sites_is_indeed_only(self):
+        """JobSpyAdapter.SITES contains only Indeed; no Glassdoor or Google."""
+        assert JobSpyAdapter.SITES == ("indeed",)
+        assert "glassdoor" not in JobSpyAdapter.SITES
+        assert "google" not in JobSpyAdapter.SITES
+
+
+class TestJobSpySiteIsolation:
+    """One board raising must never drop another board's rows (AC2)."""
+
+    @pytest.mark.asyncio
+    async def test_one_site_failing_does_not_drop_other_sites_rows(self, monkeypatch, caplog):
+        """One board raising keeps the other board's row."""
+        adapter = JobSpyAdapter()
+        monkeypatch.setattr(JobSpyAdapter, "SITES", ("indeed", "linkedin"))
+        seen_site_names = []
+
+        def fake_scrape_jobs(*, site_name, **kwargs):
+            seen_site_names.append(site_name)
+            if site_name == ["indeed"]:
+                raise RuntimeError("indeed exploded")
+            return _FakeFrame(
+                [
+                    {
+                        "title": "LI Title",
+                        "company": "Co",
+                        "location": "Berlin",
+                        "job_url": "http://li",
+                    }
+                ]
+            )
+
+        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
+
+        with caplog.at_level(logging.WARNING):
+            rows = await adapter.scrape(ScrapeParams(keywords=["pm"], locations=["Berlin"]))
+
+        assert len(rows) == 1
+        assert rows[0].title == "LI Title"
+        assert rows[0].url == "http://li"
+        assert seen_site_names == [["indeed"], ["linkedin"]]
+        assert any(
+            "indeed" in rec.message and "indeed exploded" in rec.message
+            for rec in caplog.records
+            if rec.levelname == "WARNING"
+        )
+
+    @pytest.mark.asyncio
+    async def test_all_sites_failing_raises_with_both_reasons(self, monkeypatch):
+        """When every call fails, scrape raises RuntimeError naming every site+reason."""
+        adapter = JobSpyAdapter()
+        monkeypatch.setattr(JobSpyAdapter, "SITES", ("indeed", "linkedin"))
+
+        def fake_scrape_jobs(*, site_name, **kwargs):
+            raise RuntimeError(f"{site_name[0]} boom")
+
+        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await adapter.scrape(ScrapeParams(keywords=["pm"], locations=["Berlin"]))
+
+        message = str(exc_info.value)
+        assert "indeed" in message and "indeed boom" in message
+        assert "linkedin" in message and "linkedin boom" in message
+
+
+class TestJobSpyTimeout:
+    """A hung executor call must never stall the sweep (AC3)."""
+
+    @pytest.mark.asyncio
+    async def test_hung_scraper_times_out_and_sweep_returns_fast(self, monkeypatch):
+        """A blocked executor call is abandoned after jobspy_timeout_seconds."""
+        monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
+        event = threading.Event()
+
+        def fake_scrape_jobs(**kwargs):
+            event.wait(5)
+            return _FakeFrame()
+
+        adapter = JobSpyAdapter()
+        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
+
+        try:
+            start = time.monotonic()
+            jobs, warnings, sources_queried = await _scrape_all_adapters(
+                [adapter], ScrapeParams(keywords=["pm"])
+            )
+            elapsed = time.monotonic() - start
+
+            assert elapsed < 2.0
+            assert jobs == []
+            assert sources_queried == []
+            assert len(warnings) == 1
+            assert warnings[0]["source"] == "jobspy"
+            assert "timed out" in warnings[0]["error"] and "indeed" in warnings[0]["error"]
+        finally:
+            event.set()
+
+    @pytest.mark.asyncio
+    async def test_hung_calls_are_bounded_and_quarantine_new_calls(self, monkeypatch):
+        """Abandoned threads are counted; at the pool size new calls fail fast
+        instead of queueing, and the count drops once the threads return."""
+        monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 2)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+        release = threading.Event()
+
+        def fake_scrape_jobs(**kwargs):
+            release.wait(5)
+            return _FakeFrame()
+
+        adapter = JobSpyAdapter()
+        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
+        try:
+            for _ in range(2):
+                _, warnings, _ = await _scrape_all_adapters(
+                    [adapter], ScrapeParams(keywords=["pm"])
+                )
+                assert "timed out" in warnings[0]["error"]
+            assert JobSpyAdapter.hung_calls() == 2
+            start = time.monotonic()
+            _, warnings, _ = await _scrape_all_adapters([adapter], ScrapeParams(keywords=["pm"]))
+            assert time.monotonic() - start < 0.05, "refused up front, not after a timeout"
+            assert "quarantined" in warnings[0]["error"]
+            assert JobSpyAdapter.hung_calls() == 2
+        finally:
+            release.set()
+        for _ in range(50):
+            if JobSpyAdapter.hung_calls() == 0:
+                break
+            await asyncio.sleep(0.02)
+        assert JobSpyAdapter.hung_calls() == 0
+        _, warnings, _ = await _scrape_all_adapters([adapter], ScrapeParams(keywords=["pm"]))
+        assert warnings == []
+
+    @pytest.mark.asyncio
+    async def test_concurrent_calls_beyond_the_limit_are_refused_not_queued(self, monkeypatch):
+        """Limit of 1, three concurrent calls: one runs (and hangs), two are refused
+        immediately; the hung one is counted alone, on a daemon thread the
+        interpreter will not join, and both counters return to zero on release."""
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 1)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+        release = threading.Event()
+        started = []
+
+        def fake_scrape_jobs(**kwargs):
+            started.append(1)
+            release.wait(5)
+            return _FakeFrame()
+
+        adapter = JobSpyAdapter()
+        try:
+            results = await asyncio.gather(
+                *[
+                    adapter._scrape_site(fake_scrape_jobs, "indeed", "pm", "Germany", 5, 0.05)
+                    for _ in range(3)
+                ],
+                return_exceptions=True,
+            )
+            kinds = sorted(type(r).__name__ for r in results)
+            assert kinds == ["RuntimeError", "RuntimeError", "TimeoutError"]
+            assert all("quarantined" in str(r) for r in results if isinstance(r, RuntimeError))
+            assert len(started) == 1
+            assert JobSpyAdapter.hung_calls() == 1
+            hung_threads = [t for t in threading.enumerate() if t.name == "jobspy" and t.is_alive()]
+            assert hung_threads and all(t.daemon for t in hung_threads)
+        finally:
+            release.set()
+        for _ in range(50):
+            if JobSpyAdapter.hung_calls() == 0 and JobSpyAdapter._running == 0:
+                break
+            await asyncio.sleep(0.02)
+        assert JobSpyAdapter.hung_calls() == 0
+        assert JobSpyAdapter._running == 0
+
+    @pytest.mark.asyncio
+    async def test_cancelled_before_thread_start_releases_the_slot(self, monkeypatch):
+        """If the awaiting task gives up before the daemon thread runs, the
+        reserved slot is released and jobspy is never called."""
+        from career_os.discovery import adapters as adapters_module
+
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 1)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+        captured: list = []
+
+        class LazyThread:
+            """Records the target instead of starting it, so the test controls when it runs."""
+
+            def __init__(self, target, name=None, daemon=None):
+                captured.append(target)
+
+            def start(self):
+                pass
+
+        monkeypatch.setattr(adapters_module.threading, "Thread", LazyThread)
+        calls = []
+
+        def fake_scrape_jobs(**kwargs):
+            calls.append(1)
+            return _FakeFrame()
+
+        with pytest.raises(TimeoutError):
+            await JobSpyAdapter()._scrape_site(fake_scrape_jobs, "indeed", "pm", "Germany", 5, 0.01)
+        assert JobSpyAdapter._running == 1, "slot reserved while the submission is pending"
+        captured[0]()  # the thread body finally runs: the future is already cancelled
+        assert calls == []
+        assert JobSpyAdapter._running == 0
+        assert JobSpyAdapter.hung_calls() == 0
+
+    @pytest.mark.asyncio
+    async def test_thread_start_failure_releases_the_slot(self, monkeypatch):
+        """OS thread exhaustion at start() must not consume a slot forever."""
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 1)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+
+        def cannot_start(self):
+            raise RuntimeError("can't start new thread")
+
+        monkeypatch.setattr(threading.Thread, "start", cannot_start)
+        for _ in range(2):
+            with pytest.raises(RuntimeError, match="can't start new thread"):
+                await JobSpyAdapter()._scrape_site(
+                    lambda **kw: _FakeFrame(), "indeed", "pm", "Germany", 5, 1
+                )
+            assert JobSpyAdapter._running == 0
+        assert JobSpyAdapter.hung_calls() == 0
+
+    @pytest.mark.asyncio
+    async def test_late_completion_after_timeout_raises_nothing_in_the_thread(self, monkeypatch):
+        """A call that finishes (or raises) after the awaiting task timed out
+        must publish quietly: the Future is RUNNING, so wait_for's cancel()
+        did not take, set_result/set_exception succeed and no thread
+        exception is emitted."""
+        monkeypatch.setattr(JobSpyAdapter, "MAX_WORKERS", 2)
+        monkeypatch.setattr(JobSpyAdapter, "_running", 0)
+        monkeypatch.setattr(JobSpyAdapter, "_hung", 0)
+        hooked: list = []
+        monkeypatch.setattr(threading, "excepthook", lambda args: hooked.append(args))
+        release = threading.Event()
+
+        def late_return(**kwargs):
+            release.wait(5)
+            return _FakeFrame()
+
+        def late_raise(**kwargs):
+            release.wait(5)
+            raise ValueError("late boom")
+
+        adapter = JobSpyAdapter()
+        for fn in (late_return, late_raise):
+            with pytest.raises(TimeoutError):
+                await adapter._scrape_site(fn, "indeed", "pm", "Germany", 5, 0.02)
+        assert JobSpyAdapter.hung_calls() == 2
+        release.set()
+        for _ in range(100):
+            if JobSpyAdapter._running == 0:
+                break
+            await asyncio.sleep(0.02)
+        assert JobSpyAdapter._running == 0
+        assert JobSpyAdapter.hung_calls() == 0
+        assert hooked == [], [str(h.exc_value) for h in hooked]
+
+    @pytest.mark.asyncio
+    async def test_partial_timeout_keeps_other_sites_row(self, monkeypatch, caplog):
+        """One board timing out does not drop another board's row."""
+        monkeypatch.setattr(settings, "jobspy_timeout_seconds", 0.05)
+        monkeypatch.setattr(JobSpyAdapter, "SITES", ("indeed", "linkedin"))
+        event = threading.Event()
+
+        def fake_scrape_jobs(*, site_name, **kwargs):
+            if site_name == ["indeed"]:
+                event.wait(5)
+                return _FakeFrame()
+            return _FakeFrame(
+                [{"title": "LI", "company": "Co", "location": "Berlin", "job_url": "http://li"}]
+            )
+
+        adapter = JobSpyAdapter()
+        monkeypatch.setattr(adapter, "_import_jobspy", lambda: fake_scrape_jobs)
+
+        try:
+            with caplog.at_level(logging.WARNING):
+                start = time.monotonic()
+                rows = await adapter.scrape(ScrapeParams(keywords=["pm"], locations=["Berlin"]))
+                elapsed = time.monotonic() - start
+
+            assert elapsed < 2.0
+            assert len(rows) == 1
+            assert rows[0].title == "LI"
+            assert any(
+                "timed out" in rec.message and "indeed" in rec.message
+                for rec in caplog.records
+                if rec.levelname == "WARNING"
+            )
+        finally:
+            event.set()
+
+
+class TestJobSpyMissingDependency:
+    """python-jobspy not being installed must produce a warning, not a crash."""
+
+    @pytest.mark.asyncio
+    async def test_missing_jobspy_records_a_warning_not_a_crash(self, monkeypatch):
+        """With python-jobspy not importable, the sweep records a warning."""
+        monkeypatch.setitem(sys.modules, "jobspy", None)
+
+        adapter = JobSpyAdapter()
+        jobs, warnings, sources_queried = await _scrape_all_adapters(
+            [adapter], ScrapeParams(keywords=["pm"])
+        )
+
+        assert jobs == []
+        assert sources_queried == []
+        assert len(warnings) == 1
+        assert warnings[0]["source"] == "jobspy"
+        assert "python-jobspy is not installed" in warnings[0]["error"]
+
+
+class TestJobSpyTimeoutSetting:
+    """Settings.jobspy_timeout_seconds: default, env override, and validation."""
+
+    def test_default_is_60(self):
+        """Settings field defaults to 60 seconds and is a float."""
+        field = Settings.model_fields["jobspy_timeout_seconds"]
+        assert field.default == 60
+        assert field.annotation is float
+
+    def test_env_var_override(self, monkeypatch):
+        """JOBSPY_TIMEOUT_SECONDS from the environment overrides the default."""
+        monkeypatch.setenv("JOBSPY_TIMEOUT_SECONDS", "7")
+        s = Settings(_env_file=None, ai_provider="mock", auth_enabled=False)
+        assert s.jobspy_timeout_seconds == 7.0
+        assert isinstance(s.jobspy_timeout_seconds, float)
+
+    def test_zero_is_rejected(self, monkeypatch):
+        """A value of 0 fails Settings validation (gt=0)."""
+        monkeypatch.setenv("JOBSPY_TIMEOUT_SECONDS", "0")
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(_env_file=None, ai_provider="mock", auth_enabled=False)
+
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("jobspy_timeout_seconds",) for e in errors)
+        assert any("greater than" in e["msg"] for e in errors)
+
+    @pytest.mark.parametrize("value", ["inf", "+inf", "-inf", "nan", "Infinity", "NaN"])
+    def test_non_finite_is_rejected(self, monkeypatch, value):
+        """inf would make the 'hard' timeout unbounded; nan is never a duration."""
+        monkeypatch.setenv("JOBSPY_TIMEOUT_SECONDS", value)
+        with pytest.raises(ValidationError):
+            Settings(_env_file=None)
