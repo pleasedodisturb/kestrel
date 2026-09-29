@@ -59,12 +59,21 @@ jobs:
       # attestation on the registry (the wrapper has zero dependencies, so
       # `npm audit signatures` has nothing to verify here).
       - name: Verify published provenance
+        # G-1848: the registry needs minutes, not seconds, to expose the
+        # attestation ("Your package is being processed and may take a few
+        # minutes"); one query after a fixed 30 s failed 0.28.1 and 0.28.2
+        # although both were signed. Wait 30 s, query, and repeat ten times
+        # (checks at 30 s .. 300 s); still strict after the tenth.
         run: |
-          sleep 30
           VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
-          PROV=$(npm view "kestrel-app@${VERSION}" dist.attestations.provenance.predicateType 2>/dev/null)
-          if [ -z "$PROV" ]; then
-            echo "::error::No provenance attestation found for kestrel-app@${VERSION}"
-            exit 1
-          fi
-          echo "Provenance OK for ${VERSION}: ${PROV}"
+          for attempt in $(seq 1 10); do
+            sleep 30
+            PROV=$(npm view "kestrel-app@${VERSION}" dist.attestations.provenance.predicateType 2>/dev/null || true)
+            if [ -n "$PROV" ]; then
+              echo "Provenance OK for ${VERSION} (attempt ${attempt}): ${PROV}"
+              exit 0
+            fi
+            echo "attempt ${attempt}/10: no attestation visible yet for kestrel-app@${VERSION}"
+          done
+          echo "::error::No provenance attestation found for kestrel-app@${VERSION} after 5 minutes"
+          exit 1
