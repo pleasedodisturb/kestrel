@@ -276,12 +276,13 @@ def _is_module_level_skip(node: ast.AST) -> bool:
 | A2 | The Pattern 2 AST-detection code sketch is correct Python/works against pytest/ast as written | Architecture Patterns > Pattern 2 | Medium — it was designed against the real shapes of the four files read this session but was not executed; the planner/executor should run it against a constructed bad-pattern fixture (the Nyquist "scratch check" below) before trusting it in CI |
 | A3 | No isolated commit deliberately removed `parse_scoring_response` from `tools/job_scorer.py` — it fell out incidentally | State of the Art | Very low — doesn't affect the delete recommendation, which is based on "zero live callers today," a fact independently verified by grep, not by git history |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the TEST-02 guard also cover `tools/tests/*.py`, not just `tests/*.py`?**
    - What we know: G-1382's own AC text says "No test file in **tests/**..." (scoped), but `tools/tests/test_config_loaders.py` has an identical file-presence-guard pattern (fine, not a violation) and the *class* of anti-pattern (masking ImportError) is architecturally identical whether it happens under `tests/` or `tools/tests/`. `tools/tests/` is a separate `pytest` invocation in CI (`Run tool-script tests` step) but the phase's stated goal — "the test suite tells the truth" — isn't directory-scoped.
    - What's unclear: Whether scoping strictly to `tests/` (satisfying the literal AC) vs. also sweeping `tools/tests/` (serving the broader phase goal, at near-zero marginal cost since no violation currently exists there) is the intended scope.
    - Recommendation: Sweep both. The cost of including `tools/tests/**/*.py` in the glob is one extra directory in an `ast.walk`, and today it finds zero violations there (confirmed: the only `tools/tests/` `allow_module_level` instance is the file-presence-guard pattern), so it costs nothing today and closes the same class of gap for free.
+   - **RESOLVED (2026-09-29, plan 06-02 DEC-09):** sweep both `tests/` and `tools/tests/`, recursing into subpackages.
 
 ## Environment Availability
 

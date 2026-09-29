@@ -36,6 +36,7 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
 ## Phase Details
 
 ### Phase 6: Test honesty
+
 **Goal**: The test suite tells the truth: no test silently vanishes behind a masked import error, and the formatter used locally cannot disagree with the one CI enforces.
 **Depends on**: Phase 5 (roadmap-m1, shipped)
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04
@@ -46,10 +47,20 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
   3. A guard test or CI step fails on demand when an import-masking module-level skip is reintroduced (proven by a deliberate reintroduction in a scratch check)
   4. `ruff format --check src/ tests/` (the CI invocation) and the local pre-commit `ruff-format` hook agree on every file, because one ruff version is pinned in both `.pre-commit-config.yaml` and `pyproject.toml`; the `_alembic` exclude is preserved
   5. A test or CI step fails when the pre-commit ruff rev and the pyproject ruff pin are made to drift apart (proven by a deliberate drift in a scratch check)
-**Plans**: TBD
+
+**Plans:** 2 plans
+
+Plans:
+**Wave 1**
+- [ ] 06-01-PLAN.md — (wave 1, G-1383) Pin one exact ruff version in pyproject and pre-commit, add force-exclude, add the drift + _alembic-exclude guard `tests/test_toolchain_pins.py`, prove drift detection and pre-commit/CI parity
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 06-02-PLAN.md — (wave 2, G-1382, depends on 06-01) Add the AST guard `tests/test_no_import_masking_skips.py`, delete the dead `tests/test_parse_scoring_response.py`, re-pin its 10 live behaviours on `_try_parse_structured`, prove reintroduction is caught
+
 **Git delivery**: Branch `G-1382/test-honesty` off main; commits scoped per ticket (`test(G-1382): ...`, `chore(G-1383): ...`); `review-push run` then `review-push sign` before push; one PR for the phase; merge only when CI is green.
 
 ### Phase 7: Wire the geo gate
+
 **Goal**: A user can turn geo-eligibility filtering on per search profile and see the verdict on every surviving job, with zero change in behaviour for profiles that leave it off.
 **Depends on**: Phase 6
 **Requirements**: GEO-01, GEO-02, GEO-03, GEO-04
@@ -59,11 +70,13 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
   2. With the gate enabled, `DiscoveredJob.geo_class` is persisted for each surviving job and present in the discovery API response body
   3. With no geo keys set on a profile, prefilter output and discovery API results are byte-identical to pre-Phase-7 behaviour, proven by a regression test comparing fixture output before and after
   4. A user reading discovery results, via the API response (documented) and via the frontend results view if one exists, can see each job's `geo_class`
+
 **Plans**: TBD
 **Git delivery**: Branch `G-1483/wire-geo-gate` off main; conventional commits scoped `feat(G-1483): ...`; `review-push run` then `review-push sign` before push; one PR; merge only when CI is green.
 **UI hint**: yes
 
 ### Phase 8: Over-admission rule
+
 **Goal**: A multi-office global company no longer passes the gate on the strength of one eligible desk when the role's own location is ineligible, and the choice of rule is backed by measurement, not guesswork.
 **Depends on**: Phase 7
 **Requirements**: RULE-01, RULE-02, RULE-03, RULE-04
@@ -75,10 +88,12 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
   3. Precision on the 277-item blind set with authoritative offices improves over the 51.5% baseline while recall stays at or above 79.1%, recorded in the eval log with a differential table
   4. The committed benchmark run measures the exact configuration that ships (offices supplied), so the published numbers match production behaviour
   5. The chosen rule and its rationale are documented in `.claude/rules/geo-gate.md` or the engine docs, readable by the next contributor
+
 **Plans**: TBD
 **Git delivery**: Branch `G-1496/over-admission-rule` off main; conventional commits scoped `feat(G-1496): ...`; `review-push run` then `review-push sign` before push; one PR; merge only when CI is green.
 
 ### Phase 9: Single authority
+
 **Goal**: There is exactly one geo classifier in the codebase; the legacy `tools/batch_probe.py` duplicate delegates to the package engine, and the blind-set fixture is trimmed to the engine's real input window without changing a single reference verdict.
 **Depends on**: Phase 8
 **Requirements**: UNIF-01, UNIF-02, UNIF-03, UNIF-04, UNIF-05
@@ -89,10 +104,12 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
   3. `build_profile` rejects or documents pathological user regexes, and `_compile_tokens` skips punctuation-only tokens, both covered by unit tests
   4. Every item in `tests/eval/geo/fixtures/blind_items.json` has `desc` capped at the 2500-character engine window, HTML-stripped, with tracking markers and outbound URLs removed
   5. `pytest tests/eval/geo` is green with `reference_assignments.json` regenerated and all 277 reference verdicts unchanged from before the trim, recorded in `GENERATION_LOG.md`
+
 **Plans**: TBD
 **Git delivery**: Branch `G-1485/single-geo-authority` off main; conventional commits scoped per ticket (`refactor(G-1485): ...`, `chore(G-1484): ...`); `review-push run` then `review-push sign` before push; one PR for the phase; merge only when CI is green.
 
 ### Phase 10: Provider preflight
+
 **Goal**: Provider failures are told apart before they burn budget or silently degrade discovery: "no credits" is distinguished from "rate limited," and a preflight check reports readiness before any scan runs.
 **Depends on**: Phase 9
 **Requirements**: PROV-01, PROV-02, PROV-03
@@ -102,6 +119,7 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
   2. `tools/preflight_providers.py` checks every configured provider's readiness (key present, endpoint reachable, credits or quota status) without scoring a single job, and prints a readiness table
   3. The preflight tool exits 0 only when every required provider is ready, and non-zero otherwise, proven by a test with a mocked not-ready provider
   4. The scan workflow docs reference the preflight tool and explain the 402-vs-429 semantics to a reader; the pre-push scrub confirms no personal data entered the port
+
 **Plans**: TBD
 **Git delivery**: Branch `G-1440/provider-preflight` off main; conventional commits scoped `feat(G-1440): ...`; `review-push run` then `review-push sign` before push; one PR; merge only when CI is green.
 
@@ -114,7 +132,7 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
 | 3. Forward Vision | roadmap-m1 | 2/2 | Complete | 2026-04-26 |
 | 4. Milestone Deep Dives | roadmap-m1 | 2/2 | Complete | 2026-04-27 |
 | 5. Contributor Experience | roadmap-m1 | 2/2 | Complete | 2026-05-07 |
-| 6. Test honesty | v1.1 | 0/TBD | Not started | - |
+| 6. Test honesty | v1.1 | 0/2 | Planned | - |
 | 7. Wire the geo gate | v1.1 | 0/TBD | Not started | - |
 | 8. Over-admission rule | v1.1 | 0/TBD | Not started | - |
 | 9. Single authority | v1.1 | 0/TBD | Not started | - |
