@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.3](https://github.com/pleasedodisturb/kestrel/compare/v0.28.2...v0.28.3) (2026-09-29)
+
+
+### Dependencies
+
+* **G-1851:** undici 7.29.0 -&gt; 7.30.0 in the frontend lockfile (GHSA-3wwx-pv8p-q78v) ([#551](https://github.com/pleasedodisturb/kestrel/issues/551)) ([9a6379a](https://github.com/pleasedodisturb/kestrel/commit/9a6379ae2226d310d968caf126a0c007d92434f0))
+
 ## [0.28.2](https://github.com/pleasedodisturb/kestrel/compare/v0.28.1...v0.28.2) (2026-09-28)
 
 
