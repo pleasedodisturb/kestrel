@@ -1,6 +1,7 @@
 """Tests for JSON parse robustness and retry logic in AI providers."""
 
 import json
+import logging
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -11,7 +12,7 @@ from career_os.ai.openrouter_provider import (
     OpenRouterProvider,
     _try_parse_structured,
 )
-from career_os.schemas.ai import AIFeature
+from career_os.schemas.ai import AIFeature, ScoreResult
 
 VALID_SCORE_JSON = {
     "fit_score": 5.0,
@@ -91,6 +92,64 @@ class TestTryParseStructured:
         content = json.dumps(VALID_SCORE_JSON)
         result = _try_parse_structured(content, AIFeature.complete)
         assert result is None
+
+    @pytest.mark.parametrize(
+        "case_id",
+        [
+            "whitespace_padded",
+            "plain_fence",
+            "fence_trailing_whitespace",
+            "nested_trailing_comma",
+            "text_before_only",
+            "text_after_only",
+            "fence_plus_trailing_comma",
+            "text_plus_trailing_comma",
+        ],
+    )
+    def test_recovers_payload_from_llm_wrapping(self, case_id: str):
+        """_try_parse_structured recovers the payload from common LLM-output wrapping.
+
+        Re-pins 8 of the 10 still-meaningful cases from the deleted
+        tests/test_parse_scoring_response.py (G-1382), against the live parser
+        rather than the dead flat-dict one. Each input differs from the clean
+        json.dumps(VALID_SCORE_JSON) (proving the case really wraps the
+        payload), and the nested score_breakdown list must survive intact.
+        """
+        clean = json.dumps(VALID_SCORE_JSON)
+        cases = {
+            "whitespace_padded": "  \n" + clean + "\n  ",
+            "plain_fence": "```\n" + clean + "\n```",
+            "fence_trailing_whitespace": "```json\n" + clean + "\n```  \n",
+            "nested_trailing_comma": clean.replace('"Remote only"}]', '"Remote only"},]'),
+            "text_before_only": "Here is my analysis: " + clean,
+            "text_after_only": clean + "\nHope this helps.",
+            "fence_plus_trailing_comma": "```json\n" + clean[:-1] + ",}" + "\n```",
+            "text_plus_trailing_comma": "Result: " + clean[:-1] + ",}" + " - end",
+        }
+        content = cases[case_id]
+        assert content != clean
+
+        result = _try_parse_structured(content, AIFeature.score)
+
+        assert isinstance(result, ScoreResult)
+        assert result.fit_score == 5.0
+        assert len(result.score_breakdown) == 3
+
+    @pytest.mark.parametrize("content", ["", "   \n\t  "], ids=["empty", "whitespace_only"])
+    def test_blank_content_returns_none_and_logs(
+        self, content: str, caplog: pytest.LogCaptureFixture
+    ):
+        """Blank content returns None and logs a warning (G-1382 re-pin).
+
+        Re-pins the remaining 2 of the 10 still-meaningful deleted cases: an
+        empty string and a whitespace-only string must both fail to parse
+        without crashing, and the failure must be observable via logging.
+        """
+        with caplog.at_level(logging.WARNING, logger="career_os.ai.openrouter_provider"):
+            result = _try_parse_structured(content, AIFeature.score)
+
+        assert result is None
+        assert "Could not parse structured response" in caplog.text
 
 
 # ---------------------------------------------------------------------------
