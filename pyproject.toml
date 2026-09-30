@@ -48,7 +48,11 @@ dev = [
     "pytest-asyncio>=0.25.0",
     "pytest-cov>=6.1.0",
     "pytest-timeout>=2.3.0",
-    "ruff>=0.11.0",
+    # Exact pin, not a floor: must equal the astral-sh/ruff-pre-commit rev in
+    # .pre-commit-config.yaml. Bump both in the same PR — tests/test_toolchain_pins.py
+    # fails otherwise. A Dependabot PR bumping only this line is expected to go red
+    # until the rev follows (G-1383).
+    "ruff==0.16.9",
     "httpx>=0.28.0",
     # setuptools>=83.0.0 closes PYSEC-2026-3447 (advisory against <83.0.0). Declared
     # here (not just build-system.requires) so `pip install -e .[dev]` upgrades it in
@@ -93,10 +97,14 @@ career_os = [
 
 [tool.ruff]
 target-version = "py311"
-# Alembic scaffolding is generated + historical: linting/reformatting it churns
-# files that already ran against production databases, and pre-commit's pinned
-# ruff disagrees with CI's floating one on their formatting (G-1350).
+# Alembic scaffolding is generated and historical and has already run against
+# production databases, so ruff never lints or reformats it (G-1350).
+# force-exclude makes that exclude hold even when a path is passed explicitly
+# (a bare ruff check on a file, or an editor integration). The ruff-pre-commit
+# hooks already pass --force-exclude themselves, so this keeps pyproject the
+# single source of the rule for every invocation shape (G-1383).
 extend-exclude = ["src/career_os/_alembic"]
+force-exclude = true
 line-length = 100
 src = ["src", "tests"]
 

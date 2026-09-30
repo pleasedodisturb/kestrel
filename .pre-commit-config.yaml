@@ -3,7 +3,9 @@
 # touch it (G-1350). The exclude is applied per-hook rather than top-level on
 # purpose: a global `exclude:` would also switch off detect-private-key,
 # check-added-large-files, check-merge-conflict and gitleaks for that path.
-# Ruff skips the directory via extend-exclude in pyproject.toml.
+# Ruff skips the directory via extend-exclude plus force-exclude in pyproject.toml.
+# The ruff-pre-commit rev below must equal pyproject's ruff== pin (enforced by
+# tests/test_toolchain_pins.py, G-1383).
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -22,7 +24,7 @@ repos:
         exclude: ^src/career_os/_alembic/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.0
+    rev: v0.16.9
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
