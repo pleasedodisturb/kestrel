@@ -12,7 +12,13 @@ What is flagged: a ``pytest.skip(...)`` call carrying the ``allow_module_level``
 keyword, sitting inside an ``except`` handler that catches ``ImportError`` (or a
 spelling variant of the same idea — see below), OR a first-party
 ``pytest.importorskip(...)`` at module level (which is the same masking
-mechanism spelled differently).
+mechanism spelled differently). Two further variants of the same anti-pattern
+are also flagged (WR-01 hardening): a ``raise unittest.SkipTest(...)`` inside
+an import-masking handler, and the flag-variable pattern — an import-masking
+handler that assigns a name (e.g. ``_HAVE_MODULE = False``) which a
+``pytest.mark.skipif(...)``/``skipif(...)`` condition later reads, whether via
+a module-level ``pytestmark = ...`` assignment or as a decorator on a test
+function or class.
 
 What is NOT flagged: the legitimate module-level file-presence guards in this
 repo (``if not path.exists(): pytest.skip(..., allow_module_level=True)``), and
@@ -23,12 +29,9 @@ The remedy for a broken import is always the same: import directly, with no
 try/except around it, so a broken import fails collection loudly instead of
 looking like a deliberate, reasoned skip.
 
-Not detected (outside TEST-02's named construct, recorded rather than silently
-ignored — see the Task 2 hardening pass for the full spelling-variant coverage
-this module does implement):
-- the flag-variable pattern, where an except-ImportError branch sets a boolean
-  that ``pytest.mark.skipif`` later reads;
-- a module-level ``raise unittest.SkipTest(...)``;
+Not detected (recorded rather than silently ignored — see the Task 2/WR-01
+hardening passes for the full spelling-variant coverage this module does
+implement):
 - a per-test ``pytest.skip(...)`` (no ``allow_module_level``) inside an
   ``except ImportError:``;
 - ``pytest.importorskip(...)`` of third-party modules (this is the sanctioned
@@ -39,6 +42,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -64,27 +68,59 @@ def _sweep_files() -> list[Path]:
 SWEPT_FILES = _sweep_files()
 
 
-def _pytest_names(tree: ast.Module) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
-    """Return (pytest module names, pytest.skip names, pytest.importorskip names).
+class _ImportNames(NamedTuple):
+    """Aliases this file binds for the pytest/unittest skip machinery we watch."""
 
-    Handles a plain ``import pytest`` (optionally aliased), and a from-import of
-    ``skip``/``importorskip`` (optionally aliased).
+    pytest_modules: frozenset[str]
+    skip_names: frozenset[str]
+    importorskip_names: frozenset[str]
+    mark_modules: frozenset[str]
+    unittest_modules: frozenset[str]
+    skiptest_names: frozenset[str]
+
+
+def _pytest_names(tree: ast.Module) -> _ImportNames:
+    """Return the alias sets used to recognise pytest/unittest skip constructs.
+
+    Handles a plain ``import pytest`` (optionally aliased); a from-import of
+    ``skip``/``importorskip``/``mark`` from pytest (optionally aliased, e.g.
+    ``from pytest import mark as m``); a plain ``import unittest`` (optionally
+    aliased); and a from-import of ``SkipTest`` from unittest (optionally
+    aliased).
     """
     pytest_modules: set[str] = set()
     skip_names: set[str] = set()
     importorskip_names: set[str] = set()
+    mark_modules: set[str] = set()
+    unittest_modules: set[str] = set()
+    skiptest_names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.name == "pytest":
                     pytest_modules.add(alias.asname or alias.name)
+                elif alias.name == "unittest":
+                    unittest_modules.add(alias.asname or alias.name)
         elif isinstance(node, ast.ImportFrom) and node.module == "pytest":
             for alias in node.names:
                 if alias.name == "skip":
                     skip_names.add(alias.asname or alias.name)
                 elif alias.name == "importorskip":
                     importorskip_names.add(alias.asname or alias.name)
-    return frozenset(pytest_modules), frozenset(skip_names), frozenset(importorskip_names)
+                elif alias.name == "mark":
+                    mark_modules.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom) and node.module == "unittest":
+            for alias in node.names:
+                if alias.name == "SkipTest":
+                    skiptest_names.add(alias.asname or alias.name)
+    return _ImportNames(
+        pytest_modules=frozenset(pytest_modules),
+        skip_names=frozenset(skip_names),
+        importorskip_names=frozenset(importorskip_names),
+        mark_modules=frozenset(mark_modules),
+        unittest_modules=frozenset(unittest_modules),
+        skiptest_names=frozenset(skiptest_names),
+    )
 
 
 def _handler_is_broad(handler: ast.ExceptHandler) -> bool:
@@ -137,10 +173,7 @@ def _handler_masks_imports(try_node: ast.Try, handler: ast.ExceptHandler) -> boo
     return _handler_is_broad(handler) and _body_contains_import(try_node.body)
 
 
-def _is_module_level_skip(
-    node: ast.AST, names: tuple[frozenset[str], frozenset[str], frozenset[str]]
-) -> bool:
-    pytest_modules, skip_names, _importorskip_names = names
+def _is_module_level_skip(node: ast.AST, names: _ImportNames) -> bool:
     if not isinstance(node, ast.Call):
         return False
     func = node.func
@@ -148,9 +181,9 @@ def _is_module_level_skip(
         isinstance(func, ast.Attribute)
         and func.attr == "skip"
         and isinstance(func.value, ast.Name)
-        and func.value.id in pytest_modules
+        and func.value.id in names.pytest_modules
     )
-    is_bare_skip = isinstance(func, ast.Name) and func.id in skip_names
+    is_bare_skip = isinstance(func, ast.Name) and func.id in names.skip_names
     if not (is_pytest_skip or is_bare_skip):
         return False
     for kw in node.keywords:
@@ -159,9 +192,112 @@ def _is_module_level_skip(
     return False
 
 
+def _is_unittest_skiptest_raise(node: ast.AST, names: _ImportNames) -> bool:
+    """True for ``raise unittest.SkipTest(...)`` (call or bare) via a recognised alias.
+
+    Treated the same as ``pytest.skip(..., allow_module_level=True)`` when it
+    appears inside an import-masking handler (WR-01): both cause the module's
+    tests to be silently skipped rather than fail collection loudly.
+    """
+    if not isinstance(node, ast.Raise) or node.exc is None:
+        return False
+    ref: ast.expr = node.exc.func if isinstance(node.exc, ast.Call) else node.exc
+    is_unittest_skiptest = (
+        isinstance(ref, ast.Attribute)
+        and ref.attr == "SkipTest"
+        and isinstance(ref.value, ast.Name)
+        and ref.value.id in names.unittest_modules
+    )
+    is_bare_skiptest = isinstance(ref, ast.Name) and ref.id in names.skiptest_names
+    return is_unittest_skiptest or is_bare_skiptest
+
+
+def _handler_assigned_names(handler: ast.ExceptHandler) -> set[str]:
+    """Names assigned anywhere in ``handler``'s body (the flag-variable pattern, WR-01).
+
+    E.g. ``except ImportError: _HAVE_MODULE = False`` — collected so a later
+    ``pytest.mark.skipif(not _HAVE_MODULE, ...)`` reading this name can be
+    traced back to the import-masking handler that set it.
+    """
+    assigned: set[str] = set()
+    for sub in ast.walk(handler):
+        if isinstance(sub, ast.Assign):
+            for target in sub.targets:
+                if isinstance(target, ast.Name):
+                    assigned.add(target.id)
+        elif isinstance(sub, ast.AnnAssign) and isinstance(sub.target, ast.Name):
+            assigned.add(sub.target.id)
+    return assigned
+
+
+def _is_skipif_call(node: ast.AST, names: _ImportNames) -> bool:
+    """True for ``pytest.mark.skipif(...)`` (or a ``mark``-alias's ``.skipif(...)``)."""
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    if not (isinstance(func, ast.Attribute) and func.attr == "skipif"):
+        return False
+    value = func.value
+    is_pytest_mark_skipif = (
+        isinstance(value, ast.Attribute)
+        and value.attr == "mark"
+        and isinstance(value.value, ast.Name)
+        and value.value.id in names.pytest_modules
+    )
+    is_mark_alias_skipif = isinstance(value, ast.Name) and value.id in names.mark_modules
+    return is_pytest_mark_skipif or is_mark_alias_skipif
+
+
+def _condition_references_names(expr: ast.expr, flag_names: frozenset[str]) -> bool:
+    """True if any ``Name`` node inside ``expr`` refers to one of ``flag_names``."""
+    return any(isinstance(sub, ast.Name) and sub.id in flag_names for sub in ast.walk(expr))
+
+
+def _find_masking_skipif_uses(
+    tree: ast.Module, names: _ImportNames, flag_names: frozenset[str]
+) -> list[int]:
+    """Line numbers of ``skipif(...)`` calls whose condition reads a masked flag (WR-01).
+
+    Covers both shapes a masked flag is read in: a top-level
+    ``pytestmark = pytest.mark.skipif(...)`` assignment (restricted to
+    statements directly in the module body — this is what "module level"
+    means for an assignment), and a ``skipif(...)`` used as a decorator on any
+    function or class in the file (a decorator is evaluated at
+    module-collection time regardless of nesting, so it needs no such
+    restriction).
+    """
+    if not flag_names:
+        return []
+    module_body_ids = {id(stmt) for stmt in tree.body}
+    lines: list[int] = []
+    for node in ast.walk(tree):
+        exprs: list[ast.expr] = []
+        if isinstance(node, ast.Assign) and id(node) in module_body_ids:
+            if any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets):
+                exprs.append(node.value)
+        elif isinstance(node, ast.AnnAssign) and id(node) in module_body_ids:
+            if (
+                isinstance(node.target, ast.Name)
+                and node.target.id == "pytestmark"
+                and node.value is not None
+            ):
+                exprs.append(node.value)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            exprs.extend(node.decorator_list)
+        for expr in exprs:
+            for sub in ast.walk(expr):
+                if (
+                    _is_skipif_call(sub, names)
+                    and sub.args
+                    and _condition_references_names(sub.args[0], flag_names)
+                ):
+                    lines.append(sub.lineno)
+    return lines
+
+
 def _is_first_party_importorskip(
     node: ast.AST,
-    names: tuple[frozenset[str], frozenset[str], frozenset[str]],
+    names: _ImportNames,
     first_party: frozenset[str],
 ) -> bool:
     """True for ``pytest.importorskip("first.party.module")`` at any scope.
@@ -170,7 +306,6 @@ def _is_first_party_importorskip(
     construct (DEC-10) — unlike the except-ImportError shapes above, it needs
     no enclosing Try/handler.
     """
-    pytest_modules, _skip_names, importorskip_names = names
     if not isinstance(node, ast.Call):
         return False
     func = node.func
@@ -178,9 +313,9 @@ def _is_first_party_importorskip(
         isinstance(func, ast.Attribute)
         and func.attr == "importorskip"
         and isinstance(func.value, ast.Name)
-        and func.value.id in pytest_modules
+        and func.value.id in names.pytest_modules
     )
-    is_bare_importorskip = isinstance(func, ast.Name) and func.id in importorskip_names
+    is_bare_importorskip = isinstance(func, ast.Name) and func.id in names.importorskip_names
     if not (is_pytest_importorskip or is_bare_importorskip):
         return False
     if not node.args:
@@ -211,6 +346,8 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
             rel = path.as_posix()
         violations.add(f"{rel}:{lineno}")
 
+    masked_flag_names: set[str] = set()
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Try):
             for handler in node.handlers:
@@ -219,8 +356,14 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
                 for sub in ast.walk(handler):
                     if _is_module_level_skip(sub, names):
                         _report(sub.lineno)
+                    if _is_unittest_skiptest_raise(sub, names):
+                        _report(sub.lineno)
+                masked_flag_names |= _handler_assigned_names(handler)
         if _is_first_party_importorskip(node, names, first_party):
             _report(node.lineno)
+
+    for lineno in _find_masking_skipif_uses(tree, names, frozenset(masked_flag_names)):
+        _report(lineno)
 
     return sorted(violations)
 
@@ -388,6 +531,57 @@ _FLAG_CASES = [
         3,
         id="first_party_importorskip_tools_module",
     ),
+    # WR-01: the flag-variable pattern — an except-ImportError handler sets a
+    # boolean that a module-level `pytestmark = pytest.mark.skipif(...)` later
+    # reads. Exact fixture reproduced from 06-REVIEW.md WR-01.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="module removed")\n'
+            "def test_something():\n"
+            "    assert not_a_real_module.thing() == 1\n"
+        ),
+        7,
+        id="flag_variable_pytestmark",
+    ),
+    # WR-01: same flag-variable pattern, but the skipif is a decorator on the
+    # test function rather than a module-level `pytestmark = ...` assignment.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "\n"
+            '@pytest.mark.skipif(not _HAVE_MODULE, reason="module removed")\n'
+            "def test_something():\n"
+            "    assert not_a_real_module.thing() == 1\n"
+        ),
+        8,
+        id="flag_variable_skipif_decorator",
+    ),
+    # WR-01: a module-level `raise unittest.SkipTest(...)` inside an
+    # import-masking handler. Exact fixture reproduced from 06-REVIEW.md WR-01.
+    pytest.param(
+        (
+            "import unittest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    raise unittest.SkipTest("module removed")\n'
+            "def test_something():\n"
+            "    assert not_a_real_module.thing() == 1\n"
+        ),
+        5,
+        id="unittest_skiptest_raise",
+    ),
 ]
 
 
@@ -429,6 +623,51 @@ _IGNORE_CASES = [
             'pytest.skip("unrelated", allow_module_level=True)\n'
         ),
         id="broad_except_without_import",
+    ),
+    # WR-01 negative: a skipif condition reading a flag that was NOT set by an
+    # import-masking handler (no try/except at all here) must not be flagged.
+    pytest.param(
+        (
+            "import pytest\n"
+            "SOME_OTHER_FLAG = True\n"
+            'pytestmark = pytest.mark.skipif(not SOME_OTHER_FLAG, reason="unrelated")\n'
+            "def test_something():\n"
+            "    assert True\n"
+        ),
+        id="skipif_flag_not_from_handler",
+    ),
+    # WR-01 negative: an import-masking handler assigns a flag, but the
+    # skipif elsewhere reads a *different*, unrelated flag — must not be
+    # flagged (proves the match is by specific name, not "any skipif exists
+    # somewhere in a file that also has a masking handler").
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "UNRELATED_FLAG = True\n"
+            'pytestmark = pytest.mark.skipif(not UNRELATED_FLAG, reason="unrelated")\n'
+            "def test_something():\n"
+            "    assert not_a_real_module.thing() == 1\n"
+        ),
+        id="skipif_references_unrelated_flag",
+    ),
+    # WR-01 negative: the handler masks an import but raises a non-SkipTest
+    # exception — this is the desired remedy (fail loudly), not a masking
+    # pattern, so it must not be flagged.
+    pytest.param(
+        (
+            "import pytest\n"
+            "\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    raise RuntimeError("boom")\n'
+        ),
+        id="handler_raises_non_skiptest",
     ),
 ]
 
