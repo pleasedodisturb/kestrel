@@ -48,14 +48,14 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
   4. `ruff format --check src/ tests/` (the CI invocation) and the local pre-commit `ruff-format` hook agree on every file, because one ruff version is pinned in both `.pre-commit-config.yaml` and `pyproject.toml`; the `_alembic` exclude is preserved
   5. A test or CI step fails when the pre-commit ruff rev and the pyproject ruff pin are made to drift apart (proven by a deliberate drift in a scratch check)
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
 **Wave 1**
 - [x] 06-01-PLAN.md — (wave 1, G-1383) Pin one exact ruff version in pyproject and pre-commit, add force-exclude, add the drift + _alembic-exclude guard `tests/test_toolchain_pins.py`, prove drift detection and pre-commit/CI parity
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 06-02-PLAN.md — (wave 2, G-1382, depends on 06-01) Add the AST guard `tests/test_no_import_masking_skips.py`, delete the dead `tests/test_parse_scoring_response.py`, re-pin its 10 live behaviours on `_try_parse_structured`, prove reintroduction is caught
+- [x] 06-02-PLAN.md — (wave 2, G-1382, depends on 06-01) Add the AST guard `tests/test_no_import_masking_skips.py`, delete the dead `tests/test_parse_scoring_response.py`, re-pin its 10 live behaviours on `_try_parse_structured`, prove reintroduction is caught
 
 **Git delivery**: Branch `G-1382/test-honesty` off main; commits scoped per ticket (`test(G-1382): ...`, `chore(G-1383): ...`); `review-push run` then `review-push sign` before push; one PR for the phase; merge only when CI is green.
 
@@ -132,7 +132,7 @@ Plans:
 | 3. Forward Vision | roadmap-m1 | 2/2 | Complete | 2026-04-26 |
 | 4. Milestone Deep Dives | roadmap-m1 | 2/2 | Complete | 2026-04-27 |
 | 5. Contributor Experience | roadmap-m1 | 2/2 | Complete | 2026-05-07 |
-| 6. Test honesty | v1.1 | 1/2 | In Progress|  |
+| 6. Test honesty | v1.1 | 2/2 | In Progress|  |
 | 7. Wire the geo gate | v1.1 | 0/TBD | Not started | - |
 | 8. Over-admission rule | v1.1 | 0/TBD | Not started | - |
 | 9. Single authority | v1.1 | 0/TBD | Not started | - |

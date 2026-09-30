@@ -24,3 +24,5 @@ the ruff-pin work.
 `brace-expansion` (transitive dependency) across the three affected
 lockfiles. Not filed here — follow the project's existing Dependabot intake
 pattern.
+
+**Filed 2026-09-30 as G-1856** (Todo, CareerOS Open Source): bump brace-expansion across the three lockfiles; also covers GHSA-qhr7-859c-m2p7 found in the same audit.
