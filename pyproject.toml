@@ -48,6 +48,10 @@ dev = [
     "pytest-asyncio>=0.25.0",
     "pytest-cov>=6.1.0",
     "pytest-timeout>=2.3.0",
+    # Declared directly because tests/test_toolchain_pins.py imports
+    # packaging.requirements/packaging.utils; previously relied on it only as
+    # a transitive dependency of pytest (G-1383 IN-01).
+    "packaging>=24",
     # Exact pin, not a floor: must equal the astral-sh/ruff-pre-commit rev in
     # .pre-commit-config.yaml. Bump both in the same PR — tests/test_toolchain_pins.py
     # fails otherwise. A Dependabot PR bumping only this line is expected to go red
