@@ -5,23 +5,23 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Import-masking guard silently passes the flag-variable and unittest.SkipTest variants of the exact anti-pattern it exists to catch"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "tests/test_toolchain_pins.py imports packaging without it being a declared dependency anywhere in pyproject.toml"
-open: 2
+open: 0
 total: 2
-recorded: 2026-09-30T10:53:00Z
+recorded: 2026-09-30T11:08:00Z
 ---
 
 # Phase 06: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | 06-REVIEW.md |
-| IN-01 | info | open | 06-REVIEW.md |
+| WR-01 | warning | fixed | 06-REVIEW-FIX.md (3738a5e) |
+| IN-01 | info | fixed | 06-REVIEW-FIX.md (274082e) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
