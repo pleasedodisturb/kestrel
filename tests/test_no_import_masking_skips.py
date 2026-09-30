@@ -40,6 +40,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
+
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
 SWEEP_ROOTS = (_REPO_ROOT / "tests", _REPO_ROOT / "tools" / "tests")
@@ -85,11 +87,38 @@ def _pytest_names(tree: ast.Module) -> tuple[frozenset[str], frozenset[str], fro
     return frozenset(pytest_modules), frozenset(skip_names), frozenset(importorskip_names)
 
 
-def _handler_masks_imports(try_node: ast.Try, handler: ast.ExceptHandler) -> bool:
-    """True if this handler catches ImportError-like exceptions.
+def _handler_is_broad(handler: ast.ExceptHandler) -> bool:
+    """True for a bare ``except:`` or one that catches Exception/BaseException."""
+    if handler.type is None:
+        return True
+    return isinstance(handler.type, ast.Name) and handler.type.id in ("Exception", "BaseException")
 
-    This is the tracer's committed detector: bare Name, dotted Attribute ending
-    in ImportError/ModuleNotFoundError, or either inside a Tuple.
+
+def _body_contains_import(body: list[ast.stmt]) -> bool:
+    """True if any statement in ``body`` performs an import.
+
+    Covers ``import``/``from ... import``, ``importlib.import_module(...)``,
+    and the builtin ``__import__(...)``.
+    """
+    for stmt in body:
+        for node in ast.walk(stmt):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                return True
+            if isinstance(node, ast.Call):
+                func = node.func
+                if isinstance(func, ast.Attribute) and func.attr == "import_module":
+                    return True
+                if isinstance(func, ast.Name) and func.id == "__import__":
+                    return True
+    return False
+
+
+def _handler_masks_imports(try_node: ast.Try, handler: ast.ExceptHandler) -> bool:
+    """True if this handler masks an import failure.
+
+    Two cases (DEC-10): the handler type names ImportError/ModuleNotFoundError
+    (bare Name, dotted Attribute, or either inside a Tuple), or the handler is
+    broad (bare/Exception/BaseException) and the try body itself imports.
     """
 
     def _names_import_error(t: ast.expr | None) -> bool:
@@ -103,7 +132,9 @@ def _handler_masks_imports(try_node: ast.Try, handler: ast.ExceptHandler) -> boo
             return any(_names_import_error(elt) for elt in t.elts)
         return False
 
-    return _names_import_error(handler.type)
+    if _names_import_error(handler.type):
+        return True
+    return _handler_is_broad(handler) and _body_contains_import(try_node.body)
 
 
 def _is_module_level_skip(
@@ -128,27 +159,68 @@ def _is_module_level_skip(
     return False
 
 
+def _is_first_party_importorskip(
+    node: ast.AST,
+    names: tuple[frozenset[str], frozenset[str], frozenset[str]],
+    first_party: frozenset[str],
+) -> bool:
+    """True for ``pytest.importorskip("first.party.module")`` at any scope.
+
+    Flagged wherever it appears in the file, because it is itself the masking
+    construct (DEC-10) — unlike the except-ImportError shapes above, it needs
+    no enclosing Try/handler.
+    """
+    pytest_modules, _skip_names, importorskip_names = names
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    is_pytest_importorskip = (
+        isinstance(func, ast.Attribute)
+        and func.attr == "importorskip"
+        and isinstance(func.value, ast.Name)
+        and func.value.id in pytest_modules
+    )
+    is_bare_importorskip = isinstance(func, ast.Name) and func.id in importorskip_names
+    if not (is_pytest_importorskip or is_bare_importorskip):
+        return False
+    if not node.args:
+        return False
+    first_arg = node.args[0]
+    if not (isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str)):
+        return False
+    return first_arg.value.split(".")[0] in first_party
+
+
 def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PARTY) -> list[str]:
     """Return sorted "relative/path:lineno" strings for import-masking skips.
 
     Parses ``path`` with :mod:`ast`. An unparseable file raises ``SyntaxError``
     rather than being silently treated as having no findings — a file this
-    guard cannot read must never be reported as clean.
+    guard cannot read must never be reported as clean. The relative-path
+    formatting falls back to the absolute path for a fixture file that lives
+    outside ``_REPO_ROOT`` (e.g. a self-test's ``tmp_path`` fixture).
     """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     names = _pytest_names(tree)
     violations: set[str] = set()
 
+    def _report(lineno: int) -> None:
+        try:
+            rel = path.relative_to(_REPO_ROOT).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        violations.add(f"{rel}:{lineno}")
+
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Try):
-            continue
-        for handler in node.handlers:
-            if not _handler_masks_imports(node, handler):
-                continue
-            for sub in ast.walk(handler):
-                if _is_module_level_skip(sub, names):
-                    rel = path.relative_to(_REPO_ROOT).as_posix()
-                    violations.add(f"{rel}:{sub.lineno}")
+        if isinstance(node, ast.Try):
+            for handler in node.handlers:
+                if not _handler_masks_imports(node, handler):
+                    continue
+                for sub in ast.walk(handler):
+                    if _is_module_level_skip(sub, names):
+                        _report(sub.lineno)
+        if _is_first_party_importorskip(node, names, first_party):
+            _report(node.lineno)
 
     return sorted(violations)
 
@@ -173,3 +245,240 @@ def test_no_import_masking_module_level_skips() -> None:
         "so a broken import fails collection loudly instead of looking like a "
         "deliberate, reasoned skip."
     )
+
+
+# ---------------------------------------------------------------------------
+# Guard-the-guard: fixture-based self-tests (G-1382, TEST-02 hardening)
+# ---------------------------------------------------------------------------
+
+
+def _write_fixture(tmp_path: Path, source: str) -> Path:
+    """Write ``source`` to a throwaway .py file under tmp_path and return its path."""
+    path = tmp_path / "fixture.py"
+    path.write_text(source, encoding="utf-8")
+    return path
+
+
+_FLAG_CASES = [
+    pytest.param(
+        (
+            "import sys\n"
+            "from pathlib import Path\n"
+            "\n"
+            "import pytest\n"
+            "\n"
+            'sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))\n'
+            "\n"
+            "try:\n"
+            "    from job_scorer import parse_scoring_response\n"
+            "except ImportError:\n"
+            "    pytest.skip(\n"
+            '        "parse_scoring_response removed from tools/job_scorer.py",\n'
+            "        allow_module_level=True,\n"
+            "    )\n"
+        ),
+        11,
+        id="removed_block",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ModuleNotFoundError:\n"
+            '    pytest.skip("x", allow_module_level=True)\n'
+        ),
+        6,
+        id="module_not_found",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except (ImportError, AttributeError):\n"
+            '    pytest.skip("x", allow_module_level=True)\n'
+        ),
+        6,
+        id="tuple_handler",
+    ),
+    pytest.param(
+        (
+            "import pytest as pt\n"
+            "\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    pt.skip("x", allow_module_level=True)\n'
+        ),
+        6,
+        id="pytest_alias",
+    ),
+    pytest.param(
+        (
+            "from pytest import skip as pyskip\n"
+            "\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    pyskip("x", allow_module_level=True)\n'
+        ),
+        6,
+        id="from_import_skip",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    if True:\n"
+            '        pytest.skip("x", allow_module_level=True)\n'
+        ),
+        7,
+        id="nested_if_in_handler",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except Exception:\n"
+            '    pytest.skip("x", allow_module_level=True)\n'
+        ),
+        6,
+        id="broad_except_around_import",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except:\n"
+            '    pytest.skip("x", allow_module_level=True)\n'
+        ),
+        6,
+        id="bare_except_around_import",
+    ),
+    pytest.param(
+        (
+            "import importlib\n"
+            "import pytest\n"
+            "\n"
+            "try:\n"
+            '    importlib.import_module("not_a_real_module")\n'
+            "except Exception:\n"
+            '    pytest.skip("x", allow_module_level=True)\n'
+        ),
+        7,
+        id="broad_except_around_importlib",
+    ),
+    pytest.param(
+        ('import pytest\n\npytest.importorskip("career_os.services.geo")\n'),
+        3,
+        id="first_party_importorskip_package",
+    ),
+    pytest.param(
+        ('import pytest\n\npytest.importorskip("job_scorer")\n'),
+        3,
+        id="first_party_importorskip_tools_module",
+    ),
+]
+
+
+@pytest.mark.parametrize("source, expected_line", _FLAG_CASES)
+def test_detector_flags_masking_variants(tmp_path: Path, source: str, expected_line: int) -> None:
+    """Every spelling variant of the import-masking skip yields exactly one hit."""
+    fixture = _write_fixture(tmp_path, source)
+    violations = find_import_masking_skips(fixture)
+    assert len(violations) == 1
+    assert violations[0].endswith(f":{expected_line}")
+
+
+_IGNORE_CASES = [
+    pytest.param(
+        (
+            "from pathlib import Path\n"
+            "\n"
+            "import pytest\n"
+            "\n"
+            'path = Path("/nonexistent")\n'
+            "if not path.exists():\n"
+            '    pytest.skip("not found", allow_module_level=True)\n'
+        ),
+        id="file_presence_guard",
+    ),
+    pytest.param(
+        ('import pytest\n\npytest.importorskip("hypothesis", reason="optional")\n'),
+        id="third_party_importorskip",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "\n"
+            "try:\n"
+            "    x = 1 / 0\n"
+            "except Exception:\n"
+            "    pass\n"
+            "\n"
+            'pytest.skip("unrelated", allow_module_level=True)\n'
+        ),
+        id="broad_except_without_import",
+    ),
+]
+
+
+@pytest.mark.parametrize("source", _IGNORE_CASES)
+def test_detector_ignores_legitimate_skips(tmp_path: Path, source: str) -> None:
+    """Legitimate skip shapes must never be flagged as import-masking."""
+    fixture = _write_fixture(tmp_path, source)
+    violations = find_import_masking_skips(fixture)
+    assert violations == []
+    assert fixture.exists()
+
+
+def test_detector_raises_on_unparseable_file(tmp_path: Path) -> None:
+    """An unparseable file must raise, never silently report no findings."""
+    bad = _write_fixture(tmp_path, "def broken(:\n    pass\n")
+    with pytest.raises(SyntaxError) as exc_info:
+        find_import_masking_skips(bad)
+    assert exc_info.type is SyntaxError
+    assert exc_info.value.filename == str(bad)
+
+
+def test_real_file_presence_guards_are_not_flagged() -> None:
+    """The three legitimate real file-presence guards must never be flagged."""
+    guarded = [
+        _REPO_ROOT / "tests" / "test_batch_apply_browser.py",
+        _REPO_ROOT / "tests" / "test_batch_apply_overlay.py",
+        _REPO_ROOT / "tools" / "tests" / "test_config_loaders.py",
+    ]
+    for path in guarded:
+        assert path in SWEPT_FILES
+        assert find_import_masking_skips(path) == []
+
+
+def test_sweep_covers_both_roots_and_subpackages() -> None:
+    """Guard the guard: the sweep must not silently shrink across roots/subpackages."""
+    expected = [
+        _REPO_ROOT / "tests" / "test_provider_contract.py",
+        _REPO_ROOT / "tools" / "tests" / "test_config_loaders.py",
+        _REPO_ROOT / "tests" / "property" / "test_state_machine.py",
+        _REPO_ROOT / "tests" / "fuzz" / "test_api_fuzz.py",
+        _REPO_ROOT / "tests" / "conftest.py",
+        _REPO_ROOT / "tests" / "test_no_import_masking_skips.py",
+    ]
+    missing = [p for p in expected if p not in SWEPT_FILES]
+    assert not missing, f"sweep missing expected files: {missing}"
+    assert not any("__pycache__" in p.parts for p in SWEPT_FILES)
+
+
+def test_first_party_names_are_derived_from_the_repo() -> None:
+    """FIRST_PARTY must be derived from the repo layout, not a hand-written list."""
+    assert {"career_os", "tests", "job_scorer"} <= FIRST_PARTY
+    assert not ({"hypothesis", "mcp"} & FIRST_PARTY)
