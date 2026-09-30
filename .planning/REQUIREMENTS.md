@@ -10,8 +10,8 @@ Each requirement maps to exactly one roadmap phase. Phase numbering continues fr
 
 ### Test honesty (TEST)
 
-- [ ] **TEST-01**: No test file under `tests/` masks an ImportError with a module-level `pytest.skip(allow_module_level=True)`; `tests/test_parse_scoring_response.py` either runs against a relocated parser or is deleted with its dead subject (G-1382)
-- [ ] **TEST-02**: A guard test or CI step fails when an import-masking module-level skip is reintroduced (G-1382)
+- [x] **TEST-01**: No test file under `tests/` masks an ImportError with a module-level `pytest.skip(allow_module_level=True)`; `tests/test_parse_scoring_response.py` either runs against a relocated parser or is deleted with its dead subject (G-1382)
+- [x] **TEST-02**: A guard test or CI step fails when an import-masking module-level skip is reintroduced (G-1382)
 - [x] **TEST-03**: One ruff version governs pre-commit and CI; a file formatted locally cannot fail `ruff format --check` in CI; the `_alembic` exclude stays (G-1383)
 - [x] **TEST-04**: A test or CI step fails when the pre-commit ruff rev and the pyproject ruff pin drift apart (G-1383)
 
@@ -67,8 +67,8 @@ Filled by the roadmapper.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | Phase 6 | Pending |
-| TEST-02 | Phase 6 | Pending |
+| TEST-01 | Phase 6 | Complete |
+| TEST-02 | Phase 6 | Complete |
 | TEST-03 | Phase 6 | Complete |
 | TEST-04 | Phase 6 | Complete |
 | GEO-01 | Phase 7 | Pending |

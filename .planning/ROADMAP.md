@@ -27,7 +27,7 @@ Audit: `.planning/milestones/roadmap-m1-MILESTONE-AUDIT.md`
 
 Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below ships as its own PR on a `<ticket>/<slug>` branch: commits use conventional-commit format scoped to the ticket, `review-push run` then `review-push sign` before push, one PR per phase, merge only on green CI.
 
-- [ ] **Phase 6: Test honesty** - No test masks an ImportError behind a module-level skip; one ruff version governs dev and CI
+- [x] **Phase 6: Test honesty** - No test masks an ImportError behind a module-level skip; one ruff version governs dev and CI (completed 2026-09-30)
 - [ ] **Phase 7: Wire the geo gate** - `SearchProfile.filters` enables the gate; `geo_class` is persisted and visible in discovery results; defaults unchanged
 - [ ] **Phase 8: Over-admission rule** - Multi-office postings stop passing the gate on one eligible desk; the rule is chosen by measurement on the 277-item blind set
 - [ ] **Phase 9: Single authority** - `tools/batch_probe.py` delegates to the package geo engine; the blind-set fixture is trimmed with a behaviour-neutrality proof
@@ -48,7 +48,7 @@ Phase numbering continues from roadmap-m1 (ended at Phase 5). Every phase below 
   4. `ruff format --check src/ tests/` (the CI invocation) and the local pre-commit `ruff-format` hook agree on every file, because one ruff version is pinned in both `.pre-commit-config.yaml` and `pyproject.toml`; the `_alembic` exclude is preserved
   5. A test or CI step fails when the pre-commit ruff rev and the pyproject ruff pin are made to drift apart (proven by a deliberate drift in a scratch check)
 
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 **Wave 1**
@@ -132,7 +132,7 @@ Plans:
 | 3. Forward Vision | roadmap-m1 | 2/2 | Complete | 2026-04-26 |
 | 4. Milestone Deep Dives | roadmap-m1 | 2/2 | Complete | 2026-04-27 |
 | 5. Contributor Experience | roadmap-m1 | 2/2 | Complete | 2026-05-07 |
-| 6. Test honesty | v1.1 | 2/2 | In Progress|  |
+| 6. Test honesty | v1.1 | 2/2 | Complete    | 2026-09-30 |
 | 7. Wire the geo gate | v1.1 | 0/TBD | Not started | - |
 | 8. Over-admission rule | v1.1 | 0/TBD | Not started | - |
 | 9. Single authority | v1.1 | 0/TBD | Not started | - |
