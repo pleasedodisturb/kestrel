@@ -50,10 +50,10 @@ Make Kestrel's direction visible and structured so users can evaluate the produc
 - ✓ Integration system (TickTick, Pushover, Calendar, AI providers, OAuth PKCE) — existing
 - ✓ Web frontend (React 19, 11 pages, Kanban board, analytics, discovery — works locally) — existing
 - ⏸ Mobile app (React Native/Expo scaffold, paused for web v1 priority) — parked
+- ✓ Test suite is honest: AST guard fails collection on import-masking module skips (incl. flag-variable skipif and unittest.SkipTest), dead parser suite deleted with its 19 cases ledgered, ruff==0.16.9 pinned in pyproject and pre-commit with a drift guard and force-exclude for `_alembic` — Phase 6 (2026-09-30)
 
 ### Active
 
-- [ ] Test suite is honest: no ImportError-masking module skips, one ruff version governs dev and CI (v1.1)
 - [ ] A user can enable the geo gate per search profile and see each job's `geo_class` in discovery results, with defaults unchanged (v1.1)
 - [ ] Multi-office global companies no longer pass the gate on the strength of one eligible desk; the secondary-location rescue still works (v1.1)
 - [ ] One geo classifier: `batch_probe` delegates to `services/geo`; the public blind-set fixture carries no full-text JDs (v1.1)
@@ -157,6 +157,10 @@ ROADMAP.md (master, repo root)
 | BMAD PRDs feed into milestone structure | PRD process already in progress (5/13 steps); roadmap should receive its output | — Pending |
 | Linear remains single source for task tracking | Already established (team G, 100+ tickets); GitHub Issues not used | — Pending |
 | Map existing progress before forward planning | "Bag of cats" — can't plan forward without knowing what's built | — Pending |
+| Resolve the ruff pin from the newest green main CI run at execution time, never from research notes | Research, venv and pre-commit each held a different version; only CI's resolution is the contract | Done — 0.16.9 pinned in both files (G-1383) |
+| Keep `force-exclude = true` even though the pre-commit ruff hooks already pass `--force-exclude` | Belt and braces for bare and editor invocations; the RESEARCH claim that pre-commit bypassed the `_alembic` exclude was wrong | Done (Phase 6) |
+| Delete the dead `test_parse_scoring_response.py` and ledger all 19 cases (7 covered, 10 re-pinned, 2 out of contract) instead of relocating it | Its subject has zero live callers; a ledger keeps the deletion auditable | Done (G-1382) |
+| Import-masking guard is AST-based with no allowlist, and fails loudly on unparseable files | An exemption mechanism would recreate the silent-skip class it exists to remove | Done; extended after code review to flag-variable skipif and unittest.SkipTest (WR-01) |
 
 ## Evolution
 
@@ -176,4 +180,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-28 after starting milestone v1.1 (Geo gate to production)*
+*Last updated: 2026-09-30 after Phase 6 (Test honesty)*

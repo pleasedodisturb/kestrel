@@ -82,6 +82,8 @@ Recent decisions affecting current work:
 - All Mermaid diagrams synced with Phase 3 prose: Know Me added, Voice Mode renamed, Feature Flags edge added
 - v1.1 roadmap: Phases 6-10 continue numbering from roadmap-m1 (ended at Phase 5); every phase ships as its own PR through the review-push gate (branch, signed review, merge only on green CI)
 - Phase 8 (Over-admission rule, RULE-01..04) requires /gsd-discuss-phase before planning; the rule is a design decision to be re-measured against the 277-item blind set
+- Phase 6: ruff pin resolved from CI at execution time (0.16.9); force-exclude kept as belt and braces; dead suite deleted with a 19-case ledger; AST guard has no allowlist and was extended post-review (flag-variable skipif, unittest.SkipTest)
+- Phase 6 executor worktrees fork from HEAD via `worktree.baseRef: head` in .claude/settings.local.json (set with `gsd-tools worktree set-baseref head`); cleanup-wave merge commits are linearized onto the executor tip because review-push and the Review-trailers CI job refuse merge commits
 
 ### Pending Todos
 
@@ -90,7 +92,8 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-None.
+- ⚠️ [Phase 6] `tests/test_dep_security.py` npm-audit cases fail on GHSA-6j4f-fj2g-mc7p / GHSA-qhr7-859c-m2p7 (brace-expansion) in all three lockfiles — G-1856, blocks the frontend CI audit gate until bumped
+- ⚠️ [Phase 6] Branch `G-1382/test-honesty` is local-only until `review-push run` → `sign` → push → PR
 
 ### Quick Tasks Completed
 
@@ -128,6 +131,6 @@ Items acknowledged and deferred at roadmap-m1 milestone close on 2026-05-07:
 
 ## Session Continuity
 
-Last session: 2026-09-28T15:12:54.789Z
-Stopped at: Phase 06 complete, ready to plan Phase 7
-Resume file: None (roadmap complete, ready for phase planning)
+Last session: 2026-09-30T11:17:00Z
+Stopped at: Phase 6 complete and verified (5/5, review fixes applied); branch G-1382/test-honesty unpushed, next is review-push → PR, then /gsd-plan-phase 7
+Resume file: None
