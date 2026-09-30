@@ -26,6 +26,7 @@ import re
 import tomllib
 from pathlib import Path
 
+import pytest
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
@@ -144,3 +145,177 @@ def test_ruff_exclude_keeps_alembic_out():
     ruff_config = data["tool"]["ruff"]
     assert ruff_config["force-exclude"] is True
     assert "src/career_os/_alembic" in ruff_config["extend-exclude"]
+
+
+# ---------------------------------------------------------------------------
+# Parser self-tests (Task 2, G-1383): prove the parsers themselves are correct
+# against constructed fixtures, independent of whatever the real repo files
+# currently contain. These are what let test_ruff_pin_matches_precommit_rev be
+# trusted as a real drift signal rather than an accident of today's config.
+# ---------------------------------------------------------------------------
+
+
+def _write(tmp_path: Path, name: str, content: str) -> Path:
+    """Write `content` to `tmp_path / name`, creating parent dirs, and return the path."""
+    path = tmp_path / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def test_pin_parsers_detect_drift_between_fixture_files(tmp_path):
+    """Mismatched fixtures produce two different, correctly-parsed version strings."""
+    pyproject = _write(
+        tmp_path,
+        "pyproject.toml",
+        '[project.optional-dependencies]\ndev = ["ruff==1.0.0"]\n',
+    )
+    precommit = _write(
+        tmp_path,
+        ".pre-commit-config.yaml",
+        "repos:\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v2.0.0\n",
+    )
+    pin = get_pyproject_ruff_pin(pyproject)
+    rev = get_precommit_ruff_rev(precommit)
+    assert pin == "1.0.0"
+    assert rev == "2.0.0"
+    assert pin != rev
+
+
+def test_pin_parsers_agree_on_matching_fixtures(tmp_path):
+    """Matching fixtures produce equal, v-stripped version strings."""
+    pyproject = _write(
+        tmp_path,
+        "pyproject.toml",
+        '[project.optional-dependencies]\ndev = ["ruff==1.2.3"]\n',
+    )
+    precommit = _write(
+        tmp_path,
+        ".pre-commit-config.yaml",
+        "repos:\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v1.2.3\n",
+    )
+    pin = get_pyproject_ruff_pin(pyproject)
+    rev = get_precommit_ruff_rev(precommit)
+    assert pin == rev == "1.2.3"
+    assert not rev.startswith("v")
+
+
+def test_precommit_rev_comes_from_the_ruff_block_not_the_first_rev(tmp_path):
+    """The parser targets the ruff-pre-commit block specifically, not the first rev: line."""
+    precommit = _write(
+        tmp_path,
+        ".pre-commit-config.yaml",
+        "repos:\n"
+        "  - repo: https://github.com/pre-commit/pre-commit-hooks\n"
+        "    rev: v5.0.0\n"
+        "    hooks:\n"
+        "      - id: check-yaml\n"
+        "  - repo: https://github.com/astral-sh/ruff-pre-commit\n"
+        "    rev: v1.2.3\n"
+        "    hooks:\n"
+        "      - id: ruff\n",
+    )
+    rev = get_precommit_ruff_rev(precommit)
+    assert rev == "1.2.3"
+    assert rev != "5.0.0"
+
+
+@pytest.mark.parametrize(
+    "repo_line,rev_line",
+    [
+        ("  - repo: https://github.com/astral-sh/ruff-pre-commit", '    rev: "v1.2.3"'),
+        ("  - repo: https://github.com/astral-sh/ruff-pre-commit", "    rev: 'v1.2.3'"),
+        (
+            "  - repo: https://github.com/astral-sh/ruff-pre-commit",
+            "    rev: v1.2.3  # pinned by G-1383",
+        ),
+        ('  - repo: "https://github.com/astral-sh/ruff-pre-commit"', "    rev: v1.2.3"),
+    ],
+    ids=["double-quoted-rev", "single-quoted-rev", "trailing-comment", "quoted-repo-url"],
+)
+def test_precommit_rev_tolerates_quotes_and_trailing_comment(tmp_path, repo_line, rev_line):
+    """Quoting and trailing comments around the repo/rev lines don't affect parsing."""
+    precommit = _write(tmp_path, ".pre-commit-config.yaml", f"repos:\n{repo_line}\n{rev_line}\n")
+    rev = get_precommit_ruff_rev(precommit)
+    assert rev == "1.2.3"
+    assert isinstance(rev, str)
+
+
+def test_precommit_rev_rejects_missing_ruff_block(tmp_path):
+    """Absence of the ruff-pre-commit repo block raises ValueError naming it."""
+    precommit = _write(
+        tmp_path,
+        ".pre-commit-config.yaml",
+        "repos:\n  - repo: https://github.com/pre-commit/pre-commit-hooks\n    rev: v5.0.0\n",
+    )
+    with pytest.raises(ValueError) as excinfo:
+        get_precommit_ruff_rev(precommit)
+    message = str(excinfo.value)
+    assert "ruff-pre-commit" in message
+    assert "found 0" in message
+
+
+def test_precommit_rev_rejects_duplicate_ruff_blocks(tmp_path):
+    """Two ruff-pre-commit repo blocks raise ValueError rather than picking one silently."""
+    precommit = _write(
+        tmp_path,
+        ".pre-commit-config.yaml",
+        "repos:\n"
+        "  - repo: https://github.com/astral-sh/ruff-pre-commit\n"
+        "    rev: v1.0.0\n"
+        "  - repo: https://github.com/astral-sh/ruff-pre-commit\n"
+        "    rev: v2.0.0\n",
+    )
+    with pytest.raises(ValueError) as excinfo:
+        get_precommit_ruff_rev(precommit)
+    message = str(excinfo.value)
+    assert "ruff-pre-commit" in message
+    assert "found 2" in message
+
+
+def test_precommit_rev_rejects_frozen_sha_rev(tmp_path):
+    """A frozen 40-hex SHA rev is rejected loudly instead of silently accepted."""
+    sha = "a" * 40
+    precommit = _write(
+        tmp_path,
+        ".pre-commit-config.yaml",
+        f"repos:\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: {sha}\n",
+    )
+    with pytest.raises(ValueError) as excinfo:
+        get_precommit_ruff_rev(precommit)
+    message = str(excinfo.value)
+    assert sha in message
+    assert "frozen SHA" in message
+
+
+@pytest.mark.parametrize(
+    "dev_list,expected_substrings",
+    [
+        ('["ruff>=1.0.0"]', ("==", "ruff must be pinned")),
+        ('["ruff==1.*"]', ("==", "ruff must be pinned")),
+        ('["black==24.0.0"]', ("ruff", "found 0")),
+    ],
+    ids=["floor", "wildcard", "no-ruff-entry"],
+)
+def test_pyproject_pin_rejects_non_exact_specifiers(tmp_path, dev_list, expected_substrings):
+    """A floor, a wildcard, or a missing ruff entry all raise ValueError naming the problem."""
+    pyproject = _write(
+        tmp_path, "pyproject.toml", f"[project.optional-dependencies]\ndev = {dev_list}\n"
+    )
+    with pytest.raises(ValueError) as excinfo:
+        get_pyproject_ruff_pin(pyproject)
+    message = str(excinfo.value)
+    assert expected_substrings[0] in message
+    assert expected_substrings[1] in message
+
+
+def test_pyproject_pin_matches_ruff_by_canonical_name(tmp_path):
+    """canonicalize_name distinguishes ruff from lookalike packages like ruff-lsp."""
+    pyproject = _write(
+        tmp_path,
+        "pyproject.toml",
+        '[project.optional-dependencies]\ndev = ["ruff-lsp==0.0.1", "ruff==1.2.3"]\n',
+    )
+    pin = get_pyproject_ruff_pin(pyproject)
+    assert pin == "1.2.3"
+    assert pin != "0.0.1"
