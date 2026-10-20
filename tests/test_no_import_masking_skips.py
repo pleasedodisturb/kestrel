@@ -248,6 +248,29 @@ def _is_skipif_call(node: ast.AST, names: _ImportNames) -> bool:
     return is_pytest_mark_skipif or is_mark_alias_skipif
 
 
+def _skipif_conditions(call: ast.Call) -> list[ast.expr]:
+    """The condition expressions pytest evaluates for a ``skipif(...)`` call.
+
+    Mirrors pytest's ``evaluate_skip_marks``: a ``condition=`` keyword wins;
+    otherwise every positional argument is a condition (any true one skips).
+    A string condition is evaluated by pytest against the module's globals, so
+    it is parsed here into the expression it stands for. An unparseable string
+    makes pytest fail collection loudly, so it contributes no names.
+    """
+    keyword = next((kw.value for kw in call.keywords if kw.arg == "condition"), None)
+    raw = [keyword] if keyword is not None else list(call.args)
+    conditions: list[ast.expr] = []
+    for cond in raw:
+        if isinstance(cond, ast.Constant) and isinstance(cond.value, str):
+            try:
+                conditions.append(ast.parse(cond.value, mode="eval").body)
+            except SyntaxError:
+                continue
+        else:
+            conditions.append(cond)
+    return conditions
+
+
 def _condition_references_names(expr: ast.expr, flag_names: frozenset[str]) -> bool:
     """True if any ``Name`` node inside ``expr`` refers to one of ``flag_names``."""
     return any(isinstance(sub, ast.Name) and sub.id in flag_names for sub in ast.walk(expr))
@@ -286,10 +309,9 @@ def _find_masking_skipif_uses(
             exprs.extend(node.decorator_list)
         for expr in exprs:
             for sub in ast.walk(expr):
-                if (
-                    _is_skipif_call(sub, names)
-                    and sub.args
-                    and _condition_references_names(sub.args[0], flag_names)
+                if _is_skipif_call(sub, names) and any(
+                    _condition_references_names(cond, flag_names)
+                    for cond in _skipif_conditions(sub)
                 ):
                     lines.append(sub.lineno)
     return lines
@@ -567,6 +589,48 @@ _FLAG_CASES = [
         ),
         8,
         id="flag_variable_skipif_decorator",
+    ),
+    # Codex review: pytest reads the `condition=` keyword, any positional
+    # condition (not just the first), and string conditions evaluated
+    # against module globals. Each spelling must still be caught.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            'pytestmark = pytest.mark.skipif(condition=not _HAVE_MODULE, reason="x")\n'
+        ),
+        7,
+        id="flag_variable_condition_keyword",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            'pytestmark = pytest.mark.skipif(False, not _HAVE_MODULE, reason="x")\n'
+        ),
+        7,
+        id="flag_variable_second_positional_condition",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            'pytestmark = pytest.mark.skipif("not _HAVE_MODULE", reason="x")\n'
+        ),
+        7,
+        id="flag_variable_string_condition",
     ),
     # WR-01: a module-level `raise unittest.SkipTest(...)` inside an
     # import-masking handler. Exact fixture reproduced from 06-REVIEW.md WR-01.
