@@ -248,21 +248,23 @@ def _is_skipif_call(node: ast.AST, names: _ImportNames) -> bool:
     return is_pytest_mark_skipif or is_mark_alias_skipif
 
 
-_NEW_SCOPE = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+_DEFERRED_SCOPE = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
 
 
 def _module_scope_nodes(nodes: list[ast.AST]) -> list[ast.AST]:
-    """Every node that executes in module scope, descending through compound statements.
+    """Every node that executes at import time, descending through compound statements.
 
     An assignment or call nested in a module-level ``if``/``try``/``with``/loop
-    still runs at import time and still binds module globals such as
-    ``pytestmark``. Function, class, and lambda bodies open a new scope and are
-    not descended into (decorators are handled separately by the caller).
+    still runs at import time and still binds globals such as ``pytestmark``.
+    Class bodies also run at import time, and pytest applies a class-level
+    ``pytestmark`` to every test method, so they are descended into too.
+    Function and lambda bodies only run when called and are skipped
+    (decorators are handled separately by the caller).
     """
     found: list[ast.AST] = []
     for node in nodes:
         found.append(node)
-        if not isinstance(node, _NEW_SCOPE):
+        if not isinstance(node, _DEFERRED_SCOPE):
             found.extend(_module_scope_nodes(list(ast.iter_child_nodes(node))))
     return found
 
@@ -696,6 +698,24 @@ _FLAG_CASES = [
         ),
         8,
         id="flag_variable_conditional_module_skip",
+    ),
+    # Codex review: a class body runs at import time and pytest applies a
+    # class-level `pytestmark` to every method in it.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "class TestFeature:\n"
+            '    pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert not_a_real_module.thing() == 1\n"
+        ),
+        8,
+        id="flag_variable_class_pytestmark",
     ),
     # WR-01: a module-level `raise unittest.SkipTest(...)` inside an
     # import-masking handler. Exact fixture reproduced from 06-REVIEW.md WR-01.
