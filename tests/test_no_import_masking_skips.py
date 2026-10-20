@@ -248,6 +248,25 @@ def _is_skipif_call(node: ast.AST, names: _ImportNames) -> bool:
     return is_pytest_mark_skipif or is_mark_alias_skipif
 
 
+_NEW_SCOPE = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+
+
+def _module_scope_nodes(nodes: list[ast.AST]) -> list[ast.AST]:
+    """Every node that executes in module scope, descending through compound statements.
+
+    An assignment or call nested in a module-level ``if``/``try``/``with``/loop
+    still runs at import time and still binds module globals such as
+    ``pytestmark``. Function, class, and lambda bodies open a new scope and are
+    not descended into (decorators are handled separately by the caller).
+    """
+    found: list[ast.AST] = []
+    for node in nodes:
+        found.append(node)
+        if not isinstance(node, _NEW_SCOPE):
+            found.extend(_module_scope_nodes(list(ast.iter_child_nodes(node))))
+    return found
+
+
 def _skipif_conditions(call: ast.Call) -> list[ast.expr]:
     """The condition expressions pytest evaluates for a ``skipif(...)`` call.
 
@@ -281,24 +300,25 @@ def _find_masking_skipif_uses(
 ) -> list[int]:
     """Line numbers of ``skipif(...)`` calls whose condition reads a masked flag (WR-01).
 
-    Covers both shapes a masked flag is read in: a top-level
-    ``pytestmark = pytest.mark.skipif(...)`` assignment (restricted to
-    statements directly in the module body — this is what "module level"
-    means for an assignment), and a ``skipif(...)`` used as a decorator on any
-    function or class in the file (a decorator is evaluated at
-    module-collection time regardless of nesting, so it needs no such
+    Covers both shapes a masked flag is read in: a module-scope
+    ``pytestmark = pytest.mark.skipif(...)`` assignment (plain, annotated, or
+    augmented, including one nested in a module-level ``if``/``try``/``with``
+    — see ``_module_scope_nodes``), and a ``skipif(...)`` used as a decorator
+    on any function or class in the file (a decorator is evaluated at
+    module-collection time regardless of nesting, so it needs no scope
     restriction).
     """
     if not flag_names:
         return []
-    module_body_ids = {id(stmt) for stmt in tree.body}
+    module_scope_ids = {id(node) for node in _module_scope_nodes(list(tree.body))}
     lines: list[int] = []
     for node in ast.walk(tree):
         exprs: list[ast.expr] = []
-        if isinstance(node, ast.Assign) and id(node) in module_body_ids:
+        in_module_scope = id(node) in module_scope_ids
+        if isinstance(node, ast.Assign) and in_module_scope:
             if any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets):
                 exprs.append(node.value)
-        elif isinstance(node, ast.AnnAssign) and id(node) in module_body_ids:
+        elif isinstance(node, ast.AnnAssign | ast.AugAssign) and in_module_scope:
             if (
                 isinstance(node.target, ast.Name)
                 and node.target.id == "pytestmark"
@@ -385,8 +405,23 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
         if _is_first_party_importorskip(node, names, first_party):
             _report(node.lineno)
 
-    for lineno in _find_masking_skipif_uses(tree, names, frozenset(masked_flag_names)):
+    flags = frozenset(masked_flag_names)
+    for lineno in _find_masking_skipif_uses(tree, names, flags):
         _report(lineno)
+
+    # A module-scope `if`/`while` gated on a masked flag that skips the module
+    # (e.g. `if not HAVE_MODULE: pytest.skip(..., allow_module_level=True)`)
+    # is the same masking as a skip inside the handler itself.
+    if flags:
+        for node in _module_scope_nodes(list(tree.body)):
+            if not (
+                isinstance(node, ast.If | ast.While)
+                and _condition_references_names(node.test, flags)
+            ):
+                continue
+            for sub in _module_scope_nodes(node.body + node.orelse):
+                if _is_module_level_skip(sub, names) or _is_unittest_skiptest_raise(sub, names):
+                    _report(sub.lineno)
 
     return sorted(violations)
 
@@ -632,6 +667,36 @@ _FLAG_CASES = [
         7,
         id="flag_variable_string_condition",
     ),
+    # Codex review: module scope is more than tree.body — an assignment or skip
+    # nested in a module-level `if` still runs at import time.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "if not _HAVE_MODULE:\n"
+            '    pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        8,
+        id="flag_variable_conditional_pytestmark",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "if not _HAVE_MODULE:\n"
+            '    pytest.skip("x", allow_module_level=True)\n'
+        ),
+        8,
+        id="flag_variable_conditional_module_skip",
+    ),
     # WR-01: a module-level `raise unittest.SkipTest(...)` inside an
     # import-masking handler. Exact fixture reproduced from 06-REVIEW.md WR-01.
     pytest.param(
@@ -741,6 +806,22 @@ _IGNORE_CASES = [
             "    assert not_a_real_module.thing() == 1\n"
         ),
         id="skipif_references_unrelated_flag",
+    ),
+    # Scope negative: a `pytestmark` bound inside a function is a local, not
+    # the module's marker, so pytest never applies it.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "def helper():\n"
+            '    pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "    return pytestmark\n"
+        ),
+        id="function_local_pytestmark",
     ),
     # WR-01 negative: the handler masks an import but raises a non-SkipTest
     # exception — this is the desired remedy (fail loudly), not a masking
