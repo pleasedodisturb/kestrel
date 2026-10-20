@@ -149,7 +149,7 @@ def _body_contains_import(body: list[ast.stmt]) -> bool:
     return False
 
 
-def _handler_masks_imports(try_node: ast.Try, handler: ast.ExceptHandler) -> bool:
+def _handler_masks_imports(try_node: ast.Try | ast.TryStar, handler: ast.ExceptHandler) -> bool:
     """True if this handler masks an import failure.
 
     Two cases (DEC-10): the handler type names ImportError/ModuleNotFoundError
@@ -349,7 +349,8 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
     masked_flag_names: set[str] = set()
 
     for node in ast.walk(tree):
-        if isinstance(node, ast.Try):
+        # ast.TryStar (try/except*) carries the same handler shape as ast.Try.
+        if isinstance(node, ast.Try | ast.TryStar):
             for handler in node.handlers:
                 if not _handler_masks_imports(node, handler):
                     continue
@@ -581,6 +582,28 @@ _FLAG_CASES = [
         ),
         5,
         id="unittest_skiptest_raise",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except* ImportError:\n"
+            '    pytest.skip("module removed", allow_module_level=True)\n'
+        ),
+        5,
+        id="except_star_import_error",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except* Exception:\n"
+            '    pytest.skip("module removed", allow_module_level=True)\n'
+        ),
+        5,
+        id="except_star_broad_handler",
     ),
 ]
 
