@@ -1998,6 +1998,59 @@ _FLAG_CASES = [
         7,
         id="handler_defines_and_calls_skip_helper",
     ),
+    # Codex review (run 750036dd78b0): a failure path that falls through to
+    # the end of the function returns an implicit None while the success path
+    # returned early. Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        8,
+        id="result_implicit_none_after_pass",
+    ),
+    pytest.param(
+        (
+            "import logging\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            '        logging.debug("missing")\n'
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_implicit_none_after_handler_work",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    else:\n"
+            "        return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_success_return_in_else",
+    ),
 ]
 
 
@@ -2444,6 +2497,39 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="handler_defines_uncalled_skip_helper",
+    ),
+    # Implicit-return negatives: the fall-through reaches a later return (same
+    # value on both paths), or the function never returns at all, so pytest
+    # skips even with a working import (not import-driven).
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_fallthrough_reaches_later_return",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_function_never_returns",
     ),
 ]
 
