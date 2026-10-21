@@ -1801,6 +1801,44 @@ _FLAG_CASES = [
         12,
         id="scope_class_global_conditional_rebinding_does_not_clear",
     ),
+    # Codex review (run 44f93fe5b69b): a class body only runs if the class
+    # definition does, so its `global` rebinding clears the module only when
+    # the class is reached unconditionally. Each row skips silently.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "if False:\n"
+            "    class Fixer:\n"
+            "        global _HAVE_MODULE\n"
+            "        _HAVE_MODULE = True\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        11,
+        id="scope_conditional_class_global_does_not_clear",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "if False:\n"
+            "    class Outer:\n"
+            "        class Fixer:\n"
+            "            global _HAVE_MODULE\n"
+            "            _HAVE_MODULE = True\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        12,
+        id="scope_nested_class_under_conditional_does_not_clear",
+    ),
 ]
 
 
@@ -2148,6 +2186,26 @@ _IGNORE_CASES = [
             "        assert False\n"
         ),
         id="scope_class_global_rebinding_then_class_use",
+    ),
+    # A class nested directly in an unconditional class runs too, so its
+    # `global` rebinding clears the module (the test runs).
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "class Outer:\n"
+            "    class Fixer:\n"
+            "        global _HAVE_MODULE\n"
+            "        _HAVE_MODULE = True\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="scope_nested_unconditional_class_global_clears",
     ),
 ]
 
