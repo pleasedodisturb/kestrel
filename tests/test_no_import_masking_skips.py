@@ -950,6 +950,13 @@ _FLAG_CASES = [
         11,
         id="taint_assigned_inside_gated_branch",
     ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'MARKS = [pytest.mark.skip(reason="x")] if not _HAVE_MODULE else []\n'
+        + "pytestmark = MARKS\n",
+        8,
+        id="taint_mark_list_bound_to_a_name",
+    ),
 ]
 
 
@@ -1075,6 +1082,25 @@ _IGNORE_CASES = [
         + "def _bail():\n"
         + '    pytest.skip("x", allow_module_level=True)\n',
         id="skip_helper_never_called",
+    ),
+    # Codex review (run 47400ec72c8e): a pytestmark that reads a tainted name
+    # but cannot apply a skip because of it is not masking. Both rows were
+    # checked against pytest: the first runs its test, the second skips even
+    # when the import succeeds (so the skip is not import-driven).
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'pytestmark = pytest.mark.parametrize("available", [_HAVE_MODULE])\n'
+        + "def test_something(available):\n"
+        + "    assert True\n",
+        id="module_parametrize_reads_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "pytestmark = [\n"
+        + '    pytest.mark.parametrize("a", [_HAVE_MODULE]),\n'
+        + '    pytest.mark.skip(reason="not ready"),\n'
+        + "]\n",
+        id="unconditional_skip_beside_flag_read",
     ),
 ]
 
