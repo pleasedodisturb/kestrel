@@ -541,6 +541,12 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
                 returns_on_failure |= any(isinstance(sub, ast.Return) for sub in handled)
                 for sub in handled:
                     path_locals |= _assignment_parts(sub)[0]
+        # Close over local aliases in source order: `result = available` (and
+        # any straight-line chain) makes `result` import-dependent too.
+        for sub in body:
+            bound, value = _assignment_parts(sub)
+            if value is not None and _condition_references_names(value, frozenset(path_locals)):
+                path_locals |= bound
         if not returns_on_failure and path_locals:
             returns_on_failure = any(
                 isinstance(sub, ast.Return)
