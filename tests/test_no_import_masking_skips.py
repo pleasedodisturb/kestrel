@@ -464,17 +464,30 @@ def _always_returns(stmts: list[ast.stmt]) -> bool:
     return False
 
 
-def _fails_through_to_implicit_none(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-    """True if a masking handler's fall-through ends ``fn`` with an implicit ``None``.
+def _failure_return_differs(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """True if ``fn`` can return something on import failure that differs from success.
 
-    The success path returns early from a ``try``/``else`` block directly in
-    the function body, so the failure path's ``None`` differs from it.
+    For a ``try`` directly in the body whose ``try``/``else`` block returns
+    (the success path) and a masking handler that falls through (no
+    ``return``/``raise``), the failure path returns whatever the code after
+    the ``try`` returns, plus an implicit ``None`` when that code does not
+    always return (see ``_always_returns``). Return expressions are compared
+    structurally; if more than one distinct value is possible across both
+    paths, the result depends on the import.
     """
+
+    def returned(nodes: list[ast.AST]) -> set[str]:
+        return {
+            ast.dump(sub.value if sub.value is not None else ast.Constant(None))
+            for sub in nodes
+            if isinstance(sub, ast.Return)
+        }
+
     for index, stmt in enumerate(fn.body):
         if not isinstance(stmt, ast.Try | ast.TryStar):
             continue
-        success = _module_scope_nodes([*stmt.body, *stmt.orelse])
-        if not any(isinstance(sub, ast.Return) for sub in success):
+        success = returned(_module_scope_nodes([*stmt.body, *stmt.orelse]))
+        if not success:
             continue
         falls_through = any(
             _handler_masks_imports(stmt, handler)
@@ -484,7 +497,13 @@ def _fails_through_to_implicit_none(fn: ast.FunctionDef | ast.AsyncFunctionDef) 
             )
             for handler in stmt.handlers
         )
-        if falls_through and not _always_returns(fn.body[index + 1 :]):
+        if not falls_through:
+            continue
+        later = fn.body[index + 1 :]
+        failure = returned(_module_scope_nodes(list(later)))
+        if not _always_returns(later):
+            failure.add(ast.dump(ast.Constant(None)))
+        if len(success | failure) > 1:
             return True
     return False
 
@@ -496,10 +515,9 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
     False`` makes ``check`` tainted, so ``HAVE = check()`` and ``skipif(not
     check())`` read taint through it. Counted: a ``return`` inside a masking
     handler; a ``return`` reading a local that a masking handler assigned; or
-    an implicit ``None`` on failure, when a ``try`` directly in the body
-    returns from its ``try``/``else`` block, a masking handler can fall
-    through (no ``return``/``raise``), and the code after that ``try`` does
-    not always return (see ``_always_returns``).
+    a failure path that falls through to a different value than the success
+    path returned, including an implicit ``None`` (see
+    ``_failure_return_differs``).
     A handler that re-raises or leaves the result alone does not count.
     """
     seeds: dict[tuple[_Scope, str], set[int]] = {}
@@ -527,7 +545,7 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
                 for sub in body
             )
         if not returns_on_failure:
-            returns_on_failure = _fails_through_to_implicit_none(fn)
+            returns_on_failure = _failure_return_differs(fn)
         if returns_on_failure:
             key = (ns.binding(ns.of(fn), fn.name), fn.name)
             seeds.setdefault(key, set()).add(fn.lineno)
