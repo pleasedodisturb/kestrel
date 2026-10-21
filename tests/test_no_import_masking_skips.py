@@ -298,6 +298,37 @@ def _import_time_scopes(tree: ast.Module) -> dict[int, _Scope]:
     return scopes
 
 
+class _Namespaces(NamedTuple):
+    """Where import-time code is evaluated, and where its assignments bind.
+
+    ``of(node)`` is the namespace an expression is evaluated in. ``binding``
+    is where an assignment of ``name`` made in ``scope`` lands: normally the
+    same namespace, but a class body that declares ``global name`` binds the
+    module global instead.
+    """
+
+    scopes: dict[int, _Scope]
+    class_globals: dict[int, frozenset[str]]
+
+    def of(self, node: ast.AST) -> _Scope:
+        return self.scopes.get(id(node))
+
+    def binding(self, scope: _Scope, name: str) -> _Scope:
+        if scope is not None and name in self.class_globals.get(scope, frozenset()):
+            return None
+        return scope
+
+
+def _namespaces(tree: ast.Module) -> _Namespaces:
+    scopes = _import_time_scopes(tree)
+    class_globals: dict[int, set[str]] = {}
+    for node in _module_scope_nodes(list(tree.body)):
+        where = scopes.get(id(node))
+        if isinstance(node, ast.Global) and where is not None:
+            class_globals.setdefault(where, set()).update(node.names)
+    return _Namespaces(scopes, {k: frozenset(v) for k, v in class_globals.items()})
+
+
 def _is_skip_mark_ref(node: ast.AST, names: _ImportNames) -> bool:
     """True for ``pytest.mark.skip``/``pytest.mark.skipif`` (or a ``mark`` alias's), called or not."""
     if not (isinstance(node, ast.Attribute) and node.attr in ("skip", "skipif")):
@@ -348,19 +379,19 @@ def _assignment_parts(node: ast.AST) -> tuple[set[str], ast.expr | None]:
     return bound, value
 
 
-def _gated_region_ids(scope: list[ast.AST], taint: _Taint, scopes: dict[int, _Scope]) -> set[int]:
+def _gated_region_ids(scope: list[ast.AST], taint: _Taint, ns: _Namespaces) -> set[int]:
     """ids of import-time nodes that only run because of a tainted ``if``/``while`` test."""
     gated: set[int] = set()
     for node in scope:
         if isinstance(node, ast.If | ast.While) and _condition_references_names(
-            node.test, taint.at(node.lineno, scopes.get(id(node)))
+            node.test, taint.at(node.lineno, ns.of(node))
         ):
             gated |= {id(sub) for sub in _module_scope_nodes(node.body + node.orelse)}
     return gated
 
 
 def _import_time_taint_seeds(
-    tree: ast.Module, scopes: dict[int, _Scope]
+    tree: ast.Module, ns: _Namespaces
 ) -> dict[tuple[_Scope, str], set[int]]:
     """Module globals an import-masking handler really assigns at import time, by line.
 
@@ -387,9 +418,10 @@ def _import_time_taint_seeds(
                     bound, _ = _assignment_parts(sub)
                     # A `global` helper binds module globals; otherwise the
                     # handler binds in the namespace it runs in.
-                    where = None if keep is not None else scopes.get(id(sub))
+                    where = None if keep is not None else ns.of(sub)
                     for name in bound if keep is None else bound & keep:
-                        seeds.setdefault((where, name), set()).add(line or sub.lineno)
+                        key = (ns.binding(where, name), name)
+                        seeds.setdefault(key, set()).add(line or sub.lineno)
 
     collect(scope, None, None)
     calls: dict[str, set[int]] = {}
@@ -496,7 +528,7 @@ def _rebound_names(target: ast.expr) -> set[str]:
     return set()
 
 
-def _top_level_clears(tree: ast.Module) -> dict[tuple[_Scope, str], set[int]]:
+def _top_level_clears(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scope, str], set[int]]:
     """Lines where a direct assignment unconditionally rebinds a name in its namespace.
 
     Only statements directly in the module body (namespace ``None``) or
@@ -523,7 +555,7 @@ def _top_level_clears(tree: ast.Module) -> dict[tuple[_Scope, str], set[int]]:
             else:
                 continue
             for name in {n for t in targets for n in _rebound_names(t)}:
-                clears.setdefault((where, name), set()).add(stmt.lineno)
+                clears.setdefault((ns.binding(where, name), name), set()).add(stmt.lineno)
     return clears
 
 
@@ -531,7 +563,7 @@ def _flow_taint(
     tree: ast.Module,
     names: _ImportNames,
     seeds: dict[tuple[_Scope, str], set[int]],
-    scopes: dict[int, _Scope],
+    ns: _Namespaces,
 ) -> _Taint:
     """Close ``seeds`` over import-time assignments, tracking clears (fixpoint).
 
@@ -542,24 +574,25 @@ def _flow_taint(
     Taint lines only grow across iterations, so the loop terminates.
     """
     scope = _module_scope_nodes(list(tree.body))
-    clears = _top_level_clears(tree)
+    clears = _top_level_clears(tree, ns)
     taint_lines = {key: set(lines) for key, lines in seeds.items()}
     changed = bool(taint_lines)
     while changed:
         changed = False
         taint = _Taint(taint_lines, clears)
-        gated = _gated_region_ids(scope, taint, scopes)
+        gated = _gated_region_ids(scope, taint, ns)
         for node in scope:
             bound, value = _assignment_parts(node)
             if not bound:
                 continue
-            where = scopes.get(id(node))
+            where = ns.of(node)
             view = taint.view(node.lineno, where)
             reads = value is not None and _reads_tainted(value, names, view)
             if reads or id(node) in gated:
                 for name in bound:
-                    if node.lineno not in taint_lines.setdefault((where, name), set()):
-                        taint_lines[(where, name)].add(node.lineno)
+                    key = (ns.binding(where, name), name)
+                    if node.lineno not in taint_lines.setdefault(key, set()):
+                        taint_lines[key].add(node.lineno)
                         changed = True
     return _Taint(taint_lines, clears)
 
@@ -610,7 +643,7 @@ def _reads_tainted(expr: ast.expr, names: _ImportNames, view: _TaintView) -> boo
 
 def _flow_bound_names(
     tree: ast.Module,
-    scopes: dict[int, _Scope],
+    ns: _Namespaces,
     binds_mark: Callable[[ast.expr, int, _Scope, _Taint], bool],
 ) -> _Taint:
     """Flow-sensitive set of names bound to a mark value of some kind (fixpoint).
@@ -622,7 +655,7 @@ def _flow_bound_names(
     so ``MARK = <mark>; MARK = <other>; pytestmark = MARK`` sees the other.
     """
     scope = _module_scope_nodes(list(tree.body))
-    clears = _top_level_clears(tree)
+    clears = _top_level_clears(tree, ns)
     lines: dict[tuple[_Scope, str], set[int]] = {}
     changed = True
     while changed:
@@ -630,19 +663,18 @@ def _flow_bound_names(
         current = _Taint(lines, clears)
         for node in scope:
             bound, value = _assignment_parts(node)
-            where = scopes.get(id(node))
+            where = ns.of(node)
             if not bound or value is None or not binds_mark(value, node.lineno, where, current):
                 continue
             for name in bound:
-                if node.lineno not in lines.setdefault((where, name), set()):
-                    lines[(where, name)].add(node.lineno)
+                key = (ns.binding(where, name), name)
+                if node.lineno not in lines.setdefault(key, set()):
+                    lines[key].add(node.lineno)
                     changed = True
     return _Taint(lines, clears)
 
 
-def _skip_carrying_names(
-    tree: ast.Module, names: _ImportNames, scopes: dict[int, _Scope]
-) -> _Taint:
+def _skip_carrying_names(tree: ast.Module, names: _ImportNames, ns: _Namespaces) -> _Taint:
     """Names bound at import time to a value that holds a skip mark (flow-sensitive).
 
     E.g. ``MARKS = [pytest.mark.skip(...)] if not HAVE_MODULE else []`` makes
@@ -650,7 +682,7 @@ def _skip_carrying_names(
     """
     return _flow_bound_names(
         tree,
-        scopes,
+        ns,
         lambda value, line, where, current: _can_supply_skip(value, names, current.at(line, where)),
     )
 
@@ -711,7 +743,7 @@ def _masking_mark_names(
     names: _ImportNames,
     taint: _Taint,
     carrying: _Taint,
-    scopes: dict[int, _Scope],
+    ns: _Namespaces,
 ) -> _Taint:
     """Names bound at import time to a mark value whose skip taint decides (flow-sensitive).
 
@@ -722,7 +754,7 @@ def _masking_mark_names(
     """
     return _flow_bound_names(
         tree,
-        scopes,
+        ns,
         lambda value, line, where, current: _taint_decides_skip(
             value,
             names,
@@ -734,7 +766,7 @@ def _masking_mark_names(
 
 
 def _find_masking_skipif_uses(
-    tree: ast.Module, names: _ImportNames, taint: _Taint, scopes: dict[int, _Scope]
+    tree: ast.Module, names: _ImportNames, taint: _Taint, ns: _Namespaces
 ) -> list[int]:
     """Line numbers of ``skipif(...)`` calls whose condition reads a masked flag (WR-01).
 
@@ -749,8 +781,8 @@ def _find_masking_skipif_uses(
     if not taint.ever:
         return []
     module_scope_ids = {id(node) for node in _module_scope_nodes(list(tree.body))}
-    carrying = _skip_carrying_names(tree, names, scopes)
-    masking = _masking_mark_names(tree, names, taint, carrying, scopes)
+    carrying = _skip_carrying_names(tree, names, ns)
+    masking = _masking_mark_names(tree, names, taint, carrying, ns)
     lines: list[int] = []
     for node in ast.walk(tree):
         # (expression, line to report if taint decides its skip outside an
@@ -759,7 +791,7 @@ def _find_masking_skipif_uses(
         marks: list[tuple[ast.expr, int]] = []
         # A pytestmark value and a def's decorators are both evaluated in the
         # namespace that holds the statement.
-        where = scopes.get(id(node))
+        where = ns.of(node)
         if id(node) in module_scope_ids:
             bound, value = _assignment_parts(node)
             if "pytestmark" in bound and value is not None:
@@ -853,9 +885,9 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
         if _is_first_party_importorskip(node, names, first_party):
             _report(node.lineno)
 
-    scopes = _import_time_scopes(tree)
-    taint = _flow_taint(tree, names, _import_time_taint_seeds(tree, scopes), scopes)
-    for lineno in _find_masking_skipif_uses(tree, names, taint, scopes):
+    ns = _namespaces(tree)
+    taint = _flow_taint(tree, names, _import_time_taint_seeds(tree, ns), ns)
+    for lineno in _find_masking_skipif_uses(tree, names, taint, ns):
         _report(lineno)
 
     # Any skip action in an import-time region that only runs because the
@@ -867,7 +899,7 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
     scope = _module_scope_nodes(list(tree.body))
     import_driven = _masking_handler_region_ids(scope)
     if taint.ever:
-        import_driven |= _gated_region_ids(scope, taint, scopes)
+        import_driven |= _gated_region_ids(scope, taint, ns)
     if import_driven:
         for sub in scope:
             if id(sub) in import_driven and (
