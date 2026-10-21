@@ -2140,6 +2140,67 @@ _FLAG_CASES = [
         11,
         id="result_one_armed_if_return_is_conservatively_not_guaranteed",
     ),
+    # Codex review (run 3ddc64abc80b): a guaranteed later return only rules
+    # out an implicit None; if any value the failure path can return differs
+    # from a success-path return, the result still depends on the import.
+    # Each row skips silently under pytest when the import breaks.
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return False\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_later_return_value_differs",
+    ),
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            '    if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+            "        return True\n"
+            "    else:\n"
+            "        return False\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        13,
+        id="result_later_branch_return_value_differs",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    else:\n"
+            "        return 1\n"
+            "    return 0\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_else_success_later_return_differs",
+    ),
 ]
 
 
