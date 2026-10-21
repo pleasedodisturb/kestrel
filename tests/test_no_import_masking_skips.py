@@ -2531,6 +2531,45 @@ _FLAG_CASES = [
         17,
         id="result_dependency_gates_later_branch_in_same_statement",
     ),
+    # Codex review (run d1f694323860): an import probe nested in an `if` or a
+    # loop is still a probe; a function containing one that can return more
+    # than one value depends on the import. Each row skips silently.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    if True:\n"
+            "        try:\n"
+            "            import not_a_real_module\n"
+            "            return True\n"
+            "        except ImportError:\n"
+            "            pass\n"
+            "    return False\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_probe_nested_in_if",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            '    for name in ["not_a_real_module"]:\n'
+            "        try:\n"
+            "            __import__(name)\n"
+            "            return True\n"
+            "        except ImportError:\n"
+            "            pass\n"
+            "    return False\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_probe_nested_in_loop",
+    ),
 ]
 
 
@@ -3206,6 +3245,23 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_gated_branch_without_return_effect",
+    ),
+    # A nested probe with a single possible return value (test runs).
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    if True:\n"
+            "        try:\n"
+            "            import not_a_real_module\n"
+            "        except ImportError:\n"
+            "            pass\n"
+            "    return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_nested_probe_single_return_value",
     ),
 ]
 
