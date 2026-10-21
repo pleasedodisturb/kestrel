@@ -1102,6 +1102,10 @@ _IGNORE_CASES = [
         + "]\n",
         id="unconditional_skip_beside_flag_read",
     ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE + 'pytestmark = pytest.mark.skip(reason=f"have={_HAVE_MODULE}")\n',
+        id="unconditional_skip_mentions_flag_in_reason",
+    ),
 ]
 
 
