@@ -462,6 +462,18 @@ def _write_fixture(tmp_path: Path, source: str) -> Path:
     return path
 
 
+# Shared preamble for the taint-tracking fixtures below: lines 1-6 mask a
+# failed import and leave the flag `_HAVE_MODULE` tainted, so every case's own
+# body starts on line 7.
+_MASKED_FLAG_PREAMBLE = (
+    "import pytest\n"
+    "_HAVE_MODULE = True\n"
+    "try:\n"
+    "    import not_a_real_module\n"
+    "except ImportError:\n"
+    "    _HAVE_MODULE = False\n"
+)
+
 _FLAG_CASES = [
     pytest.param(
         (
@@ -754,6 +766,78 @@ _FLAG_CASES = [
         5,
         id="except_star_broad_handler",
     ),
+    # Taint mapping (Codex rounds 5+): a skip that only happens because of a
+    # tainted value is masking. Tainted = set in a masking handler, derived
+    # from a tainted name, or assigned inside a branch gated on one. Every
+    # row below was confirmed as a silent pytest skip when the import breaks.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "if not _HAVE_MODULE:\n"
+        + '    pytestmark = pytest.mark.skipif(True, reason="x")\n',
+        8,
+        id="taint_gated_pytestmark_constant_condition",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "if not _HAVE_MODULE:\n"
+        + '    pytestmark = pytest.mark.skip(reason="x")\n',
+        8,
+        id="taint_gated_pytestmark_unconditional_skip",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "if not _HAVE_MODULE:\n"
+        + '    @pytest.mark.skip(reason="x")\n'
+        + "    def test_something():\n"
+        + "        assert not_a_real_module.thing() == 1\n",
+        8,
+        id="taint_gated_skip_decorator",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "MISSING = not _HAVE_MODULE\n"
+        + 'pytestmark = pytest.mark.skipif(MISSING, reason="x")\n',
+        8,
+        id="taint_alias_of_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'pytestmark = [pytest.mark.skip(reason="x")] if not _HAVE_MODULE else []\n',
+        7,
+        id="taint_conditional_expression_marks",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def _bail():\n"
+            '    pytest.skip("x", allow_module_level=True)\n'
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _bail()\n"
+        ),
+        7,
+        id="skip_helper_called_in_handler",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "def _bail():\n"
+        + '    pytest.skip("x", allow_module_level=True)\n'
+        + "if not _HAVE_MODULE:\n"
+        + "    _bail()\n",
+        10,
+        id="skip_helper_called_in_gated_branch",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "if not _HAVE_MODULE:\n"
+        + "    MISSING = True\n"
+        + "else:\n"
+        + "    MISSING = False\n"
+        + 'pytestmark = pytest.mark.skipif(MISSING, reason="x")\n',
+        11,
+        id="taint_assigned_inside_gated_branch",
+    ),
 ]
 
 
@@ -856,6 +940,29 @@ _IGNORE_CASES = [
             '    raise RuntimeError("boom")\n'
         ),
         id="handler_raises_non_skiptest",
+    ),
+    # Taint mapping negatives: none of these hides a broken import (each
+    # either fails loudly or skips for a reason unrelated to the import).
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE + 'pytestmark = pytest.mark.skip(reason="not ready")\n',
+        id="deliberate_unconditional_module_skip",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE + "if not _HAVE_MODULE:\n    thing = None\n",
+        id="gated_branch_without_skip",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + '@pytest.mark.parametrize("v", [1] if _HAVE_MODULE else [2])\n'
+        + "def test_something(v):\n"
+        + "    assert v\n",
+        id="non_skip_mark_reads_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "def _bail():\n"
+        + '    pytest.skip("x", allow_module_level=True)\n',
+        id="skip_helper_never_called",
     ),
 ]
 
