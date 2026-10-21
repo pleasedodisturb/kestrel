@@ -2236,6 +2236,46 @@ _FLAG_CASES = [
         10,
         id="result_handler_conditional_raise_falls_through",
     ),
+    # Codex review (run 56da02729f64): a returned local assigned on the
+    # success path (try body or else) depends on the import as much as one
+    # the handler assigns. Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return available\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_default_then_success_path_assign",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    ok = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    else:\n"
+            "        ok = True\n"
+            "    return ok\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        11,
+        id="result_success_path_assign_in_else",
+    ),
 ]
 
 
@@ -2796,6 +2836,40 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_handler_raises_on_every_branch",
+    ),
+    # Success-path locals that never reach a return, or a returned local set
+    # only before the try, do not depend on the import (tests run).
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        mod = not_a_real_module\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_success_path_assign_not_returned",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    ok = True\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return ok\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_returned_local_set_only_before_try",
     ),
 ]
 
