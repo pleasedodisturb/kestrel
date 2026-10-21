@@ -426,23 +426,43 @@ class _Taint(NamedTuple):
         return bool(self.taint_lines)
 
 
+def _rebound_names(target: ast.expr) -> set[str]:
+    """Names an assignment target actually rebinds.
+
+    ``x = ...`` and tuple/list/starred unpacking rebind names; ``obj.attr =
+    ...`` and ``obj[key] = ...`` only mutate ``obj``, so they rebind nothing.
+    (``_assignment_parts`` deliberately reports mutated bases too, because a
+    mutation inside a masking handler does taint the object.)
+    """
+    if isinstance(target, ast.Name):
+        return {target.id}
+    if isinstance(target, ast.Tuple | ast.List):
+        return {name for elt in target.elts for name in _rebound_names(elt)}
+    if isinstance(target, ast.Starred):
+        return _rebound_names(target.value)
+    return set()
+
+
 def _top_level_clears(tree: ast.Module) -> dict[str, set[int]]:
     """Lines where a direct top-level assignment unconditionally rebinds a name.
 
     Only statements directly in the module body count: a rebinding inside an
     ``if``/``try``/loop is not provably executed. Augmented assignment reads
-    its own target, so it never clears. A rebinding whose value reads taint is
+    its own target, so it never clears; an attribute or subscript write only
+    mutates its base (see ``_rebound_names``). A rebinding whose value reads taint is
     also a taint event on the same line, and ``_Taint.at`` only honours a
     clear strictly after the last taint, so it needs no special case here.
     """
     clears: dict[str, set[int]] = {}
     for stmt in tree.body:
-        if not isinstance(stmt, ast.Assign | ast.AnnAssign):
+        if isinstance(stmt, ast.Assign):
+            targets = stmt.targets
+        elif isinstance(stmt, ast.AnnAssign) and stmt.value is not None:
+            targets = [stmt.target]
+        else:
             continue
-        bound, value = _assignment_parts(stmt)
-        if value is not None:
-            for name in bound:
-                clears.setdefault(name, set()).add(stmt.lineno)
+        for name in {n for t in targets for n in _rebound_names(t)}:
+            clears.setdefault(name, set()).add(stmt.lineno)
     return clears
 
 
