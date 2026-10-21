@@ -2082,6 +2082,49 @@ _FLAG_CASES = [
         9,
         id="result_success_return_in_else",
     ),
+    # Codex review (run 24d960ccfce1): only code that always returns stops the
+    # fall-through; a later return inside a one-armed `if` does not.
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    if False:\n"
+            "        return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        11,
+        id="result_conditional_later_return_does_not_guarantee",
+    ),
+    # Deliberately conservative: pytest runs this test (`if True` returns), but
+    # a one-armed `if` does not guarantee a return statically, so the failure
+    # path still counts as falling through. Fails CI loudly, never silently.
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    if True:\n"
+            "        return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        11,
+        id="result_one_armed_if_return_is_conservatively_not_guaranteed",
+    ),
 ]
 
 
@@ -2561,6 +2604,51 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_function_never_returns",
+    ),
+    # Guaranteed later returns (both branches of an if/else, recursively)
+    # stop the fall-through, so these tests run under pytest.
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            '    if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+            "        return True\n"
+            "    else:\n"
+            "        return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_both_branches_return",
+    ),
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            '    if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+            "        return True\n"
+            "    else:\n"
+            "        if True:\n"
+            "            return True\n"
+            "        else:\n"
+            "            return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_nested_both_branches_return",
     ),
 ]
 
