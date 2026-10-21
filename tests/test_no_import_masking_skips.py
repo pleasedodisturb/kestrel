@@ -505,6 +505,56 @@ def _failure_return_differs(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     return False
 
 
+def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """True if ``fn`` returns a value that depends on a masked import (local flow).
+
+    Walks the direct statements of ``fn.body`` in source order, tracking
+    import-dependent locals: those assigned on either path of a ``try`` with a
+    masking handler (the handler, or the try body / ``else``), and any local
+    later bound from one (``result = available``). A direct, unconditional
+    rebinding to a value that reads none of them clears the names it rebinds
+    (``available = True``); rebindings nested in ``if``/loops/``try`` only add,
+    because they are not provably executed. Also true for a ``return`` inside
+    a masking handler.
+    """
+    dependent: set[str] = set()
+    for stmt in fn.body:
+        nodes = _module_scope_nodes([stmt])
+        for node in nodes:
+            if not isinstance(node, ast.Try | ast.TryStar):
+                continue
+            masking = [h for h in node.handlers if _handler_masks_imports(node, h)]
+            if not masking:
+                continue
+            for sub in _module_scope_nodes([*node.body, *node.orelse]):
+                dependent |= _assignment_parts(sub)[0]
+            for handler in masking:
+                handled = _module_scope_nodes(list(handler.body))
+                if any(isinstance(sub, ast.Return) for sub in handled):
+                    return True
+                for sub in handled:
+                    dependent |= _assignment_parts(sub)[0]
+        if isinstance(stmt, ast.Assign | ast.AnnAssign) and stmt.value is not None:
+            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+            if _condition_references_names(stmt.value, frozenset(dependent)):
+                dependent |= _assignment_parts(stmt)[0]
+            else:
+                dependent -= {n for t in targets for n in _rebound_names(t)}
+            continue
+        for node in nodes:
+            bound, value = _assignment_parts(node)
+            if value is not None and _condition_references_names(value, frozenset(dependent)):
+                dependent |= bound
+        if any(
+            isinstance(node, ast.Return)
+            and node.value is not None
+            and _condition_references_names(node.value, frozenset(dependent))
+            for node in nodes
+        ):
+            return True
+    return False
+
+
 def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scope, str], set[int]]:
     """Import-time functions whose failure path returns a value, seeded at the ``def``.
 
@@ -522,38 +572,7 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
     for fn in _module_scope_nodes(list(tree.body)):
         if not isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef):
             continue
-        body = _module_scope_nodes(list(fn.body))
-        returns_on_failure = False
-        # Locals whose value depends on the import: assigned in a masking
-        # handler (failure path) or in the try body / else of a try that has
-        # one (success path), e.g. `available = False; try: import x;
-        # available = True`.
-        path_locals: set[str] = set()
-        for node in body:
-            if not isinstance(node, ast.Try | ast.TryStar):
-                continue
-            masking = [h for h in node.handlers if _handler_masks_imports(node, h)]
-            if masking:
-                for sub in _module_scope_nodes([*node.body, *node.orelse]):
-                    path_locals |= _assignment_parts(sub)[0]
-            for handler in masking:
-                handled = _module_scope_nodes(list(handler.body))
-                returns_on_failure |= any(isinstance(sub, ast.Return) for sub in handled)
-                for sub in handled:
-                    path_locals |= _assignment_parts(sub)[0]
-        # Close over local aliases in source order: `result = available` (and
-        # any straight-line chain) makes `result` import-dependent too.
-        for sub in body:
-            bound, value = _assignment_parts(sub)
-            if value is not None and _condition_references_names(value, frozenset(path_locals)):
-                path_locals |= bound
-        if not returns_on_failure and path_locals:
-            returns_on_failure = any(
-                isinstance(sub, ast.Return)
-                and sub.value is not None
-                and _condition_references_names(sub.value, frozenset(path_locals))
-                for sub in body
-            )
+        returns_on_failure = _local_flow_returns_dependent(fn)
         if not returns_on_failure:
             returns_on_failure = _failure_return_differs(fn)
         if returns_on_failure:
