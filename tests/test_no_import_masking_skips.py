@@ -2619,6 +2619,28 @@ _FLAG_CASES = [
         12,
         id="result_wrapper_chain_returns_masking_result",
     ),
+    # Codex review (run de174506ffac): a wrapper that branches on a masking
+    # result and returns constants decides its result from the import too.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def probe():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            "def available():\n"
+            "    if probe():\n"
+            "        return True\n"
+            "    return False\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        12,
+        id="result_wrapper_branches_on_masking_result",
+    ),
 ]
 
 
@@ -3331,6 +3353,25 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_wrapper_of_unrelated_function",
+    ),
+    # A wrapper that calls a masking result but has one possible return value.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def probe():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            "def available():\n"
+            "    probe()\n"
+            "    return True\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_wrapper_calls_masking_result_single_return",
     ),
 ]
 
