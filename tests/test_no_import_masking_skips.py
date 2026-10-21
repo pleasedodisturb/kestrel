@@ -223,22 +223,6 @@ def _is_unittest_skiptest_raise(node: ast.AST, names: _ImportNames) -> bool:
     return is_unittest_skiptest or is_bare_skiptest
 
 
-def _handler_assigned_names(handler: ast.ExceptHandler) -> set[str]:
-    """Names assigned anywhere in ``handler``'s body (the flag-variable pattern, WR-01).
-
-    E.g. ``except ImportError: _HAVE_MODULE = False`` — collected so a later
-    ``pytest.mark.skipif(not _HAVE_MODULE, ...)`` reading this name can be
-    traced back to the import-masking handler that set it.
-    """
-    assigned: set[str] = set()
-    for sub in ast.walk(handler):
-        # Every binding form counts: plain, annotated, augmented, walrus, and
-        # tuple/list/starred unpacking (``module, HAVE_MODULE = None, False``).
-        bound, _ = _assignment_parts(sub)
-        assigned |= bound
-    return assigned
-
-
 def _is_skipif_call(node: ast.AST, names: _ImportNames) -> bool:
     """True for ``pytest.mark.skipif(...)`` (or a ``mark``-alias's ``.skipif(...)``)."""
     if not isinstance(node, ast.Call):
@@ -333,49 +317,55 @@ def _assignment_parts(node: ast.AST) -> tuple[set[str], ast.expr | None]:
     return bound, value
 
 
-def _gated_region_ids(scope: list[ast.AST], tainted: frozenset[str]) -> set[int]:
+def _gated_region_ids(scope: list[ast.AST], taint: _Taint) -> set[int]:
     """ids of import-time nodes that only run because of a tainted ``if``/``while`` test."""
     gated: set[int] = set()
     for node in scope:
-        if isinstance(node, ast.If | ast.While) and _condition_references_names(node.test, tainted):
+        if isinstance(node, ast.If | ast.While) and _condition_references_names(
+            node.test, taint.at(node.lineno)
+        ):
             gated |= {id(sub) for sub in _module_scope_nodes(node.body + node.orelse)}
     return gated
 
 
-def _import_time_taint_seeds(tree: ast.Module) -> frozenset[str]:
-    """Module globals that an import-masking handler really assigns at import time.
+def _import_time_taint_seeds(tree: ast.Module) -> dict[str, set[int]]:
+    """Module globals an import-masking handler really assigns at import time, by line.
 
     A handler in import-time scope (module or class body, see
-    ``_module_scope_nodes``) seeds every name it assigns. A handler inside a
-    function seeds only the names that function declares ``global``, and only
-    when the function is called at import time: otherwise the assignment is a
-    local, or never runs before the skip condition is evaluated.
+    ``_module_scope_nodes``) seeds every name it assigns, at the assignment's
+    line. A handler inside a function seeds only the names that function
+    declares ``global``, and only when the function is called at import time
+    (seeded at the call's line): otherwise the assignment is a local, or never
+    runs before the skip condition is evaluated.
     """
     scope = _module_scope_nodes(list(tree.body))
-    seeds: set[str] = set()
+    seeds: dict[str, set[int]] = {}
 
-    def collect(nodes: list[ast.AST], keep: set[str] | None) -> None:
+    def collect(nodes: list[ast.AST], keep: set[str] | None, line: int | None) -> None:
         for node in nodes:
             if not isinstance(node, ast.Try | ast.TryStar):
                 continue
             for handler in node.handlers:
-                if _handler_masks_imports(node, handler):
-                    assigned = _handler_assigned_names(handler)
-                    seeds.update(assigned if keep is None else assigned & keep)
+                if not _handler_masks_imports(node, handler):
+                    continue
+                for sub in ast.walk(handler):
+                    bound, _ = _assignment_parts(sub)
+                    for name in bound if keep is None else bound & keep:
+                        seeds.setdefault(name, set()).add(line or sub.lineno)
 
-    collect(scope, None)
-    called = {
-        node.func.id
-        for node in scope
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-    }
+    collect(scope, None, None)
+    calls: dict[str, set[int]] = {}
     for node in scope:
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and node.name in called:
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            calls.setdefault(node.func.id, set()).add(node.lineno)
+    for node in scope:
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and node.name in calls:
             declared = {
                 name for sub in ast.walk(node) if isinstance(sub, ast.Global) for name in sub.names
             }
-            collect(list(ast.walk(node)), declared)
-    return frozenset(seeds)
+            for call_line in calls[node.name]:
+                collect(list(ast.walk(node)), declared, call_line)
+    return seeds
 
 
 def _masking_handler_region_ids(scope: list[ast.AST]) -> set[int]:
@@ -394,51 +384,120 @@ def _masking_handler_region_ids(scope: list[ast.AST]) -> set[int]:
     return region
 
 
-def _tainted_names(tree: ast.Module, seed: frozenset[str]) -> frozenset[str]:
-    """Close ``seed`` over import-time assignments (fixpoint).
+_END_OF_MODULE = 10**9
 
-    A name becomes tainted when an import-time assignment binds it from a
-    value that reads a tainted name (``MISSING = not HAVE_MODULE``), or when
-    the assignment itself sits in a branch gated on a tainted name.
+
+class _TaintView(NamedTuple):
+    """Tainted names as seen by an expression evaluated at one point of the import.
+
+    ``now`` applies to code evaluated where it appears; ``final`` to a string
+    skipif condition, which pytest evaluates against the module's globals only
+    after the whole module has been imported.
+    """
+
+    now: frozenset[str]
+    final: frozenset[str]
+
+
+class _Taint(NamedTuple):
+    """Flow-sensitive taint: where each name was tainted and where it was cleared.
+
+    A name counts as tainted at ``line`` unless an unconditional top-level
+    clear sits strictly between its last taint and ``line``. Taint itself is
+    not ordered (a taint after the use still counts), which keeps loops and
+    later calls conservative.
+    """
+
+    taint_lines: dict[str, set[int]]
+    clear_lines: dict[str, set[int]]
+
+    def at(self, line: int) -> frozenset[str]:
+        return frozenset(
+            name
+            for name, lines in self.taint_lines.items()
+            if not any(max(lines) < c < line for c in self.clear_lines.get(name, ()))
+        )
+
+    def view(self, line: int) -> _TaintView:
+        return _TaintView(now=self.at(line), final=self.at(_END_OF_MODULE))
+
+    @property
+    def ever(self) -> bool:
+        return bool(self.taint_lines)
+
+
+def _top_level_clears(tree: ast.Module) -> dict[str, set[int]]:
+    """Lines where a direct top-level assignment unconditionally rebinds a name.
+
+    Only statements directly in the module body count: a rebinding inside an
+    ``if``/``try``/loop is not provably executed. Augmented assignment reads
+    its own target, so it never clears. A rebinding whose value reads taint is
+    also a taint event on the same line, and ``_Taint.at`` only honours a
+    clear strictly after the last taint, so it needs no special case here.
+    """
+    clears: dict[str, set[int]] = {}
+    for stmt in tree.body:
+        if not isinstance(stmt, ast.Assign | ast.AnnAssign):
+            continue
+        bound, value = _assignment_parts(stmt)
+        if value is not None:
+            for name in bound:
+                clears.setdefault(name, set()).add(stmt.lineno)
+    return clears
+
+
+def _flow_taint(tree: ast.Module, names: _ImportNames, seeds: dict[str, set[int]]) -> _Taint:
+    """Close ``seeds`` over import-time assignments, tracking clears (fixpoint).
+
+    A name becomes tainted at an import-time assignment that binds it from a
+    value reading a name tainted at that line (``MISSING = not HAVE_MODULE``),
+    or that sits in a branch gated on one. (An augmented assignment to a
+    tainted name needs no rule: it never clears, see ``_top_level_clears``.)
+    Taint lines only grow across iterations, so the loop terminates.
     """
     scope = _module_scope_nodes(list(tree.body))
-    tainted = set(seed)
-    changed = bool(tainted)
+    clears = _top_level_clears(tree)
+    taint_lines = {name: set(lines) for name, lines in seeds.items()}
+    changed = bool(taint_lines)
     while changed:
         changed = False
-        frozen = frozenset(tainted)
-        gated = _gated_region_ids(scope, frozen)
+        taint = _Taint(taint_lines, clears)
+        gated = _gated_region_ids(scope, taint)
         for node in scope:
             bound, value = _assignment_parts(node)
-            if not bound or bound <= tainted:
+            if not bound:
                 continue
-            reads_taint = value is not None and _condition_references_names(value, frozen)
-            if reads_taint or id(node) in gated:
-                tainted |= bound
-                changed = True
-    return frozenset(tainted)
+            view = taint.view(node.lineno)
+            reads = value is not None and _reads_tainted(value, names, view)
+            if reads or id(node) in gated:
+                for name in bound:
+                    if node.lineno not in taint_lines.setdefault(name, set()):
+                        taint_lines[name].add(node.lineno)
+                        changed = True
+    return _Taint(taint_lines, clears)
 
 
-def _skipif_conditions(call: ast.Call) -> list[ast.expr]:
+def _skipif_conditions(call: ast.Call) -> list[tuple[ast.expr, bool]]:
     """The condition expressions pytest evaluates for a ``skipif(...)`` call.
 
     Mirrors pytest's ``evaluate_skip_marks``: a ``condition=`` keyword wins;
     otherwise every positional argument is a condition (any true one skips).
-    A string condition is evaluated by pytest against the module's globals, so
-    it is parsed here into the expression it stands for. An unparseable string
-    makes pytest fail collection loudly, so it contributes no names.
+    Each comes with whether it was a string. A string condition is evaluated
+    by pytest against the module's globals after import, so it is parsed here
+    into the expression it stands for. An unparseable string makes pytest fail
+    collection loudly, so it contributes no names.
     """
     keyword = next((kw.value for kw in call.keywords if kw.arg == "condition"), None)
     raw = [keyword] if keyword is not None else list(call.args)
-    conditions: list[ast.expr] = []
+    conditions: list[tuple[ast.expr, bool]] = []
     for cond in raw:
         if isinstance(cond, ast.Constant) and isinstance(cond.value, str):
             try:
-                conditions.append(ast.parse(cond.value, mode="eval").body)
+                conditions.append((ast.parse(cond.value, mode="eval").body, True))
             except SyntaxError:
                 continue
         else:
-            conditions.append(cond)
+            conditions.append((cond, False))
     return conditions
 
 
@@ -447,15 +506,18 @@ def _condition_references_names(expr: ast.expr, flag_names: frozenset[str]) -> b
     return any(isinstance(sub, ast.Name) and sub.id in flag_names for sub in ast.walk(expr))
 
 
-def _skipif_reads(call: ast.Call, flag_names: frozenset[str]) -> bool:
-    """True if any condition pytest evaluates for this skipif reads ``flag_names``."""
-    return any(_condition_references_names(c, flag_names) for c in _skipif_conditions(call))
+def _skipif_reads(call: ast.Call, view: _TaintView) -> bool:
+    """True if any condition pytest evaluates for this skipif reads a tainted name."""
+    return any(
+        _condition_references_names(cond, view.final if is_string else view.now)
+        for cond, is_string in _skipif_conditions(call)
+    )
 
 
-def _reads_tainted(expr: ast.expr, names: _ImportNames, tainted: frozenset[str]) -> bool:
+def _reads_tainted(expr: ast.expr, names: _ImportNames, view: _TaintView) -> bool:
     """True if ``expr`` reads a tainted name, counting string skipif conditions as code."""
-    return _condition_references_names(expr, tainted) or any(
-        _is_skipif_call(sub, names) and _skipif_reads(sub, tainted) for sub in ast.walk(expr)
+    return _condition_references_names(expr, view.now) or any(
+        _is_skipif_call(sub, names) and _skipif_reads(sub, view) for sub in ast.walk(expr)
     )
 
 
@@ -491,7 +553,7 @@ def _can_supply_skip(expr: ast.expr, names: _ImportNames, carrying: frozenset[st
 def _taint_decides_skip(
     expr: ast.expr,
     names: _ImportNames,
-    tainted: frozenset[str],
+    tainted: _TaintView,
     carrying: frozenset[str],
     masking: frozenset[str],
 ) -> bool:
@@ -535,7 +597,7 @@ def _taint_decides_skip(
 def _masking_mark_names(
     tree: ast.Module,
     names: _ImportNames,
-    tainted: frozenset[str],
+    taint: _Taint,
     carrying: frozenset[str],
 ) -> frozenset[str]:
     """Names bound at import time to a mark value whose skip taint decides (fixpoint).
@@ -554,15 +616,13 @@ def _masking_mark_names(
             bound, value = _assignment_parts(node)
             if not bound or bound <= masking or value is None:
                 continue
-            if _taint_decides_skip(value, names, tainted, carrying, frozen):
+            if _taint_decides_skip(value, names, taint.view(node.lineno), carrying, frozen):
                 masking |= bound
                 changed = True
     return frozenset(masking)
 
 
-def _find_masking_skipif_uses(
-    tree: ast.Module, names: _ImportNames, flag_names: frozenset[str]
-) -> list[int]:
+def _find_masking_skipif_uses(tree: ast.Module, names: _ImportNames, taint: _Taint) -> list[int]:
     """Line numbers of ``skipif(...)`` calls whose condition reads a masked flag (WR-01).
 
     Covers both shapes a masked flag is read in: a module-scope
@@ -573,11 +633,11 @@ def _find_masking_skipif_uses(
     module-collection time regardless of nesting, so it needs no scope
     restriction).
     """
-    if not flag_names:
+    if not taint.ever:
         return []
     module_scope_ids = {id(node) for node in _module_scope_nodes(list(tree.body))}
     carrying = _skip_carrying_names(tree, names)
-    masking = _masking_mark_names(tree, names, flag_names, carrying)
+    masking = _masking_mark_names(tree, names, taint, carrying)
     lines: list[int] = []
     for node in ast.walk(tree):
         # (expression, line to report if taint decides its skip outside an
@@ -591,15 +651,16 @@ def _find_masking_skipif_uses(
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             marks.extend((dec, dec.lineno) for dec in node.decorator_list)
         for expr, line in marks:
+            view = taint.view(line)
             hits = [
                 sub.lineno
                 for sub in ast.walk(expr)
-                if _is_skipif_call(sub, names) and _skipif_reads(sub, flag_names)
+                if _is_skipif_call(sub, names) and _skipif_reads(sub, view)
             ]
             # Taint can also decide the skip outside an inline skipif: e.g.
             # `[mark.skip] if not HAVE_MODULE else []`, or an alias such as
             # `pytestmark = MARK` / `@MARK` for a masking MARK.
-            if not hits and _taint_decides_skip(expr, names, flag_names, carrying, masking):
+            if not hits and _taint_decides_skip(expr, names, view, carrying, masking):
                 hits.append(line)
             lines.extend(hits)
     return lines
@@ -674,8 +735,8 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
         if _is_first_party_importorskip(node, names, first_party):
             _report(node.lineno)
 
-    tainted = _tainted_names(tree, _import_time_taint_seeds(tree))
-    for lineno in _find_masking_skipif_uses(tree, names, tainted):
+    taint = _flow_taint(tree, names, _import_time_taint_seeds(tree))
+    for lineno in _find_masking_skipif_uses(tree, names, taint):
         _report(lineno)
 
     # Any skip action in an import-time region that only runs because the
@@ -686,8 +747,8 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
     # raise, a skip mark, or a call to a skip helper.
     scope = _module_scope_nodes(list(tree.body))
     import_driven = _masking_handler_region_ids(scope)
-    if tainted:
-        import_driven |= _gated_region_ids(scope, tainted)
+    if taint.ever:
+        import_driven |= _gated_region_ids(scope, taint)
     if import_driven:
         for sub in scope:
             if id(sub) in import_driven and (
