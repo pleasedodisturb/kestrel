@@ -474,7 +474,9 @@ def _always_returns(stmts: list[ast.stmt]) -> bool:
     return False
 
 
-def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+def _local_flow_returns_dependent(
+    fn: ast.FunctionDef | ast.AsyncFunctionDef, initial: frozenset[str] = frozenset()
+) -> bool:
     """True if ``fn`` returns a value that depends on a masked import (local flow).
 
     Walks the direct statements of ``fn.body`` in source order, tracking
@@ -489,7 +491,9 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
     a handler or a gated branch, are covered by
     ``_probes_and_can_return_differently``.)
     """
-    dependent: set[str] = set()
+    # ``initial``: names already known to carry the dependency into this
+    # function, e.g. other masking-result functions it may call.
+    dependent: set[str] = set(initial)
     for stmt in fn.body:
         nodes = _module_scope_nodes([stmt])
         for node in nodes:
@@ -579,7 +583,8 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
     handler; a ``return`` reading a local assigned on either path of a masking
     ``try`` (the handler, or the try body / ``else``); or
     a probing function that can return more than one value, including an
-    implicit ``None`` (see ``_probes_and_can_return_differently``).
+    implicit ``None`` (see ``_probes_and_can_return_differently``); or a
+    wrapper whose return reads another masking-result function (fixpoint).
     A handler that re-raises or leaves the result alone does not count.
     """
     seeds: dict[tuple[_Scope, str], set[int]] = {}
@@ -592,6 +597,23 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
         if returns_on_failure:
             key = (ns.binding(ns.of(fn), fn.name), fn.name)
             seeds.setdefault(key, set()).add(fn.lineno)
+    # Wrappers: a function whose return reads a masking-result function
+    # (`def available(): return probe()`) is one too, through any chain.
+    functions = [
+        fn
+        for fn in _module_scope_nodes(list(tree.body))
+        if isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef)
+    ]
+    grew = bool(seeds)
+    while grew:
+        grew = False
+        known = frozenset(name for _, name in seeds)
+        for fn in functions:
+            key = (ns.binding(ns.of(fn), fn.name), fn.name)
+            if key in seeds or not _local_flow_returns_dependent(fn, known):
+                continue
+            seeds[key] = {fn.lineno}
+            grew = True
     return seeds
 
 
