@@ -453,54 +453,23 @@ def _always_returns(stmts: list[ast.stmt]) -> bool:
     """True if executing ``stmts`` is guaranteed to end in a ``return``/``raise``.
 
     A direct ``return``/``raise`` does, and so does an ``if`` whose two
-    branches both always return. Anything less certain (a one-armed ``if``,
-    a loop, a ``try``) is deliberately treated as possibly falling through.
+    branches both always return, or a ``try`` whose body (or ``else``) always
+    returns and whose every handler always exits, or whose ``finally``
+    always returns. Anything less certain (a one-armed ``if``, a loop) is
+    deliberately treated as possibly falling through.
     """
     for stmt in stmts:
         if isinstance(stmt, ast.Return | ast.Raise):
             return True
         if isinstance(stmt, ast.If) and _always_returns(stmt.body) and _always_returns(stmt.orelse):
             return True
-    return False
-
-
-def _failure_return_differs(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-    """True if ``fn`` can return something on import failure that differs from success.
-
-    For a ``try`` directly in the body whose ``try``/``else`` block returns
-    (the success path) and a masking handler that can fall through (does not
-    always return/raise, see ``_always_returns``), the failure path returns
-    whatever the code after
-    the ``try`` returns, plus an implicit ``None`` when that code does not
-    always return (see ``_always_returns``). Return expressions are compared
-    structurally; if more than one distinct value is possible across both
-    paths, the result depends on the import.
-    """
-
-    def returned(nodes: list[ast.AST]) -> set[str]:
-        return {
-            ast.dump(sub.value if sub.value is not None else ast.Constant(None))
-            for sub in nodes
-            if isinstance(sub, ast.Return)
-        }
-
-    for index, stmt in enumerate(fn.body):
-        if not isinstance(stmt, ast.Try | ast.TryStar):
-            continue
-        success = returned(_module_scope_nodes([*stmt.body, *stmt.orelse]))
-        if not success:
-            continue
-        falls_through = any(
-            _handler_masks_imports(stmt, handler) and not _always_returns(handler.body)
-            for handler in stmt.handlers
-        )
-        if not falls_through:
-            continue
-        later = fn.body[index + 1 :]
-        failure = returned(_module_scope_nodes(list(later)))
-        if not _always_returns(later):
-            failure.add(ast.dump(ast.Constant(None)))
-        if len(success | failure) > 1:
+        if isinstance(stmt, ast.Try | ast.TryStar) and (
+            _always_returns(stmt.finalbody)
+            or (
+                (_always_returns(stmt.body) or _always_returns(stmt.orelse))
+                and all(_always_returns(h.body) for h in stmt.handlers)
+            )
+        ):
             return True
     return False
 
@@ -515,12 +484,12 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
     rebinding to a value that reads none of them clears the names it rebinds
     (``available = True``); rebindings nested in ``if``/loops/``try`` only add,
     because they are not provably executed. A branch gated on a dependent
-    local makes what it assigns dependent, and a ``return`` inside it decides
-    the result unless every return yields the same value. Also true for a
-    ``return`` inside a masking handler.
+    local makes what it assigns dependent. (Control-flow shapes where
+    different ``return`` statements decide the result, including returns in
+    a handler or a gated branch, are covered by
+    ``_probes_and_can_return_differently``.)
     """
     dependent: set[str] = set()
-    gated_return = False
     for stmt in fn.body:
         nodes = _module_scope_nodes([stmt])
         for node in nodes:
@@ -532,10 +501,7 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
             for sub in _module_scope_nodes([*node.body, *node.orelse]):
                 dependent |= _assignment_parts(sub)[0]
             for handler in masking:
-                handled = _module_scope_nodes(list(handler.body))
-                if any(isinstance(sub, ast.Return) for sub in handled):
-                    return True
-                for sub in handled:
+                for sub in _module_scope_nodes(list(handler.body)):
                     dependent |= _assignment_parts(sub)[0]
         if isinstance(stmt, ast.Assign | ast.AnnAssign) and stmt.value is not None:
             targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
@@ -564,7 +530,6 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
                 ):
                     dependent |= bound
             changed = (len(dependent), len(gated)) != before
-        gated_return |= any(isinstance(node, ast.Return) and id(node) in gated for node in nodes)
         if any(
             isinstance(node, ast.Return)
             and node.value is not None
@@ -572,15 +537,37 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
             for node in nodes
         ):
             return True
-    if gated_return:
-        # Unless every return yields the same value, a gated return decides it.
-        values = {
-            ast.dump(sub.value if sub.value is not None else ast.Constant(None))
-            for sub in _module_scope_nodes(list(fn.body))
-            if isinstance(sub, ast.Return)
-        }
-        return len(values) > 1 or not _always_returns(fn.body)
     return False
+
+
+def _probes_and_can_return_differently(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """True if ``fn`` contains an import probe and can return more than one value.
+
+    A probe is a ``try`` with a masking handler anywhere in the function's
+    own body (nested in ``if``/loops included). Possible return values are
+    the return expressions, compared structurally, plus an implicit ``None``
+    when the body does not always return (see ``_always_returns``). With a
+    probe present, more than one possible value means the result can depend
+    on the import. Deliberately conservative: unrelated branching returns in
+    a probing function also count, which only matters if that function's
+    result reaches a skip condition.
+    """
+    own = _module_scope_nodes(list(fn.body))
+    probes = any(
+        isinstance(node, ast.Try | ast.TryStar)
+        and any(_handler_masks_imports(node, h) for h in node.handlers)
+        for node in own
+    )
+    if not probes:
+        return False
+    values = {
+        ast.dump(node.value if node.value is not None else ast.Constant(None))
+        for node in own
+        if isinstance(node, ast.Return)
+    }
+    if not _always_returns(fn.body):
+        values.add(ast.dump(ast.Constant(None)))
+    return len(values) > 1
 
 
 def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scope, str], set[int]]:
@@ -591,9 +578,8 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
     check())`` read taint through it. Counted: a ``return`` inside a masking
     handler; a ``return`` reading a local assigned on either path of a masking
     ``try`` (the handler, or the try body / ``else``); or
-    a failure path that falls through to a different value than the success
-    path returned, including an implicit ``None`` (see
-    ``_failure_return_differs``).
+    a probing function that can return more than one value, including an
+    implicit ``None`` (see ``_probes_and_can_return_differently``).
     A handler that re-raises or leaves the result alone does not count.
     """
     seeds: dict[tuple[_Scope, str], set[int]] = {}
@@ -602,7 +588,7 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
             continue
         returns_on_failure = _local_flow_returns_dependent(fn)
         if not returns_on_failure:
-            returns_on_failure = _failure_return_differs(fn)
+            returns_on_failure = _probes_and_can_return_differently(fn)
         if returns_on_failure:
             key = (ns.binding(ns.of(fn), fn.name), fn.name)
             seeds.setdefault(key, set()).add(fn.lineno)
