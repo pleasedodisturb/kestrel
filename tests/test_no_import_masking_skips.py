@@ -1520,6 +1520,37 @@ _FLAG_CASES = [
         7,
         id="handler_subscript_mutation_taints_base",
     ),
+    # Codex review (run 6a4bdb5ca439): mark aliases follow the same flow rule
+    # as taint. These stay flagged (each skips silently under pytest): a use
+    # before the rebinding, a conditional rebinding, and a carrying alias that
+    # is never rebound.
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'MARK = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + "pytestmark = MARK\n"
+        + 'MARK = pytest.mark.filterwarnings("ignore")\n'
+        + _FLOW_TEST,
+        9,
+        id="flow_masking_alias_used_before_rebind",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'MARK = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + 'if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+        + '    MARK = pytest.mark.filterwarnings("ignore")\n'
+        + "pytestmark = MARK\n"
+        + _FLOW_TEST,
+        11,
+        id="flow_masking_alias_conditional_rebind",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'M = pytest.mark.skip(reason="x")\n'
+        + "pytestmark = M if not _HAVE_MODULE else []\n"
+        + _FLOW_TEST,
+        9,
+        id="flow_carrying_alias_still_carrying",
+    ),
 ]
 
 
@@ -1755,6 +1786,32 @@ _IGNORE_CASES = [
             'pytestmark = pytest.mark.skipif(not state.available, reason="x")\n'
         ),
         id="flow_real_rebinding_of_object_clears",
+    ),
+    # Mark-alias negatives: the alias is unconditionally rebound to a non-skip
+    # mark before use, so pytest runs each test.
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'MARK = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + 'MARK = pytest.mark.filterwarnings("ignore")\n'
+        + "pytestmark = MARK\n"
+        + _FLOW_TEST,
+        id="flow_masking_alias_rebound_before_pytestmark",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'MARK = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + 'MARK = pytest.mark.filterwarnings("ignore")\n'
+        + "@MARK\n"
+        + _FLOW_TEST,
+        id="flow_masking_alias_rebound_before_decorator",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'M = pytest.mark.skip(reason="x")\n'
+        + 'M = pytest.mark.filterwarnings("ignore")\n'
+        + "pytestmark = M if not _HAVE_MODULE else []\n"
+        + _FLOW_TEST,
+        id="flow_carrying_alias_rebound_before_use",
     ),
 ]
 
