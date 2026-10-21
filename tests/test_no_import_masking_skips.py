@@ -20,6 +20,17 @@ handler that assigns a name (e.g. ``_HAVE_MODULE = False``) which a
 a module-level ``pytestmark = ...`` assignment or as a decorator on a test
 function or class.
 
+The general contract (G-1382 review rounds): a skip that only happens because
+of a *tainted* value is masking. A name is tainted when an import-masking
+handler assigns it, when an import-time assignment derives it from a tainted
+name, or when it is assigned inside an import-time branch gated on one. Flagged
+are: a ``pytestmark`` (module or class scope, at any nesting) whose value reads
+a tainted name; a skip action (module-level skip, ``SkipTest`` raise, skip
+mark, or a call to a helper that skips the module) inside a masking handler or
+a tainted branch. The ``_FLAG_CASES``/``_IGNORE_CASES`` fixtures are the
+input-to-output mapping for this contract, each row confirmed against real
+pytest with the import broken.
+
 What is NOT flagged: the legitimate module-level file-presence guards in this
 repo (``if not path.exists(): pytest.skip(..., allow_module_level=True)``), and
 ``pytest.importorskip(...)`` of a genuinely optional third-party package (this
@@ -258,15 +269,104 @@ def _module_scope_nodes(nodes: list[ast.AST]) -> list[ast.AST]:
     still runs at import time and still binds globals such as ``pytestmark``.
     Class bodies also run at import time, and pytest applies a class-level
     ``pytestmark`` to every test method, so they are descended into too.
-    Function and lambda bodies only run when called and are skipped
-    (decorators are handled separately by the caller).
+    Function and lambda bodies only run when called and are skipped, but a
+    function's decorators and default values are evaluated at definition time,
+    so they are included.
     """
     found: list[ast.AST] = []
     for node in nodes:
         found.append(node)
-        if not isinstance(node, _DEFERRED_SCOPE):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            eager: list[ast.AST] = [*node.decorator_list, *node.args.defaults]
+            eager.extend(d for d in node.args.kw_defaults if d is not None)
+            found.extend(_module_scope_nodes(eager))
+        elif not isinstance(node, _DEFERRED_SCOPE):
             found.extend(_module_scope_nodes(list(ast.iter_child_nodes(node))))
     return found
+
+
+def _is_skip_mark_ref(node: ast.AST, names: _ImportNames) -> bool:
+    """True for ``pytest.mark.skip``/``pytest.mark.skipif`` (or a ``mark`` alias's), called or not."""
+    if not (isinstance(node, ast.Attribute) and node.attr in ("skip", "skipif")):
+        return False
+    value = node.value
+    via_pytest = (
+        isinstance(value, ast.Attribute)
+        and value.attr == "mark"
+        and isinstance(value.value, ast.Name)
+        and value.value.id in names.pytest_modules
+    )
+    via_alias = isinstance(value, ast.Name) and value.id in names.mark_modules
+    return via_pytest or via_alias
+
+
+def _skip_helpers(tree: ast.Module, names: _ImportNames) -> frozenset[str]:
+    """Names of import-time functions whose body skips the whole module.
+
+    A helper such as ``def _bail(): pytest.skip(..., allow_module_level=True)``
+    is harmless until called; a call from a masking handler or a tainted
+    branch is the same masking as an inline skip there.
+    """
+    helpers: set[str] = set()
+    for node in _module_scope_nodes(list(tree.body)):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and any(
+            _is_module_level_skip(sub, names) or _is_unittest_skiptest_raise(sub, names)
+            for sub in ast.walk(node)
+        ):
+            helpers.add(node.name)
+    return frozenset(helpers)
+
+
+def _is_skip_helper_call(node: ast.AST, helpers: frozenset[str]) -> bool:
+    return (
+        isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in helpers
+    )
+
+
+def _assignment_parts(node: ast.AST) -> tuple[set[str], ast.expr | None]:
+    """(names bound, value expression) for an assignment-like node, else (empty, None)."""
+    targets: list[ast.expr] = []
+    value: ast.expr | None = None
+    if isinstance(node, ast.Assign):
+        targets, value = list(node.targets), node.value
+    elif isinstance(node, ast.AnnAssign | ast.AugAssign | ast.NamedExpr):
+        targets, value = [node.target], node.value
+    bound = {sub.id for t in targets for sub in ast.walk(t) if isinstance(sub, ast.Name)}
+    return bound, value
+
+
+def _gated_region_ids(scope: list[ast.AST], tainted: frozenset[str]) -> set[int]:
+    """ids of import-time nodes that only run because of a tainted ``if``/``while`` test."""
+    gated: set[int] = set()
+    for node in scope:
+        if isinstance(node, ast.If | ast.While) and _condition_references_names(node.test, tainted):
+            gated |= {id(sub) for sub in _module_scope_nodes(node.body + node.orelse)}
+    return gated
+
+
+def _tainted_names(tree: ast.Module, seed: frozenset[str]) -> frozenset[str]:
+    """Close ``seed`` over import-time assignments (fixpoint).
+
+    A name becomes tainted when an import-time assignment binds it from a
+    value that reads a tainted name (``MISSING = not HAVE_MODULE``), or when
+    the assignment itself sits in a branch gated on a tainted name.
+    """
+    scope = _module_scope_nodes(list(tree.body))
+    tainted = set(seed)
+    changed = bool(tainted)
+    while changed:
+        changed = False
+        frozen = frozenset(tainted)
+        gated = _gated_region_ids(scope, frozen)
+        for node in scope:
+            bound, value = _assignment_parts(node)
+            if not bound or bound <= tainted:
+                continue
+            reads_taint = value is not None and _condition_references_names(value, frozen)
+            if reads_taint or id(node) in gated:
+                tainted |= bound
+                changed = True
+    return frozenset(tainted)
 
 
 def _skipif_conditions(call: ast.Call) -> list[ast.expr]:
@@ -316,26 +416,33 @@ def _find_masking_skipif_uses(
     lines: list[int] = []
     for node in ast.walk(tree):
         exprs: list[ast.expr] = []
-        in_module_scope = id(node) in module_scope_ids
-        if isinstance(node, ast.Assign) and in_module_scope:
-            if any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets):
-                exprs.append(node.value)
-        elif isinstance(node, ast.AnnAssign | ast.AugAssign) and in_module_scope:
-            if (
-                isinstance(node.target, ast.Name)
-                and node.target.id == "pytestmark"
-                and node.value is not None
-            ):
-                exprs.append(node.value)
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        pytestmark_value: ast.expr | None = None
+        if id(node) in module_scope_ids:
+            bound, value = _assignment_parts(node)
+            if "pytestmark" in bound and value is not None:
+                pytestmark_value = value
+                exprs.append(value)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             exprs.extend(node.decorator_list)
-        for expr in exprs:
-            for sub in ast.walk(expr):
-                if _is_skipif_call(sub, names) and any(
-                    _condition_references_names(cond, flag_names)
-                    for cond in _skipif_conditions(sub)
-                ):
-                    lines.append(sub.lineno)
+        hits = [
+            sub.lineno
+            for expr in exprs
+            for sub in ast.walk(expr)
+            if _is_skipif_call(sub, names)
+            and any(
+                _condition_references_names(cond, flag_names) for cond in _skipif_conditions(sub)
+            )
+        ]
+        # A pytestmark whose value reads a tainted name outside any skipif
+        # condition (e.g. `[mark.skip] if not HAVE_MODULE else []`) still
+        # decides the module's skip from the masked import.
+        if (
+            not hits
+            and pytestmark_value is not None
+            and _condition_references_names(pytestmark_value, flag_names)
+        ):
+            hits.append(node.lineno)
+        lines.extend(hits)
     return lines
 
 
@@ -391,6 +498,7 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
         violations.add(f"{rel}:{lineno}")
 
     masked_flag_names: set[str] = set()
+    helpers = _skip_helpers(tree, names)
 
     for node in ast.walk(tree):
         # ast.TryStar (try/except*) carries the same handler shape as ast.Try.
@@ -399,31 +507,35 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
                 if not _handler_masks_imports(node, handler):
                     continue
                 for sub in ast.walk(handler):
-                    if _is_module_level_skip(sub, names):
-                        _report(sub.lineno)
-                    if _is_unittest_skiptest_raise(sub, names):
+                    if (
+                        _is_module_level_skip(sub, names)
+                        or _is_unittest_skiptest_raise(sub, names)
+                        or _is_skip_helper_call(sub, helpers)
+                    ):
                         _report(sub.lineno)
                 masked_flag_names |= _handler_assigned_names(handler)
         if _is_first_party_importorskip(node, names, first_party):
             _report(node.lineno)
 
-    flags = frozenset(masked_flag_names)
-    for lineno in _find_masking_skipif_uses(tree, names, flags):
+    tainted = _tainted_names(tree, frozenset(masked_flag_names))
+    for lineno in _find_masking_skipif_uses(tree, names, tainted):
         _report(lineno)
 
-    # A module-scope `if`/`while` gated on a masked flag that skips the module
-    # (e.g. `if not HAVE_MODULE: pytest.skip(..., allow_module_level=True)`)
-    # is the same masking as a skip inside the handler itself.
-    if flags:
-        for node in _module_scope_nodes(list(tree.body)):
-            if not (
-                isinstance(node, ast.If | ast.While)
-                and _condition_references_names(node.test, flags)
+    # Any skip action inside an import-time branch gated on a tainted name
+    # (e.g. `if not HAVE_MODULE: pytest.skip(..., allow_module_level=True)`,
+    # a skip mark, or a call to a skip helper) only happens because the
+    # import failed: the same masking as a skip inside the handler itself.
+    if tainted:
+        scope = _module_scope_nodes(list(tree.body))
+        gated = _gated_region_ids(scope, tainted)
+        for sub in scope:
+            if id(sub) in gated and (
+                _is_module_level_skip(sub, names)
+                or _is_unittest_skiptest_raise(sub, names)
+                or _is_skip_mark_ref(sub, names)
+                or _is_skip_helper_call(sub, helpers)
             ):
-                continue
-            for sub in _module_scope_nodes(node.body + node.orelse):
-                if _is_module_level_skip(sub, names) or _is_unittest_skiptest_raise(sub, names):
-                    _report(sub.lineno)
+                _report(sub.lineno)
 
     return sorted(violations)
 
