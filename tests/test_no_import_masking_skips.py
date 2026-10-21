@@ -544,11 +544,14 @@ def _local_flow_returns_dependent(
     return False
 
 
-def _probes_and_can_return_differently(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+def _probes_and_can_return_differently(
+    fn: ast.FunctionDef | ast.AsyncFunctionDef, known: frozenset[str] = frozenset()
+) -> bool:
     """True if ``fn`` contains an import probe and can return more than one value.
 
     A probe is a ``try`` with a masking handler anywhere in the function's
-    own body (nested in ``if``/loops included). Possible return values are
+    own body (nested in ``if``/loops included), or a reference to a ``known``
+    masking-result function (``if probe(): return True``). Possible return values are
     the return expressions, compared structurally, plus an implicit ``None``
     when the body does not always return (see ``_always_returns``). With a
     probe present, more than one possible value means the result can depend
@@ -558,8 +561,11 @@ def _probes_and_can_return_differently(fn: ast.FunctionDef | ast.AsyncFunctionDe
     """
     own = _module_scope_nodes(list(fn.body))
     probes = any(
-        isinstance(node, ast.Try | ast.TryStar)
-        and any(_handler_masks_imports(node, h) for h in node.handlers)
+        (
+            isinstance(node, ast.Try | ast.TryStar)
+            and any(_handler_masks_imports(node, h) for h in node.handlers)
+        )
+        or (isinstance(node, ast.Name) and node.id in known)
         for node in own
     )
     if not probes:
@@ -610,7 +616,10 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
         known = frozenset(name for _, name in seeds)
         for fn in functions:
             key = (ns.binding(ns.of(fn), fn.name), fn.name)
-            if key in seeds or not _local_flow_returns_dependent(fn, known):
+            if key in seeds or not (
+                _local_flow_returns_dependent(fn, known)
+                or _probes_and_can_return_differently(fn, known)
+            ):
                 continue
             seeds[key] = {fn.lineno}
             grew = True
