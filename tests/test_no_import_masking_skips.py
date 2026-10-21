@@ -539,6 +539,18 @@ def _top_level_clears(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scope, s
     also a taint event on the same line, and ``_Taint.at`` only honours a
     clear strictly after the last taint, so it needs no special case here.
     """
+    # A class body runs only if its class statement does. Unconditionally
+    # reached classes sit directly in the module body or directly in another
+    # such class's body; only their rebindings may clear a module binding
+    # (via `global`). A conditional class's class-local rebindings still
+    # count: they only affect uses inside that class body, which run only if
+    # the class does.
+    unconditional: set[int] = set()
+    pending = [n for n in tree.body if isinstance(n, ast.ClassDef)]
+    while pending:
+        cls = pending.pop()
+        unconditional.add(id(cls))
+        pending.extend(n for n in cls.body if isinstance(n, ast.ClassDef))
     bodies: list[tuple[_Scope, list[ast.stmt]]] = [(None, list(tree.body))]
     bodies.extend(
         (id(node), list(node.body))
@@ -555,7 +567,10 @@ def _top_level_clears(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scope, s
             else:
                 continue
             for name in {n for t in targets for n in _rebound_names(t)}:
-                clears.setdefault((ns.binding(where, name), name), set()).add(stmt.lineno)
+                lands = ns.binding(where, name)
+                if lands is None and where is not None and where not in unconditional:
+                    continue
+                clears.setdefault((lands, name), set()).add(stmt.lineno)
     return clears
 
 
