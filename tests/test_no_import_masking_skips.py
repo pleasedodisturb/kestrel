@@ -1167,6 +1167,74 @@ _FLAG_CASES = [
         10,
         id="global_flag_set_by_helper_called_at_import",
     ),
+    # Codex review (run 336bf867d1f7): every binding form a handler can use
+    # for the flag seeds taint, not just a plain `NAME = ...`. Each row skips
+    # silently under pytest when the import breaks.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    module, _HAVE_MODULE = None, False\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        7,
+        id="handler_binds_flag_by_tuple_unpack",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    [module, _HAVE_MODULE] = [None, False]\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        7,
+        id="handler_binds_flag_by_list_unpack",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    *rest, _HAVE_MODULE = [None, False]\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        7,
+        id="handler_binds_flag_by_starred_unpack",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    (_HAVE_MODULE := False)\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        7,
+        id="handler_binds_flag_by_walrus",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE &= False\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        7,
+        id="handler_binds_flag_by_augmented_assignment",
+    ),
 ]
 
 
