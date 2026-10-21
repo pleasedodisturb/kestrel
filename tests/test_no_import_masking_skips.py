@@ -468,8 +468,9 @@ def _failure_return_differs(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     """True if ``fn`` can return something on import failure that differs from success.
 
     For a ``try`` directly in the body whose ``try``/``else`` block returns
-    (the success path) and a masking handler that falls through (no
-    ``return``/``raise``), the failure path returns whatever the code after
+    (the success path) and a masking handler that can fall through (does not
+    always return/raise, see ``_always_returns``), the failure path returns
+    whatever the code after
     the ``try`` returns, plus an implicit ``None`` when that code does not
     always return (see ``_always_returns``). Return expressions are compared
     structurally; if more than one distinct value is possible across both
@@ -490,11 +491,7 @@ def _failure_return_differs(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
         if not success:
             continue
         falls_through = any(
-            _handler_masks_imports(stmt, handler)
-            and not any(
-                isinstance(sub, ast.Return | ast.Raise)
-                for sub in _module_scope_nodes(list(handler.body))
-            )
+            _handler_masks_imports(stmt, handler) and not _always_returns(handler.body)
             for handler in stmt.handlers
         )
         if not falls_through:
