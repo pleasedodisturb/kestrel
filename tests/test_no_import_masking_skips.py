@@ -514,10 +514,13 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
     later bound from one (``result = available``). A direct, unconditional
     rebinding to a value that reads none of them clears the names it rebinds
     (``available = True``); rebindings nested in ``if``/loops/``try`` only add,
-    because they are not provably executed. Also true for a ``return`` inside
-    a masking handler.
+    because they are not provably executed. A branch gated on a dependent
+    local makes what it assigns dependent, and a ``return`` inside it decides
+    the result unless every return yields the same value. Also true for a
+    ``return`` inside a masking handler.
     """
     dependent: set[str] = set()
+    gated_return = False
     for stmt in fn.body:
         nodes = _module_scope_nodes([stmt])
         for node in nodes:
@@ -541,10 +544,21 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
             else:
                 dependent -= {n for t in targets for n in _rebound_names(t)}
             continue
+        # Control dependency: what a branch gated on a dependent local assigns
+        # or returns depends on the import too.
+        gated: set[int] = set()
+        for node in nodes:
+            if isinstance(node, ast.If | ast.While) and _condition_references_names(
+                node.test, frozenset(dependent)
+            ):
+                gated |= {id(sub) for sub in _module_scope_nodes(node.body + node.orelse)}
         for node in nodes:
             bound, value = _assignment_parts(node)
-            if value is not None and _condition_references_names(value, frozenset(dependent)):
+            if value is not None and (
+                id(node) in gated or _condition_references_names(value, frozenset(dependent))
+            ):
                 dependent |= bound
+            gated_return |= isinstance(node, ast.Return) and id(node) in gated
         if any(
             isinstance(node, ast.Return)
             and node.value is not None
@@ -552,6 +566,14 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
             for node in nodes
         ):
             return True
+    if gated_return:
+        # Unless every return yields the same value, a gated return decides it.
+        values = {
+            ast.dump(sub.value if sub.value is not None else ast.Constant(None))
+            for sub in _module_scope_nodes(list(fn.body))
+            if isinstance(sub, ast.Return)
+        }
+        return len(values) > 1 or not _always_returns(fn.body)
     return False
 
 
@@ -2456,6 +2478,25 @@ _FLAG_CASES = [
         ),
         12,
         id="result_return_in_branch_gated_on_local",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    if available:\n"
+            "        return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        11,
+        id="result_gated_return_without_fallback",
     ),
 ]
 
