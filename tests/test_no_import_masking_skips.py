@@ -397,6 +397,74 @@ def _condition_references_names(expr: ast.expr, flag_names: frozenset[str]) -> b
     return any(isinstance(sub, ast.Name) and sub.id in flag_names for sub in ast.walk(expr))
 
 
+def _skip_carrying_names(tree: ast.Module, names: _ImportNames) -> frozenset[str]:
+    """Names bound at import time to a value that holds a skip mark (fixpoint).
+
+    E.g. ``MARKS = [pytest.mark.skip(...)] if not HAVE_MODULE else []`` makes
+    ``MARKS`` skip-carrying, and so does any name later bound from ``MARKS``.
+    """
+    scope = _module_scope_nodes(list(tree.body))
+    carrying: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        frozen = frozenset(carrying)
+        for node in scope:
+            bound, value = _assignment_parts(node)
+            if not bound or bound <= carrying or value is None:
+                continue
+            if _can_supply_skip(value, names, frozen):
+                carrying |= bound
+                changed = True
+    return frozenset(carrying)
+
+
+def _can_supply_skip(expr: ast.expr, names: _ImportNames, carrying: frozenset[str]) -> bool:
+    """True if ``expr`` holds a skip mark directly or via a skip-carrying name."""
+    return any(_is_skip_mark_ref(sub, names) for sub in ast.walk(expr)) or (
+        _condition_references_names(expr, carrying)
+    )
+
+
+def _taint_decides_skip(
+    expr: ast.expr,
+    names: _ImportNames,
+    tainted: frozenset[str],
+    carrying: frozenset[str],
+) -> bool:
+    """True if a tainted name decides whether ``expr`` (a pytestmark value) applies a skip.
+
+    Reading a tainted name is not enough: ``parametrize("a", [HAVE])`` cannot
+    skip, and ``mark.skip(reason=f"{HAVE}")`` skips whatever the flag says.
+    Containers are judged element by element; a conditional expression masks
+    when its test is tainted and a branch can supply a skip; a bare name masks
+    when it is both tainted and skip-carrying. skipif conditions are judged by
+    the caller.
+    """
+    if isinstance(expr, ast.List | ast.Tuple | ast.Set):
+        return any(_taint_decides_skip(e, names, tainted, carrying) for e in expr.elts)
+    if isinstance(expr, ast.Starred):
+        return _taint_decides_skip(expr.value, names, tainted, carrying)
+    if isinstance(expr, ast.IfExp):
+        branch_skips = _can_supply_skip(expr.body, names, carrying) or _can_supply_skip(
+            expr.orelse, names, carrying
+        )
+        return (
+            (_condition_references_names(expr.test, tainted) and branch_skips)
+            or _taint_decides_skip(expr.body, names, tainted, carrying)
+            or _taint_decides_skip(expr.orelse, names, tainted, carrying)
+        )
+    if isinstance(expr, ast.BinOp):
+        return _taint_decides_skip(expr.left, names, tainted, carrying) or _taint_decides_skip(
+            expr.right, names, tainted, carrying
+        )
+    if isinstance(expr, ast.Name):
+        return expr.id in tainted and expr.id in carrying
+    if isinstance(expr, ast.Call) and _is_skip_mark_ref(expr.func, names):
+        return False
+    return _can_supply_skip(expr, names, carrying) and _condition_references_names(expr, tainted)
+
+
 def _find_masking_skipif_uses(
     tree: ast.Module, names: _ImportNames, flag_names: frozenset[str]
 ) -> list[int]:
@@ -413,6 +481,7 @@ def _find_masking_skipif_uses(
     if not flag_names:
         return []
     module_scope_ids = {id(node) for node in _module_scope_nodes(list(tree.body))}
+    carrying = _skip_carrying_names(tree, names)
     lines: list[int] = []
     for node in ast.walk(tree):
         exprs: list[ast.expr] = []
@@ -433,13 +502,14 @@ def _find_masking_skipif_uses(
                 _condition_references_names(cond, flag_names) for cond in _skipif_conditions(sub)
             )
         ]
-        # A pytestmark whose value reads a tainted name outside any skipif
-        # condition (e.g. `[mark.skip] if not HAVE_MODULE else []`) still
-        # decides the module's skip from the masked import.
+        # A pytestmark where a tainted name decides, outside any skipif
+        # condition, whether a skip mark applies (e.g. `[mark.skip] if not
+        # HAVE_MODULE else []`) still decides the module's skip from the
+        # masked import.
         if (
             not hits
             and pytestmark_value is not None
-            and _condition_references_names(pytestmark_value, flag_names)
+            and _taint_decides_skip(pytestmark_value, names, flag_names, carrying)
         ):
             hits.append(node.lineno)
         lines.extend(hits)
