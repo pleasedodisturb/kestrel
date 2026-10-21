@@ -1854,6 +1854,95 @@ _FLAG_CASES = [
         12,
         id="scope_nested_class_under_conditional_does_not_clear",
     ),
+    # Masking-result functions (gap 3): a function whose failure path returns
+    # a value (a `return` in a masking handler, or a returned local the
+    # handler assigned) taints its name, so `HAVE = check()` and
+    # `skipif(not check())` are masking. Plus a handler that defines and
+    # calls a skip helper is reported once, at the call (Codex review run
+    # ea5b9891a5f7 family). Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            "_HAVE_MODULE = check()\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_return_in_handler_via_flag",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        8,
+        id="result_return_in_handler_direct_call",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            "    return True\n"
+            "_HAVE_MODULE = check()\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_return_after_try",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        ok = True\n"
+            "    except ImportError:\n"
+            "        ok = False\n"
+            "    return ok\n"
+            "_HAVE_MODULE = check()\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_return_local_flag",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    def helper():\n"
+            '        pytest.skip("x", allow_module_level=True)\n'
+            "    helper()\n"
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        7,
+        id="handler_defines_and_calls_skip_helper",
+    ),
 ]
 
 
@@ -2221,6 +2310,85 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="scope_nested_unconditional_class_global_clears",
+    ),
+    # Gap 1-3 negatives: a re-raising handler fails loudly; a handler with no
+    # effect on the return value; a masking result used by a non-skip mark;
+    # and function bodies defined (not called) inside a handler, which never
+    # run at import (Codex review run ea5b9891a5f7). Each test runs or errors.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        raise\n"
+            "    return True\n"
+            "_HAVE_MODULE = check()\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_handler_reraises",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return True\n"
+            "_HAVE_MODULE = check()\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_handler_without_return_effect",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            '@pytest.mark.parametrize("v", [check()])\n'
+            "def test_something(v):\n"
+            "    assert v is not None\n"
+        ),
+        id="result_used_in_non_skip_mark",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    def helper():\n"
+            "        _HAVE_MODULE = False\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="handler_defines_uncalled_local_assigner",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    def helper():\n"
+            '        pytest.skip("x", allow_module_level=True)\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="handler_defines_uncalled_skip_helper",
     ),
 ]
 
