@@ -2413,6 +2413,50 @@ _FLAG_CASES = [
         13,
         id="result_alias_taken_before_local_rebind",
     ),
+    # Codex review (run b3c9e812a6c8): a branch gated on a dependent local
+    # carries the dependency into what it assigns or returns. Skips silently.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    if available:\n"
+            "        result = True\n"
+            "    else:\n"
+            "        result = False\n"
+            "    return result\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        14,
+        id="result_assign_in_branch_gated_on_local",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    if available:\n"
+            "        return True\n"
+            "    return False\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        12,
+        id="result_return_in_branch_gated_on_local",
+    ),
 ]
 
 
@@ -3048,6 +3092,46 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_unconditional_local_rebind_clears",
+    ),
+    # A gated branch whose returns all match the fallback, or that does not
+    # affect the return at all, is not import-dependent (tests run).
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    if available:\n"
+            "        return True\n"
+            "    return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_gated_return_same_value_everywhere",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    if available:\n"
+            '        print("ok")\n'
+            "    return True\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_gated_branch_without_return_effect",
     ),
 ]
 
