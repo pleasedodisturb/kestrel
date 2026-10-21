@@ -511,7 +511,8 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
     ``def check(): try: import x; return True / except ImportError: return
     False`` makes ``check`` tainted, so ``HAVE = check()`` and ``skipif(not
     check())`` read taint through it. Counted: a ``return`` inside a masking
-    handler; a ``return`` reading a local that a masking handler assigned; or
+    handler; a ``return`` reading a local assigned on either path of a masking
+    ``try`` (the handler, or the try body / ``else``); or
     a failure path that falls through to a different value than the success
     path returned, including an implicit ``None`` (see
     ``_failure_return_differs``).
@@ -523,22 +524,28 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
             continue
         body = _module_scope_nodes(list(fn.body))
         returns_on_failure = False
-        handler_locals: set[str] = set()
+        # Locals whose value depends on the import: assigned in a masking
+        # handler (failure path) or in the try body / else of a try that has
+        # one (success path), e.g. `available = False; try: import x;
+        # available = True`.
+        path_locals: set[str] = set()
         for node in body:
             if not isinstance(node, ast.Try | ast.TryStar):
                 continue
-            for handler in node.handlers:
-                if not _handler_masks_imports(node, handler):
-                    continue
+            masking = [h for h in node.handlers if _handler_masks_imports(node, h)]
+            if masking:
+                for sub in _module_scope_nodes([*node.body, *node.orelse]):
+                    path_locals |= _assignment_parts(sub)[0]
+            for handler in masking:
                 handled = _module_scope_nodes(list(handler.body))
                 returns_on_failure |= any(isinstance(sub, ast.Return) for sub in handled)
                 for sub in handled:
-                    handler_locals |= _assignment_parts(sub)[0]
-        if not returns_on_failure and handler_locals:
+                    path_locals |= _assignment_parts(sub)[0]
+        if not returns_on_failure and path_locals:
             returns_on_failure = any(
                 isinstance(sub, ast.Return)
                 and sub.value is not None
-                and _condition_references_names(sub.value, frozenset(handler_locals))
+                and _condition_references_names(sub.value, frozenset(path_locals))
                 for sub in body
             )
         if not returns_on_failure:
