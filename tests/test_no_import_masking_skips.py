@@ -52,6 +52,7 @@ implement):
 from __future__ import annotations
 
 import ast
+from collections.abc import Callable
 from pathlib import Path
 from typing import NamedTuple
 
@@ -541,26 +542,44 @@ def _reads_tainted(expr: ast.expr, names: _ImportNames, view: _TaintView) -> boo
     )
 
 
-def _skip_carrying_names(tree: ast.Module, names: _ImportNames) -> frozenset[str]:
-    """Names bound at import time to a value that holds a skip mark (fixpoint).
+def _flow_bound_names(
+    tree: ast.Module, binds_mark: Callable[[ast.expr, int, _Taint], bool]
+) -> _Taint:
+    """Flow-sensitive set of names bound to a mark value of some kind (fixpoint).
+
+    ``binds_mark(value, line, current)`` decides whether an import-time
+    assignment at ``line`` puts such a mark in its targets, given the set so
+    far. The result follows the same rule as taint (``_Taint.at``): an
+    unconditional top-level rebinding clears a name for what comes after it,
+    so ``MARK = <mark>; MARK = <other>; pytestmark = MARK`` sees the other.
+    """
+    scope = _module_scope_nodes(list(tree.body))
+    clears = _top_level_clears(tree)
+    lines: dict[str, set[int]] = {}
+    changed = True
+    while changed:
+        changed = False
+        current = _Taint(lines, clears)
+        for node in scope:
+            bound, value = _assignment_parts(node)
+            if not bound or value is None or not binds_mark(value, node.lineno, current):
+                continue
+            for name in bound:
+                if node.lineno not in lines.setdefault(name, set()):
+                    lines[name].add(node.lineno)
+                    changed = True
+    return _Taint(lines, clears)
+
+
+def _skip_carrying_names(tree: ast.Module, names: _ImportNames) -> _Taint:
+    """Names bound at import time to a value that holds a skip mark (flow-sensitive).
 
     E.g. ``MARKS = [pytest.mark.skip(...)] if not HAVE_MODULE else []`` makes
     ``MARKS`` skip-carrying, and so does any name later bound from ``MARKS``.
     """
-    scope = _module_scope_nodes(list(tree.body))
-    carrying: set[str] = set()
-    changed = True
-    while changed:
-        changed = False
-        frozen = frozenset(carrying)
-        for node in scope:
-            bound, value = _assignment_parts(node)
-            if not bound or bound <= carrying or value is None:
-                continue
-            if _can_supply_skip(value, names, frozen):
-                carrying |= bound
-                changed = True
-    return frozenset(carrying)
+    return _flow_bound_names(
+        tree, lambda value, line, current: _can_supply_skip(value, names, current.at(line))
+    )
 
 
 def _can_supply_skip(expr: ast.expr, names: _ImportNames, carrying: frozenset[str]) -> bool:
@@ -618,28 +637,21 @@ def _masking_mark_names(
     tree: ast.Module,
     names: _ImportNames,
     taint: _Taint,
-    carrying: frozenset[str],
-) -> frozenset[str]:
-    """Names bound at import time to a mark value whose skip taint decides (fixpoint).
+    carrying: _Taint,
+) -> _Taint:
+    """Names bound at import time to a mark value whose skip taint decides (flow-sensitive).
 
     ``MARK = pytest.mark.skipif(not HAVE_MODULE)`` makes ``MARK`` masking, so a
-    later ``pytestmark = MARK`` or ``@MARK`` is too. ``MARK =
-    pytest.mark.skip(reason=f"{HAVE_MODULE}")`` does not: it skips regardless.
+    later ``pytestmark = MARK`` or ``@MARK`` is too, until ``MARK`` is
+    unconditionally rebound. ``MARK = pytest.mark.skip(reason=f"{HAVE_MODULE}")``
+    is not masking: it skips regardless.
     """
-    scope = _module_scope_nodes(list(tree.body))
-    masking: set[str] = set()
-    changed = True
-    while changed:
-        changed = False
-        frozen = frozenset(masking)
-        for node in scope:
-            bound, value = _assignment_parts(node)
-            if not bound or bound <= masking or value is None:
-                continue
-            if _taint_decides_skip(value, names, taint.view(node.lineno), carrying, frozen):
-                masking |= bound
-                changed = True
-    return frozenset(masking)
+    return _flow_bound_names(
+        tree,
+        lambda value, line, current: _taint_decides_skip(
+            value, names, taint.view(line), carrying.at(line), current.at(line)
+        ),
+    )
 
 
 def _find_masking_skipif_uses(tree: ast.Module, names: _ImportNames, taint: _Taint) -> list[int]:
@@ -680,7 +692,9 @@ def _find_masking_skipif_uses(tree: ast.Module, names: _ImportNames, taint: _Tai
             # Taint can also decide the skip outside an inline skipif: e.g.
             # `[mark.skip] if not HAVE_MODULE else []`, or an alias such as
             # `pytestmark = MARK` / `@MARK` for a masking MARK.
-            if not hits and _taint_decides_skip(expr, names, view, carrying, masking):
+            if not hits and _taint_decides_skip(
+                expr, names, view, carrying.at(line), masking.at(line)
+            ):
                 hits.append(line)
             lines.extend(hits)
     return lines
