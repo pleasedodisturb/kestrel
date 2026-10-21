@@ -2498,6 +2498,33 @@ _FLAG_CASES = [
         11,
         id="result_gated_return_without_fallback",
     ),
+    # Codex review (run a7bab6f7671d): a local that becomes dependent inside
+    # a compound statement gates later branches in that same statement.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    if True:\n"
+            "        if available:\n"
+            "            result = True\n"
+            "        else:\n"
+            "            result = False\n"
+            "        if result:\n"
+            "            return True\n"
+            "    return False\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        17,
+        id="result_dependency_gates_later_branch_in_same_statement",
+    ),
 ]
 
 
