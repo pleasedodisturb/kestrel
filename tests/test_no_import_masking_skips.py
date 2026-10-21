@@ -46,7 +46,16 @@ implement):
 - a per-test ``pytest.skip(...)`` (no ``allow_module_level``) inside an
   ``except ImportError:``;
 - ``pytest.importorskip(...)`` of third-party modules (this is the sanctioned
-  use of the mechanism, not the anti-pattern).
+  use of the mechanism, not the anti-pattern);
+- known false negatives tracked in G-1974: first-party
+  ``importlib.util.find_spec(...)`` checks that use no ``try``, mutation
+  through method calls (``FLAGS.update(have=False)``), and skip helpers
+  reached through an alias or attribute;
+- dynamic writes (``exec``, ``globals()[...] = ...``), out of scope.
+
+Deliberately conservative (may flag code that pytest runs): a rebinding
+inside a loop or ``try`` body never clears taint, because it is not
+provably executed.
 """
 
 from __future__ import annotations
@@ -414,7 +423,9 @@ def _import_time_taint_seeds(
             for handler in node.handlers:
                 if not _handler_masks_imports(node, handler):
                     continue
-                for sub in ast.walk(handler):
+                # Only what the handler itself runs: a function defined in the
+                # handler binds its own locals, and only if it is ever called.
+                for sub in _module_scope_nodes(list(handler.body)):
                     bound, _ = _assignment_parts(sub)
                     # A `global` helper binds module globals; otherwise the
                     # handler binds in the namespace it runs in.
@@ -435,6 +446,45 @@ def _import_time_taint_seeds(
             }
             for call_line in calls[node.name]:
                 collect(list(ast.walk(node)), declared, call_line)
+    return seeds
+
+
+def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scope, str], set[int]]:
+    """Import-time functions whose failure path returns a value, seeded at the ``def``.
+
+    ``def check(): try: import x; return True / except ImportError: return
+    False`` makes ``check`` tainted, so ``HAVE = check()`` and ``skipif(not
+    check())`` read taint through it. Counted: a ``return`` inside a masking
+    handler, or a ``return`` reading a local that a masking handler assigned.
+    A handler that re-raises or leaves the result alone does not count.
+    """
+    seeds: dict[tuple[_Scope, str], set[int]] = {}
+    for fn in _module_scope_nodes(list(tree.body)):
+        if not isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        body = _module_scope_nodes(list(fn.body))
+        returns_on_failure = False
+        handler_locals: set[str] = set()
+        for node in body:
+            if not isinstance(node, ast.Try | ast.TryStar):
+                continue
+            for handler in node.handlers:
+                if not _handler_masks_imports(node, handler):
+                    continue
+                handled = _module_scope_nodes(list(handler.body))
+                returns_on_failure |= any(isinstance(sub, ast.Return) for sub in handled)
+                for sub in handled:
+                    handler_locals |= _assignment_parts(sub)[0]
+        if not returns_on_failure and handler_locals:
+            returns_on_failure = any(
+                isinstance(sub, ast.Return)
+                and sub.value is not None
+                and _condition_references_names(sub.value, frozenset(handler_locals))
+                for sub in body
+            )
+        if returns_on_failure:
+            key = (ns.binding(ns.of(fn), fn.name), fn.name)
+            seeds.setdefault(key, set()).add(fn.lineno)
     return seeds
 
 
@@ -890,7 +940,9 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
             for handler in node.handlers:
                 if not _handler_masks_imports(node, handler):
                     continue
-                for sub in ast.walk(handler):
+                # A skip inside a function defined (not called) in the handler
+                # never runs; a call to such a helper is caught below.
+                for sub in _module_scope_nodes(list(handler.body)):
                     if (
                         _is_module_level_skip(sub, names)
                         or _is_unittest_skiptest_raise(sub, names)
@@ -901,7 +953,10 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
             _report(node.lineno)
 
     ns = _namespaces(tree)
-    taint = _flow_taint(tree, names, _import_time_taint_seeds(tree, ns), ns)
+    seeds = _import_time_taint_seeds(tree, ns)
+    for key, lines in _masking_result_seeds(tree, ns).items():
+        seeds.setdefault(key, set()).update(lines)
+    taint = _flow_taint(tree, names, seeds, ns)
     for lineno in _find_masking_skipif_uses(tree, names, taint, ns):
         _report(lineno)
 
