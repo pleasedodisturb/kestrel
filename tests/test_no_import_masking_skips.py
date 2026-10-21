@@ -2330,6 +2330,70 @@ _FLAG_CASES = [
         12,
         id="result_returned_alias_chain_of_path_local",
     ),
+    # Function-local flow (Codex review run aeb3c2e4730a): these keep the
+    # dependency, each skips silently under pytest.
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            '    if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+            "        available = True\n"
+            "    return available\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        13,
+        id="result_conditional_local_rebind_does_not_clear",
+    ),
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    available = available or False\n"
+            "    return available\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        12,
+        id="result_local_rebind_reading_taint_does_not_clear",
+    ),
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    result = available\n"
+            "    available = True\n"
+            "    return result\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        13,
+        id="result_alias_taken_before_local_rebind",
+    ),
 ]
 
 
@@ -2944,6 +3008,27 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_returned_alias_of_unrelated_local",
+    ),
+    # A direct, unconditional rebinding to an independent value clears the
+    # local (both paths return True, the test runs).
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    available = True\n"
+            "    return available\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_unconditional_local_rebind_clears",
     ),
 ]
 
