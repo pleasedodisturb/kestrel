@@ -2219,6 +2219,26 @@ _FLAG_CASES = [
         10,
         id="result_else_success_later_return_differs",
     ),
+    # Codex review (run 406402445f64): only a handler that always exits
+    # (return/raise on every path) stops the fall-through. Skips silently.
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            '        if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+            "            raise\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_handler_conditional_raise_falls_through",
+    ),
 ]
 
 
@@ -2743,6 +2763,42 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_nested_both_branches_return",
+    ),
+    # A handler that raises on every path fails collection loudly.
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        raise\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_handler_unconditional_raise",
+    ),
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "def check():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            '        if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+            "            raise\n"
+            "        else:\n"
+            '            raise RuntimeError("missing")\n'
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_handler_raises_on_every_branch",
     ),
 ]
 
