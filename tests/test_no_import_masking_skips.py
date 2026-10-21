@@ -695,6 +695,30 @@ _MASKED_FLAG_PREAMBLE = (
     "    _HAVE_MODULE = False\n"
 )
 
+# Scope fixtures (Codex review run 5798565a34b0): an import-masking handler
+# inside a helper function only taints a module global when the helper binds
+# it (`global`) and actually runs at import time.
+_PROBE_LOCAL = (
+    "def _probe():\n"
+    "    try:\n"
+    "        import not_a_real_module\n"
+    "    except ImportError:\n"
+    "        _HAVE_MODULE = False\n"
+)
+_PROBE_GLOBAL = (
+    "def _probe():\n"
+    "    global _HAVE_MODULE\n"
+    "    try:\n"
+    "        import not_a_real_module\n"
+    "    except ImportError:\n"
+    "        _HAVE_MODULE = False\n"
+)
+_SKIPIF_ON_FLAG_TEST = (
+    '@pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+    "def test_something():\n"
+    "    assert not_a_real_module.thing() == 1\n"
+)
+
 _FLAG_CASES = [
     pytest.param(
         (
@@ -1101,6 +1125,14 @@ _FLAG_CASES = [
         8,
         id="alias_string_condition_decorator",
     ),
+    pytest.param(
+        "import pytest\n_HAVE_MODULE = True\n"
+        + _PROBE_GLOBAL
+        + "_probe()\n"
+        + _SKIPIF_ON_FLAG_TEST,
+        10,
+        id="global_flag_set_by_helper_called_at_import",
+    ),
 ]
 
 
@@ -1267,6 +1299,20 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="alias_unconditional_skip_decorator",
+    ),
+    # Scope negatives: each test runs (fails loudly) under pytest, because the
+    # helper's assignment never reaches the module global at import time.
+    pytest.param(
+        "import pytest\n_HAVE_MODULE = True\n" + _PROBE_LOCAL + _SKIPIF_ON_FLAG_TEST,
+        id="local_flag_in_uncalled_helper",
+    ),
+    pytest.param(
+        "import pytest\n_HAVE_MODULE = True\n" + _PROBE_LOCAL + "_probe()\n" + _SKIPIF_ON_FLAG_TEST,
+        id="local_flag_in_called_helper",
+    ),
+    pytest.param(
+        "import pytest\n_HAVE_MODULE = True\n" + _PROBE_GLOBAL + _SKIPIF_ON_FLAG_TEST,
+        id="global_flag_in_uncalled_helper",
     ),
 ]
 
