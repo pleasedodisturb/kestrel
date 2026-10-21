@@ -449,6 +449,21 @@ def _import_time_taint_seeds(
     return seeds
 
 
+def _always_returns(stmts: list[ast.stmt]) -> bool:
+    """True if executing ``stmts`` is guaranteed to end in a ``return``/``raise``.
+
+    A direct ``return``/``raise`` does, and so does an ``if`` whose two
+    branches both always return. Anything less certain (a one-armed ``if``,
+    a loop, a ``try``) is deliberately treated as possibly falling through.
+    """
+    for stmt in stmts:
+        if isinstance(stmt, ast.Return | ast.Raise):
+            return True
+        if isinstance(stmt, ast.If) and _always_returns(stmt.body) and _always_returns(stmt.orelse):
+            return True
+    return False
+
+
 def _fails_through_to_implicit_none(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     """True if a masking handler's fall-through ends ``fn`` with an implicit ``None``.
 
@@ -469,8 +484,7 @@ def _fails_through_to_implicit_none(fn: ast.FunctionDef | ast.AsyncFunctionDef) 
             )
             for handler in stmt.handlers
         )
-        later = _module_scope_nodes(list(fn.body[index + 1 :]))
-        if falls_through and not any(isinstance(sub, ast.Return) for sub in later):
+        if falls_through and not _always_returns(fn.body[index + 1 :]):
             return True
     return False
 
@@ -484,7 +498,8 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
     handler; a ``return`` reading a local that a masking handler assigned; or
     an implicit ``None`` on failure, when a ``try`` directly in the body
     returns from its ``try``/``else`` block, a masking handler can fall
-    through (no ``return``/``raise``), and nothing after that ``try`` returns.
+    through (no ``return``/``raise``), and the code after that ``try`` does
+    not always return (see ``_always_returns``).
     A handler that re-raises or leaves the result alone does not count.
     """
     seeds: dict[tuple[_Scope, str], set[int]] = {}
