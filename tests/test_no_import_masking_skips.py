@@ -1027,6 +1027,41 @@ _FLAG_CASES = [
         8,
         id="taint_mark_list_bound_to_a_name",
     ),
+    # Codex review (run 3c758387f1b1): a skip mark bound to an alias first,
+    # then applied via pytestmark or as a decorator. Each row skips silently
+    # under pytest when the import breaks.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'MARK = pytest.mark.skipif("not _HAVE_MODULE", reason="x")\n'
+        + "pytestmark = MARK\n",
+        8,
+        id="alias_string_condition_pytestmark",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'MARK = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + "pytestmark = MARK\n",
+        8,
+        id="alias_expression_condition_pytestmark",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'MARK = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + "@MARK\n"
+        + "def test_something():\n"
+        + "    assert not_a_real_module.thing() == 1\n",
+        8,
+        id="alias_expression_condition_decorator",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'MARK = pytest.mark.skipif("not _HAVE_MODULE", reason="x")\n'
+        + "@MARK\n"
+        + "def test_something():\n"
+        + "    assert not_a_real_module.thing() == 1\n",
+        8,
+        id="alias_string_condition_decorator",
+    ),
 ]
 
 
@@ -1175,6 +1210,24 @@ _IGNORE_CASES = [
     pytest.param(
         _MASKED_FLAG_PREAMBLE + 'pytestmark = pytest.mark.skip(reason=f"have={_HAVE_MODULE}")\n',
         id="unconditional_skip_mentions_flag_in_reason",
+    ),
+    # Alias negatives: the aliased mark either cannot skip, or skips whatever
+    # the flag says (verified skipped with a working import).
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'MARK = pytest.mark.parametrize("a", [_HAVE_MODULE])\n'
+        + "@MARK\n"
+        + "def test_something(a):\n"
+        + "    assert a is not None\n",
+        id="alias_parametrize_decorator_reads_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'MARK = pytest.mark.skip(reason=f"have={_HAVE_MODULE}")\n'
+        + "@MARK\n"
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="alias_unconditional_skip_decorator",
     ),
 ]
 
