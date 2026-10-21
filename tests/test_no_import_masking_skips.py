@@ -2556,6 +2556,47 @@ _FLAG_CASES = [
         10,
         id="result_probe_nested_in_loop",
     ),
+    # Codex review (run 33308ffaa945): a function that returns a masking
+    # result (through any chain of wrappers) is a masking result too.
+    # Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def probe():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            "def available():\n"
+            "    return probe()\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_wrapper_returns_masking_result",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def probe():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            "def inner():\n"
+            "    return probe()\n"
+            "def outer():\n"
+            "    return bool(inner())\n"
+            'pytestmark = pytest.mark.skipif(not outer(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        12,
+        id="result_wrapper_chain_returns_masking_result",
+    ),
 ]
 
 
@@ -3248,6 +3289,26 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_nested_probe_single_return_value",
+    ),
+    # A wrapper around a function unrelated to the import stays clean.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def probe():\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        return True\n"
+            "    except ImportError:\n"
+            "        return False\n"
+            "def helper():\n"
+            "    return True\n"
+            "def available():\n"
+            "    return helper()\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_wrapper_of_unrelated_function",
     ),
 ]
 
