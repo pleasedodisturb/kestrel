@@ -1233,6 +1233,60 @@ _FLAG_CASES = [
         7,
         id="handler_binds_flag_by_augmented_assignment",
     ),
+    # Codex review (run 8a8ca3138644): a masking handler body only runs when
+    # the import fails, so a skip mark created there is import-driven exactly
+    # like one in an `if not HAVE_MODULE:` branch. Reported where the skip is
+    # created. Each row skips silently under pytest when the import breaks.
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    pytestmark = pytest.mark.skip(reason="module unavailable")\n'
+            "def test_feature():\n"
+            "    assert not_a_real_module.thing() == 1\n"
+        ),
+        5,
+        id="handler_assigns_skip_pytestmark",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    pytestmark = pytest.mark.skipif(True, reason="x")\n'
+        ),
+        5,
+        id="handler_assigns_constant_skipif_pytestmark",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "    MARK = []\n"
+            "except ImportError:\n"
+            '    MARK = pytest.mark.skip(reason="x")\n'
+            "pytestmark = MARK\n"
+        ),
+        6,
+        id="handler_binds_skip_mark_alias",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    @pytest.mark.skip(reason="x")\n'
+            "    def test_feature():\n"
+            "        assert False\n"
+        ),
+        5,
+        id="handler_defines_skip_decorated_test",
+    ),
 ]
 
 
@@ -1413,6 +1467,20 @@ _IGNORE_CASES = [
     pytest.param(
         "import pytest\n_HAVE_MODULE = True\n" + _PROBE_GLOBAL + _SKIPIF_ON_FLAG_TEST,
         id="global_flag_in_uncalled_helper",
+    ),
+    # A non-skip mark set in a masking handler cannot hide the broken import:
+    # the test runs (fails loudly) under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    pytestmark = pytest.mark.filterwarnings("ignore")\n'
+            "def test_feature():\n"
+            "    assert not_a_real_module.thing() == 1\n"
+        ),
+        id="handler_assigns_non_skip_mark",
     ),
 ]
 
