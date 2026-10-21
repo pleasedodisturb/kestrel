@@ -378,6 +378,22 @@ def _import_time_taint_seeds(tree: ast.Module) -> frozenset[str]:
     return frozenset(seeds)
 
 
+def _masking_handler_region_ids(scope: list[ast.AST]) -> set[int]:
+    """ids of import-time nodes inside an import-masking handler body.
+
+    A masking handler only runs when the import fails, so anything it does at
+    import time is import-driven, exactly like a branch gated on a tainted
+    name.
+    """
+    region: set[int] = set()
+    for node in scope:
+        if isinstance(node, ast.Try | ast.TryStar):
+            for handler in node.handlers:
+                if _handler_masks_imports(node, handler):
+                    region |= {id(sub) for sub in _module_scope_nodes(list(handler.body))}
+    return region
+
+
 def _tainted_names(tree: ast.Module, seed: frozenset[str]) -> frozenset[str]:
     """Close ``seed`` over import-time assignments (fixpoint).
 
@@ -662,15 +678,19 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
     for lineno in _find_masking_skipif_uses(tree, names, tainted):
         _report(lineno)
 
-    # Any skip action inside an import-time branch gated on a tainted name
-    # (e.g. `if not HAVE_MODULE: pytest.skip(..., allow_module_level=True)`,
-    # a skip mark, or a call to a skip helper) only happens because the
-    # import failed: the same masking as a skip inside the handler itself.
+    # Any skip action in an import-time region that only runs because the
+    # import failed is masking: a branch gated on a tainted name (e.g. `if not
+    # HAVE_MODULE: pytest.skip(..., allow_module_level=True)`) or a masking
+    # handler body itself (e.g. `except ImportError: pytestmark =
+    # pytest.mark.skip(...)`). Skip actions: module-level skip, SkipTest
+    # raise, a skip mark, or a call to a skip helper.
+    scope = _module_scope_nodes(list(tree.body))
+    import_driven = _masking_handler_region_ids(scope)
     if tainted:
-        scope = _module_scope_nodes(list(tree.body))
-        gated = _gated_region_ids(scope, tainted)
+        import_driven |= _gated_region_ids(scope, tainted)
+    if import_driven:
         for sub in scope:
-            if id(sub) in gated and (
+            if id(sub) in import_driven and (
                 _is_module_level_skip(sub, names)
                 or _is_unittest_skiptest_raise(sub, names)
                 or _is_skip_mark_ref(sub, names)
