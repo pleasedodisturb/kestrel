@@ -2283,6 +2283,47 @@ _FLAG_CASES = [
         11,
         id="result_success_path_assign_in_else",
     ),
+    # Codex review (run 65bdca14d742): a local bound from an import-dependent
+    # local is import-dependent too, through any chain. Skips silently.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    result = available\n"
+            "    return result\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        11,
+        id="result_returned_alias_of_path_local",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    first = available\n"
+            "    second = bool(first)\n"
+            "    return second\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        12,
+        id="result_returned_alias_chain_of_path_local",
+    ),
 ]
 
 
@@ -2877,6 +2918,26 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_returned_local_set_only_before_try",
+    ),
+    # An alias of a local unrelated to the import stays clean (test runs).
+    pytest.param(
+        (
+            "import pytest\n"
+            "def check():\n"
+            "    available = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        available = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    flag = True\n"
+            "    result = flag\n"
+            "    return result\n"
+            'pytestmark = pytest.mark.skipif(not check(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_returned_alias_of_unrelated_local",
     ),
 ]
 
