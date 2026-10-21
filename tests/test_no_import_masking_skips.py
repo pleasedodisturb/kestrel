@@ -1440,6 +1440,66 @@ _FLAG_CASES = [
         10,
         id="flow_rebinding_inside_loop_is_conservatively_not_a_clear",
     ),
+    # Codex review (run 8778b042e5dd): writing an attribute or subscript
+    # mutates its base object but does not rebind it, so it must not clear
+    # taint; a mutation inside the masking handler still taints the base.
+    # Each row skips silently under pytest when the import breaks.
+    pytest.param(
+        (
+            "from types import SimpleNamespace\n"
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "    state = SimpleNamespace(available=True)\n"
+            "except ImportError:\n"
+            "    state = SimpleNamespace(available=False)\n"
+            'state.note = "x"\n'
+            'pytestmark = pytest.mark.skipif(not state.available, reason="x")\n'
+        ),
+        9,
+        id="flow_attribute_write_does_not_clear",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            '    FLAGS = {"have": True}\n'
+            "except ImportError:\n"
+            '    FLAGS = {"have": False}\n'
+            'FLAGS["note"] = "x"\n'
+            'pytestmark = pytest.mark.skipif(not FLAGS["have"], reason="x")\n'
+        ),
+        8,
+        id="flow_subscript_write_does_not_clear",
+    ),
+    pytest.param(
+        (
+            "from types import SimpleNamespace\n"
+            "import pytest\n"
+            "state = SimpleNamespace(available=True)\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    state.available = False\n"
+            'pytestmark = pytest.mark.skipif(not state.available, reason="x")\n'
+        ),
+        8,
+        id="handler_attribute_mutation_taints_base",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            'FLAGS = {"have": True}\n'
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            '    FLAGS["have"] = False\n'
+            'pytestmark = pytest.mark.skipif(not FLAGS["have"], reason="x")\n'
+        ),
+        7,
+        id="handler_subscript_mutation_taints_base",
+    ),
 ]
 
 
@@ -1660,6 +1720,21 @@ _IGNORE_CASES = [
         + 'pytestmark = pytest.mark.skipif(MISSING, reason="x")\n'
         + _FLOW_TEST,
         id="flow_derived_after_clear_is_clean",
+    ),
+    # A real name rebinding still clears (the test runs under pytest).
+    pytest.param(
+        (
+            "from types import SimpleNamespace\n"
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "    state = SimpleNamespace(available=True)\n"
+            "except ImportError:\n"
+            "    state = SimpleNamespace(available=False)\n"
+            "state = SimpleNamespace(available=True)\n"
+            'pytestmark = pytest.mark.skipif(not state.available, reason="x")\n'
+        ),
+        id="flow_real_rebinding_of_object_clears",
     ),
 ]
 
