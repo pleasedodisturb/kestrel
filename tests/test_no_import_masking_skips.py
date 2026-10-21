@@ -232,12 +232,10 @@ def _handler_assigned_names(handler: ast.ExceptHandler) -> set[str]:
     """
     assigned: set[str] = set()
     for sub in ast.walk(handler):
-        if isinstance(sub, ast.Assign):
-            for target in sub.targets:
-                if isinstance(target, ast.Name):
-                    assigned.add(target.id)
-        elif isinstance(sub, ast.AnnAssign) and isinstance(sub.target, ast.Name):
-            assigned.add(sub.target.id)
+        # Every binding form counts: plain, annotated, augmented, walrus, and
+        # tuple/list/starred unpacking (``module, HAVE_MODULE = None, False``).
+        bound, _ = _assignment_parts(sub)
+        assigned |= bound
     return assigned
 
 
