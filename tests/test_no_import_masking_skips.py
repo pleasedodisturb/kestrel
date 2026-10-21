@@ -546,19 +546,25 @@ def _local_flow_returns_dependent(fn: ast.FunctionDef | ast.AsyncFunctionDef) ->
             continue
         # Control dependency: what a branch gated on a dependent local assigns
         # or returns depends on the import too.
+        # Iterate to a fixed point: a local made dependent here can gate a
+        # later branch in the same compound statement.
         gated: set[int] = set()
-        for node in nodes:
-            if isinstance(node, ast.If | ast.While) and _condition_references_names(
-                node.test, frozenset(dependent)
-            ):
-                gated |= {id(sub) for sub in _module_scope_nodes(node.body + node.orelse)}
-        for node in nodes:
-            bound, value = _assignment_parts(node)
-            if value is not None and (
-                id(node) in gated or _condition_references_names(value, frozenset(dependent))
-            ):
-                dependent |= bound
-            gated_return |= isinstance(node, ast.Return) and id(node) in gated
+        changed = True
+        while changed:
+            before = (len(dependent), len(gated))
+            for node in nodes:
+                if isinstance(node, ast.If | ast.While) and _condition_references_names(
+                    node.test, frozenset(dependent)
+                ):
+                    gated |= {id(sub) for sub in _module_scope_nodes(node.body + node.orelse)}
+            for node in nodes:
+                bound, value = _assignment_parts(node)
+                if value is not None and (
+                    id(node) in gated or _condition_references_names(value, frozenset(dependent))
+                ):
+                    dependent |= bound
+            changed = (len(dependent), len(gated)) != before
+        gated_return |= any(isinstance(node, ast.Return) and id(node) in gated for node in nodes)
         if any(
             isinstance(node, ast.Return)
             and node.value is not None
