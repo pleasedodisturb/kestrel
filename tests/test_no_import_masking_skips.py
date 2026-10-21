@@ -771,6 +771,19 @@ _SKIPIF_ON_FLAG_TEST = (
     "    assert not_a_real_module.thing() == 1\n"
 )
 
+# Flow-ordering fixtures (Codex review run 6df3ce9ff855): lines 1-7 mask a
+# failed import and taint `_HAVE_MODULE`; each case's body starts on line 8.
+# `os` is imported for the conditional-clear row.
+_FLOW_PREAMBLE = (
+    "import os\n"
+    "import pytest\n"
+    "_HAVE_MODULE = True\n"
+    "try:\n"
+    "    import not_a_real_module\n"
+    "except ImportError:\n"
+    "    _HAVE_MODULE = False\n"
+)
+_FLOW_TEST = "def test_something():\n    assert not_a_real_module.thing() == 1\n"
 _FLAG_CASES = [
     pytest.param(
         (
@@ -1307,6 +1320,65 @@ _FLAG_CASES = [
         5,
         id="handler_defines_skip_decorated_test",
     ),
+    # Flow ordering: taint is cleared only by an unconditional top-level
+    # rebinding that does not read taint, and only for uses evaluated after
+    # it. Each row skips silently under pytest, except the loop row (see its
+    # comment).
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+        + "    _HAVE_MODULE = True\n"
+        + 'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + _FLOW_TEST,
+        10,
+        id="flow_conditional_rebinding_does_not_clear",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + "_HAVE_MODULE = _HAVE_MODULE and True\n"
+        + 'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + _FLOW_TEST,
+        9,
+        id="flow_rebinding_that_reads_taint_does_not_clear",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + "_HAVE_MODULE = True\n"
+        + _FLOW_TEST,
+        8,
+        id="flow_expression_condition_evaluated_before_clear",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + '@pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + _FLOW_TEST
+        + "_HAVE_MODULE = True\n",
+        8,
+        id="flow_decorator_evaluated_before_clear",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + "MISSING = not _HAVE_MODULE\n"
+        + "_HAVE_MODULE = True\n"
+        + 'pytestmark = pytest.mark.skipif(MISSING, reason="x")\n'
+        + _FLOW_TEST,
+        10,
+        id="flow_derived_before_clear_stays_tainted",
+    ),
+    # Deliberately conservative: pytest runs this test (range(1) iterates),
+    # but a loop body is not provably executed (`for _ in []:` never clears),
+    # so a rebinding inside a loop does not clear taint. A false positive here
+    # fails CI loudly; the alternative could hide a broken import silently.
+    pytest.param(
+        _FLOW_PREAMBLE
+        + "for _ in range(1):\n"
+        + "    _HAVE_MODULE = True\n"
+        + 'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + _FLOW_TEST,
+        10,
+        id="flow_rebinding_inside_loop_is_conservatively_not_a_clear",
+    ),
 ]
 
 
@@ -1501,6 +1573,32 @@ _IGNORE_CASES = [
             "    assert not_a_real_module.thing() == 1\n"
         ),
         id="handler_assigns_non_skip_mark",
+    ),
+    # Flow negatives: an unconditional top-level rebinding clears taint for
+    # what is evaluated after it. Each test runs (fails loudly) under pytest.
+    pytest.param(
+        _FLOW_PREAMBLE
+        + "_HAVE_MODULE = True\n"
+        + 'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        + _FLOW_TEST,
+        id="flow_unconditional_clear_before_use",
+    ),
+    # pytest evaluates a string condition against the module's globals after
+    # the module has finished importing, so a later clear still applies.
+    pytest.param(
+        _FLOW_PREAMBLE
+        + 'pytestmark = pytest.mark.skipif("not _HAVE_MODULE", reason="x")\n'
+        + "_HAVE_MODULE = True\n"
+        + _FLOW_TEST,
+        id="flow_string_condition_sees_final_value",
+    ),
+    pytest.param(
+        _FLOW_PREAMBLE
+        + "_HAVE_MODULE = True\n"
+        + "MISSING = not _HAVE_MODULE\n"
+        + 'pytestmark = pytest.mark.skipif(MISSING, reason="x")\n'
+        + _FLOW_TEST,
+        id="flow_derived_after_clear_is_clean",
     ),
 ]
 
