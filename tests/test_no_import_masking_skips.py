@@ -1565,6 +1565,72 @@ _FLAG_CASES = [
         9,
         id="flow_carrying_alias_still_carrying",
     ),
+    # Codex review (run 356257de6d0d): a class body reads its own names first,
+    # then module globals; module code reads only globals. These stay flagged
+    # (each skips silently under pytest).
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "class TestProbe:\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        _HAVE_MODULE = False\n"
+            '    pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert False\n"
+        ),
+        8,
+        id="scope_class_handler_class_pytestmark",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "class TestProbe:\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        _HAVE_MODULE = False\n"
+            '    @pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert False\n"
+        ),
+        8,
+        id="scope_class_handler_method_decorator",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "class Other:\n"
+            "    _HAVE_MODULE = True\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        9,
+        id="scope_class_rebinding_does_not_clear_global",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "class TestProbe:\n"
+            '    pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert False\n"
+        ),
+        8,
+        id="scope_class_use_reads_tainted_global",
+    ),
 ]
 
 
@@ -1826,6 +1892,56 @@ _IGNORE_CASES = [
         + "pytestmark = M if not _HAVE_MODULE else []\n"
         + _FLOW_TEST,
         id="flow_carrying_alias_rebound_before_use",
+    ),
+    # Scope negatives (each test runs under pytest): a class-local handler
+    # cannot taint the module global; a class-local rebinding shadows a
+    # tainted global for that class; a string condition is evaluated against
+    # module globals, never the class namespace.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "class TestProbe:\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        _HAVE_MODULE = False\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="scope_class_handler_does_not_taint_module_global",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "class TestProbe:\n"
+            "    _HAVE_MODULE = True\n"
+            '    pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert False\n"
+        ),
+        id="scope_class_rebinding_shadows_tainted_global",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "class TestProbe:\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        _HAVE_MODULE = False\n"
+            '    pytestmark = pytest.mark.skipif("not _HAVE_MODULE", reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert False\n"
+        ),
+        id="scope_string_condition_reads_module_globals",
     ),
 ]
 
