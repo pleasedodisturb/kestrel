@@ -344,6 +344,42 @@ def _gated_region_ids(scope: list[ast.AST], tainted: frozenset[str]) -> set[int]
     return gated
 
 
+def _import_time_taint_seeds(tree: ast.Module) -> frozenset[str]:
+    """Module globals that an import-masking handler really assigns at import time.
+
+    A handler in import-time scope (module or class body, see
+    ``_module_scope_nodes``) seeds every name it assigns. A handler inside a
+    function seeds only the names that function declares ``global``, and only
+    when the function is called at import time: otherwise the assignment is a
+    local, or never runs before the skip condition is evaluated.
+    """
+    scope = _module_scope_nodes(list(tree.body))
+    seeds: set[str] = set()
+
+    def collect(nodes: list[ast.AST], keep: set[str] | None) -> None:
+        for node in nodes:
+            if not isinstance(node, ast.Try | ast.TryStar):
+                continue
+            for handler in node.handlers:
+                if _handler_masks_imports(node, handler):
+                    assigned = _handler_assigned_names(handler)
+                    seeds.update(assigned if keep is None else assigned & keep)
+
+    collect(scope, None)
+    called = {
+        node.func.id
+        for node in scope
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    for node in scope:
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and node.name in called:
+            declared = {
+                name for sub in ast.walk(node) if isinstance(sub, ast.Global) for name in sub.names
+            }
+            collect(list(ast.walk(node)), declared)
+    return frozenset(seeds)
+
+
 def _tainted_names(tree: ast.Module, seed: frozenset[str]) -> frozenset[str]:
     """Close ``seed`` over import-time assignments (fixpoint).
 
@@ -606,7 +642,6 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
             rel = path.as_posix()
         violations.add(f"{rel}:{lineno}")
 
-    masked_flag_names: set[str] = set()
     helpers = _skip_helpers(tree, names)
 
     for node in ast.walk(tree):
@@ -622,11 +657,10 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
                         or _is_skip_helper_call(sub, helpers)
                     ):
                         _report(sub.lineno)
-                masked_flag_names |= _handler_assigned_names(handler)
         if _is_first_party_importorskip(node, names, first_party):
             _report(node.lineno)
 
-    tainted = _tainted_names(tree, frozenset(masked_flag_names))
+    tainted = _tainted_names(tree, _import_time_taint_seeds(tree))
     for lineno in _find_masking_skipif_uses(tree, names, tainted):
         _report(lineno)
 
