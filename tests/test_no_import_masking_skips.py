@@ -1716,6 +1716,59 @@ _FLAG_CASES = [
         8,
         id="scope_class_use_reads_tainted_global",
     ),
+    # Codex review (run a643ad9b096d): `global NAME` in a class body makes
+    # its assignments bind the module global. These stay flagged (each skips
+    # silently under pytest).
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "class Probe:\n"
+            "    global _HAVE_MODULE\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        _HAVE_MODULE = False\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        9,
+        id="scope_class_global_handler_taints_module",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "class TestProbe:\n"
+            "    global _HAVE_MODULE\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        _HAVE_MODULE = False\n"
+            '    pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert False\n"
+        ),
+        9,
+        id="scope_class_global_handler_class_use",
+    ),
+    pytest.param(
+        (
+            "import os\n"
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "class Fixer:\n"
+            "    global _HAVE_MODULE\n"
+            '    if os.environ.get("NOT_A_REAL_ENV_VAR"):\n'
+            "        _HAVE_MODULE = True\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+        ),
+        12,
+        id="scope_class_global_conditional_rebinding_does_not_clear",
+    ),
 ]
 
 
@@ -2027,6 +2080,42 @@ _IGNORE_CASES = [
             "        assert False\n"
         ),
         id="scope_string_condition_reads_module_globals",
+    ),
+    # A direct class-body rebinding under `global` rebinds the module global,
+    # so it clears for module and class uses alike (each test runs).
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "class Fixer:\n"
+            "    global _HAVE_MODULE\n"
+            "    _HAVE_MODULE = True\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="scope_class_global_rebinding_clears_module",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "class TestProbe:\n"
+            "    global _HAVE_MODULE\n"
+            "    _HAVE_MODULE = True\n"
+            '    pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert False\n"
+        ),
+        id="scope_class_global_rebinding_then_class_use",
     ),
 ]
 
