@@ -449,13 +449,42 @@ def _import_time_taint_seeds(
     return seeds
 
 
+def _fails_through_to_implicit_none(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """True if a masking handler's fall-through ends ``fn`` with an implicit ``None``.
+
+    The success path returns early from a ``try``/``else`` block directly in
+    the function body, so the failure path's ``None`` differs from it.
+    """
+    for index, stmt in enumerate(fn.body):
+        if not isinstance(stmt, ast.Try | ast.TryStar):
+            continue
+        success = _module_scope_nodes([*stmt.body, *stmt.orelse])
+        if not any(isinstance(sub, ast.Return) for sub in success):
+            continue
+        falls_through = any(
+            _handler_masks_imports(stmt, handler)
+            and not any(
+                isinstance(sub, ast.Return | ast.Raise)
+                for sub in _module_scope_nodes(list(handler.body))
+            )
+            for handler in stmt.handlers
+        )
+        later = _module_scope_nodes(list(fn.body[index + 1 :]))
+        if falls_through and not any(isinstance(sub, ast.Return) for sub in later):
+            return True
+    return False
+
+
 def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scope, str], set[int]]:
     """Import-time functions whose failure path returns a value, seeded at the ``def``.
 
     ``def check(): try: import x; return True / except ImportError: return
     False`` makes ``check`` tainted, so ``HAVE = check()`` and ``skipif(not
     check())`` read taint through it. Counted: a ``return`` inside a masking
-    handler, or a ``return`` reading a local that a masking handler assigned.
+    handler; a ``return`` reading a local that a masking handler assigned; or
+    an implicit ``None`` on failure, when a ``try`` directly in the body
+    returns from its ``try``/``else`` block, a masking handler can fall
+    through (no ``return``/``raise``), and nothing after that ``try`` returns.
     A handler that re-raises or leaves the result alone does not count.
     """
     seeds: dict[tuple[_Scope, str], set[int]] = {}
@@ -482,6 +511,8 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
                 and _condition_references_names(sub.value, frozenset(handler_locals))
                 for sub in body
             )
+        if not returns_on_failure:
+            returns_on_failure = _fails_through_to_implicit_none(fn)
         if returns_on_failure:
             key = (ns.binding(ns.of(fn), fn.name), fn.name)
             seeds.setdefault(key, set()).add(fn.lineno)
