@@ -397,6 +397,18 @@ def _condition_references_names(expr: ast.expr, flag_names: frozenset[str]) -> b
     return any(isinstance(sub, ast.Name) and sub.id in flag_names for sub in ast.walk(expr))
 
 
+def _skipif_reads(call: ast.Call, flag_names: frozenset[str]) -> bool:
+    """True if any condition pytest evaluates for this skipif reads ``flag_names``."""
+    return any(_condition_references_names(c, flag_names) for c in _skipif_conditions(call))
+
+
+def _reads_tainted(expr: ast.expr, names: _ImportNames, tainted: frozenset[str]) -> bool:
+    """True if ``expr`` reads a tainted name, counting string skipif conditions as code."""
+    return _condition_references_names(expr, tainted) or any(
+        _is_skipif_call(sub, names) and _skipif_reads(sub, tainted) for sub in ast.walk(expr)
+    )
+
+
 def _skip_carrying_names(tree: ast.Module, names: _ImportNames) -> frozenset[str]:
     """Names bound at import time to a value that holds a skip mark (fixpoint).
 
@@ -431,38 +443,71 @@ def _taint_decides_skip(
     names: _ImportNames,
     tainted: frozenset[str],
     carrying: frozenset[str],
+    masking: frozenset[str],
 ) -> bool:
-    """True if a tainted name decides whether ``expr`` (a pytestmark value) applies a skip.
+    """True if a tainted name decides whether ``expr`` (a mark value) applies a skip.
 
     Reading a tainted name is not enough: ``parametrize("a", [HAVE])`` cannot
     skip, and ``mark.skip(reason=f"{HAVE}")`` skips whatever the flag says.
     Containers are judged element by element; a conditional expression masks
-    when its test is tainted and a branch can supply a skip; a bare name masks
-    when it is both tainted and skip-carrying. skipif conditions are judged by
-    the caller.
+    when its test is tainted and a branch can supply a skip; a skipif masks
+    when a condition it evaluates is tainted; a bare name masks when it is a
+    masking mark name (see ``_masking_mark_names``).
     """
+
+    def again(e: ast.expr) -> bool:
+        return _taint_decides_skip(e, names, tainted, carrying, masking)
+
     if isinstance(expr, ast.List | ast.Tuple | ast.Set):
-        return any(_taint_decides_skip(e, names, tainted, carrying) for e in expr.elts)
+        return any(again(e) for e in expr.elts)
     if isinstance(expr, ast.Starred):
-        return _taint_decides_skip(expr.value, names, tainted, carrying)
+        return again(expr.value)
     if isinstance(expr, ast.IfExp):
         branch_skips = _can_supply_skip(expr.body, names, carrying) or _can_supply_skip(
             expr.orelse, names, carrying
         )
         return (
-            (_condition_references_names(expr.test, tainted) and branch_skips)
-            or _taint_decides_skip(expr.body, names, tainted, carrying)
-            or _taint_decides_skip(expr.orelse, names, tainted, carrying)
+            (_reads_tainted(expr.test, names, tainted) and branch_skips)
+            or again(expr.body)
+            or again(expr.orelse)
         )
     if isinstance(expr, ast.BinOp):
-        return _taint_decides_skip(expr.left, names, tainted, carrying) or _taint_decides_skip(
-            expr.right, names, tainted, carrying
-        )
+        return again(expr.left) or again(expr.right)
     if isinstance(expr, ast.Name):
-        return expr.id in tainted and expr.id in carrying
+        return expr.id in masking
+    if _is_skipif_call(expr, names):
+        return _skipif_reads(expr, tainted)
     if isinstance(expr, ast.Call) and _is_skip_mark_ref(expr.func, names):
         return False
-    return _can_supply_skip(expr, names, carrying) and _condition_references_names(expr, tainted)
+    return _can_supply_skip(expr, names, carrying) and _reads_tainted(expr, names, tainted)
+
+
+def _masking_mark_names(
+    tree: ast.Module,
+    names: _ImportNames,
+    tainted: frozenset[str],
+    carrying: frozenset[str],
+) -> frozenset[str]:
+    """Names bound at import time to a mark value whose skip taint decides (fixpoint).
+
+    ``MARK = pytest.mark.skipif(not HAVE_MODULE)`` makes ``MARK`` masking, so a
+    later ``pytestmark = MARK`` or ``@MARK`` is too. ``MARK =
+    pytest.mark.skip(reason=f"{HAVE_MODULE}")`` does not: it skips regardless.
+    """
+    scope = _module_scope_nodes(list(tree.body))
+    masking: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        frozen = frozenset(masking)
+        for node in scope:
+            bound, value = _assignment_parts(node)
+            if not bound or bound <= masking or value is None:
+                continue
+            if _taint_decides_skip(value, names, tainted, carrying, frozen):
+                masking |= bound
+                changed = True
+    return frozenset(masking)
 
 
 def _find_masking_skipif_uses(
@@ -482,37 +527,31 @@ def _find_masking_skipif_uses(
         return []
     module_scope_ids = {id(node) for node in _module_scope_nodes(list(tree.body))}
     carrying = _skip_carrying_names(tree, names)
+    masking = _masking_mark_names(tree, names, flag_names, carrying)
     lines: list[int] = []
     for node in ast.walk(tree):
-        exprs: list[ast.expr] = []
-        pytestmark_value: ast.expr | None = None
+        # (expression, line to report if taint decides its skip outside an
+        # inline skipif): a module/class-scope pytestmark value, reported at
+        # the assignment, and every decorator, reported at the decorator.
+        marks: list[tuple[ast.expr, int]] = []
         if id(node) in module_scope_ids:
             bound, value = _assignment_parts(node)
             if "pytestmark" in bound and value is not None:
-                pytestmark_value = value
-                exprs.append(value)
+                marks.append((value, node.lineno))
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            exprs.extend(node.decorator_list)
-        hits = [
-            sub.lineno
-            for expr in exprs
-            for sub in ast.walk(expr)
-            if _is_skipif_call(sub, names)
-            and any(
-                _condition_references_names(cond, flag_names) for cond in _skipif_conditions(sub)
-            )
-        ]
-        # A pytestmark where a tainted name decides, outside any skipif
-        # condition, whether a skip mark applies (e.g. `[mark.skip] if not
-        # HAVE_MODULE else []`) still decides the module's skip from the
-        # masked import.
-        if (
-            not hits
-            and pytestmark_value is not None
-            and _taint_decides_skip(pytestmark_value, names, flag_names, carrying)
-        ):
-            hits.append(node.lineno)
-        lines.extend(hits)
+            marks.extend((dec, dec.lineno) for dec in node.decorator_list)
+        for expr, line in marks:
+            hits = [
+                sub.lineno
+                for sub in ast.walk(expr)
+                if _is_skipif_call(sub, names) and _skipif_reads(sub, flag_names)
+            ]
+            # Taint can also decide the skip outside an inline skipif: e.g.
+            # `[mark.skip] if not HAVE_MODULE else []`, or an alias such as
+            # `pytestmark = MARK` / `@MARK` for a masking MARK.
+            if not hits and _taint_decides_skip(expr, names, flag_names, carrying, masking):
+                hits.append(line)
+            lines.extend(hits)
     return lines
 
 
