@@ -544,12 +544,15 @@ def _import_bound_names(node: ast.AST) -> set[str]:
 
 def _bound_names(node: ast.AST) -> set[str]:
     """Every name a single statement binds: assignment targets, import bindings,
-    ``for`` targets and ``with ... as`` targets.
+    ``for``/``with``/``match`` targets, and ``def``/``class`` names.
 
     ``except ... as NAME`` is deliberately excluded: Python deletes NAME when
     the handler ends, so it cannot carry a flag past the handler.
     """
-    return _assignment_parts(node)[0] | _import_bound_names(node)
+    names = _assignment_parts(node)[0] | _import_bound_names(node)
+    if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+        names.add(node.name)
+    return names
 
 
 def _local_flow_returns_dependent(
