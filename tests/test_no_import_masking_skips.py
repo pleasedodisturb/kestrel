@@ -420,11 +420,14 @@ def _assignment_parts(node: ast.AST) -> tuple[set[str], ast.expr | None]:
 def _gate_parts(node: ast.AST) -> tuple[list[ast.expr], list[ast.stmt]] | None:
     """(tests that decide it, bodies it gates) for a branching statement, else None.
 
-    ``if``/``while`` are gated by their test; a ``match`` by its subject and
-    every case guard, gating all case bodies.
+    ``if``/``while`` are gated by their test, a ``for`` by its iterable, and a
+    ``match`` by its subject and every case guard, gating all case bodies.
     """
     if isinstance(node, ast.If | ast.While):
         return [node.test], [*node.body, *node.orelse]
+    if isinstance(node, ast.For | ast.AsyncFor):
+        # The iterable decides whether (and how often) the body runs.
+        return [node.iter], [*node.body, *node.orelse]
     if isinstance(node, ast.Match):
         tests = [node.subject, *(case.guard for case in node.cases if case.guard)]
         return tests, [stmt for case in node.cases for stmt in case.body]
