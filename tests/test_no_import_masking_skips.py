@@ -2815,6 +2815,59 @@ _FLAG_CASES = [
         8,
         id="module_success_path_assignment_taints",
     ),
+    # Codex review (run 3d46493d1555): every statement that binds a name
+    # counts, including for-loop and with-as targets. Each row skips silently.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    for _HAVE_MODULE in [False]:\n"
+            "        pass\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        8,
+        id="handler_for_target_binds_flag",
+    ),
+    pytest.param(
+        (
+            "import contextlib\n"
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    with contextlib.nullcontext(False) as _HAVE_MODULE:\n"
+            "        pass\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="handler_with_target_binds_flag",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def available():\n"
+            "    ok = True\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        for ok in [False]:\n"
+            "            pass\n"
+            "    return ok\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="result_handler_for_target_binds_returned_local",
+    ),
 ]
 
 
@@ -3604,6 +3657,22 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="module_skip_reads_name_unrelated_to_probe",
+    ),
+    # `except ... as NAME` deletes NAME when the handler ends, so a later read
+    # fails collection loudly (NameError) instead of skipping.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError as _HAVE_MODULE:\n"
+            "    pass\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="handler_except_as_name_is_deleted_after_handler",
     ),
 ]
 
