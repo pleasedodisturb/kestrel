@@ -2774,6 +2774,40 @@ _FLAG_CASES = [
         8,
         id="handler_import_binding_taints_module_name",
     ),
+    # Codex review (run e029fa328621): at module level, what the success path
+    # of a masking try binds (assignment or import) is import-dependent too.
+    # Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "mod = None\n"
+            "try:\n"
+            "    import not_a_real_module as mod\n"
+            "except ImportError:\n"
+            "    pass\n"
+            'pytestmark = pytest.mark.skipif(mod is None, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        7,
+        id="module_success_path_import_binding_taints",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = False\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "    _HAVE_MODULE = True\n"
+            "except ImportError:\n"
+            "    pass\n"
+            'pytestmark = pytest.mark.skipif(not _HAVE_MODULE, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        8,
+        id="module_success_path_assignment_taints",
+    ),
 ]
 
 
@@ -3546,6 +3580,23 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_import_binds_unrelated_name",
+    ),
+    # The skip reads a name the probe never touches (always False, so pytest
+    # skips even with a working import: not import-driven).
+    pytest.param(
+        (
+            "import pytest\n"
+            "OTHER = False\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "    _HAVE_MODULE = True\n"
+            "except ImportError:\n"
+            "    pass\n"
+            'pytestmark = pytest.mark.skipif(not OTHER, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="module_skip_reads_name_unrelated_to_probe",
     ),
 ]
 
