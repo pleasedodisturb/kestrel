@@ -3216,6 +3216,17 @@ _FLAG_CASES = [
         11,
         id="result_call_site_globals_reach_callee_through_wrapper",
     ),
+    # Codex review (run bb14ca7f9827): a default argument captures the global
+    # at `def` time, so a later clear does not reach the parameter.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "def available(have=_HAVE_MODULE):\n"
+        + "    return have\n"
+        + "_HAVE_MODULE = True\n"
+        + 'pytestmark = pytest.mark.skipif(not available(), reason="x")\n',
+        10,
+        id="result_tainted_default_argument_returned",
+    ),
 ]
 
 
@@ -4111,6 +4122,17 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_function_returns_global_cleared_before_call",
+    ),
+    # The default is captured after the clear, so the parameter is clean.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_HAVE_MODULE = True\n"
+        + "def available(have=_HAVE_MODULE):\n"
+        + "    return have\n"
+        + 'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+        + "def test_something():\n"
+        + "    assert False\n",
+        id="result_default_argument_captured_after_clear",
     ),
 ]
 
