@@ -405,7 +405,10 @@ def _gated_region_ids(scope: list[ast.AST], taint: _Taint, ns: _Namespaces) -> s
 def _import_time_taint_seeds(
     tree: ast.Module, ns: _Namespaces
 ) -> dict[tuple[_Scope, str], set[int]]:
-    """Module globals an import-masking handler really assigns at import time, by line.
+    """Module globals a masking try really binds at import time, by line.
+
+    Both paths count: what a masking handler binds (failure) and what the try
+    body / ``else`` binds (success, e.g. ``try: import x as mod``).
 
     A handler in import-time scope (module or class body, see
     ``_module_scope_nodes``) seeds every name it assigns, at the assignment's
@@ -423,19 +426,23 @@ def _import_time_taint_seeds(
         for node in nodes:
             if not isinstance(node, ast.Try | ast.TryStar):
                 continue
-            for handler in node.handlers:
-                if not _handler_masks_imports(node, handler):
-                    continue
-                # Only what the handler itself runs: a function defined in the
-                # handler binds its own locals, and only if it is ever called.
-                for sub in _module_scope_nodes(list(handler.body)):
-                    bound = _assignment_parts(sub)[0] | _import_bound_names(sub)
-                    # A `global` helper binds module globals; otherwise the
-                    # handler binds in the namespace it runs in.
-                    where = None if keep is not None else ns.of(sub)
-                    for name in bound if keep is None else bound & keep:
-                        key = (ns.binding(where, name), name)
-                        seeds.setdefault(key, set()).add(line or sub.lineno)
+            masking = [h for h in node.handlers if _handler_masks_imports(node, h)]
+            if not masking:
+                continue
+            # Both paths of a masking try bind import-dependent names: the
+            # handlers (failure) and the try body / else (success). Only what
+            # runs here counts: a function defined inside binds its own locals.
+            paths = [*node.body, *node.orelse]
+            for handler in masking:
+                paths.extend(handler.body)
+            for sub in _module_scope_nodes(paths):
+                bound = _assignment_parts(sub)[0] | _import_bound_names(sub)
+                # A `global` helper binds module globals; otherwise the code
+                # binds in the namespace it runs in.
+                where = None if keep is not None else ns.of(sub)
+                for name in bound if keep is None else bound & keep:
+                    key = (ns.binding(where, name), name)
+                    seeds.setdefault(key, set()).add(line or sub.lineno)
 
     collect(scope, None, None)
     calls: dict[str, set[int]] = {}
