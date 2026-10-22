@@ -3155,6 +3155,17 @@ _FLAG_CASES = [
         11,
         id="result_function_branches_on_tainted_global",
     ),
+    # Codex review (run 2c8f93940f27): a function called during import sees
+    # globals as of the call, so a later top-level clear does not help.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "def available():\n"
+        + "    return _HAVE_MODULE\n"
+        + 'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+        + "_HAVE_MODULE = True\n",
+        9,
+        id="result_import_time_call_sees_globals_before_later_clear",
+    ),
 ]
 
 
