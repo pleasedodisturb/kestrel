@@ -3082,6 +3082,24 @@ _FLAG_CASES = [
         15,
         id="result_local_match_on_dependent_subject_gates_cases",
     ),
+    # Codex review (run a43d2a6054d1): a for loop's iterable decides whether
+    # its body runs, so a tainted iterable gates the body. Skips silently.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "for _ in ([] if _HAVE_MODULE else [None]):\n"
+            '    pytest.skip("missing", allow_module_level=True)\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        8,
+        id="flow_for_over_tainted_iterable_gates_body",
+    ),
 ]
 
 
@@ -3941,6 +3959,23 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="flow_match_on_independent_subject_does_not_gate",
+    ),
+    # A loop over an iterable independent of the import gates nothing (here
+    # it never runs; the test fails loudly).
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "for _ in []:\n"
+            '    pytest.skip("never", allow_module_level=True)\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="flow_for_over_independent_iterable_does_not_gate",
     ),
 ]
 
