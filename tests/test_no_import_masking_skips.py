@@ -429,7 +429,7 @@ def _import_time_taint_seeds(
                 # Only what the handler itself runs: a function defined in the
                 # handler binds its own locals, and only if it is ever called.
                 for sub in _module_scope_nodes(list(handler.body)):
-                    bound, _ = _assignment_parts(sub)
+                    bound = _assignment_parts(sub)[0] | _import_bound_names(sub)
                     # A `global` helper binds module globals; otherwise the
                     # handler binds in the namespace it runs in.
                     where = None if keep is not None else ns.of(sub)
@@ -519,7 +519,7 @@ def _local_flow_returns_dependent(
                 dependent |= _assignment_parts(sub)[0] | _import_bound_names(sub)
             for handler in masking:
                 for sub in _module_scope_nodes(list(handler.body)):
-                    dependent |= _assignment_parts(sub)[0]
+                    dependent |= _assignment_parts(sub)[0] | _import_bound_names(sub)
         if isinstance(stmt, ast.Assign | ast.AnnAssign) and stmt.value is not None:
             targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
             if _condition_references_names(stmt.value, frozenset(dependent)):
