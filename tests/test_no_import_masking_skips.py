@@ -3272,6 +3272,20 @@ _FLAG_CASES = [
         10,
         id="def_on_masking_paths_binds_name",
     ),
+    # Codex review (run b522a161648c): a `def` in a branch gated on a tainted
+    # flag binds a tainted name, like an assignment there.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "if _HAVE_MODULE:\n"
+        + "    def available():\n"
+        + "        return True\n"
+        + "else:\n"
+        + "    def available():\n"
+        + "        return False\n"
+        + 'pytestmark = pytest.mark.skipif(not available(), reason="x")\n',
+        13,
+        id="def_in_flag_gated_branch_binds_tainted_name",
+    ),
 ]
 
 
