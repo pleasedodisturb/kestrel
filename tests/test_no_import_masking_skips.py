@@ -2738,6 +2738,42 @@ _FLAG_CASES = [
         9,
         id="result_bare_import_binding_returned",
     ),
+    # Codex review (run 309c5bd5034e): an import inside a masking handler
+    # binds a name on the failure path, in a function or at module level.
+    # Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def available():\n"
+            "    mod = None\n"
+            "    try:\n"
+            "        import not_a_real_module as other\n"
+            "    except ImportError:\n"
+            "        import types as mod\n"
+            "    return mod is None\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_handler_import_binding_returned",
+    ),
+    pytest.param(
+        (
+            "import types\n"
+            "import pytest\n"
+            "mod = None\n"
+            "try:\n"
+            "    import not_a_real_module as other\n"
+            "except ImportError:\n"
+            "    import types as mod\n"
+            'pytestmark = pytest.mark.skipif(mod is types, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        8,
+        id="handler_import_binding_taints_module_name",
+    ),
 ]
 
 
