@@ -3183,6 +3183,19 @@ _FLAG_CASES = [
         9,
         id="result_import_time_call_sees_globals_before_later_clear",
     ),
+    # Codex review (run 37fd01e75036): call-site globals flow through the
+    # call graph, so `available()` called at import carries them to `inner()`.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "def inner():\n"
+        + "    return _HAVE_MODULE\n"
+        + "def available():\n"
+        + "    return inner()\n"
+        + 'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+        + "_HAVE_MODULE = True\n",
+        11,
+        id="result_call_site_globals_reach_callee_through_wrapper",
+    ),
 ]
 
 
