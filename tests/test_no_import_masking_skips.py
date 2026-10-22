@@ -878,7 +878,9 @@ def _flow_taint(
         taint = _Taint(taint_lines, clears)
         gated = _gated_region_ids(scope, taint, ns)
         for node in scope:
-            bound, value = _assignment_parts(node)
+            # Any binding counts under a tainted gate (incl. def/class/import);
+            # only assignment-like nodes carry a value to read taint from.
+            bound, value = _bound_names(node), _assignment_parts(node)[1]
             if not bound:
                 continue
             where = ns.of(node)
