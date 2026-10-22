@@ -380,13 +380,24 @@ def _is_skip_helper_call(node: ast.AST, helpers: frozenset[str]) -> bool:
 
 
 def _assignment_parts(node: ast.AST) -> tuple[set[str], ast.expr | None]:
-    """(names bound, value expression) for an assignment-like node, else (empty, None)."""
+    """(names bound, value expression) for an assignment-like node, else (empty, None).
+
+    A ``for`` binds its target from its iterable, and a ``with`` binds its
+    ``as`` targets from its context expressions, so dependencies propagate
+    through them like through an assignment.
+    """
     targets: list[ast.expr] = []
     value: ast.expr | None = None
     if isinstance(node, ast.Assign):
         targets, value = list(node.targets), node.value
     elif isinstance(node, ast.AnnAssign | ast.AugAssign | ast.NamedExpr):
         targets, value = [node.target], node.value
+    elif isinstance(node, ast.For | ast.AsyncFor):
+        targets, value = [node.target], node.iter
+    elif isinstance(node, ast.With | ast.AsyncWith):
+        items = [item for item in node.items if item.optional_vars is not None]
+        targets = [item.optional_vars for item in items if item.optional_vars is not None]
+        value = ast.Tuple(elts=[item.context_expr for item in items], ctx=ast.Load())
     bound = {sub.id for t in targets for sub in ast.walk(t) if isinstance(sub, ast.Name)}
     return bound, value
 
@@ -500,15 +511,7 @@ def _bound_names(node: ast.AST) -> set[str]:
     ``except ... as NAME`` is deliberately excluded: Python deletes NAME when
     the handler ends, so it cannot carry a flag past the handler.
     """
-    names = _assignment_parts(node)[0] | _import_bound_names(node)
-    targets: list[ast.expr] = []
-    if isinstance(node, ast.For | ast.AsyncFor):
-        targets.append(node.target)
-    elif isinstance(node, ast.With | ast.AsyncWith):
-        targets.extend(item.optional_vars for item in node.items if item.optional_vars)
-    for target in targets:
-        names |= {sub.id for sub in ast.walk(target) if isinstance(sub, ast.Name)}
-    return names
+    return _assignment_parts(node)[0] | _import_bound_names(node)
 
 
 def _local_flow_returns_dependent(
