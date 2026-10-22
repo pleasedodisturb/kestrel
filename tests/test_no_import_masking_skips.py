@@ -2650,6 +2650,25 @@ _FLAG_CASES = [
         12,
         id="result_wrapper_branches_on_masking_result",
     ),
+    # Namespaces (Codex review run 5083bc2701b1): a class body sees its own
+    # masking function; pinned so the wrapper fix cannot drop it.
+    pytest.param(
+        (
+            "import pytest\n"
+            "class TestProbe:\n"
+            "    def probe():\n"
+            "        try:\n"
+            "            import not_a_real_module\n"
+            "            return True\n"
+            "        except ImportError:\n"
+            "            return False\n"
+            '    pytestmark = pytest.mark.skipif(not probe(), reason="x")\n'
+            "    def test_something(self):\n"
+            "        assert False\n"
+        ),
+        9,
+        id="result_class_body_uses_class_masking_function",
+    ),
 ]
 
 
@@ -3381,6 +3400,29 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_wrapper_calls_masking_result_single_return",
+    ),
+    # A function body resolves bare names against module globals only, so a
+    # masking method on a class cannot taint callers of a module-level
+    # function with the same name (the test runs).
+    pytest.param(
+        (
+            "import pytest\n"
+            "class Unused:\n"
+            "    def probe(self):\n"
+            "        try:\n"
+            "            import not_a_real_module\n"
+            "            return True\n"
+            "        except ImportError:\n"
+            "            return False\n"
+            "def probe():\n"
+            "    return True\n"
+            "def available():\n"
+            "    return probe()\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_class_method_does_not_taint_module_wrapper",
     ),
 ]
 
