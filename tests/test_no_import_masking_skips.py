@@ -2675,6 +2675,59 @@ _FLAG_CASES = [
         9,
         id="result_class_body_uses_class_masking_function",
     ),
+    # Codex review (run 402db9202f23): an import statement binds a name on
+    # the success path just like an assignment. Each row skips silently.
+    pytest.param(
+        (
+            "import pytest\n"
+            "def available():\n"
+            "    mod = None\n"
+            "    try:\n"
+            "        import not_a_real_module as mod\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return mod is not None\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_import_alias_binding_returned",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def available():\n"
+            "    thing = None\n"
+            "    try:\n"
+            "        from not_a_real_module import thing\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return thing is not None\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_from_import_binding_returned",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def available():\n"
+            "    not_a_real_module = None\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return not_a_real_module is not None\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_bare_import_binding_returned",
+    ),
 ]
 
 
@@ -3429,6 +3482,24 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="result_class_method_does_not_taint_module_wrapper",
+    ),
+    # The import binds a different name than the one returned, so the result
+    # is None either way (pytest skips even with a working import).
+    pytest.param(
+        (
+            "import pytest\n"
+            "def available():\n"
+            "    mod = None\n"
+            "    try:\n"
+            "        import not_a_real_module as other\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    return mod is not None\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_import_binds_unrelated_name",
     ),
 ]
 
