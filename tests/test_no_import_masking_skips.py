@@ -51,7 +51,10 @@ implement):
   ``importlib.util.find_spec(...)`` checks that use no ``try``, mutation
   through method calls (``FLAGS.update(have=False)``), and skip helpers
   reached through an alias or attribute;
-- dynamic writes (``exec``, ``globals()[...] = ...``), out of scope.
+- dynamic namespace access, out of scope: ``exec``/``eval``, and reads or
+  writes through ``globals()``/``locals()``/``vars()`` (e.g. ``return
+  "mod" in locals()`` after a masked import, or ``globals()["HAVE"] =
+  False``). The guard reasons about static bindings only.
 
 Deliberately conservative (may flag code that pytest runs): a rebinding
 inside a loop or ``try`` body never clears taint, because it is not
