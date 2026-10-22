@@ -2999,6 +2999,72 @@ _FLAG_CASES = [
         10,
         id="flow_match_capture_bound_from_tainted_subject",
     ),
+    # Codex review (run e235566fe350): a match whose subject or any case
+    # guard is tainted gates its case bodies, like a tainted if/while.
+    # Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "match _HAVE_MODULE:\n"
+            "    case False:\n"
+            "        MISSING = True\n"
+            "    case True:\n"
+            "        MISSING = False\n"
+            'pytestmark = pytest.mark.skipif(MISSING, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        12,
+        id="flow_match_on_tainted_subject_gates_cases",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "match 1:\n"
+            "    case 1 if not _HAVE_MODULE:\n"
+            "        MISSING = True\n"
+            "    case _:\n"
+            "        MISSING = False\n"
+            'pytestmark = pytest.mark.skipif(MISSING, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        12,
+        id="flow_match_tainted_case_guard_gates_cases",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def available():\n"
+            "    ok = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        ok = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    match ok:\n"
+            "        case True:\n"
+            "            result = True\n"
+            "        case _:\n"
+            "            result = False\n"
+            "    return result\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        15,
+        id="result_local_match_on_dependent_subject_gates_cases",
+    ),
 ]
 
 
@@ -3840,6 +3906,24 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="flow_match_capture_bound_from_independent_subject",
+    ),
+    # A match on an independent subject with no tainted guard gates nothing.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "match 1:\n"
+            "    case 1:\n"
+            "        MISSING = False\n"
+            'pytestmark = pytest.mark.skipif(MISSING, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="flow_match_on_independent_subject_does_not_gate",
     ),
 ]
 
