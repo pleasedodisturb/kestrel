@@ -656,7 +656,9 @@ def _probes_and_can_return_differently(
     return len(values) > 1
 
 
-def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scope, str], set[int]]:
+def _masking_result_seeds(
+    tree: ast.Module, ns: _Namespaces, tainted_globals: frozenset[str] = frozenset()
+) -> dict[tuple[_Scope, str], set[int]]:
     """Import-time functions whose failure path returns a value, seeded at the ``def``.
 
     ``def check(): try: import x; return True / except ImportError: return
@@ -686,13 +688,15 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
         for fn in _module_scope_nodes(list(tree.body))
         if isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef)
     ]
-    grew = bool(seeds)
+    # `tainted_globals`: module globals tainted when a function body runs
+    # (end of module), e.g. `def available(): return HAVE`.
+    grew = bool(seeds) or bool(tainted_globals)
     while grew:
         grew = False
         # A function body resolves bare names against module globals only (a
         # class namespace is never visible from inside a function), so only
         # module-scope masking functions can reach a wrapper by name.
-        known = frozenset(name for scope, name in seeds if scope is None)
+        known = frozenset(name for scope, name in seeds if scope is None) | tainted_globals
         for fn in functions:
             key = (ns.binding(ns.of(fn), fn.name), fn.name)
             if key in seeds or not (
@@ -1170,10 +1174,20 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
             _report(node.lineno)
 
     ns = _namespaces(tree)
+    # Module taint and masking-result functions feed each other (a function
+    # can return a tainted global; a masking result taints its callers), so
+    # alternate until neither grows. A function body runs after import, so it
+    # sees the module taint at end of module.
     seeds = _import_time_taint_seeds(tree, ns)
-    for key, lines in _masking_result_seeds(tree, ns).items():
-        seeds.setdefault(key, set()).update(lines)
-    taint = _flow_taint(tree, names, seeds, ns)
+    tainted_globals: frozenset[str] = frozenset()
+    while True:
+        for key, lines in _masking_result_seeds(tree, ns, tainted_globals).items():
+            seeds.setdefault(key, set()).update(lines)
+        taint = _flow_taint(tree, names, seeds, ns)
+        final = taint.at(_END_OF_MODULE)
+        if final <= tainted_globals:
+            break
+        tainted_globals = final
     for lineno in _find_masking_skipif_uses(tree, names, taint, ns):
         _report(lineno)
 
