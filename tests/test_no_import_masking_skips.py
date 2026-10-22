@@ -3249,6 +3249,26 @@ _FLAG_CASES = [
         10,
         id="result_tainted_default_argument_returned",
     ),
+    # Codex review (run 18fb783d5d0a): a `def` on a masking path binds its
+    # name like an assignment, so which function exists depends on the import.
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    def available():\n"
+            "        return False\n"
+            "else:\n"
+            "    def available():\n"
+            "        return True\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="def_on_masking_paths_binds_name",
+    ),
 ]
 
 
