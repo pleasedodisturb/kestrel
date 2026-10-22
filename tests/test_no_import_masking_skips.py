@@ -657,7 +657,10 @@ def _probes_and_can_return_differently(
 
 
 def _masking_result_seeds(
-    tree: ast.Module, ns: _Namespaces, tainted_globals: frozenset[str] = frozenset()
+    tree: ast.Module,
+    ns: _Namespaces,
+    tainted_globals: frozenset[str] = frozenset(),
+    call_globals: dict[str, frozenset[str]] | None = None,
 ) -> dict[tuple[_Scope, str], set[int]]:
     """Import-time functions whose failure path returns a value, seeded at the ``def``.
 
@@ -688,9 +691,12 @@ def _masking_result_seeds(
         for fn in _module_scope_nodes(list(tree.body))
         if isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef)
     ]
-    # `tainted_globals`: module globals tainted when a function body runs
-    # (end of module), e.g. `def available(): return HAVE`.
-    grew = bool(seeds) or bool(tainted_globals)
+    # `tainted_globals`: module globals tainted when a function body runs after
+    # import (end of module), e.g. `def available(): return HAVE`.
+    # `call_globals[name]`: globals tainted at an import-time call of `name`
+    # (a skipif argument calls it before a later top-level clear).
+    call_globals = call_globals or {}
+    grew = bool(seeds) or bool(tainted_globals) or bool(call_globals)
     while grew:
         grew = False
         # A function body resolves bare names against module globals only (a
@@ -699,9 +705,10 @@ def _masking_result_seeds(
         known = frozenset(name for scope, name in seeds if scope is None) | tainted_globals
         for fn in functions:
             key = (ns.binding(ns.of(fn), fn.name), fn.name)
+            seen = known | call_globals.get(fn.name, frozenset())
             if key in seeds or not (
-                _local_flow_returns_dependent(fn, known)
-                or _probes_and_can_return_differently(fn, known)
+                _local_flow_returns_dependent(fn, seen)
+                or _probes_and_can_return_differently(fn, seen)
             ):
                 continue
             seeds[key] = {fn.lineno}
@@ -1180,14 +1187,24 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
     # sees the module taint at end of module.
     seeds = _import_time_taint_seeds(tree, ns)
     tainted_globals: frozenset[str] = frozenset()
+    call_globals: dict[str, frozenset[str]] = {}
     while True:
-        for key, lines in _masking_result_seeds(tree, ns, tainted_globals).items():
+        for key, lines in _masking_result_seeds(tree, ns, tainted_globals, call_globals).items():
             seeds.setdefault(key, set()).update(lines)
         taint = _flow_taint(tree, names, seeds, ns)
         final = taint.at(_END_OF_MODULE)
-        if final <= tainted_globals:
+        at_calls: dict[str, frozenset[str]] = {}
+        for node in _module_scope_nodes(list(tree.body)):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                name = node.func.id
+                at_calls[name] = at_calls.get(name, frozenset()) | taint.at(node.lineno)
+        if final <= tainted_globals and all(
+            v <= call_globals.get(k, frozenset()) for k, v in at_calls.items()
+        ):
             break
-        tainted_globals = final
+        tainted_globals |= final
+        for k, v in at_calls.items():
+            call_globals[k] = call_globals.get(k, frozenset()) | v
     for lineno in _find_masking_skipif_uses(tree, names, taint, ns):
         _report(lineno)
 
