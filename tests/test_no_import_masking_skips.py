@@ -2948,6 +2948,42 @@ _FLAG_CASES = [
         12,
         id="result_local_for_target_bound_from_dependent_iterable",
     ),
+    # Codex review (run 92d4ab5428cd): match/case captures are bindings from
+    # the match subject. Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import pytest\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    match False:\n"
+            "        case available:\n"
+            "            pass\n"
+            'pytestmark = pytest.mark.skipif(not available, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        8,
+        id="handler_match_capture_binds_flag",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "match [not _HAVE_MODULE]:\n"
+            "    case [missing]:\n"
+            "        pass\n"
+            'pytestmark = pytest.mark.skipif(missing, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="flow_match_capture_bound_from_tainted_subject",
+    ),
 ]
 
 
@@ -3771,6 +3807,24 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="flow_for_target_bound_from_independent_iterable",
+    ),
+    # A match capture bound from a subject independent of the import.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "match [False]:\n"
+            "    case [missing]:\n"
+            "        pass\n"
+            'pytestmark = pytest.mark.skipif(missing, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="flow_match_capture_bound_from_independent_subject",
     ),
 ]
 
