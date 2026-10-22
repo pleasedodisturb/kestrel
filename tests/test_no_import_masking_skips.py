@@ -613,7 +613,10 @@ def _masking_result_seeds(tree: ast.Module, ns: _Namespaces) -> dict[tuple[_Scop
     grew = bool(seeds)
     while grew:
         grew = False
-        known = frozenset(name for _, name in seeds)
+        # A function body resolves bare names against module globals only (a
+        # class namespace is never visible from inside a function), so only
+        # module-scope masking functions can reach a wrapper by name.
+        known = frozenset(name for scope, name in seeds if scope is None)
         for fn in functions:
             key = (ns.binding(ns.of(fn), fn.name), fn.name)
             if key in seeds or not (
