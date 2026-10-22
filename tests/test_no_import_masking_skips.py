@@ -2886,6 +2886,65 @@ _FLAG_CASES = [
         10,
         id="result_handler_for_target_binds_returned_local",
     ),
+    # Codex review (run b5666ec62e9c): a for target is bound from its
+    # iterable and a with-as target from its context expression, so taint
+    # propagates through them. Each row skips silently under pytest.
+    pytest.param(
+        (
+            "import contextlib\n"
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "for missing in [not _HAVE_MODULE]:\n"
+            "    pass\n"
+            'pytestmark = pytest.mark.skipif(missing, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="flow_for_target_bound_from_tainted_iterable",
+    ),
+    pytest.param(
+        (
+            "import contextlib\n"
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "with contextlib.nullcontext(not _HAVE_MODULE) as missing:\n"
+            "    pass\n"
+            'pytestmark = pytest.mark.skipif(missing, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        10,
+        id="flow_with_target_bound_from_tainted_context",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "def available():\n"
+            "    ok = False\n"
+            "    try:\n"
+            "        import not_a_real_module\n"
+            "        ok = True\n"
+            "    except ImportError:\n"
+            "        pass\n"
+            "    for result in [ok]:\n"
+            "        pass\n"
+            "    return result\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        12,
+        id="result_local_for_target_bound_from_dependent_iterable",
+    ),
 ]
 
 
@@ -3691,6 +3750,24 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="handler_except_as_name_is_deleted_after_handler",
+    ),
+    # A loop target bound from an iterable independent of the import.
+    pytest.param(
+        (
+            "import contextlib\n"
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "for missing in [False]:\n"
+            "    pass\n"
+            'pytestmark = pytest.mark.skipif(missing, reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="flow_for_target_bound_from_independent_iterable",
     ),
 ]
 
