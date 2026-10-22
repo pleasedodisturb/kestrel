@@ -1198,6 +1198,28 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
                 name = node.func.id
                 at_calls[name] = at_calls.get(name, frozenset()) | taint.at(node.lineno)
+        # A default argument captures its value at `def` time: a parameter whose
+        # default reads taint there starts out dependent inside the function.
+        for fn in _module_scope_nodes(list(tree.body)):
+            if not isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            at_def = taint.at(fn.lineno, ns.of(fn))
+            positional = [*fn.args.posonlyargs, *fn.args.args]
+            pairs = list(
+                zip(
+                    positional[len(positional) - len(fn.args.defaults) :],
+                    fn.args.defaults,
+                    strict=True,
+                )
+            )
+            pairs += [
+                (a, d) for a, d in zip(fn.args.kwonlyargs, fn.args.kw_defaults, strict=True) if d
+            ]
+            captured = frozenset(
+                arg.arg for arg, default in pairs if _condition_references_names(default, at_def)
+            )
+            if captured:
+                at_calls[fn.name] = at_calls.get(fn.name, frozenset()) | captured
         # A function called at import runs its own calls then too: push each
         # function's call-site globals to the functions it calls, to a fixpoint.
         callees: dict[str, set[str]] = {}
