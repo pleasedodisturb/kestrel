@@ -417,14 +417,34 @@ def _assignment_parts(node: ast.AST) -> tuple[set[str], ast.expr | None]:
     return bound, value
 
 
+def _gate_parts(node: ast.AST) -> tuple[list[ast.expr], list[ast.stmt]] | None:
+    """(tests that decide it, bodies it gates) for a branching statement, else None.
+
+    ``if``/``while`` are gated by their test; a ``match`` by its subject and
+    every case guard, gating all case bodies.
+    """
+    if isinstance(node, ast.If | ast.While):
+        return [node.test], [*node.body, *node.orelse]
+    if isinstance(node, ast.Match):
+        tests = [node.subject, *(case.guard for case in node.cases if case.guard)]
+        return tests, [stmt for case in node.cases for stmt in case.body]
+    return None
+
+
+def _gated_by(node: ast.AST, tainted: frozenset[str]) -> list[ast.AST]:
+    """Import-time nodes ``node`` gates when one of its deciding tests reads ``tainted``."""
+    parts = _gate_parts(node)
+    if parts is None or not any(_condition_references_names(t, tainted) for t in parts[0]):
+        return []
+    return _module_scope_nodes(list(parts[1]))
+
+
 def _gated_region_ids(scope: list[ast.AST], taint: _Taint, ns: _Namespaces) -> set[int]:
-    """ids of import-time nodes that only run because of a tainted ``if``/``while`` test."""
+    """ids of import-time nodes that only run because of a tainted branch decision."""
     gated: set[int] = set()
     for node in scope:
-        if isinstance(node, ast.If | ast.While) and _condition_references_names(
-            node.test, taint.at(node.lineno, ns.of(node))
-        ):
-            gated |= {id(sub) for sub in _module_scope_nodes(node.body + node.orelse)}
+        if _gate_parts(node) is not None:
+            gated |= {id(sub) for sub in _gated_by(node, taint.at(node.lineno, ns.of(node)))}
     return gated
 
 
@@ -579,10 +599,7 @@ def _local_flow_returns_dependent(
         while changed:
             before = (len(dependent), len(gated))
             for node in nodes:
-                if isinstance(node, ast.If | ast.While) and _condition_references_names(
-                    node.test, frozenset(dependent)
-                ):
-                    gated |= {id(sub) for sub in _module_scope_nodes(node.body + node.orelse)}
+                gated |= {id(sub) for sub in _gated_by(node, frozenset(dependent))}
             for node in nodes:
                 bound, value = _assignment_parts(node)
                 if value is not None and (
