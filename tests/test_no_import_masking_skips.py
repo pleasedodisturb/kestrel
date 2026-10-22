@@ -3103,6 +3103,44 @@ _FLAG_CASES = [
         8,
         id="flow_for_over_tainted_iterable_gates_body",
     ),
+    # Codex review (run 0f2d5821cd1f): a function that returns (or branches
+    # on) a module global tainted when it runs is a masking result.
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "def available():\n"
+            "    return _HAVE_MODULE\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        9,
+        id="result_function_returns_tainted_global",
+    ),
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "def available():\n"
+            "    if _HAVE_MODULE:\n"
+            "        return True\n"
+            "    return False\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        11,
+        id="result_function_branches_on_tainted_global",
+    ),
 ]
 
 
@@ -3979,6 +4017,25 @@ _IGNORE_CASES = [
             "    assert False\n"
         ),
         id="flow_for_over_independent_iterable_does_not_gate",
+    ),
+    # The global is cleared at top level before any call, so the function
+    # returns True (the test runs).
+    pytest.param(
+        (
+            "import pytest\n"
+            "_HAVE_MODULE = True\n"
+            "try:\n"
+            "    import not_a_real_module\n"
+            "except ImportError:\n"
+            "    _HAVE_MODULE = False\n"
+            "_HAVE_MODULE = True\n"
+            "def available():\n"
+            "    return _HAVE_MODULE\n"
+            'pytestmark = pytest.mark.skipif(not available(), reason="x")\n'
+            "def test_something():\n"
+            "    assert False\n"
+        ),
+        id="result_function_returns_global_cleared_before_call",
     ),
 ]
 
