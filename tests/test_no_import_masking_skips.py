@@ -436,7 +436,7 @@ def _import_time_taint_seeds(
             for handler in masking:
                 paths.extend(handler.body)
             for sub in _module_scope_nodes(paths):
-                bound = _assignment_parts(sub)[0] | _import_bound_names(sub)
+                bound = _bound_names(sub)
                 # A `global` helper binds module globals; otherwise the code
                 # binds in the namespace it runs in.
                 where = None if keep is not None else ns.of(sub)
@@ -493,6 +493,24 @@ def _import_bound_names(node: ast.AST) -> set[str]:
     return set()
 
 
+def _bound_names(node: ast.AST) -> set[str]:
+    """Every name a single statement binds: assignment targets, import bindings,
+    ``for`` targets and ``with ... as`` targets.
+
+    ``except ... as NAME`` is deliberately excluded: Python deletes NAME when
+    the handler ends, so it cannot carry a flag past the handler.
+    """
+    names = _assignment_parts(node)[0] | _import_bound_names(node)
+    targets: list[ast.expr] = []
+    if isinstance(node, ast.For | ast.AsyncFor):
+        targets.append(node.target)
+    elif isinstance(node, ast.With | ast.AsyncWith):
+        targets.extend(item.optional_vars for item in node.items if item.optional_vars)
+    for target in targets:
+        names |= {sub.id for sub in ast.walk(target) if isinstance(sub, ast.Name)}
+    return names
+
+
 def _local_flow_returns_dependent(
     fn: ast.FunctionDef | ast.AsyncFunctionDef, initial: frozenset[str] = frozenset()
 ) -> bool:
@@ -523,10 +541,10 @@ def _local_flow_returns_dependent(
             if not masking:
                 continue
             for sub in _module_scope_nodes([*node.body, *node.orelse]):
-                dependent |= _assignment_parts(sub)[0] | _import_bound_names(sub)
+                dependent |= _bound_names(sub)
             for handler in masking:
                 for sub in _module_scope_nodes(list(handler.body)):
-                    dependent |= _assignment_parts(sub)[0] | _import_bound_names(sub)
+                    dependent |= _bound_names(sub)
         if isinstance(stmt, ast.Assign | ast.AnnAssign) and stmt.value is not None:
             targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
             if _condition_references_names(stmt.value, frozenset(dependent)):
