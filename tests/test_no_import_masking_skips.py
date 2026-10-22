@@ -1198,6 +1198,26 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
                 name = node.func.id
                 at_calls[name] = at_calls.get(name, frozenset()) | taint.at(node.lineno)
+        # A function called at import runs its own calls then too: push each
+        # function's call-site globals to the functions it calls, to a fixpoint.
+        callees: dict[str, set[str]] = {}
+        for fn in _module_scope_nodes(list(tree.body)):
+            if isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef):
+                callees.setdefault(fn.name, set()).update(
+                    sub.func.id
+                    for sub in _module_scope_nodes(list(fn.body))
+                    if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name)
+                )
+        spread = True
+        while spread:
+            spread = False
+            for caller, names_called in callees.items():
+                for callee in names_called:
+                    have = at_calls.get(callee, frozenset())
+                    more = have | at_calls.get(caller, frozenset())
+                    if more != have:
+                        at_calls[callee] = more
+                        spread = True
         if final <= tainted_globals and all(
             v <= call_globals.get(k, frozenset()) for k, v in at_calls.items()
         ):
