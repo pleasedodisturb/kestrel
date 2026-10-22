@@ -477,14 +477,24 @@ def _always_returns(stmts: list[ast.stmt]) -> bool:
     return False
 
 
+def _import_bound_names(node: ast.AST) -> set[str]:
+    """Names an ``import``/``from ... import`` statement binds (``import a.b`` binds ``a``)."""
+    if isinstance(node, ast.Import):
+        return {alias.asname or alias.name.split(".")[0] for alias in node.names}
+    if isinstance(node, ast.ImportFrom):
+        return {alias.asname or alias.name for alias in node.names if alias.name != "*"}
+    return set()
+
+
 def _local_flow_returns_dependent(
     fn: ast.FunctionDef | ast.AsyncFunctionDef, initial: frozenset[str] = frozenset()
 ) -> bool:
     """True if ``fn`` returns a value that depends on a masked import (local flow).
 
     Walks the direct statements of ``fn.body`` in source order, tracking
-    import-dependent locals: those assigned on either path of a ``try`` with a
-    masking handler (the handler, or the try body / ``else``), and any local
+    import-dependent locals: those assigned (or bound by an import statement)
+    on either path of a ``try`` with a masking handler (the handler, or the
+    try body / ``else``), and any local
     later bound from one (``result = available``). A direct, unconditional
     rebinding to a value that reads none of them clears the names it rebinds
     (``available = True``); rebindings nested in ``if``/loops/``try`` only add,
@@ -506,7 +516,7 @@ def _local_flow_returns_dependent(
             if not masking:
                 continue
             for sub in _module_scope_nodes([*node.body, *node.orelse]):
-                dependent |= _assignment_parts(sub)[0]
+                dependent |= _assignment_parts(sub)[0] | _import_bound_names(sub)
             for handler in masking:
                 for sub in _module_scope_nodes(list(handler.body)):
                     dependent |= _assignment_parts(sub)[0]
