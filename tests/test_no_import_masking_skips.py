@@ -3341,6 +3341,45 @@ _FLAG_CASES = [
         9,
         id="boolop_skip_helper_call_gated_on_flag",
     ),
+    # Codex review (run e2231b0d4e36): a comprehension's iterables and filters
+    # gate what comes after them, like a loop and an `if`.
+    *(
+        pytest.param(_MASKED_FLAG_PREAMBLE + source + "\n", 7, id=case_id)
+        for case_id, source in [
+            (
+                "listcomp_filter_gated_on_flag",
+                '[pytest.skip("m", allow_module_level=True) for _ in [None] if not _HAVE_MODULE]',
+            ),
+            (
+                "listcomp_iterable_gated_on_flag",
+                '[pytest.skip("m", allow_module_level=True)'
+                " for _ in ([None] if not _HAVE_MODULE else [])]",
+            ),
+            (
+                "setcomp_filter_gated_on_flag",
+                '{pytest.skip("m", allow_module_level=True) for _ in [None] if not _HAVE_MODULE}',
+            ),
+            (
+                "dictcomp_value_gated_on_flag",
+                '{0: pytest.skip("m", allow_module_level=True)'
+                " for _ in [None] if not _HAVE_MODULE}",
+            ),
+            (
+                "comprehension_later_filter_gated_on_flag",
+                '[_ for _ in [None] if not _HAVE_MODULE if pytest.skip("m", allow_module_level=True)]',
+            ),
+            (
+                "comprehension_second_iterable_gated_on_flag",
+                "[_ for _ in [None] if not _HAVE_MODULE"
+                ' for __ in [pytest.skip("m", allow_module_level=True)]]',
+            ),
+            (
+                "consumed_generator_filter_gated_on_flag",
+                'list(pytest.skip("m", allow_module_level=True)'
+                " for _ in [None] if not _HAVE_MODULE)",
+            ),
+        ]
+    ),
 ]
 
 
@@ -4282,6 +4321,25 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="ifexp_mark_list_never_applied",
+    ),
+    # A comprehension filter on an untainted name, or a tainted filter that
+    # only runs after the skip, does not make the skip import-driven.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = True\n"
+        + '[pytest.skip("m", allow_module_level=True) for _ in [None] if not _OTHER]\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="comprehension_filter_on_untainted_name",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = False\n"
+        + "[_ for _ in [None] if _OTHER"
+        + ' if pytest.skip("m", allow_module_level=True) if _HAVE_MODULE]\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="comprehension_tainted_filter_after_skip",
     ),
 ]
 
