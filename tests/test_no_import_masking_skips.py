@@ -3288,6 +3288,37 @@ _FLAG_CASES = [
         13,
         id="def_in_flag_gated_branch_binds_tainted_name",
     ),
+    # Codex review (run 9d97b6cff097): a conditional expression or a
+    # short-circuit `or`/`and` gates its later operands like an `if` does.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'pytest.skip("m", allow_module_level=True) if not _HAVE_MODULE else None\n',
+        7,
+        id="ifexp_body_gated_on_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'None if _HAVE_MODULE else pytest.skip("m", allow_module_level=True)\n',
+        7,
+        id="ifexp_orelse_gated_on_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE + '_HAVE_MODULE or pytest.skip("m", allow_module_level=True)\n',
+        7,
+        id="boolop_or_gated_on_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE + 'not _HAVE_MODULE and pytest.skip("m", allow_module_level=True)\n',
+        7,
+        id="boolop_and_gated_on_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = False\n"
+        + '_OTHER or _HAVE_MODULE or pytest.skip("m", allow_module_level=True)\n',
+        8,
+        id="boolop_later_operand_gated_on_flag",
+    ),
 ]
 
 
@@ -4194,6 +4225,32 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert False\n",
         id="result_default_argument_captured_after_clear",
+    ),
+    # Expression gates decided by an untainted name, or whose tainted operand
+    # only runs after the skip, are not import-driven.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = True\n"
+        + 'pytest.skip("m", allow_module_level=True) if not _OTHER else None\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="ifexp_gated_on_untainted_name",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = True\n"
+        + '_OTHER or pytest.skip("m", allow_module_level=True)\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="boolop_gated_on_untainted_name",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = True\n"
+        + '_OTHER or pytest.skip("m", allow_module_level=True) or _HAVE_MODULE\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="boolop_tainted_operand_after_skip",
     ),
 ]
 
