@@ -3462,6 +3462,15 @@ _FLAG_CASES = [
         7,
         id="assert_message_gated_on_flag",
     ),
+    # Codex review (run bbd7b973785d): pytest evaluates a string skipif
+    # condition, so a generator read only there is consumed.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "gen = (not _HAVE_MODULE for _ in [None])\n"
+        + 'pytestmark = pytest.mark.skipif("any(gen)", reason="m")\n',
+        8,
+        id="string_skipif_condition_consumes_generator",
+    ),
 ]
 
 
@@ -4488,6 +4497,15 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="assert_message_on_untainted_name",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = False\n"
+        + "gen = (not _HAVE_MODULE for _ in [None])\n"
+        + 'pytestmark = pytest.mark.skipif("_OTHER", reason="m")\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="string_skipif_condition_reads_other_name",
     ),
 ]
 
