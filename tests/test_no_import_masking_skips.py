@@ -151,7 +151,15 @@ def _handler_is_broad(handler: ast.ExceptHandler) -> bool:
     """True for a bare ``except:`` or one that catches Exception/BaseException."""
     if handler.type is None:
         return True
-    return isinstance(handler.type, ast.Name) and handler.type.id in ("Exception", "BaseException")
+
+    def _catches_all(t: ast.expr) -> bool:
+        # A tuple catches what any of its entries catches.
+        if isinstance(t, ast.Tuple):
+            return any(_catches_all(elt) for elt in t.elts)
+        name = t.id if isinstance(t, ast.Name) else t.attr if isinstance(t, ast.Attribute) else ""
+        return name in ("Exception", "BaseException")
+
+    return _catches_all(handler.type)
 
 
 def _body_contains_import(body: list[ast.stmt]) -> bool:
