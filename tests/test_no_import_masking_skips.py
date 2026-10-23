@@ -420,10 +420,11 @@ def _assignment_parts(node: ast.AST) -> tuple[set[str], ast.expr | None]:
 def _gate_parts(node: ast.AST) -> list[tuple[list[ast.expr], list[ast.AST]]]:
     """(tests that decide them, parts they gate) pairs for a branching node, else [].
 
-    ``if``/``while`` and a conditional expression are gated by their test, a
-    ``for`` by its iterable, and a ``match`` by its subject and every case
-    guard, gating all case bodies. A short-circuit ``or``/``and`` gates each
-    operand by the operands before it.
+    ``if``/``while``, a conditional expression and an ``assert`` message are
+    gated by their test, a ``for`` by its iterable, and a ``match`` by its
+    subject and every case guard, gating all case bodies. A short-circuit
+    ``or``/``and`` gates each operand by the operands before it, and a chained
+    comparison each operand after the second by the ones before it.
     """
     if isinstance(node, ast.If | ast.While):
         return [([node.test], [*node.body, *node.orelse])]
@@ -435,8 +436,14 @@ def _gate_parts(node: ast.AST) -> list[tuple[list[ast.expr], list[ast.AST]]]:
         return [(tests, [stmt for case in node.cases for stmt in case.body])]
     if isinstance(node, ast.IfExp):
         return [([node.test], [node.body, node.orelse])]
+    if isinstance(node, ast.Assert) and node.msg is not None:
+        return [([node.test], [node.msg])]
     if isinstance(node, ast.BoolOp):
         return [(node.values[:i], [node.values[i]]) for i in range(1, len(node.values))]
+    if isinstance(node, ast.Compare):
+        # `a < b < c` evaluates c only while a < b holds.
+        operands = [node.left, *node.comparators]
+        return [(operands[:i], [operands[i]]) for i in range(2, len(operands))]
     if isinstance(node, ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp):
         # Iterables and filters run in order; each gates the rest and the element.
         steps = [part for gen in node.generators for part in (gen.iter, *gen.ifs)]
@@ -3449,6 +3456,12 @@ _FLAG_CASES = [
         8,
         id="chained_comparison_later_link_gated_on_flag",
     ),
+    # An assert evaluates its message only when its test is false.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE + 'assert _HAVE_MODULE, pytest.skip("m", allow_module_level=True)\n',
+        7,
+        id="assert_message_gated_on_flag",
+    ),
 ]
 
 
@@ -4461,6 +4474,20 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="chained_comparison_tainted_operand_after_skip",
+    ),
+    # The first comparison always evaluates both operands: this skips whether
+    # or not the import works, so it hides nothing about the import.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE + '_HAVE_MODULE == pytest.skip("m", allow_module_level=True)\n',
+        id="comparison_second_operand_always_runs",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = True\n"
+        + 'assert _OTHER, pytest.skip("m", allow_module_level=True)\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="assert_message_on_untainted_name",
     ),
 ]
 
