@@ -417,36 +417,44 @@ def _assignment_parts(node: ast.AST) -> tuple[set[str], ast.expr | None]:
     return bound, value
 
 
-def _gate_parts(node: ast.AST) -> tuple[list[ast.expr], list[ast.stmt]] | None:
-    """(tests that decide it, bodies it gates) for a branching statement, else None.
+def _gate_parts(node: ast.AST) -> list[tuple[list[ast.expr], list[ast.AST]]]:
+    """(tests that decide them, parts they gate) pairs for a branching node, else [].
 
-    ``if``/``while`` are gated by their test, a ``for`` by its iterable, and a
-    ``match`` by its subject and every case guard, gating all case bodies.
+    ``if``/``while`` and a conditional expression are gated by their test, a
+    ``for`` by its iterable, and a ``match`` by its subject and every case
+    guard, gating all case bodies. A short-circuit ``or``/``and`` gates each
+    operand by the operands before it.
     """
     if isinstance(node, ast.If | ast.While):
-        return [node.test], [*node.body, *node.orelse]
+        return [([node.test], [*node.body, *node.orelse])]
     if isinstance(node, ast.For | ast.AsyncFor):
         # The iterable decides whether (and how often) the body runs.
-        return [node.iter], [*node.body, *node.orelse]
+        return [([node.iter], [*node.body, *node.orelse])]
     if isinstance(node, ast.Match):
         tests = [node.subject, *(case.guard for case in node.cases if case.guard)]
-        return tests, [stmt for case in node.cases for stmt in case.body]
-    return None
+        return [(tests, [stmt for case in node.cases for stmt in case.body])]
+    if isinstance(node, ast.IfExp):
+        return [([node.test], [node.body, node.orelse])]
+    if isinstance(node, ast.BoolOp):
+        return [(node.values[:i], [node.values[i]]) for i in range(1, len(node.values))]
+    return []
 
 
 def _gated_by(node: ast.AST, tainted: frozenset[str]) -> list[ast.AST]:
-    """Import-time nodes ``node`` gates when one of its deciding tests reads ``tainted``."""
-    parts = _gate_parts(node)
-    if parts is None or not any(_condition_references_names(t, tainted) for t in parts[0]):
-        return []
-    return _module_scope_nodes(list(parts[1]))
+    """Import-time nodes ``node`` gates when one of their deciding tests reads ``tainted``."""
+    return [
+        sub
+        for tests, parts in _gate_parts(node)
+        if any(_condition_references_names(t, tainted) for t in tests)
+        for sub in _module_scope_nodes(parts)
+    ]
 
 
 def _gated_region_ids(scope: list[ast.AST], taint: _Taint, ns: _Namespaces) -> set[int]:
     """ids of import-time nodes that only run because of a tainted branch decision."""
     gated: set[int] = set()
     for node in scope:
-        if _gate_parts(node) is not None:
+        if _gate_parts(node):
             gated |= {id(sub) for sub in _gated_by(node, taint.at(node.lineno, ns.of(node)))}
     return gated
 
@@ -1261,19 +1269,25 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
     # handler body itself (e.g. `except ImportError: pytestmark =
     # pytest.mark.skip(...)`). Skip actions: module-level skip, SkipTest
     # raise, a skip mark, or a call to a skip helper.
+    # A mark gated by an expression (`[mark.skip] if not HAVE else []`) skips
+    # only where it is applied, which `_find_masking_skipif_uses` tracks, so
+    # marks count in statement-gated regions only.
     scope = _module_scope_nodes(list(tree.body))
-    import_driven = _masking_handler_region_ids(scope)
+    import_driven = mark_driven = _masking_handler_region_ids(scope)
     if taint.ever:
-        import_driven |= _gated_region_ids(scope, taint, ns)
-    if import_driven:
-        for sub in scope:
-            if id(sub) in import_driven and (
+        statements = [node for node in scope if isinstance(node, ast.stmt)]
+        mark_driven = mark_driven | _gated_region_ids(statements, taint, ns)
+        import_driven = mark_driven | _gated_region_ids(scope, taint, ns)
+    for sub in scope:
+        if (
+            id(sub) in import_driven
+            and (
                 _is_module_level_skip(sub, names)
                 or _is_unittest_skiptest_raise(sub, names)
-                or _is_skip_mark_ref(sub, names)
                 or _is_skip_helper_call(sub, helpers)
-            ):
-                _report(sub.lineno)
+            )
+        ) or (id(sub) in mark_driven and _is_skip_mark_ref(sub, names)):
+            _report(sub.lineno)
 
     return sorted(violations)
 
@@ -3319,6 +3333,14 @@ _FLAG_CASES = [
         8,
         id="boolop_later_operand_gated_on_flag",
     ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "def _bail():\n"
+        + '    pytest.skip("x", allow_module_level=True)\n'
+        + "_HAVE_MODULE or _bail()\n",
+        9,
+        id="boolop_skip_helper_call_gated_on_flag",
+    ),
 ]
 
 
@@ -4251,6 +4273,15 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="boolop_tainted_operand_after_skip",
+    ),
+    # A mark built under an expression gate skips only where it is applied;
+    # never applied, it skips nothing.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'MARKS = [pytest.mark.skip(reason="x")] if not _HAVE_MODULE else []\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="ifexp_mark_list_never_applied",
     ),
 ]
 
