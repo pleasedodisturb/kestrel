@@ -437,6 +437,11 @@ def _gate_parts(node: ast.AST) -> list[tuple[list[ast.expr], list[ast.AST]]]:
         return [([node.test], [node.body, node.orelse])]
     if isinstance(node, ast.BoolOp):
         return [(node.values[:i], [node.values[i]]) for i in range(1, len(node.values))]
+    if isinstance(node, ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp):
+        # Iterables and filters run in order; each gates the rest and the element.
+        steps = [part for gen in node.generators for part in (gen.iter, *gen.ifs)]
+        elements = [node.key, node.value] if isinstance(node, ast.DictComp) else [node.elt]
+        return [(steps[:i], [part]) for i, part in enumerate([*steps, *elements]) if i]
     return []
 
 
