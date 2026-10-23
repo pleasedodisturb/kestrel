@@ -3433,6 +3433,22 @@ _FLAG_CASES = [
         5,
         id="generator_consumed_in_masking_handler",
     ),
+    # Codex review (run d41a25fca768): a chained comparison evaluates each
+    # later operand only while every earlier link holds.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + '_HAVE_MODULE == False == pytest.skip("m", allow_module_level=True)\n',
+        7,
+        id="chained_comparison_gated_on_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = 1\n"
+        + "0 < _OTHER < (0 if _HAVE_MODULE else 2)"
+        + ' < pytest.skip("m", allow_module_level=True)\n',
+        8,
+        id="chained_comparison_later_link_gated_on_flag",
+    ),
 ]
 
 
@@ -4427,6 +4443,24 @@ _IGNORE_CASES = [
         "def test_something():\n"
         "    assert True\n",
         id="unconsumed_generator_in_masking_handler",
+    ),
+    # A chain decided by untainted links, or whose tainted operand only comes
+    # after the skip, is not import-driven.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = True\n"
+        + '_OTHER == False == pytest.skip("m", allow_module_level=True)\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="chained_comparison_on_untainted_name",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + "_OTHER = True\n"
+        + '_OTHER == False == pytest.skip("m", allow_module_level=True) == _HAVE_MODULE\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="chained_comparison_tainted_operand_after_skip",
     ),
 ]
 
