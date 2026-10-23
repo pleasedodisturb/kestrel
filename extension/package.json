@@ -21,13 +21,15 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/chrome": "^0.0.287",
+    "@types/node": "^25.9.9",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@wxt-dev/module-react": "^1.2.2",
     "jsdom": "^26.0.0",
     "typescript": "^5.8.3",
+    "vite": "^8.3.5",
     "vitest": "^5.0.0",
-    "wxt": "^0.20.27"
+    "wxt": "^0.21.4"
   },
   "overrides": {
     "shell-quote": "^1.9.0",
