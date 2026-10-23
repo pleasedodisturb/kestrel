@@ -1,5 +1,88 @@
 # Changelog
 
+## [0.28.3](https://github.com/pleasedodisturb/kestrel/compare/v0.28.2...v0.28.3) (2026-10-23)
+
+
+### Bug Fixes
+
+* **G-1382:** a handler stops fall-through only if it always exits ([f2e8325](https://github.com/pleasedodisturb/kestrel/commit/f2e8325df8411ce4685b2802826ad45787190f53))
+* **G-1382:** bindings of every kind inherit taint under a tainted gate ([c6cedcc](https://github.com/pleasedodisturb/kestrel/commit/c6cedccc1efc19221bc288a7c7a5c8bfedcc38ba))
+* **G-1382:** broad exceptions inside tuples or dotted still mask ([ae67a6f](https://github.com/pleasedodisturb/kestrel/commit/ae67a6f5dc3795ec2daabfeb28323f71b8dde27e))
+* **G-1382:** carry control dependencies through function-local flow ([a78b0d7](https://github.com/pleasedodisturb/kestrel/commit/a78b0d72f4cee6b168e4a1bc4f4498a117043482))
+* **G-1382:** catch except* ImportError handlers in the import-masking guard ([ade38e0](https://github.com/pleasedodisturb/kestrel/commit/ade38e0d8e4d415a2c3bbb249373873e04489442))
+* **G-1382:** chained comparisons and assert messages gate like an if ([3eb83c3](https://github.com/pleasedodisturb/kestrel/commit/3eb83c3677743bb5ea9412679191f2e4f917f61e))
+* **G-1382:** clear taint only on real name rebinding, not attribute writes ([70d573d](https://github.com/pleasedodisturb/kestrel/commit/70d573d3eca14f5519901563041caf9ccb6e052c))
+* **G-1382:** comprehension iterables and filters gate what follows ([0c78787](https://github.com/pleasedodisturb/kestrel/commit/0c78787365111398717506afe31dc56b9d39b410))
+* **G-1382:** conditional expressions and or/and gate like an if ([324530f](https://github.com/pleasedodisturb/kestrel/commit/324530f82bc891cb4ac5eb002f6315fd246fdc0f))
+* **G-1382:** count def/class names as bindings on masking paths ([f00b27b](https://github.com/pleasedodisturb/kestrel/commit/f00b27b551c12e2a47d3ee741637692d84b653f1))
+* **G-1382:** count handler import bindings in local flow and module seeds ([ce0376b](https://github.com/pleasedodisturb/kestrel/commit/ce0376b28765ae55134929477db1e570c7eceb0c))
+* **G-1382:** count names bound by import statements as success-path locals ([4b9683d](https://github.com/pleasedodisturb/kestrel/commit/4b9683db6f800aa566564986f8e0f496b867affe))
+* **G-1382:** descend into class bodies when scanning for masked-flag pytestmark ([21b8031](https://github.com/pleasedodisturb/kestrel/commit/21b8031cfc61036cc8c90fc32d34a184e480f5c2))
+* **G-1382:** evaluate import-time calls against globals at the call site ([a522083](https://github.com/pleasedodisturb/kestrel/commit/a5220835535ef2923bd8456f64922b7f77d5f964))
+* **G-1382:** extend import-masking guard to catch flag-variable and unittest.SkipTest bypasses ([90bf7ea](https://github.com/pleasedodisturb/kestrel/commit/90bf7eae137597dcb64c7c72216035b94d4f2988))
+* **G-1382:** feed end-of-module taint into function-result analysis ([61813ff](https://github.com/pleasedodisturb/kestrel/commit/61813ff4fec9cf390357ba201395c3c0399cde0e))
+* **G-1382:** flag a pytestmark only where taint decides whether a skip applies ([aefeaf8](https://github.com/pleasedodisturb/kestrel/commit/aefeaf88edd17ad3dcdb217f490348177290959e))
+* **G-1382:** flag masking results whenever failure and success returns differ ([5929edb](https://github.com/pleasedodisturb/kestrel/commit/5929edbce4c8e61ff3bfa540c0d49e2beffb4717))
+* **G-1382:** follow local aliases of import-dependent locals to the return ([fa2961d](https://github.com/pleasedodisturb/kestrel/commit/fa2961d57594a1acff9f263c4f1523c5c5fddb1f))
+* **G-1382:** generators nobody consumes run only their first iterable ([d235a1e](https://github.com/pleasedodisturb/kestrel/commit/d235a1e9d0dfb0fc531adbfed2a4ba4e9a5314c4))
+* **G-1382:** honour `global` in class bodies when keying masking bindings ([0e2f9ca](https://github.com/pleasedodisturb/kestrel/commit/0e2f9cadd37857d15a0ba74db68acb71a9d40edf))
+* **G-1382:** iterate local control dependencies to a fixed point per statement ([16b6a9f](https://github.com/pleasedodisturb/kestrel/commit/16b6a9f903583b55b11da19b57af3541daf5e558))
+* **G-1382:** key masking taint by namespace so class bindings stay class-local ([9b918e2](https://github.com/pleasedodisturb/kestrel/commit/9b918e224d24b85a407648ef6c3870d94d7a1aab))
+* **G-1382:** let a tainted for-loop iterable gate the loop body ([17c2675](https://github.com/pleasedodisturb/kestrel/commit/17c267550f6a7ca75b9a22cb3b5d51c693bc8009))
+* **G-1382:** let a tainted match gate its case bodies ([fa494ad](https://github.com/pleasedodisturb/kestrel/commit/fa494ad27ec7004698ebe61eb19d98518aa46917))
+* **G-1382:** make mark-alias tracking flow-sensitive to rebinding ([e9c50bc](https://github.com/pleasedodisturb/kestrel/commit/e9c50bce6bd14fbd86c5412a720bba250fbc0c06))
+* **G-1382:** make masking taint flow-sensitive to unconditional rebinding ([417844c](https://github.com/pleasedodisturb/kestrel/commit/417844c53bf144a9e11f882ba718b140eb0858de))
+* **G-1382:** make masking-result locals flow-sensitive to direct rebinding ([7783c70](https://github.com/pleasedodisturb/kestrel/commit/7783c70a954b8368eb0af1c6084972aac94a8506))
+* **G-1382:** names in string skipif conditions count as generator reads ([505334a](https://github.com/pleasedodisturb/kestrel/commit/505334af4cd45112e65f905549b14a6a05c12f86))
+* **G-1382:** one _bound_names helper for every name-binding statement ([7def769](https://github.com/pleasedodisturb/kestrel/commit/7def7691c1c96a78999fd30000d758f6a5479b2e))
+* **G-1382:** only a guaranteed later return stops implicit-None detection ([97736c2](https://github.com/pleasedodisturb/kestrel/commit/97736c2300d491e34f0d25ce23a1a58e3ef875dd))
+* **G-1382:** only skipif condition strings count as generator reads ([3b6a7ac](https://github.com/pleasedodisturb/kestrel/commit/3b6a7ac75030e1f80e951009e36e48022d67f08e))
+* **G-1382:** only unconditionally reached classes may clear module bindings ([3f4537b](https://github.com/pleasedodisturb/kestrel/commit/3f4537bd23fa162535da3f5eb6a1cb0c32a2f854))
+* **G-1382:** parameters with tainted defaults start dependent ([b28312c](https://github.com/pleasedodisturb/kestrel/commit/b28312c1598acdcffd69ce30e1653a9e23c783d1))
+* **G-1382:** propagate masking results through wrapper functions ([9acdae1](https://github.com/pleasedodisturb/kestrel/commit/9acdae172f0fb6021e079d671607aed331be48c6))
+* **G-1382:** read every skipif condition pytest evaluates in the masking guard ([ae01aab](https://github.com/pleasedodisturb/kestrel/commit/ae01aab41f00f04faa4ca7eb9538d8ef86cc04ac))
+* **G-1382:** replace path-shape return rules with "probe + distinct returns" ([e2c3716](https://github.com/pleasedodisturb/kestrel/commit/e2c3716c7e2cf103e28f0a60903f849fc8c85163))
+* **G-1382:** resolve mark aliases in pytestmark values and decorators ([064c1b6](https://github.com/pleasedodisturb/kestrel/commit/064c1b6f95aafbd1c679b35dd3cbb217737d6199))
+* **G-1382:** scan all of module scope for masked-flag skips, not just tree.body ([c80b473](https://github.com/pleasedodisturb/kestrel/commit/c80b47354954818c0b2eaf6acb03e0e324b486a4))
+* **G-1382:** seed masking taint from every binding form a handler uses ([5356559](https://github.com/pleasedodisturb/kestrel/commit/53565595fef7895fb91b7fc16a536f7a99493ea4))
+* **G-1382:** seed masking taint only from handlers that bind globals at import ([57a23f3](https://github.com/pleasedodisturb/kestrel/commit/57a23f31ddd152b46c9ca898a4ed664b671a5439))
+* **G-1382:** seed module taint from both paths of a masking try ([387fab2](https://github.com/pleasedodisturb/kestrel/commit/387fab27e561332e4bfc47c66b91cf7f88206fe1))
+* **G-1382:** spread call-site globals through the function call graph ([875937a](https://github.com/pleasedodisturb/kestrel/commit/875937ae33be9225554f0082b88b640c40d2ffc1))
+* **G-1382:** stop handler walks at nested defs; taint masking-result functions ([7a1edfa](https://github.com/pleasedodisturb/kestrel/commit/7a1edfa43478e6625b8bea03ecf34a0a3df498b5))
+* **G-1382:** track success-path locals in masking-result functions ([158b811](https://github.com/pleasedodisturb/kestrel/commit/158b811bc711fd700c3857843f0f1b5fdbff7130))
+* **G-1382:** track taint through import-time code in the import-masking guard ([4a16fa5](https://github.com/pleasedodisturb/kestrel/commit/4a16fa53a5154f0240d4219ffa4fcd1f436a9874))
+* **G-1382:** treat a fall-through to implicit None as a masking result ([470fe69](https://github.com/pleasedodisturb/kestrel/commit/470fe69dff535dfaccedd74ec987fbfddf345b8b))
+* **G-1382:** treat a reference to a masking result as a probe in wrappers ([724edef](https://github.com/pleasedodisturb/kestrel/commit/724edeffc17095a2831943245423cfcc38e0e13a))
+* **G-1382:** treat for/with targets as assignments for taint propagation ([1902f8f](https://github.com/pleasedodisturb/kestrel/commit/1902f8ffa908d8bbd30aa31e52a1ec4019c14f91))
+* **G-1382:** treat masking handler bodies as import-driven regions ([cb59635](https://github.com/pleasedodisturb/kestrel/commit/cb596353b55bb112727617c647dc71a08c02c8a4))
+* **G-1382:** treat match/case captures as bindings from the subject ([313766c](https://github.com/pleasedodisturb/kestrel/commit/313766c019407190db72cad205cf2f2eb890ae37))
+* **G-1382:** wrappers see only module-scope masking functions ([c8abc1b](https://github.com/pleasedodisturb/kestrel/commit/c8abc1bf11da477557fa50d89a66f9b1e7b7ce3d))
+* **G-1383:** declare packaging as a direct dev dependency ([9b6a515](https://github.com/pleasedodisturb/kestrel/commit/9b6a5154bc672911fe5e28407a9f126e5d926cdd))
+
+
+### Documentation
+
+* **G-1382:** add phase 6 code review report ([4e062af](https://github.com/pleasedodisturb/kestrel/commit/4e062af30985bc5eb10fbbb9934e4561788bf094))
+* **G-1382:** add phase 6 validation strategy ([7a40c45](https://github.com/pleasedodisturb/kestrel/commit/7a40c45a6e7bdca47c941f0822755e75b187421a))
+* **G-1382:** add phase 6 verification report (passed, 5/5) ([64279ba](https://github.com/pleasedodisturb/kestrel/commit/64279bad9d90f2f6a57a2a9f1ea09b9672705e94))
+* **G-1382:** complete phase 06 plan 02 (import-masking guard, dead-suite deletion) ([d2c31b8](https://github.com/pleasedodisturb/kestrel/commit/d2c31b8c01d0b227e697276b2c973b52c8ede6a7))
+* **G-1382:** complete phase 6 (test honesty) ([4aa4784](https://github.com/pleasedodisturb/kestrel/commit/4aa4784ec7d00bc25b3874a17dd5a516e9844a96))
+* **G-1382:** create phase 6 plan (2 plans, 2 waves) ([0f3d8f4](https://github.com/pleasedodisturb/kestrel/commit/0f3d8f44b2f6cdf054b27988e99d549b4aea76d2))
+* **G-1382:** evolve PROJECT.md and STATE.md after phase 6 ([50d25c9](https://github.com/pleasedodisturb/kestrel/commit/50d25c98be396b8f5edb1b157c905f5800ff54bc))
+* **G-1382:** name dynamic namespace reads as an out-of-scope guard limit ([873c32f](https://github.com/pleasedodisturb/kestrel/commit/873c32ffd3601118e558e131cb02f820f8cb8956))
+* **G-1382:** record phase 6 code review dispositions (2 open) ([a4ddfa3](https://github.com/pleasedodisturb/kestrel/commit/a4ddfa3567b14ddc0cd2ccee860f089ded4f3fd8))
+* **G-1382:** record phase 6 review fixes (WR-01, IN-01 fixed) ([639fc24](https://github.com/pleasedodisturb/kestrel/commit/639fc245743b6543ccbf5f09cff26308a01ce8b6))
+* **G-1382:** research phase 6 test honesty ([a6f58a1](https://github.com/pleasedodisturb/kestrel/commit/a6f58a16a24c1f3ebc04ab503306b76d1ba4c0a0))
+* **G-1382:** update tracking after phase 6 wave 1 ([87cc221](https://github.com/pleasedodisturb/kestrel/commit/87cc2217ba3f2b169d9501556b8e6d30c4929429))
+* **G-1382:** update tracking after phase 6 wave 2 ([8592431](https://github.com/pleasedodisturb/kestrel/commit/859243159a02094704ff64a9a65219bfbdd73f38))
+* **G-1383:** complete phase 06 plan 01 (pin ruff, guard the pins) ([b085193](https://github.com/pleasedodisturb/kestrel/commit/b0851936280411ef37ebd0cac9f9f63e2fef48b4))
+
+
+### Dependencies
+
+* **G-1851:** undici 7.29.0 -&gt; 7.30.0 in the frontend lockfile (GHSA-3wwx-pv8p-q78v) ([#551](https://github.com/pleasedodisturb/kestrel/issues/551)) ([9a6379a](https://github.com/pleasedodisturb/kestrel/commit/9a6379ae2226d310d968caf126a0c007d92434f0))
+* **G-1856:** clear npm audit in frontend, worker and extension ([fbb8142](https://github.com/pleasedodisturb/kestrel/commit/fbb81421ff11afa884bb79524984d2e5eb44852d))
+
 ## [0.28.2](https://github.com/pleasedodisturb/kestrel/compare/v0.28.1...v0.28.2) (2026-09-28)
 
 
