@@ -3486,6 +3486,29 @@ _FLAG_CASES = [
         8,
         id="string_skipif_condition_consumes_generator",
     ),
+    # Codex review (run 8aed7bd2a51d): Exception/BaseException inside a tuple,
+    # or spelled builtins.Exception, still catches the ImportError.
+    *(
+        pytest.param(
+            pre
+            + "try:\n"
+            + "    import not_a_real_module\n"
+            + f"except {exc}:\n"
+            + '    pytest.skip("m", allow_module_level=True)\n',
+            line,
+            id=case_id,
+        )
+        for case_id, pre, exc, line in [
+            ("broad_exception_in_tuple", "import pytest\n", "(Exception, ValueError)", 5),
+            ("broad_baseexception_in_tuple", "import pytest\n", "(ValueError, BaseException)", 5),
+            (
+                "dotted_builtins_exception",
+                "import builtins\nimport pytest\n",
+                "builtins.Exception",
+                6,
+            ),
+        ]
+    ),
 ]
 
 
@@ -4532,6 +4555,15 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="plain_string_naming_generator_is_not_a_read",
+    ),
+    # A tuple of narrow exceptions lets the ImportError fail collection loudly.
+    pytest.param(
+        "import pytest\n"
+        "try:\n"
+        "    import not_a_real_module\n"
+        "except (ValueError, KeyError):\n"
+        '    pytest.skip("m", allow_module_level=True)\n',
+        id="narrow_exception_tuple_does_not_mask",
     ),
 ]
 
