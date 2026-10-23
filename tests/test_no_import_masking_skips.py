@@ -1158,6 +1158,29 @@ def _is_first_party_importorskip(
     return first_arg.value.split(".")[0] in first_party
 
 
+def _drop_unconsumed_generators(tree: ast.Module) -> None:
+    """Replace each generator nobody consumes with the one part of it that runs.
+
+    Creating a generator evaluates only its first iterable; its filters and
+    element run when it is consumed. A generator is unconsumed when it is a
+    bare expression statement or the whole value bound to plain names that no
+    code in the file reads; anything else counts as consumed.
+    """
+    read = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            targets: list[ast.expr] = node.targets
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+        elif isinstance(node, ast.Expr):
+            targets = []
+        else:
+            continue
+        unread = all(isinstance(t, ast.Name) and t.id not in read for t in targets)
+        if unread and isinstance(node.value, ast.GeneratorExp):
+            node.value = node.value.generators[0].iter
+
+
 def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PARTY) -> list[str]:
     """Return sorted "relative/path:lineno" strings for import-masking skips.
 
@@ -1168,6 +1191,7 @@ def find_import_masking_skips(path: Path, first_party: frozenset[str] = FIRST_PA
     outside ``_REPO_ROOT`` (e.g. a self-test's ``tmp_path`` fixture).
     """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    _drop_unconsumed_generators(tree)
     names = _pytest_names(tree)
     violations: set[str] = set()
 
@@ -4385,6 +4409,14 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="bare_generator_statement_gated_on_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'unused: object = (pytest.skip("m", allow_module_level=True) for _ in [None]'
+        + " if not _HAVE_MODULE)\n"
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="unconsumed_annotated_generator_gated_on_flag",
     ),
     pytest.param(
         "import pytest\n"
