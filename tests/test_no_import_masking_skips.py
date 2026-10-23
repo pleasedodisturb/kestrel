@@ -3383,7 +3383,31 @@ _FLAG_CASES = [
                 'list(pytest.skip("m", allow_module_level=True)'
                 " for _ in [None] if not _HAVE_MODULE)",
             ),
+            # A generator's first iterable is evaluated when it is created.
+            (
+                "generator_first_iterable_gated_on_flag",
+                "unused = (_ for _ in"
+                ' ([pytest.skip("m", allow_module_level=True)] if not _HAVE_MODULE else []))',
+            ),
         ]
+    ),
+    # Codex review (run 862729b4bb37): a generator runs its filters and element
+    # only when consumed, but one stored and read later is consumed.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'gen = (pytest.skip("m", allow_module_level=True) for _ in [None] if not _HAVE_MODULE)\n'
+        + "list(gen)\n",
+        7,
+        id="stored_generator_consumed_later",
+    ),
+    pytest.param(
+        "import pytest\n"
+        "try:\n"
+        "    import not_a_real_module\n"
+        "except ImportError:\n"
+        '    list(pytest.skip("m", allow_module_level=True) for _ in [None])\n',
+        5,
+        id="generator_consumed_in_masking_handler",
     ),
 ]
 
@@ -4345,6 +4369,32 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="comprehension_tainted_filter_after_skip",
+    ),
+    # A generator nobody consumes never runs its filters or element.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'unused = (pytest.skip("m", allow_module_level=True) for _ in [None]'
+        + " if not _HAVE_MODULE)\n"
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="unconsumed_generator_gated_on_flag",
+    ),
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + '(pytest.skip("m", allow_module_level=True) for _ in [None] if not _HAVE_MODULE)\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="bare_generator_statement_gated_on_flag",
+    ),
+    pytest.param(
+        "import pytest\n"
+        "try:\n"
+        "    import not_a_real_module\n"
+        "except ImportError:\n"
+        '    unused = (pytest.skip("m", allow_module_level=True) for _ in [None])\n'
+        "def test_something():\n"
+        "    assert True\n",
+        id="unconsumed_generator_in_masking_handler",
     ),
 ]
 
