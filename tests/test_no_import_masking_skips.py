@@ -1171,17 +1171,18 @@ def _drop_unconsumed_generators(tree: ast.Module) -> None:
     Creating a generator evaluates only its first iterable; its filters and
     element run when it is consumed. A generator is unconsumed when it is a
     bare expression statement or the whole value bound to plain names that no
-    code in the file reads; anything else counts as consumed. A string that
-    parses as an expression counts as code (pytest evaluates string skipif
-    conditions).
+    code in the file reads; anything else counts as consumed. A string
+    condition of any ``.skipif(...)`` call counts as code, since pytest
+    evaluates it; other strings are just data.
     """
     code: list[ast.AST] = [tree]
     for node in ast.walk(tree):
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            try:
-                code.append(ast.parse(node.value, mode="eval"))
-            except SyntaxError:
-                continue
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "skipif"
+        ):
+            code += [cond for cond, _ in _skipif_conditions(node)]
     read = {
         n.id
         for root in code
@@ -4520,6 +4521,17 @@ _IGNORE_CASES = [
         + "def test_something():\n"
         + "    assert True\n",
         id="string_skipif_condition_reads_other_name",
+    ),
+    # Codex review (run b5b28d34e8b7): only strings pytest evaluates are code;
+    # an ordinary string naming the generator does not consume it.
+    pytest.param(
+        _MASKED_FLAG_PREAMBLE
+        + 'unused = (pytest.skip("m", allow_module_level=True) for _ in [None]'
+        + " if not _HAVE_MODULE)\n"
+        + 'LABEL = "unused"\n'
+        + "def test_something():\n"
+        + "    assert True\n",
+        id="plain_string_naming_generator_is_not_a_read",
     ),
 ]
 
