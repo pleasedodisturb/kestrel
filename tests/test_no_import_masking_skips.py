@@ -1171,9 +1171,23 @@ def _drop_unconsumed_generators(tree: ast.Module) -> None:
     Creating a generator evaluates only its first iterable; its filters and
     element run when it is consumed. A generator is unconsumed when it is a
     bare expression statement or the whole value bound to plain names that no
-    code in the file reads; anything else counts as consumed.
+    code in the file reads; anything else counts as consumed. A string that
+    parses as an expression counts as code (pytest evaluates string skipif
+    conditions).
     """
-    read = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)}
+    code: list[ast.AST] = [tree]
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            try:
+                code.append(ast.parse(node.value, mode="eval"))
+            except SyntaxError:
+                continue
+    read = {
+        n.id
+        for root in code
+        for n in ast.walk(root)
+        if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)
+    }
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             targets: list[ast.expr] = node.targets
