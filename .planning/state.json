@@ -1,0 +1,63 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v2.0",
+  "phases": [
+    {
+      "number": "1",
+      "name": "Feature Inventory",
+      "status": "pending"
+    },
+    {
+      "number": "2",
+      "name": "Roadmap Foundation",
+      "status": "complete"
+    },
+    {
+      "number": "3",
+      "name": "Forward Vision",
+      "status": "complete"
+    },
+    {
+      "number": "4",
+      "name": "Milestone Deep Dives",
+      "status": "complete"
+    },
+    {
+      "number": "5",
+      "name": "Contributor Experience",
+      "status": "complete"
+    },
+    {
+      "number": "6",
+      "name": "Test honesty",
+      "status": "complete"
+    },
+    {
+      "number": "7",
+      "name": "Wire the geo gate",
+      "status": "pending"
+    },
+    {
+      "number": "8",
+      "name": "Over-admission rule",
+      "status": "pending"
+    },
+    {
+      "number": "9",
+      "name": "Single authority",
+      "status": "pending"
+    },
+    {
+      "number": "10",
+      "name": "Provider preflight",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd-discuss-phase",
+    "label": "Discuss the first phase",
+    "reason": "Project initialized — plan your first phase"
+  },
+  "updated_at": "2026-10-24T19:34:44.415Z"
+}
