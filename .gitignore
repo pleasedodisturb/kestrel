@@ -118,3 +118,6 @@ GSD-CLAUDE.md
 # Internal business docs
 docs/pricing-strategy.md
 .cache_key
+
+# GSD researcher tool cache (research-store), never commit
+.planning/research/.cache/
