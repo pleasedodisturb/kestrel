@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 milestone: v2.0
 current_phase_name: defining requirements
 status: planning
-stopped_at: context exhaustion at 75% (2026-10-25)
-last_updated: "2026-10-25T16:14:17.358Z"
+stopped_at: context exhaustion at 77% (2026-10-25)
+last_updated: "2026-10-25T16:21:50.999Z"
 last_activity: 2026-10-24
 last_activity_desc: Milestone v2.0 started
-state_head: 578bf28d852aa051e44a80baa1c38731b6cbb365
+state_head: 6ab4f06decdbcdc8605953b8bd5863a8cc86374b
 progress:
   total_phases: 0
   completed_phases: 0
@@ -130,11 +130,12 @@ Items acknowledged and deferred at roadmap-m1 milestone close on 2026-05-07:
 
 ## Session Continuity
 
-Last session: 2026-10-25T17:17:00Z
-Stopped at: v2.0 requirements step, phase-by-phase review with the maintainer (GSD new-milestone step 9)
+Last session: 2026-10-25T16:21:50.988Z
+Stopped at: context exhaustion at 77% (2026-10-25)
 Resume file: None
 
 ### v2.0 review position (2026-10-25)
+
 Research (step 8) is committed: `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY,free-tier-routing}.md`.
 The maintainer reviews each phase as idea / process / results, one at a time, before REQUIREMENTS.md is written.
 
@@ -142,6 +143,6 @@ Settled:
 - Phase 0 **Map** (new, P0): Track A freezes today's outputs (script ledger, goldens with source hashes, mapping tables for every new behaviour encoded as red tests, per-source arrival counts). Track B is a June-October flow retrospective from this machine's evidence (commits, handoffs, action log, cost ledger, applications table, transcripts, screenpipe) with a keep / scope-and-plan / park / remove verdict per flow, each tagged profile-specific vs generic and "works for a non-tech profile". Cut lists for Phases 2 and 11 derive from these verdicts.
 - Phase 1 **Foundation**: 1a safety nets (relocate trailer checker, CI Complete allow-list, wheel-content job fixing G-2015, import-all + OpenAPI tests, bootstrap with KESTREL_HOME resolver and ensure_schema, SQLite hardening, notify() seam, loopback bind for G-2009); 1b cost guard (status+code+Retry-After classifier with per-provider fixtures, spend halt at the provider factory with a non-swallowable exception and persisted ledger, bounded 429 waits, preflight, Free preset corrected, AST guard on provider construction).
 
-Decisions: Pushover KEPT as opt-in notify() sink; all scrapers PORTED and judged on Map evidence; Release-As 2.0.0 at close; agents (Claude Code on subscription, API key in TUI, Codex/Pi via MCP or CLI twins) are swappable model suppliers while gates and state live in Kestrel; v2.0 carries a per-profile isolation constraint, real friend-profile searches plus an anonymised showcase are v2.1.
+Decisions: Pushover UNTOUCHED until the end (2026-10-25): no seam work in Cut A, no callers moved; it is handled last, in Phase 11 Retire, only after every other phase is verified working (it already degrades to a logged 'failed'/skipped result when unconfigured, so nothing blocks on it); all scrapers PORTED and judged on Map evidence; Release-As 2.0.0 at close; agents (Claude Code on subscription, API key in TUI, Codex/Pi via MCP or CLI twins) are swappable model suppliers while gates and state live in Kestrel; v2.0 carries a per-profile isolation constraint, real friend-profile searches plus an anonymised showcase are v2.1.
 
 Next: present Phase 2 Cut A, then Phases 3-12 (Find, Filter, Scan, Score, Track, Write, Connect, Apply, Retire, Install). Then write REQUIREMENTS.md, spawn the roadmapper (phases numbered from 11, continuing v1.1 which ended at 10, unless --reset-phase-numbers), PR to main. Filed this session: G-2015 (stale frontend in the published wheel).
