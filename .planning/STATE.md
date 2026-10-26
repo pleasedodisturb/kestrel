@@ -1,15 +1,15 @@
 ---
 gsd_state_version: "1.0"
 milestone: v2.0
-current_phase_name: defining requirements
-status: planning
-stopped_at: Phase 2 Cut A settled; writing v2.0 requirements (2026-10-26)
+current_phase_name: Map
+status: ready to plan
+stopped_at: roadmap for Phases 11-13 written; next /gsd-plan-phase 11 (2026-10-26)
 last_updated: "2026-10-26T10:30:00.000Z"
-last_activity: 2026-10-24
-last_activity_desc: Milestone v2.0 started
+last_activity: 2026-10-26
+last_activity_desc: v2.0 roadmap written for Phases 11-13 (Map, Foundation, Cut A)
 state_head: 6ab4f06decdbcdc8605953b8bd5863a8cc86374b
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -24,14 +24,14 @@ milestone_name: Lean Kestrel
 See: .planning/PROJECT.md (updated 2026-04-21)
 
 **Core value:** Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
-**Current focus:** Phase 6 — Test honesty
+**Current focus:** v2.0 Lean Kestrel, Phase 11 Map (ready to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 11 — Map (not started; first of the 3 settled v2.0 phases, Phases 14+ are added as each review closes)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-10-24 — Milestone v2.0 started
+Status: Ready to plan (`/gsd-plan-phase 11`)
+Last activity: 2026-10-26 — v2.0 roadmap written for Phases 11-13 (Map, Foundation, Cut A)
 
 ## Performance Metrics
 
