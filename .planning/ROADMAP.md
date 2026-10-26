@@ -37,7 +37,7 @@ Full archive: `.planning/milestones/v1.1-ROADMAP.md`
 
 ### 🚧 v2.0 Lean Kestrel (In Progress)
 
-**Milestone goal:** Turn Kestrel from a do-everything platform into one loop a real person can run: it finds and triages jobs, helps you write in your own voice, and learns from every outcome. The maintainer runs his own daily search on it, and a technical stranger gets from clone to a first useful job list in 15 minutes. Linear epic G-2013 (phase tickets not yet filed; written as `G-TBD` below).
+**Milestone goal:** Turn Kestrel from a do-everything platform into one loop a real person can run: it finds and triages jobs, helps you write in your own voice, and learns from every outcome. The maintainer runs his own daily search on it, and a technical stranger gets from clone to a first useful job list in 15 minutes. Linear epic G-2013 (phase tickets G-2039 Map, G-2040 and G-2041 Foundation waves, G-2042 Cut A umbrella).
 
 Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid: Phases 11 to 13 are the settled ones, and the remaining phases of the reconciled build order (`.planning/research/SUMMARY.md`) are added with `/gsd-phase add` as each review closes, in this order: Find, Filter, Scan, Score, Track, Write, Connect, Apply, Retire, Install. Every phase ships as its own PR (or a short series) on a `<ticket>/<slug>` branch: conventional commits scoped to the ticket, `review-push run` then `review-push sign` before push, merge only on green CI. Release-As 2.0.0 at milestone close.
 
@@ -52,7 +52,7 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
 **Goal**: Before anything is ported or cut, today's behaviour is frozen as evidence: every script has a ledger row, every output v2.0 reproduces has a golden with the hash that produced it, every later behaviour has a red test CI already collects, and every flow and feature carries an anonymised verdict that the cut lists cite.
 **Depends on**: Nothing in v2.0 (first phase of the milestone; main carries v1.1 Phase 6)
 **Requirements**: MAP-01, MAP-02, MAP-03, MAP-04, MAP-05, MAP-06, MAP-07, MAP-08, MAP-09
-**Linear tickets**: G-TBD (child of G-2013)
+**Linear tickets**: G-2039 (child of G-2013)
 **Constraints** (binding, from STATE.md "v2.0 review position"): read-only, meaning no production code changes (`git diff main --stat -- src/ frontend/src/` is empty at PR review) and no paid LLM calls. Track B's raw retrospective (sessions, application rows, company names, dates, stall and recovery narrative) lives only in the private pipeline's repository, with the gitignored `private/retrospective/` in Kestrel for working notes; Kestrel's `.planning/` receives the anonymised verdict list only. Track A goldens are synthetic or scrubbed, never copied from the private pipeline's data. The CI PII scan is the second net, not the first.
 **Success Criteria** (what must be TRUE):
   1. A committed script ledger has a row for every file under `tools/` and every private-pipeline script v2.0 ports, each with status (runs on a schedule / run by hand / dead), inputs, outputs and disposition (port / keep until Retire / delete); comparing `ls tools/` with the ledger shows no file without a row
@@ -62,14 +62,14 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
   5. The full June-to-October 2026 flow retrospective exists as a session doc in the private pipeline's repository and nowhere in Kestrel; Kestrel's `.planning/` holds the anonymised verdict list (per flow and per feature: keep / scope-and-plan / park / remove, a profile-specific-or-generic tag, a "works for a non-technical profile" column, counts and reasons; no company names, no person names, no dates finer than a month, no transcript quotes), the CI PII scan passes on it, and the Cut A and Retire cut lists cite one of its verdicts for every item
 
 **Plans**: TBD
-**Git delivery**: Branch `G-TBD/map` off main; conventional commits scoped to the ticket (`test(G-TBD): ...` for goldens and red tests, `docs(G-TBD): ...` for the ledger, counts and verdict list); `review-push run` then `review-push sign` before push; one PR for the phase, opened once the verdict list is in; merge only when CI is green. Track B's raw retrospective is committed in the private pipeline's repository, never in this PR.
+**Git delivery**: Branch `G-2039/map` off main; conventional commits scoped to the ticket (`test(G-2039): ...` for goldens and red tests, `docs(G-2039): ...` for the ledger, counts and verdict list); `review-push run` then `review-push sign` before push; one PR for the phase, opened once the verdict list is in; merge only when CI is green. Track B's raw retrospective is committed in the private pipeline's repository, never in this PR.
 
 ### Phase 12: Foundation
 
 **Goal**: Deleting code and opening the database from new entry points becomes safe, and no unattended paid run can overspend: CI fails closed, every entry point resolves one `KESTREL_HOME`, the API listens on loopback unless told otherwise, and every paid call goes through a spend guard that tells provider errors apart and halts at budget.
 **Depends on**: Phase 11 (the goldens, red mapping tests and ledger are the regression net; the MAP-05 golden must stay green through the credential-read and factory changes made here)
 **Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, FOUND-06, FOUND-07, FOUND-08, FOUND-09, COST-01, COST-02, COST-03, COST-04, COST-05, COST-06
-**Linear tickets**: G-TBD (wave 1), G-TBD (wave 2), children of G-2013
+**Linear tickets**: G-2040 (wave 1), G-2041 (wave 2), children of G-2013
 **Waves**: One phase, two waves, two separate PRs. Wave 1 "safety nets" is FOUND-01..09 and merges first. Wave 2 "cost guard" is COST-01..06 and starts after wave 1 merges. This phase lands before any cut (Phase 13 waits for both waves), and nothing unattended and paid (no cron scan, no shadow run) runs before wave 2 merges. Pushover is untouched here: no `notify()` seam, no callers moved (see REQUIREMENTS.md "Decisions carried into later phases").
 **Planning note**: Wave 1 is standard patterns. Wave 2 needs `/gsd-plan-phase 12 --research-phase` before planning: capture real 402/429/400 response bodies per provider (only Anthropic, OpenAI and OpenRouter are verified from docs; the other seven get the conservative class until fixtures exist), design the spend ledger (reserve/settle under `BEGIN IMMEDIATE`), and settle batch-API cost accounting.
 **Success Criteria** (what must be TRUE):
@@ -80,14 +80,14 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
   5. Readiness is known before anything is scored: the preflight reports each configured provider's readiness (key present, endpoint reachable, credits or quota) without scoring a job and exits non-zero when a required provider is not ready; the Free preset resolves only to models that are free at release time, the pricing table is corrected, and a test fails if the Free chain ever contains a paid model
 
 **Plans**: TBD
-**Git delivery**: Two PRs on two branches off main. Wave 1: `G-TBD/foundation-safety-nets`, conventional commits scoped to its ticket (`ci(G-TBD): ...`, `feat(G-TBD): ...`, `test(G-TBD): ...`). Wave 2, after wave 1 merges: `G-TBD/foundation-cost-guard`, commits scoped to its ticket (`feat(G-TBD): ...`, `test(G-TBD): ...`). Each: `review-push run` then `review-push sign` before push; merge only when CI is green.
+**Git delivery**: Two PRs on two branches off main. Wave 1: `G-2040/foundation-safety-nets`, conventional commits scoped to its ticket (`ci(G-2040): ...`, `feat(G-2040): ...`, `test(G-2040): ...`). Wave 2, after wave 1 merges: `G-2041/foundation-cost-guard`, commits scoped to its ticket (`feat(G-2041): ...`, `test(G-2041): ...`). Each: `review-push run` then `review-push sign` before push; merge only when CI is green.
 
 ### Phase 13: Cut A
 
 **Goal**: The sprawl with no port dependency is gone and the product runs lighter: TickTick, the Cloudflare worker and dashboard, BMAD scaffolding, consumer-less workflows and release channels, and the `icalendar` dependency are removed, each removal citing a Map verdict and each removing running behaviour or an outside dependency, with the frontend, docs, environment and CI cleaned in the same PR as the backend.
 **Depends on**: Phase 12, both waves (the import-all, OpenAPI and wheel tests catch what a cut breaks; the `CI Complete` allow-list changes with every workflow deletion; the cut list and its verdicts come from Phase 11)
 **Requirements**: CUT-01, CUT-02, CUT-03, CUT-04, CUT-05, CUT-06, CUT-07, CUT-08
-**Linear tickets**: G-TBD, one per integration (children of G-2013)
+**Linear tickets**: G-2042 (umbrella; one child per integration filed at planning time), child of G-2013
 **Rules** (binding, from the Cut A review 2026-10-26): one integration per PR; every PR description cites the MAP-08 verdict for its item; a cut must remove running behaviour or an outside dependency, not just lines. Calendar code stays (only the `icalendar` dependency goes); sources (WARN, the board scrapers, JobSpy) and OAuth (OpenRouter PKCE) are not cut; `tools/` and `daily-scan.yml` stay until Retire; Pushover is untouched; every AI provider stays.
 **Planning note**: Run the Alembic upgrade spike before `/gsd-plan-phase 13`: generate a real v0.28.2 database, run `alembic upgrade head` with SQLite foreign-key enforcement on and off, and confirm how `integration_configs` rows are handled; the MAP-05 golden is the regression net for every cut migration. Use `/gsd-plan-phase 13 --research-phase` if the spike leaves open questions.
 **Success Criteria** (what must be TRUE):
@@ -98,7 +98,7 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
   5. Each cut PR deletes the feature's frontend pages, API clients and tests together with its backend, with `npm run build` and `npm run test` green; a committed keep/remove inventory covers every doc page, environment variable and CI secret of the cut features, and the removed ones no longer appear in `.env.example`, docs or workflow files
 
 **Plans**: TBD
-**Git delivery**: One PR per integration, each on its own branch off main (`G-TBD/cut-ticktick`, `G-TBD/cut-icalendar`, `G-TBD/cut-worker-dashboard`, `G-TBD/cut-bmad`, `G-TBD/cut-workflows`); conventional commits scoped to that integration's ticket (`refactor(G-TBD): ...`, `chore(G-TBD): ...`, `ci(G-TBD): ...`); `review-push run` then `review-push sign` before push; merge only when CI is green; each PR description cites its MAP-08 verdict.
+**Git delivery**: One PR per integration, each on its own branch off main (`<child>/cut-ticktick`, `<child>/cut-icalendar`, `<child>/cut-worker-dashboard`, `<child>/cut-bmad`, `<child>/cut-workflows`, each child of G-2042); conventional commits scoped to that integration's ticket (`refactor(<child>): ...`, `chore(<child>): ...`, `ci(<child>): ...`); `review-push run` then `review-push sign` before push; merge only when CI is green; each PR description cites its MAP-08 verdict.
 **UI hint**: yes (deletions only: the frontend pages and API clients of cut features are removed and the frontend build stays green; no new UI is designed)
 
 ## Progress
