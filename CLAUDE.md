@@ -203,19 +203,24 @@ BMAD drives the product planning pipeline: PRD → UX Design → Architecture �
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**Kestrel Public Roadmap**
+**Kestrel v2.0 Lean Kestrel (in progress, Linear epic G-2013)**
 
-A public, demo-ready roadmap for Kestrel — the AI-powered, self-hosted job search platform — that lives on GitHub as the single source of truth for where the product is and where it's going. The roadmap documents everything shipped, lays out the forward vision, and becomes the backbone of a structured planning hierarchy: roadmap → BMAD PRDs → milestones → epics → Linear tickets.
+Kestrel is a self-hosted job-search engine for one person at a time. It finds jobs from ATS APIs and boards, keeps every arrival, triages and scores against the person's own dossier, tracks the applications, drafts in the person's voice, and learns from outcomes. The surfaces are a CLI, a Textual TUI and an MCP server for the user's coding agents; the web app is kept working but parked behind them. The Python package is `career_os`, the PyPI name is `kestrel-app`.
 
-**Core Value:** Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
+**Core Value:** One loop a real person runs every day: find, triage, apply, learn. The maintainer's own daily search is the acceptance test, and a technical stranger gets from clone to a first useful job list in 15 minutes.
+
+**North star for v2.0:** lean, engine-first, one person at a time. CLI, TUI and MCP server are the primary surfaces; the web app is kept working but parked. The web-first, docs-only framing of the 2026-04 roadmap milestone is superseded. Ground truth for agents: `.planning/PROJECT.md` ("Current Milestone") and `.planning/STATE.md` ("v2.0 review position").
 
 ### Constraints
 
-- **Format**: ROADMAP.md at repo root (GitHub-rendered Markdown), docs/roadmap/ for depth
-- **Audience**: Must be readable by non-technical users evaluating the product, developers wanting to contribute, and the maintainer for cross-session planning
-- **Accuracy**: Every claim about shipped features must be verifiable against codebase
-- **Structure**: Must support future BMAD PRD integration — milestones and epics as plug-in points
-- **No code changes**: This milestone is documentation and planning only
+- **Privacy boundary**: `.planning/`, `docs/` and `tests/` are public. No company names, person names, dates finer than a month, transcript quotes or private paths. Raw retrospective material lives only in the private pipeline's repository, referred to here only as "the private pipeline".
+- **Port before cut**: no script or integration is deleted before its logic is ported into `src/` and replay-verified against the Map goldens; old scripts stay until Retire.
+- **Map is read-only**: no changes under `src/career_os/`, no paid LLM calls, no scan or scoring runs during Phase 11.
+- **Cost**: no bulk paid LLM operation without an estimate and the maintainer's go; the spend guard is a code invariant from Foundation on.
+- **Delivery**: every phase is a PR on its own `<ticket>/<slug>` branch, commits carry `review-push` trailers after an independent review, CI green before merge, forward-only Alembic migrations with row-scoped deletes.
+- **Per-profile**: nothing new hard-codes the maintainer's profile; Map tags every verdict profile-specific vs generic.
+- **Surfaces**: CLI and TUI first, MCP server for agents; the web app stays working but receives no new features in v2.0.
+- **Release**: v2.0 ships as `2.0.0` (Release-As) once Install passes on a fresh machine.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:codebase/STACK.md -->

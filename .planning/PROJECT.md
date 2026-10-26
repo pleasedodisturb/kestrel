@@ -27,11 +27,11 @@
 
 ## What This Is
 
-A public, demo-ready roadmap for Kestrel — the AI-powered, self-hosted job search platform — that lives on GitHub as the single source of truth for where the product is and where it's going. The roadmap documents everything shipped, lays out the forward vision, and becomes the backbone of a structured planning hierarchy: roadmap → BMAD PRDs → milestones → epics → Linear tickets.
+Kestrel is a self-hosted job-search engine for one person at a time. It finds jobs from ATS APIs and boards, keeps every arrival, triages and scores against the person's own dossier, tracks the applications, drafts in the person's voice, and learns from outcomes. The surfaces are a CLI, a Textual TUI and an MCP server for the user's coding agents; the web app is kept working but parked behind them. The Python package is `career_os`, the PyPI name is `kestrel-app`.
 
 ## Core Value
 
-Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
+One loop a real person runs every day: find, triage, apply, learn. The maintainer's own daily search is the acceptance test, and a technical stranger gets from clone to a first useful job list in 15 minutes.
 
 ## Requirements
 
@@ -86,78 +86,50 @@ Make Kestrel's direction visible and structured so users can evaluate the produc
 
 ### Out of Scope
 
-- Implementing any new Kestrel features — this milestone is roadmap/planning infrastructure only
-- Building the actual SaaS platform (hosting, billing, auth tiers) — commercial forks off to separate repo later
-- Mobile app development — parked, documented in roadmap as future milestone
-- Browser extension development — documented as planned feature in roadmap, not built this milestone
-- Career roadmapping user feature — future product feature
-- Changing any existing code or architecture — read-only analysis of current state
+- A non-technical (no-terminal) install path, a richer person model, automated learning from edits and outcomes, Firefox, opt-in auto-submit — v2.1
+- Onboarding other people's profiles (the friends' profiles are the v2.1 test); v2.0 only guarantees nothing hard-codes the maintainer's profile
+- Cutting AI providers, writing, prefill or voice — they are the product
+- A private clone of the repo for v2.0 work — declined; the private retrospective runs inside the private pipeline's repository and only an anonymised verdict list enters this repo
+- Email digest as a delivery channel — Pushover stays until Retire
+- A hosted SaaS (hosting, billing, auth tiers) — a separate repo if ever
+- Mobile app — parked
+- Rewriting history: scripts and integrations are deleted only after their logic is ported and replay-verified against Map goldens
 
 ## Context
 
-**NORTH STAR: Web-first, user-first — NOT developer-first.**
-Kestrel is a web application for job seekers, not a dev tool that happens to have a UI. Every roadmap milestone must be framed through the lens of end-user experience. The web frontend is the primary interface. CLI and self-hosting are advanced options, not the default path. Moving to real end-user experience is the highest priority after this roadmap milestone.
+**North star for v2.0: lean, engine-first, one person at a time.** The web-first framing of the 2026-04 roadmap milestone is superseded. The CLI, the TUI and the MCP server are the primary surfaces; the web app is kept working but parked; "download, open, use" packaging is a later milestone. Agents planning any v2.0 phase must read the "Current Milestone" section above and `.planning/STATE.md` ("v2.0 review position") as ground truth, not the history below.
 
-Kestrel has shipped substantial functionality across backend, frontend, AI, and infrastructure — but development has been organic and the full picture isn't captured anywhere. The codebase analysis (`.planning/codebase/`) documents the technical state. Memory files track individual epics and decisions. But there's no single document that tells the story: "here's what Kestrel is, here's what's done, here's what's next."
+**How v2.0 is built.** The maintainer reviews each phase of the reconciled build order one by one (idea / process / results), and phases are added to the roadmap only after their review closes: Map → Foundation → Cut A → Find → Filter → Scan → Score → Track → Write → Connect → Apply → Retire → Install. Map is the milestone-level instance of "tests and output mapping first": it freezes a script ledger, goldens with source hashes, strict-xfail mapping tables and per-source arrival counts before anything is built or cut. Every port is verified by replay against those goldens; the old script stays until Retire.
 
-**Deployment/packaging gap (CRITICAL — highest priority forward milestone):**
-Currently 3 techy ways to run Kestrel: (1) clone + set env vars + uvicorn, (2) Docker compose, (3) pip install + manual config. ALL of these are developer-oriented. None are acceptable for real end users. The roadmap must chart the path from "dev self-help tool" to "download, open, use" — this is THE most important forward-looking milestone, not just one of many.
+**Where the evidence comes from.** The maintainer's private pipeline (a separate, private repository) ran the full loop daily from June to October 2026 with 21 configured sources and roughly ten thousand lines of scripts. That pipeline is the source of the ported logic and of the Track B flow retrospective. Its raw material never enters this repository: committed files carry only anonymised verdicts, synthetic or scrubbed fixtures and aggregate counts, and the CI PII scan is the second net, not the first. See `docs/coe/2026-07-09_initial-commit-pii-exposure.md` for why.
 
-**Target deployment vision:** Native desktop app experience (Electron/Tauri wrapper or similar). Download a `.dmg`/`.exe`, install, open, use. Data stays local, experience is polished. Think Obsidian — self-hosted but feels like a real app. Apple Developer Certificate budget approved for proper macOS signing/notarization. The web frontend IS the app — just packaged as a desktop application with embedded backend.
+**Cross-AI review shaped the scope** (Codex CLI and Mistral Vibe CLI, 2026-10-23): make the maintainer's own daily use the acceptance test, keep one install path, treat the person model as a hypothesis, audit what the filters exclude, verify every port by replay.
 
-**Planned features for roadmap (not built this milestone, but documented):**
-- Browser extension (Chrome/Firefox) — one-click "add this job to scoring DB" from any job page, even beyond scraper reach
-- Mobile app — parked scaffold, resumes when web v1 is solid
-- Profile & Skills — RPG-style character sheet (not gamified/cringe), inspired by Ray Dalio's baseball cards but techier. Honest skill mapping with levels, strengths, gaps
-- Gap Analysis & Coaching — select target role/path, continuous gap analysis, personal development stepping stones. Progressive depth: skill maps → awesome-learn-anything lists → MOOCs → AI-assisted learning/coaching. "Can't coach you to Apple CEO, but can coach you to better specialist, communicator, professional, human"
-- Codespaces one-click setup — `.devcontainer/` for instant dev environment
+**Business model (unchanged):** this repo stays non-commercial, public, always free and self-deployable. A commercial offering, if ever, forks off into a separate repo.
 
-**Business model (decided):**
-- This repo stays **non-commercial and public**. Always free, always self-deployable, full-featured
-- Commercial SaaS product **forks off separately** later — different repo, different deployment, paid subscription tiers with refined UI/UX, managed infrastructure, GDPR compliance, zero-access privacy
-- Model reference: screenpi.pe approach — open-source repo is the product, commercial offering forks off independently
-- **Codespaces-friendly**: target one-click dev environment via `.devcontainer/` (free tier: 60 hours/month on 2-core)
+**Existing planning infrastructure:** GSD (`.planning/`, committed), Linear team G (one epic per milestone, G-2013 for v2.0, phase tickets as children), the `review-push` evidence-bound pre-push review gate, memory files across sessions. BMAD is removed in Cut A.
 
-**Planning hierarchy (target):**
-```
-ROADMAP.md (master, repo root)
-  └── docs/roadmap/ (per-milestone detail)
-       └── BMAD PRDs (product requirements)
-            └── Milestones (scoped deliverables)
-                 └── Epics (feature groupings)
-                      └── Linear tickets (granular tasks)
-```
+**Technical debt that v2.0 addresses directly:** scoring and discovery logic split between `src/` and `tools/` scripts; a shared `integration_configs` table where AI credentials sit next to third-party tokens and a silent-fail credential read; `0.0.0.0` default bind (G-2009); no pip lockfile; consumer-less workflows and packaging targets (npm, Homebrew, GHCR).
 
-**Existing planning infrastructure:**
-- GSD workflow system (`.planning/`, phases, plans, execution)
-- BMAD product planning (`_bmad/`, PRD creation in progress — 5/13 steps done)
-- Linear for task tracking (team: G)
-- Memory system tracking decisions, research, feedback across sessions
+<details>
+<summary>History: context of the 2026-04 Public Roadmap milestone (roadmap-m1, shipped 2026-05-07)</summary>
 
-**Key shipped epics (from memory):**
-- Scoring evolution: 11 epics, self-calibrating with 288 job family presets
-- Token optimization: full stack cost control shipped
-- Test infrastructure: 6 phases shipped
-- CI/CD: 4-phase roadmap researched, 22 tickets created
-- Docs audit: 40+ docs restructured
-- AI providers: Wave 1 shipped (6 providers/middleware), Waves 2-4 planned
-- Cost control: 17 tickets, research in docs/research/
+**NORTH STAR at the time: Web-first, user-first — NOT developer-first.** Kestrel was framed as a web application for job seekers with the web frontend as the primary interface and CLI/self-hosting as advanced options. The "deployment/packaging gap" (three developer-oriented ways to run Kestrel, none acceptable for end users) was named the highest-priority forward milestone, with a native desktop wrapper (Electron/Tauri, signed `.dmg`/`.exe`, Obsidian-like) as the target vision. Planned features documented then: browser extension (since shipped as "the eye", v0.24.0), mobile app (parked), RPG-style profile and skills sheet, gap analysis and coaching, Codespaces one-click setup (shipped). Planning hierarchy target: ROADMAP.md → docs/roadmap/ → BMAD PRDs → milestones → epics → Linear tickets. Technical debt noted then: scoring service monolith (4,262 lines), mock provider burden (1,844 lines), no pip lockfile, synchronous external clients, hand-maintained frontend types, SQLite-only.
 
-**Technical debt highlights (from codebase analysis):**
-- Scoring service monolith (4,262 lines)
-- Mock provider maintenance burden (1,844 lines)
-- No pip lockfile for reproducible builds
-- Synchronous external API clients blocking event loop
-- Frontend types manually maintained (drift risk)
-- SQLite-only (Supabase migration researched but unimplemented)
+v2.0 reverses the web-first framing on the evidence of six months of daily use: the engine and the terminal surfaces are what got used; the web app did not.
+
+</details>
 
 ## Constraints
 
-- **Format**: ROADMAP.md at repo root (GitHub-rendered Markdown), docs/roadmap/ for depth
-- **Audience**: Must be readable by non-technical users evaluating the product, developers wanting to contribute, and the maintainer for cross-session planning
-- **Accuracy**: Every claim about shipped features must be verifiable against codebase
-- **Structure**: Must support future BMAD PRD integration — milestones and epics as plug-in points
-- **No code changes**: This milestone is documentation and planning only
+- **Privacy boundary**: `.planning/`, `docs/` and `tests/` are public. No company names, person names, dates finer than a month, transcript quotes or private paths. Raw retrospective material lives only in the private pipeline's repository, referred to here only as "the private pipeline".
+- **Port before cut**: no script or integration is deleted before its logic is ported into `src/` and replay-verified against the Map goldens; old scripts stay until Retire.
+- **Map is read-only**: no changes under `src/career_os/`, no paid LLM calls, no scan or scoring runs during Phase 11.
+- **Cost**: no bulk paid LLM operation without an estimate and the maintainer's go; the spend guard is a code invariant from Foundation on.
+- **Delivery**: every phase is a PR on its own `<ticket>/<slug>` branch, commits carry `review-push` trailers after an independent review, CI green before merge, forward-only Alembic migrations with row-scoped deletes.
+- **Per-profile**: nothing new hard-codes the maintainer's profile; Map tags every verdict profile-specific vs generic.
+- **Surfaces**: CLI and TUI first, MCP server for agents; the web app stays working but receives no new features in v2.0.
+- **Release**: v2.0 ships as `2.0.0` (Release-As) once Install passes on a fresh machine.
 
 ## Key Decisions
 
@@ -191,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-24 after starting milestone v2.0 Lean Kestrel (G-2013)*
+*Last updated: 2026-10-26 — What This Is, Core Value, Out of Scope, Context and Constraints refreshed to the v2.0 frame (G-2013)*
