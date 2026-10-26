@@ -32,3 +32,26 @@ Historical record of shipped milestones. Each entry archives to `.planning/miles
 
 - `.planning/milestones/roadmap-m1-ROADMAP.md` — full milestone roadmap with phase details
 - `.planning/milestones/roadmap-m1-REQUIREMENTS.md` — final requirements status with outcomes
+
+## v1.1 (Geo gate to production) — Closed early 2026-10-23
+
+**Goal:** Make the shipped geo engine actually decide something in production, with one classifier, honest tests and provider failures told apart. Linear epic G-1790.
+
+**Phases:** 5 planned (6-10), 1 executed (Phase 6 Test honesty, 2/2 plans, shipped 2026-09-30, merged 2026-10-23 in #572/#573)
+**Requirements:** 4/20 satisfied (TEST-01..04)
+**Timeline:** 2026-09-28 → 2026-10-23
+
+### Why it closed early
+
+The maintainer reset direction on 2026-10-23 toward a lean rebuild (v2.0 Lean Kestrel, G-2013). Phases 7-10 (wire the geo gate, over-admission rule, single geo authority, provider preflight) were folded into v2.0 rather than executed as written: the geo work lands inside the one `assess()` engine (Filter), the provider work inside the Foundation cost guard with a status+code+Retry-After classifier.
+
+### Key Accomplishments
+
+1. **Honest test suite** — AST guard fails collection on import-masking module-level skips (incl. flag-variable skipif and unittest.SkipTest); the dead parser suite was deleted with a 19-case ledger and 10 live behaviours re-pinned
+2. **One ruff** — ruff==0.16.9 pinned in pyproject and pre-commit with a drift guard and force-exclude for `_alembic`
+
+### Archives
+
+- `.planning/milestones/v1.1-ROADMAP.md` — roadmap as written at close
+- `.planning/milestones/v1.1-REQUIREMENTS.md` — requirements with final status
+- `.planning/milestones/v1.1-phases/` — phase directories (06-test-honesty, plus the extension phases 00/01 that ran outside the v1.1 roadmap)
