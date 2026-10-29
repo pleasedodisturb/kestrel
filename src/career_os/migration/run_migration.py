@@ -11,7 +11,7 @@ from pathlib import Path
 from career_os.database import SessionLocal
 from career_os.migration.csv_import import import_csv
 from career_os.migration.link_packages import link_packages
-from career_os.migration.seed import seed_default_profile, seed_ghost_detection_records
+from career_os.migration.seed import seed_default_profile
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,15 +59,10 @@ def run_full_migration(
         logger.info("Step 3: Linking application packages from %s...", packages_path)
         pkg_stats = link_packages(db, packages_path, profile.id)
 
-        # Step 4: Seed ghost detection test records
-        logger.info("Step 4: Seeding ghost detection test records...")
-        ghost_count = seed_ghost_detection_records(db, profile.id)
-
         results = {
             "profile": {"id": profile.id, "name": profile.name},
             "csv_import": csv_stats,
             "package_linking": pkg_stats,
-            "ghost_seed": {"created": ghost_count},
         }
 
         logger.info("=" * 60)

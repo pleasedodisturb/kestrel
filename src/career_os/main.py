@@ -45,7 +45,7 @@ from career_os.api.voice import router as voice_router
 from career_os.config import settings
 from career_os.database import SessionLocal
 from career_os.discovery.scheduler import start_scheduler, stop_scheduler
-from career_os.migration.seed import seed_default_profile, seed_ghost_detection_records
+from career_os.migration.seed import seed_default_profile
 from career_os.models.models import Application
 from career_os.services.occupation_taxonomy import populate_occupations
 from career_os.services.ticktick_scheduler import (
@@ -145,11 +145,12 @@ async def lifespan(app: FastAPI):
     # 1. Run Alembic migrations (fail fast on error)
     _auto_migrate()
 
-    # 2. Seed default profile and ghost detection records
+    # 2. Seed the default profile. Never demo rows: those are opt-in via
+    #    `kestrel init` (migration.demo_seed). The old boot-time ghost seeder
+    #    re-created three fake applications on every start (G-1578).
     db = SessionLocal()
     try:
-        profile = seed_default_profile(db)
-        seed_ghost_detection_records(db, profile.id)
+        seed_default_profile(db)
     except Exception as e:
         logger.warning("Could not seed default data: %s", e)
 
