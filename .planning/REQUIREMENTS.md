@@ -44,6 +44,7 @@ Phase 1a of the build order: safety nets that make deletion and new entry points
 - [ ] **FOUND-07**: `kestrel start` and the API bind `127.0.0.1` by default; a non-loopback bind needs an explicit opt-in (environment variable, Docker override) and is refused while auth is off (closes G-2009)
 - [ ] **FOUND-08**: A per-profile isolation test proves two profiles in one database never see each other's jobs, applications, settings or credentials through the service layer
 - [ ] **FOUND-09**: The silent `except Exception: return ""` in the provider factory's database credential read becomes a logged warning, so a missing or broken `integration_configs` row is visible
+- [ ] **FOUND-10**: The scoring payload carries no profile name, email, phone or address unless the active provider passes `check_privacy_boundary` or the user opts in through a documented setting; `score_job` runs the same boundary check as conversation mode and interview prep, a test asserts the serialised prompt for a cloud provider contains none of those fields, and the README and COMPARISON disclosure of the leak is removed (closes G-1846)
 
 ### Cost guard (COST)
 
@@ -125,6 +126,7 @@ Filled by the roadmapper.
 | FOUND-07 | Phase 12 | Pending |
 | FOUND-08 | Phase 12 | Pending |
 | FOUND-09 | Phase 12 | Pending |
+| FOUND-10 | Phase 12 | Pending |
 | COST-01 | Phase 12 | Pending |
 | COST-02 | Phase 12 | Pending |
 | COST-03 | Phase 12 | Pending |
