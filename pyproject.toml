@@ -56,7 +56,7 @@ dev = [
     # .pre-commit-config.yaml. Bump both in the same PR — tests/test_toolchain_pins.py
     # fails otherwise. A Dependabot PR bumping only this line is expected to go red
     # until the rev follows (G-1383).
-    "ruff==0.16.9",
+    "ruff==0.17.3",
     "httpx>=0.28.0",
     # setuptools>=83.0.0 closes PYSEC-2026-3447 (advisory against <83.0.0). Declared
     # here (not just build-system.requires) so `pip install -e .[dev]` upgrades it in
