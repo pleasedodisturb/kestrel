@@ -205,11 +205,11 @@ BMAD drives the product planning pipeline: PRD → UX Design → Architecture �
 
 **Kestrel v2.0 Lean Kestrel (in progress, Linear epic G-2013)**
 
-Kestrel is a self-hosted job-search engine for one person at a time. It finds jobs from ATS APIs and boards, keeps every arrival, triages and scores against the person's own dossier, tracks the applications, drafts in the person's voice, and learns from outcomes. The surfaces are a CLI, a Textual TUI and an MCP server for the user's coding agents; the web app is kept working but parked behind them. The Python package is `career_os`, the PyPI name is `kestrel-app`.
+Kestrel is a self-hosted job-search engine for one person at a time. It finds jobs from ATS APIs and boards, keeps every arrival, triages and scores against the person's own dossier, tracks the applications, drafts in the person's voice, and learns from outcomes. The surfaces are a CLI, a Textual TUI and an MCP server for the user's coding agents; the web app is frozen behind them, kept in git but not built, tested or shipped. The Python package is `career_os`, the PyPI name is `kestrel-app`.
 
 **Core Value:** One loop a real person runs every day: find, triage, apply, learn. The maintainer's own daily search is the acceptance test, and a technical stranger gets from clone to a first useful job list in 15 minutes.
 
-**North star for v2.0:** lean, engine-first, one person at a time. CLI, TUI and MCP server are the primary surfaces; the web app is kept working but parked. The web-first, docs-only framing of the 2026-04 roadmap milestone is superseded. Ground truth for agents: `.planning/PROJECT.md` ("Current Milestone") and `.planning/STATE.md` ("v2.0 review position").
+**North star for v2.0:** lean, engine-first, one person at a time. CLI, TUI and MCP server are the primary surfaces; the web app is frozen. The web-first, docs-only framing of the 2026-04 roadmap milestone is superseded. Ground truth for agents: `.planning/PROJECT.md` ("Current Milestone") and `.planning/STATE.md` ("v2.0 review position").
 
 ### Constraints
 
@@ -219,7 +219,7 @@ Kestrel is a self-hosted job-search engine for one person at a time. It finds jo
 - **Cost**: no bulk paid LLM operation without an estimate and the maintainer's go; the spend guard is a code invariant from Foundation on.
 - **Delivery**: every phase is a PR on its own `<ticket>/<slug>` branch, commits carry `review-push` trailers after an independent review, CI green before merge, forward-only Alembic migrations with row-scoped deletes.
 - **Per-profile**: nothing new hard-codes the maintainer's profile; Map tags every verdict profile-specific vs generic.
-- **Surfaces**: CLI and TUI first, MCP server for agents; the web app is parked from Cut A on: served only behind an explicit opt-in, code kept, no new features and no refinement in v2.0, until a later milestone tests it end to end. v2.0 ships a selling demo on synthetic data (`kestrel demo`, terminal recordings, a video later); the Railway deploy path is cut.
+- **Surfaces**: CLI and TUI first, MCP server for agents; the web app is frozen from Cut A on: code kept in git, nothing builds, tests or ships it, a hand-built `frontend/dist` is served only behind an explicit opt-in that is off by default, no new features and no refinement in v2.0, until a later milestone tests it end to end. v2.0 ships a selling demo on synthetic data (`kestrel demo`, terminal recordings, a video later); the Railway deploy path is cut.
 - **Release**: v2.0 ships as `2.0.0` (Release-As) once Install passes on a fresh machine.
 <!-- GSD:project-end -->
 

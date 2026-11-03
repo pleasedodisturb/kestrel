@@ -13,7 +13,7 @@
 **Thesis:** Kestrel tried to wear every hat at once and served no one. What proved itself in daily use and in the field: find jobs, take the dread out of the process, automate the non-human parts (searching, filtering, opening applications), assist the human parts (writing in your voice, preparing, deciding), and learn the person over time.
 
 **Target features (v2.0):**
-- Cut the sprawl: planning-framework scaffolding, the Cloudflare worker and dashboard, TickTick/calendar/OAuth/WARN integrations, unused deploy and release surface. Park the web app behind the TUI (kept working, since it is the start of the 15-minute path). Fix the default `0.0.0.0` bind (G-2009). Script logic is deleted only after it is ported and replay-verified.
+- Cut the sprawl: planning-framework scaffolding, the Cloudflare worker and dashboard, TickTick/calendar/OAuth/WARN integrations, unused deploy and release surface. Freeze the web app (kept in git, not built, tested or shipped; a hand-built dist is served only behind an opt-in); the 15-minute path runs through the CLI and TUI. Fix the default `0.0.0.0` bind (G-2009). Script logic is deleted only after it is ported and replay-verified.
 - One engine: port the proven pipeline logic that today lives in scripts into `src/` (ATS-API sources, single eligibility engine with the geo gate, dedup within batch and against history, liveness with ATS re-resolution, canaries and floors, cost safety: preflight, spend halt, 429 = wait). A headless `kestrel scan` on cron that persists every arrival.
 - Filter & Score: one `assess()` used by prefilter, scorer, triage and alerts; calibrated scoring; a daily digest with a recurring audit of excluded jobs the user can overturn.
 - Track: a Textual TUI over the existing CLI; shortlist; outcome states (prepared / submit attempted / submission confirmed).
@@ -27,7 +27,7 @@
 
 ## What This Is
 
-Kestrel is a self-hosted job-search engine for one person at a time. It finds jobs from ATS APIs and boards, keeps every arrival, triages and scores against the person's own dossier, tracks the applications, drafts in the person's voice, and learns from outcomes. The surfaces are a CLI, a Textual TUI and an MCP server for the user's coding agents; the web app is kept working but parked behind them. The Python package is `career_os`, the PyPI name is `kestrel-app`.
+Kestrel is a self-hosted job-search engine for one person at a time. It finds jobs from ATS APIs and boards, keeps every arrival, triages and scores against the person's own dossier, tracks the applications, drafts in the person's voice, and learns from outcomes. The surfaces are a CLI, a Textual TUI and an MCP server for the user's coding agents; the web app is frozen behind them, kept in git but not built, tested or shipped. The Python package is `career_os`, the PyPI name is `kestrel-app`.
 
 ## Core Value
 
@@ -97,7 +97,7 @@ One loop a real person runs every day: find, triage, apply, learn. The maintaine
 
 ## Context
 
-**North star for v2.0: lean, engine-first, one person at a time.** The web-first framing of the 2026-04 roadmap milestone is superseded. The CLI, the TUI and the MCP server are the primary surfaces; the web app is kept working but parked; "download, open, use" packaging is a later milestone. Agents planning any v2.0 phase must read the "Current Milestone" section above and `.planning/STATE.md` ("v2.0 review position") as ground truth, not the history below.
+**North star for v2.0: lean, engine-first, one person at a time.** The web-first framing of the 2026-04 roadmap milestone is superseded. The CLI, the TUI and the MCP server are the primary surfaces; the web app is frozen; "download, open, use" packaging is a later milestone. Agents planning any v2.0 phase must read the "Current Milestone" section above and `.planning/STATE.md` ("v2.0 review position") as ground truth, not the history below.
 
 **How v2.0 is built.** The maintainer reviews each phase of the reconciled build order one by one (idea / process / results), and phases are added to the roadmap only after their review closes: Map → Foundation → Cut A → Find → Filter → Scan → Score → Track → Write → Connect → Apply → Retire → Install. Map is the milestone-level instance of "tests and output mapping first": it freezes a script ledger, goldens with source hashes, strict-xfail mapping tables and per-source arrival counts before anything is built or cut. Every port is verified by replay against those goldens; the old script stays until Retire.
 
@@ -128,7 +128,7 @@ v2.0 reverses the web-first framing on the evidence of six months of daily use: 
 - **Cost**: no bulk paid LLM operation without an estimate and the maintainer's go; the spend guard is a code invariant from Foundation on.
 - **Delivery**: every phase is a PR on its own `<ticket>/<slug>` branch, commits carry `review-push` trailers after an independent review, CI green before merge, forward-only Alembic migrations with row-scoped deletes.
 - **Per-profile**: nothing new hard-codes the maintainer's profile; Map tags every verdict profile-specific vs generic.
-- **Surfaces**: CLI and TUI first, MCP server for agents; the web app is parked from Cut A on: served only behind an explicit opt-in, code kept, no new features and no refinement in v2.0, until a later milestone tests it end to end. v2.0 ships a selling demo on synthetic data (`kestrel demo`, terminal recordings, a video later); the Railway deploy path is cut.
+- **Surfaces**: CLI and TUI first, MCP server for agents; the web app is frozen from Cut A on: code kept in git, nothing builds, tests or ships it, a hand-built `frontend/dist` is served only behind an explicit opt-in that is off by default, no new features and no refinement in v2.0, until a later milestone tests it end to end. v2.0 ships a selling demo on synthetic data (`kestrel demo`, terminal recordings, a video later); the Railway deploy path is cut.
 - **Release**: v2.0 ships as `2.0.0` (Release-As) once Install passes on a fresh machine.
 
 ## Key Decisions
@@ -143,7 +143,7 @@ v2.0 reverses the web-first framing on the evidence of six months of daily use: 
 | Resolve the ruff pin from the newest green main CI run at execution time, never from research notes | Research, venv and pre-commit each held a different version; only CI's resolution is the contract | Done — 0.16.9 pinned in both files (G-1383) |
 | Keep `force-exclude = true` even though the pre-commit ruff hooks already pass `--force-exclude` | Belt and braces for bare and editor invocations; the RESEARCH claim that pre-commit bypassed the `_alembic` exclude was wrong | Done (Phase 6) |
 | Delete the dead `test_parse_scoring_response.py` and ledger all 19 cases (7 covered, 10 re-pinned, 2 out of contract) instead of relocating it | Its subject has zero live callers; a ledger keeps the deletion auditable | Done (G-1382) |
-| Railway deploy path is cut; the web app is parked behind an explicit opt-in, not removed; v2.0 ships a selling demo on synthetic data | Maintainer decision 2026-11: a one-person self-hosted engine leads with CLI and TUI, not a cloud deploy; the web app is not trusted until refined and tested end to end; a showcase and video sell the product better than a hosted button | — Pending (CUT-09, CUT-10, DEMO-xx in the Install review) |
+| Railway deploy path is cut; the web app is frozen (kept in git, not built, tested or shipped; a hand-built dist served only behind an opt-in), not removed; v2.0 ships a selling demo on synthetic data | Maintainer decision 2026-11: a one-person self-hosted engine leads with CLI and TUI, not a cloud deploy; the web app is not trusted until refined and tested end to end, and building, testing and shipping what nobody runs only buys dependency churn; a showcase and video sell the product better than a hosted button | — Pending (CUT-09, CUT-10, DEMO-xx in the Install review) |
 | Import-masking guard is AST-based with no allowlist, and fails loudly on unparseable files | An exemption mechanism would recreate the silent-skip class it exists to remove | Done; extended after code review to flag-variable skipif and unittest.SkipTest (WR-01) |
 
 ## Evolution
