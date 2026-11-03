@@ -43,7 +43,7 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
 
 - [ ] **Phase 11: Map** - Freeze what exists before anything is ported or cut: script ledger, goldens with source hashes, red mapping tests, per-source arrival counts, and the anonymised flow verdicts every later cut must cite (read-only, no paid LLM calls)
 - [ ] **Phase 12: Foundation** - Safety nets (wave 1) and the cost guard (wave 2) land before any cut or unattended paid run: CI that fails closed, one `KESTREL_HOME`, loopback bind by default, no identifying profile fields in cloud scoring prompts, a spend halt no caller can swallow
-- [ ] **Phase 13: Cut A** - Sprawl with no port dependency goes, one integration per PR, each citing a Map verdict: TickTick, the `icalendar` dependency, worker and dashboard, BMAD scaffolding, consumer-less workflows and release channels
+- [ ] **Phase 13: Cut A** - Sprawl with no port dependency goes, one integration per PR, each citing a Map verdict: TickTick, the `icalendar` dependency, worker and dashboard, BMAD scaffolding, consumer-less workflows and release channels, the Railway deploy path; the web app is parked behind an explicit opt-in
 
 ## Phase Details
 
@@ -86,7 +86,7 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
 
 **Goal**: The sprawl with no port dependency is gone and the product runs lighter: TickTick, the Cloudflare worker and dashboard, BMAD scaffolding, consumer-less workflows and release channels, and the `icalendar` dependency are removed, each removal citing a Map verdict and each removing running behaviour or an outside dependency, with the frontend, docs, environment and CI cleaned in the same PR as the backend.
 **Depends on**: Phase 12, both waves (the import-all, OpenAPI and wheel tests catch what a cut breaks; the `CI Complete` allow-list changes with every workflow deletion; the cut list and its verdicts come from Phase 11)
-**Requirements**: CUT-01, CUT-02, CUT-03, CUT-04, CUT-05, CUT-06, CUT-07, CUT-08
+**Requirements**: CUT-01, CUT-02, CUT-03, CUT-04, CUT-05, CUT-06, CUT-07, CUT-08, CUT-09, CUT-10
 **Linear tickets**: G-2042 (umbrella; one child per integration filed at planning time), child of G-2013
 **Rules** (binding, from the Cut A review 2026-10-26): one integration per PR; every PR description cites the MAP-08 verdict for its item; a cut must remove running behaviour or an outside dependency, not just lines. Calendar code stays (only the `icalendar` dependency goes); sources (WARN, the board scrapers, JobSpy) and OAuth (OpenRouter PKCE) are not cut; `tools/` and `daily-scan.yml` stay until Retire; Pushover is untouched; every AI provider stays.
 **Planning note**: Run the Alembic upgrade spike before `/gsd-plan-phase 13`: generate a real v0.28.2 database, run `alembic upgrade head` with SQLite foreign-key enforcement on and off, and confirm how `integration_configs` rows are handled; the MAP-05 golden is the regression net for every cut migration. Use `/gsd-plan-phase 13 --research-phase` if the spike leaves open questions.
@@ -96,9 +96,10 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
   3. `worker/`, `dashboard/` and the BMAD scaffolding (`_bmad/`, `.claude/skills/bmad-*`, its output directory, the CLAUDE.md section) are deleted with their workflows, lockfiles and audit allow-list entries; the consumer-less workflows (worker and dashboard CI, npm publish, homebrew bump) are gone; the npm, homebrew and GHCR channels carry a deprecation notice pointing to PyPI; the `CI Complete` allow-list is updated in the same PR and `CI Complete` is green afterwards
   4. Each cut's database change is a forward-only Alembic revision that deletes only that integration's rows from `integration_configs` by name; older revisions are byte-identical to main, orphan tables stay in place, and the MAP-05 golden passes after `alembic upgrade head` on a real v0.28.2 database
   5. Each cut PR deletes the feature's frontend pages, API clients and tests together with its backend, with `npm run build` and `npm run test` green; a committed keep/remove inventory covers every doc page, environment variable and CI secret of the cut features, and the removed ones no longer appear in `.env.example`, docs or workflow files
+  6. The Railway deploy path is gone from the repo (`railway.json`, README button and table row, the DEPLOY.md section, the remaining mentions) and the template is retired; the API mounts the built frontend only behind an explicit opt-in that is off by default, `kestrel start` reports the web app as parked, README and docs lead with the CLI and TUI, and the frontend code, build and tests remain in place with `npm run build` and `npm run test` green
 
 **Plans**: TBD
-**Git delivery**: One PR per integration, each on its own branch off main (`<child>/cut-ticktick`, `<child>/cut-icalendar`, `<child>/cut-worker-dashboard`, `<child>/cut-bmad`, `<child>/cut-workflows`, each child of G-2042); conventional commits scoped to that integration's ticket (`refactor(<child>): ...`, `chore(<child>): ...`, `ci(<child>): ...`); `review-push run` then `review-push sign` before push; merge only when CI is green; each PR description cites its MAP-08 verdict.
+**Git delivery**: One PR per integration, each on its own branch off main (`<child>/cut-ticktick`, `<child>/cut-icalendar`, `<child>/cut-worker-dashboard`, `<child>/cut-bmad`, `<child>/cut-workflows`, `<child>/cut-railway`, `<child>/park-web`, each child of G-2042); conventional commits scoped to that integration's ticket (`refactor(<child>): ...`, `chore(<child>): ...`, `ci(<child>): ...`); `review-push run` then `review-push sign` before push; merge only when CI is green; each PR description cites its MAP-08 verdict.
 **UI hint**: yes (deletions only: the frontend pages and API clients of cut features are removed and the frontend build stays green; no new UI is designed)
 
 ## Progress

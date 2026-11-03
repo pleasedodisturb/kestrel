@@ -69,6 +69,8 @@ Phase 2 of the build order: sprawl with no port dependency. Rule: a cut must rem
 - [ ] **CUT-06**: Database changes for cuts are forward-only Alembic revisions that delete only the cut integration's rows from `integration_configs` by name; older revisions stay byte-identical, orphan tables stay in place, and the MAP-05 golden still passes
 - [ ] **CUT-07**: Frontend pages, API clients and tests for a cut feature are deleted in the same PR as their backend, with the frontend build and tests green
 - [ ] **CUT-08**: A committed keep/remove inventory covers every doc page, environment variable and CI secret of the cut features, and the removed ones are gone from `.env.example`, docs and workflow files
+- [ ] **CUT-09**: The Railway deploy path is gone: `railway.json`, the README deploy button and install-table row, the Railway section of `docs/reference/DEPLOY.md` and the remaining doc and Dockerfile mentions are removed, and the maintainer retires the Railway template (maintainer decision 2026-11, not a Map verdict; the Codespaces badge is decided in Install)
+- [ ] **CUT-10**: The web app is parked: the API mounts the built frontend only behind an explicit opt-in setting (off by default), `kestrel start` says so, README and docs lead with the CLI and TUI, and the frontend code, build and tests stay in the repo untouched so the wheel check (FOUND-03) and the per-cut frontend deletions (CUT-07) keep working
 
 ## Decisions carried into later phases (not requirements yet)
 
@@ -78,6 +80,8 @@ Phase 2 of the build order: sprawl with no port dependency. Rule: a cut must rem
 - **Calendar in Track**: Kestrel owns dates; sinks are `.ics` always, Apple Calendar/Reminders by default on a Mac behind an outbox with retry on the next interactive TUI start (macOS Automation permission needs a one-time GUI grant), any task manager through the user's agent and its MCP, Google Calendar through the prefilled link with full sync via an agent plus a Google Calendar MCP. Track's verification includes a scheduled run (LaunchAgent and SSH).
 - **Connect** exposes due follow-ups and upcoming dates through the Kestrel MCP.
 - **Multi-profile**: v2.0 carries the per-profile isolation constraint (FOUND-08); real friend-profile searches and an anonymised showcase are v2.1.
+- **Web app parked (maintainer decision 2026-11)**: served only behind an explicit opt-in from Cut A on (CUT-10); no refinement, no new features, no removal in v2.0. It comes back as a surface only after a later milestone refines and tests it end to end. Every later phase builds CLI, TUI and MCP only.
+- **Selling demo (maintainer decision 2026-11)**: v2.0 ships a showcase that sells the product: a `kestrel demo` path on a synthetic profile and synthetic jobs that runs the whole loop (find, filter, score, track, write) in the TUI without keys or network, plus terminal recordings for the README and a narrated video afterwards. Scoped in the Install review as its own requirement set (DEMO-xx), distinct from SHOW-01, which is about real friend profiles.
 - **Agents are swappable model suppliers** (Claude Code on subscription, API key in the TUI, Codex or Pi via MCP or CLI twins); gates and state live in Kestrel.
 
 ## Future Requirements
@@ -96,6 +100,7 @@ Deferred to v2.1 or later, tracked in Linear, not in this roadmap.
 |---------|--------|
 | Full private clone of the repo for the milestone | Declined 2026-10-26: end-of-milestone scrub is the shape of the repo-split incident; the public repo would go dark; every PR would flow twice. Track B runs inside the private repo instead |
 | Email digest | Not on the 15-minute path; file, terminal and TUI sinks only in v2.0 |
+| Railway deploy path | Maintainer decision 2026-11: cut in Cut A (CUT-09); a one-person self-hosted engine does not lead with a cloud deploy of the parked web app |
 | Cutting any AI provider | Maintainer decision 2026-10-23: every provider stub stays; they give other people a choice |
 | Cutting the writing and prefill tools, or the voice service | Maintainer correction 2026-10-23: core, not sprawl |
 | Deleting `tools/` or `daily-scan.yml` in Cut A | They are the live pipeline and the porting source; Retire deletes them after replay verification |
@@ -141,6 +146,8 @@ Filled by the roadmapper.
 | CUT-06 | Phase 13 | Pending |
 | CUT-07 | Phase 13 | Pending |
 | CUT-08 | Phase 13 | Pending |
+| CUT-09 | Phase 13 | Pending |
+| CUT-10 | Phase 13 | Pending |
 
 **Coverage:**
 - v2.0 requirements so far: 32 total (Map 9, Foundation 9, Cost guard 6, Cut A 8)

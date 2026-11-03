@@ -219,7 +219,7 @@ Kestrel is a self-hosted job-search engine for one person at a time. It finds jo
 - **Cost**: no bulk paid LLM operation without an estimate and the maintainer's go; the spend guard is a code invariant from Foundation on.
 - **Delivery**: every phase is a PR on its own `<ticket>/<slug>` branch, commits carry `review-push` trailers after an independent review, CI green before merge, forward-only Alembic migrations with row-scoped deletes.
 - **Per-profile**: nothing new hard-codes the maintainer's profile; Map tags every verdict profile-specific vs generic.
-- **Surfaces**: CLI and TUI first, MCP server for agents; the web app stays working but receives no new features in v2.0.
+- **Surfaces**: CLI and TUI first, MCP server for agents; the web app is parked from Cut A on: served only behind an explicit opt-in, code kept, no new features and no refinement in v2.0, until a later milestone tests it end to end. v2.0 ships a selling demo on synthetic data (`kestrel demo`, terminal recordings, a video later); the Railway deploy path is cut.
 - **Release**: v2.0 ships as `2.0.0` (Release-As) once Install passes on a fresh machine.
 <!-- GSD:project-end -->
 

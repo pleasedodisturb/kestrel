@@ -128,7 +128,7 @@ v2.0 reverses the web-first framing on the evidence of six months of daily use: 
 - **Cost**: no bulk paid LLM operation without an estimate and the maintainer's go; the spend guard is a code invariant from Foundation on.
 - **Delivery**: every phase is a PR on its own `<ticket>/<slug>` branch, commits carry `review-push` trailers after an independent review, CI green before merge, forward-only Alembic migrations with row-scoped deletes.
 - **Per-profile**: nothing new hard-codes the maintainer's profile; Map tags every verdict profile-specific vs generic.
-- **Surfaces**: CLI and TUI first, MCP server for agents; the web app stays working but receives no new features in v2.0.
+- **Surfaces**: CLI and TUI first, MCP server for agents; the web app is parked from Cut A on: served only behind an explicit opt-in, code kept, no new features and no refinement in v2.0, until a later milestone tests it end to end. v2.0 ships a selling demo on synthetic data (`kestrel demo`, terminal recordings, a video later); the Railway deploy path is cut.
 - **Release**: v2.0 ships as `2.0.0` (Release-As) once Install passes on a fresh machine.
 
 ## Key Decisions
@@ -143,6 +143,7 @@ v2.0 reverses the web-first framing on the evidence of six months of daily use: 
 | Resolve the ruff pin from the newest green main CI run at execution time, never from research notes | Research, venv and pre-commit each held a different version; only CI's resolution is the contract | Done — 0.16.9 pinned in both files (G-1383) |
 | Keep `force-exclude = true` even though the pre-commit ruff hooks already pass `--force-exclude` | Belt and braces for bare and editor invocations; the RESEARCH claim that pre-commit bypassed the `_alembic` exclude was wrong | Done (Phase 6) |
 | Delete the dead `test_parse_scoring_response.py` and ledger all 19 cases (7 covered, 10 re-pinned, 2 out of contract) instead of relocating it | Its subject has zero live callers; a ledger keeps the deletion auditable | Done (G-1382) |
+| Railway deploy path is cut; the web app is parked behind an explicit opt-in, not removed; v2.0 ships a selling demo on synthetic data | Maintainer decision 2026-11: a one-person self-hosted engine leads with CLI and TUI, not a cloud deploy; the web app is not trusted until refined and tested end to end; a showcase and video sell the product better than a hosted button | — Pending (CUT-09, CUT-10, DEMO-xx in the Install review) |
 | Import-masking guard is AST-based with no allowlist, and fails loudly on unparseable files | An exemption mechanism would recreate the silent-skip class it exists to remove | Done; extended after code review to flag-variable skipif and unittest.SkipTest (WR-01) |
 
 ## Evolution
