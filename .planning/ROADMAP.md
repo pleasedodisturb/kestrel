@@ -61,7 +61,16 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
   4. Per-source arrival counts over the retrospective window (arrived, survived prefilter, scored, shortlisted, applied, by month) are committed as aggregates with no job-level rows
   5. The full June-to-October 2026 flow retrospective exists as a session doc in the private pipeline's repository and nowhere in Kestrel; Kestrel's `.planning/` holds the anonymised verdict list (per flow and per feature: keep / scope-and-plan / park / remove, a profile-specific-or-generic tag, a "works for a non-technical profile" column, counts and reasons; no company names, no person names, no dates finer than a month, no transcript quotes), the CI PII scan passes on it, and the Cut A and Retire cut lists cite one of its verdicts for every item
 
-**Plans**: TBD
+**Plans**: 6 plans in 3 waves (wave 1 runs Track A and Track B in parallel)
+
+Plans:
+- [ ] 11-01-PLAN.md — Track A goldens: dedup, eligibility, scoring, scan-arrival and digest classes replayed from tools/ at pinned blobs, MANIFEST provenance, synthetic gate inputs (MAP-02)
+- [ ] 11-02-PLAN.md — Track A mapping tables: `v2_pending` marker, data-driven strict-xfail engine, eight provisional tables for Phases 14-21, inventory pins (MAP-03)
+- [ ] 11-03-PLAN.md — Track A MAP-05 `ai_providers` golden, `PORT_LEDGER.yaml` with its honesty test, boundary validators and the MAP-09 citation checker (MAP-01, MAP-05, MAP-08, MAP-09)
+- [ ] 11-04-PLAN.md — Track B, private repository only: flow retrospective, verdict, counts and private-ledger drafts (MAP-01, MAP-04, MAP-06, MAP-07)
+- [ ] 11-05-PLAN.md — Private gate verdicts, blocking-human approval of the exact bytes, crossing into Kestrel (MAP-01, MAP-02, MAP-04, MAP-07, MAP-08)
+- [ ] 11-06-PLAN.md — Phase gate (ledger-manifest link, mutation probe per gate, read-only and placement proof) and the Map PR (MAP-02, MAP-03, MAP-05, MAP-08, MAP-09)
+
 **Git delivery**: Branch `G-2039/map` off main; conventional commits scoped to the ticket (`test(G-2039): ...` for goldens and red tests, `docs(G-2039): ...` for the ledger, counts and verdict list); `review-push run` then `review-push sign` before push; one PR for the phase, opened once the verdict list is in; merge only when CI is green. Track B's raw retrospective is committed in the private pipeline's repository, never in this PR.
 
 ### Phase 12: Foundation
@@ -117,6 +126,6 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
 | 8. Over-admission rule | v1.1 | 0/0 | Folded into v2.0 | - |
 | 9. Single authority | v1.1 | 0/0 | Folded into v2.0 | - |
 | 10. Provider preflight | v1.1 | 0/0 | Folded into v2.0 | - |
-| 11. Map | v2.0 | 0/TBD | Not started | - |
+| 11. Map | v2.0 | 0/6 | Planned | - |
 | 12. Foundation | v2.0 | 0/TBD | Not started | - |
 | 13. Cut A | v2.0 | 0/TBD | Not started | - |
