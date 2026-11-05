@@ -1,7 +1,7 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v2.0",
+  "milestone": "v2.0 — (Lean Kestrel)",
   "phases": [
     {
       "number": "1",
@@ -52,12 +52,27 @@
       "number": "10",
       "name": "Provider preflight",
       "status": "pending"
+    },
+    {
+      "number": "11",
+      "name": "Map",
+      "status": "in_progress"
+    },
+    {
+      "number": "12",
+      "name": "Foundation",
+      "status": "pending"
+    },
+    {
+      "number": "13",
+      "name": "Cut A",
+      "status": "pending"
     }
   ],
   "next": {
-    "command": "/gsd-discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd-progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-10-24T19:34:44.415Z"
+  "updated_at": "2026-11-05T16:15:16.300Z"
 }
