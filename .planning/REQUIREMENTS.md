@@ -45,6 +45,7 @@ Phase 1a of the build order: safety nets that make deletion and new entry points
 - [ ] **FOUND-08**: A per-profile isolation test proves two profiles in one database never see each other's jobs, applications, settings or credentials through the service layer
 - [ ] **FOUND-09**: The silent `except Exception: return ""` in the provider factory's database credential read becomes a logged warning, so a missing or broken `integration_configs` row is visible
 - [ ] **FOUND-10**: The scoring payload carries no profile name, email, phone or address unless the active provider passes `check_privacy_boundary` or the user opts in through a documented setting; `score_job` runs the same boundary check as conversation mode and interview prep, a test asserts the serialised prompt for a cloud provider contains none of those fields, and the README and COMPARISON disclosure of the leak is removed (closes G-1846)
+- [ ] **FOUND-11**: No release ships from main between Foundation and Install: the release-please job is skipped while a committed `.release-hold` marker exists at the repo root, a test asserts the job carries that guard, the marker lands in wave 1 with a one-line note on why it exists and which phase removes it, and the Install phase deletes it in the same commit that sets Release-As `2.0.0` so the first 2.0.0 release run is the proof the hold lifted; the maintainer closes the open release PR by hand (maintainer decision 2026-11: main is a development branch until Install, and a wheel cut in between would ship neither the web app nor the TUI)
 
 ### Cost guard (COST)
 
@@ -81,6 +82,7 @@ Phase 2 of the build order: sprawl with no port dependency. Rule: a cut must rem
 - **Connect** exposes due follow-ups and upcoming dates through the Kestrel MCP.
 - **Multi-profile**: v2.0 carries the per-profile isolation constraint (FOUND-08); real friend-profile searches and an anonymised showcase are v2.1.
 - **Web app frozen (maintainer decision 2026-11)**: kept in git, not built, tested or shipped from Cut A on (FOUND-03 stops shipping it, CUT-10 stops building it); a hand-built `frontend/dist` is served only behind an explicit opt-in; no refinement, no new features, no removal in v2.0. The 15-minute path for a technical stranger runs through the CLI and TUI; a no-terminal path is a later milestone. It comes back as a surface only after a later milestone refines and tests it end to end. Every later phase builds CLI, TUI and MCP only.
+- **Release hold lifts at Install (maintainer decision 2026-11)**: the Install phase removes `.release-hold` in the Release-As `2.0.0` commit and records the first release-please run as the proof; until then main is a development branch, new users install 0.28.x from PyPI, and no 0.29.x goes out with the web app parked, the Cut A removals, or half-built flows.
 - **Selling demo (maintainer decision 2026-11)**: v2.0 ships a showcase that sells the product: a `kestrel demo` path on a synthetic profile and synthetic jobs that runs the whole loop (find, filter, score, track, write) in the TUI without keys or network, plus terminal recordings for the README and a narrated video afterwards. Scoped in the Install review as its own requirement set (DEMO-xx, ticket G-2068), distinct from SHOW-01, which is about real friend profiles.
 - **Agents are swappable model suppliers** (Claude Code on subscription, API key in the TUI, Codex or Pi via MCP or CLI twins); gates and state live in Kestrel.
 
@@ -132,6 +134,7 @@ Filled by the roadmapper.
 | FOUND-08 | Phase 12 | Pending |
 | FOUND-09 | Phase 12 | Pending |
 | FOUND-10 | Phase 12 | Pending |
+| FOUND-11 | Phase 12 | Pending |
 | COST-01 | Phase 12 | Pending |
 | COST-02 | Phase 12 | Pending |
 | COST-03 | Phase 12 | Pending |

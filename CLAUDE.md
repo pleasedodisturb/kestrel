@@ -220,7 +220,7 @@ Kestrel is a self-hosted job-search engine for one person at a time. It finds jo
 - **Delivery**: every phase is a PR on its own `<ticket>/<slug>` branch, commits carry `review-push` trailers after an independent review, CI green before merge, forward-only Alembic migrations with row-scoped deletes.
 - **Per-profile**: nothing new hard-codes the maintainer's profile; Map tags every verdict profile-specific vs generic.
 - **Surfaces**: CLI and TUI first, MCP server for agents; the web app is frozen from Cut A on: code kept in git, nothing builds, tests or ships it, a hand-built `frontend/dist` is served only behind an explicit opt-in that is off by default, no new features and no refinement in v2.0, until a later milestone tests it end to end. v2.0 ships a selling demo on synthetic data (`kestrel demo`, terminal recordings, a video later); the Railway deploy path is cut.
-- **Release**: v2.0 ships as `2.0.0` (Release-As) once Install passes on a fresh machine.
+- **Release**: v2.0 ships as `2.0.0` (Release-As) once Install passes on a fresh machine. Between Foundation and Install no release ships from main: a committed `.release-hold` marker skips the release-please job (FOUND-11), and Install removes it in the Release-As commit.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:codebase/STACK.md -->
