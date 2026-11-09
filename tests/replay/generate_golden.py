@@ -335,6 +335,26 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--golden-dir", type=Path, default=S.GOLDEN, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
+    # One operation per run, decided before anything runs: --check promises to write
+    # nothing, so it must never share a command line with a registration, and a
+    # registration never rides along with a regeneration. --check may still name
+    # classes (--check --all is the documented spelling).
+    operations = [
+        flag
+        for flag, chosen in (
+            ("--check", args.check),
+            ("--register-awaiting", args.register_awaiting),
+            ("--register-private", args.register_private is not None),
+        )
+        if chosen
+    ]
+    regenerating = bool(args.classes or args.all) and not args.check
+    if len(operations) > 1 or (regenerating and operations):
+        parser.error(
+            "--check, --register-awaiting, --register-private and regeneration "
+            "(--class, --all) are separate operations; run one at a time"
+        )
+
     if args.register_awaiting:
         return register_awaiting(args.golden_dir)
     if args.register_private:
