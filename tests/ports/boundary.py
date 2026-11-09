@@ -886,10 +886,12 @@ def _check_file(path: Path, kind: str) -> list[str]:
         data = path.read_bytes()
     except OSError as exc:
         return [f"cannot read file: {type(exc).__name__}"]
-    hits = forbidden_hits(data)
-    if "invalid-utf8" in hits:
+    # Decode here and leave every scan to the validators, which apply the line cap first.
+    # Scanning the bytes at this point ran the patterns over a file of any shape.
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
         return ["forbidden content [invalid-utf8]: file is not valid UTF-8"]
-    text = data.decode("utf-8")
     if kind == "verdicts":
         return verdict_problems(text)
     if kind == "counts":
