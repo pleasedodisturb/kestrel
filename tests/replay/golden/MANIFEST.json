@@ -1,0 +1,22 @@
+{
+  "classes": {
+    "dedup_verdicts": {
+      "generated": "2026-11",
+      "golden": "dedup_verdicts.jsonl",
+      "inputs": "synthetic",
+      "pins": [
+        "batch_probe._CONFIG pinned to PINNED_GEO_CONFIG",
+        "env: GITHUB_STEP_SUMMARY and PIPELINE_* unset"
+      ],
+      "producer_commit": "8d5756472950391facd55907f012c847dc3d2025",
+      "producers": {
+        "tools/normalize.py": "b92a08e9c3ca6175b41981aa22c9d8ef80d1f381",
+        "tools/scrape_resilient.py": "190f711eb3da59c0e3a1ceb2219d9f5597bc9f83"
+      },
+      "python": "3.11.15",
+      "sha256": "ac7360d57e205b195e3df321ddf665fc4c20d4aa3c5f061c501ea505509f08af",
+      "status": "frozen"
+    }
+  },
+  "schema": 1
+}
