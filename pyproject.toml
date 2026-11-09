@@ -67,7 +67,7 @@ dev = [
     # pandas<3.0.0. Kestrel's own usage is compatible (tested), but the
     # transitive constraint prevents upgrading. Revisit when jobspy relaxes.
     "pandas>=2.2.0,<4",
-    "python-jobspy>=1.1.82,<1.2",
+    "python-jobspy>=1.1.82,<1.5",
     "fpdf2>=2.8.0",
     # Dev-only oracle for the scoring eval harness (G-1336): the production
     # metric math (weighted κ, NDCG, PSI) is pure-Python in
