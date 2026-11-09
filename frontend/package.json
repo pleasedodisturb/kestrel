@@ -58,5 +58,8 @@
       "path": "dist/assets/index-*.css",
       "limit": "15 kB"
     }
-  ]
+  ],
+  "overrides": {
+    "minimatch": "^11.0.1"
+  }
 }
