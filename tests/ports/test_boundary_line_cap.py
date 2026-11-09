@@ -25,6 +25,7 @@ from tests.ports.boundary import (
     verdict_problems,
 )
 from tests.ports.test_boundary_gates import _counts_text, _verdict_text
+from tests.ports.test_boundary_structure import _run_cli
 
 _WORD = "a" * 60_000  # about 8 seconds in the scan before the fix; minutes at ten times that
 
@@ -78,3 +79,20 @@ def test_real_shaped_artefacts_are_far_below_the_cap():
 
     assert longest < MAX_LINE_CHARS // 4
     assert MAX_LINE_CHARS >= 1000
+
+
+@pytest.mark.parametrize(
+    ("kind", "build"), [(c[0], c[2]) for c in _CASES], ids=[c[0] for c in _CASES]
+)
+def test_the_cli_applies_the_cap_before_it_scans(tmp_path, capsys, kind, build):
+    """Review round 5: the CLI ran its own forbidden-content scan before the validators.
+
+    The validators were bounded, the command-line path in front of them was not.
+    """
+    started = time.monotonic()
+    code, printed = _run_cli(tmp_path, capsys, kind, build(_WORD))
+    elapsed = time.monotonic() - started
+
+    assert code == 1
+    assert f"longer than {MAX_LINE_CHARS} characters" in printed
+    assert elapsed < 2.0, f"the CLI took {elapsed:.1f}s"
