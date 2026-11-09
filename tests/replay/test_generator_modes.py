@@ -84,6 +84,12 @@ _PRIVATE_ONLY = [
     ("gates", ["--gates", "fact"]),
     ("producer-row", ["--producer-row", "P-01"]),
     ("ledger", ["--ledger", "unused.yaml"]),
+    # Review round 4: an option given with an empty value is still an option that was given.
+    ("empty-file", ["--file", ""]),
+    ("empty-private-commit", ["--private-commit", ""]),
+    ("empty-gates", ["--gates", ""]),
+    ("empty-producer-row", ["--producer-row", ""]),
+    ("empty-ledger", ["--ledger", ""]),
 ]
 _OTHER_OPERATIONS = [
     ("register-awaiting", ["--register-awaiting"]),
