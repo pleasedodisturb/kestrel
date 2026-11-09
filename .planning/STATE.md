@@ -1,21 +1,21 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.1
-milestone_name: (Geo gate to production)
-current_phase: 7
-current_phase_name: Wire the geo gate
-status: planning
-stopped_at: Phase 06 complete, ready to plan Phase 7
-last_updated: "2026-09-30T11:16:45.559Z"
-last_activity: 2026-09-30
-last_activity_desc: Phase 06 complete, transitioned to Phase 7
-state_head: f767bf66b029ced18ad7aae230440680b9ff7537
+milestone: v2.0
+milestone_name: (Lean Kestrel)
+current_phase: 11
+current_phase_name: Map
+status: ready to plan
+stopped_at: roadmap for Phases 11-13 written; next /gsd-plan-phase 11 (2026-10-26)
+last_updated: "2026-11-05T16:15:16.289Z"
+last_activity: 2026-10-26
+last_activity_desc: v2.0 roadmap written for Phases 11-13 (Map, Foundation, Cut A)
+state_head: dece6b1ac4e56089d50dad617d0c08a6f5a9e7da
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 2
-  completed_plans: 2
-  percent: 50
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 6
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,14 +25,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-21)
 
 **Core value:** Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
-**Current focus:** Phase 6 — Test honesty
+**Current focus:** v2.0 Lean Kestrel, Phase 11 Map (ready to plan)
 
 ## Current Position
 
-Phase: 7 — Wire the geo gate
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-30 — Phase 06 complete, transitioned to Phase 7
+Phase: 11 (Map) — READY TO EXECUTE
+Plan: —
+Status: Ready to plan (`/gsd-plan-phase 11`)
+Last activity: 2026-10-26 — v2.0 roadmap written for Phases 11-13 (Map, Foundation, Cut A)
 
 ## Performance Metrics
 
@@ -131,6 +131,29 @@ Items acknowledged and deferred at roadmap-m1 milestone close on 2026-05-07:
 
 ## Session Continuity
 
-Last session: 2026-09-30T11:17:00Z
-Stopped at: Phase 6 complete and verified (5/5, review fixes applied); branch G-1382/test-honesty unpushed, next is review-push → PR, then /gsd-plan-phase 7
+Last session: 2026-10-25T16:21:50.988Z
+Stopped at: context exhaustion at 77% (2026-10-25)
 Resume file: None
+
+### v2.0 review position (2026-10-25)
+
+Research (step 8) is committed: `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY,free-tier-routing}.md`.
+The maintainer reviews each phase as idea / process / results, one at a time, before REQUIREMENTS.md is written.
+
+Settled:
+- Phase 0 **Map** (new, P0): Track A freezes today's outputs (script ledger, goldens with source hashes, mapping tables for every new behaviour encoded as red tests, per-source arrival counts). Track B is a June-October flow retrospective from this machine's evidence (commits, handoffs, action log, cost ledger, applications table, transcripts, screenpipe) with a keep / scope-and-plan / park / remove verdict per flow, each tagged profile-specific vs generic and "works for a non-tech profile". Cut lists for Phases 2 and 11 derive from these verdicts.
+- Phase 1 **Foundation**: 1a safety nets (relocate trailer checker, CI Complete allow-list, wheel-content job fixing G-2015, import-all + OpenAPI tests, bootstrap with KESTREL_HOME resolver and ensure_schema, SQLite hardening, notify() seam, loopback bind for G-2009; added 2026-10-29: FOUND-10, the scoring prompt stops carrying profile name and email to cloud providers, folding P1 G-1846 into wave 1 because it is a privacy-boundary gap and Foundation is the first code PR of v2.0); 1b cost guard (status+code+Retry-After classifier with per-provider fixtures, spend halt at the provider factory with a non-swallowable exception and persisted ledger, bounded 429 waits, preflight, Free preset corrected, AST guard on provider construction).
+
+- Release hold (maintainer decision 2026-11-05): FOUND-11 in Foundation wave 1 guards the release-please job with a committed `.release-hold` marker so no 0.29.x ships from main while the web app is parked and the TUI is not yet built; Install removes the marker in the Release-As `2.0.0` commit. The maintainer closes the open release PR by hand.
+- Cut A additions (maintainer decisions 2026-11-03): the Railway deploy path is cut (CUT-09); the web app is frozen, kept in git but not built, tested or shipped, a hand-built dist served only behind an explicit opt-in (FOUND-03 stops shipping, CUT-10 stops building; CUT-07 no longer prunes frontend pages per cut) until a later milestone refines and tests it; v2.0 ships a selling demo on synthetic data with terminal recordings and a video later, scoped as DEMO-xx in the Install review.
+- Phase 2 **Cut A** (settled 2026-10-26). Rule: a cut must remove running behaviour or an outside dependency, not just lines. Cuts: TickTick (client, 15-minute scheduler started unconditionally in the API lifespan, the three Track hooks in applications/goals/follow-ups, 15 endpoints, frontend parts; replaced by a documented agent recipe for TickTick's official MCP at `https://mcp.ticktick.com`, Streamable HTTP, OAuth or Bearer, `claude mcp add --transport http ticktick https://mcp.ticktick.com`), the Cloudflare `worker/` and `dashboard/`, BMAD scaffolding, workflows without a consumer, npm/homebrew/GHCR deprecation notices. Calendar code STAYS (generic, only called from follow-ups): the `icalendar` dependency is replaced by a ~30-line `.ics` writer with a golden test; the prefilled Google Calendar and Fantastical URLs stay. WARN and every other source are NOT in Cut A: sources are ported and judged on Map arrival counts in Find. OAuth (OpenRouter PKCE) is NOT in Cut A: it feeds the web start path.
+- `integration_configs` shared-table risk (rows: ticktick, calendar, pushover, voice, `ai_providers`; `ai/factory.py:_read_credential_from_db` reads it through raw sqlite3 with a silent `except Exception: return ""`). Agreed: (1) row-scoped deletes only, copying migration `d2e5a7f1b9c3` (`DELETE ... WHERE name = '<cut name>'`), never drop the table; (2) a protective golden in Map Track A (seed `ai_providers` row, `alembic upgrade head`, read the key through the factory path); (3) Foundation 1a turns the silent except into a logged warning; (4) AI credentials move out of the shared table (dedicated table or YAML config), decided in Phase 9 Connect, not in Cut A.
+- Phase 7 Track inherits "dates reach your calendar": Kestrel owns dates; sinks are `.ics` always, Apple Calendar/Reminders by default on a Mac (AppleScript, ~20 lines, behind an outbox table with retry on the next interactive TUI start because the macOS Automation permission needs a one-time GUI grant and fails from SSH/launchd; precedent: Pushover `_queue_notification`), any task manager through the user's agent and its MCP (TickTick recipe), Google Calendar through the no-auth prefilled URL with full sync via an agent plus a Google Calendar MCP. Phase 7 verification includes a scheduled-run (LaunchAgent and SSH) test and a doc note on the one-time terminal grant and the iCloud account requirement. Phase 9 Connect exposes due follow-ups and upcoming dates through the Kestrel MCP.
+- Where the private work lives (2026-10-26): the full private-clone idea was weighed and declined (end-of-milestone scrub is the shape of the repo-split incident; the public repo would go dark; every PR would flow twice). Instead Track B runs INSIDE the private pipeline's repo (verified private: anonymous fetch returns 404) and its full retrospective is committed there as a session doc; Kestrel receives only the anonymised verdict list. Track A goldens are built in Kestrel from synthetic or scrubbed fixtures. `private/retrospective/` in Kestrel (gitignored) holds only working notes.
+- Hybrid roadmap (agreed 2026-10-26): REQUIREMENTS.md and the roadmap cover the settled Phases 0 to 2 now (Phases 11 to 13 in GSD numbering); Phases 3 to 12 of the reconciled order are added with `/gsd-phase add` as each review closes; Phase 11 Map starts now (read-only, no paid LLM); Foundation and Cut A execute only after the whole review closes.
+
+PRIVACY RULE FOR PHASE 0 MAP (2026-10-25, binding for every Map plan and agent): the raw five-month retrospective (session transcripts, application rows, company names, dates, stall/recovery narrative, moods) is written ONLY under the gitignored `private/retrospective/` folder, never under `.planning/` (which is committed to the public repo: 201 tracked files today). What enters `.planning/` from Track B is an anonymised verdict list per flow and per feature (kept / trimmed / parked / cut, with counts and reasons), with no company names, no person names, no dates finer than a month, no quotes from transcripts. Same rule for Track A goldens: fixtures are synthetic or scrubbed, never copied from the private pipeline's data. The CI PII scan is the second net, not the first.
+
+Decisions: Pushover UNTOUCHED until the end (2026-10-25): no seam work in Cut A, no callers moved; it is handled last, in Phase 11 Retire, only after every other phase is verified working (it already degrades to a logged 'failed'/skipped result when unconfigured, so nothing blocks on it); all scrapers PORTED and judged on Map evidence; Release-As 2.0.0 at close; agents (Claude Code on subscription, API key in TUI, Codex/Pi via MCP or CLI twins) are swappable model suppliers while gates and state live in Kestrel; v2.0 carries a per-profile isolation constraint, real friend-profile searches plus an anonymised showcase are v2.1.
+
+Next: Phase 11 Map planning and execution (Track B in the private repo, Track A in Kestrel), while the review continues from Phase 3 Find through Phase 12 Install (Find, Filter, Scan, Score, Track, Write, Connect, Apply, Retire, Install); each closed review adds its phase with `/gsd-phase add`. PR to main once Map's verdict list is in. Filed: G-2015 (stale frontend in the published wheel), G-2022 (Little Snitch on the mini blocks the MCP servers; needs a GUI step).
