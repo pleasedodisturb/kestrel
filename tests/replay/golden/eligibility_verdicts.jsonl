@@ -1,0 +1,49 @@
+{"id":"geo-cls-home-city","input":{"is_remote":false,"location_text":"Dublin, Ireland","offices":null,"op":"geo_classify"},"output":"home"}
+{"id":"geo-cls-home-country","input":{"is_remote":false,"location_text":"Ireland","offices":null,"op":"geo_classify"},"output":"home"}
+{"id":"geo-cls-pan-region-remote","input":{"is_remote":false,"location_text":"Remote - EMEA","offices":null,"op":"geo_classify"},"output":"eligible_remote"}
+{"id":"geo-cls-foreign-city","input":{"is_remote":false,"location_text":"Paris, France","offices":null,"op":"geo_classify"},"output":null}
+{"id":"geo-cls-multi-office","input":{"is_remote":false,"location_text":"Paris, France","offices":["Paris, France","Cork, Ireland"],"op":"geo_classify"},"output":"home"}
+{"id":"geo-cls-offices-override-text","input":{"is_remote":false,"location_text":"Cork, Ireland","offices":["Tokyo, Japan"],"op":"geo_classify"},"output":null}
+{"id":"geo-cls-unknown-place-remote","input":{"is_remote":true,"location_text":"Somewhere Nice","offices":null,"op":"geo_classify"},"output":"eligible_remote"}
+{"id":"geo-cls-unknown-place-onsite","input":{"is_remote":false,"location_text":"Somewhere Nice","offices":null,"op":"geo_classify"},"output":null}
+{"id":"geo-cls-empty-text-remote","input":{"is_remote":true,"location_text":"","offices":null,"op":"geo_classify"},"output":"eligible_remote"}
+{"id":"geo-cls-none-text","input":{"is_remote":false,"location_text":null,"offices":null,"op":"geo_classify"},"output":null}
+{"id":"geo-cls-empty-offices-list","input":{"is_remote":false,"location_text":"Galway","offices":[],"op":"geo_classify"},"output":"home"}
+{"id":"geo-elig-home-city","input":{"description":"","location":"Dublin, Ireland","offices":null,"op":"geo_eligibility","remote":false,"title":"product manager"},"output":"home_local"}
+{"id":"geo-elig-home-city-remote-flag","input":{"description":"","location":"Cork, Ireland","offices":null,"op":"geo_eligibility","remote":true,"title":"product manager"},"output":"home_local"}
+{"id":"geo-elig-pan-region-remote","input":{"description":"","location":"Remote - Europe","offices":null,"op":"geo_eligibility","remote":true,"title":"product manager"},"output":"eligible_remote"}
+{"id":"geo-elig-foreign-city","input":{"description":"","location":"Tokyo, Japan","offices":null,"op":"geo_eligibility","remote":false,"title":"product manager"},"output":"foreign"}
+{"id":"geo-elig-foreign-remote-flag","input":{"description":"","location":"Tokyo, Japan","offices":null,"op":"geo_eligibility","remote":true,"title":"product manager"},"output":"foreign"}
+{"id":"geo-elig-multi-office","input":{"description":"","location":"","offices":["Berlin","Limerick, Ireland"],"op":"geo_eligibility","remote":false,"title":"product manager"},"output":"home_local"}
+{"id":"geo-elig-unknown-place","input":{"description":"","location":"Somewhere Nice","offices":null,"op":"geo_eligibility","remote":false,"title":"product manager"},"output":"unknown"}
+{"id":"geo-elig-empty-everything","input":{"description":"","location":null,"offices":null,"op":"geo_eligibility","remote":false,"title":""},"output":"unknown"}
+{"id":"geo-elig-relocation-text","input":{"description":"Relocation support to Ireland is available for the right candidate.","location":"Paris, France","offices":null,"op":"geo_eligibility","remote":false,"title":"product manager"},"output":"foreign"}
+{"id":"pf-blocked-company","input":{"company":"BlockedCo Ltd","location":"Remote, Europe","op":"pre_filter_job","remote":true,"title":"Product Manager"},"output":[true,"Blocked company: BlockedCo Ltd",null]}
+{"id":"pf-blocked-substring","input":{"company":"Nogo Industries GmbH","location":"Dublin","op":"pre_filter_job","remote":false,"title":"Product Manager"},"output":[true,"Blocked company: Nogo Industries GmbH",null]}
+{"id":"pf-reject-title-pattern","input":{"company":"Synthco Robotics GmbH","location":"Dublin","op":"pre_filter_job","remote":false,"title":"Payroll Specialist"},"output":[true,"Rejected title pattern: 'payroll' in 'Payroll Specialist'",null]}
+{"id":"pf-reject-allowlist-hit","input":{"company":"Synthco Robotics GmbH","location":"Dublin","op":"pre_filter_job","remote":false,"title":"Account Manager"},"output":[true,"Rejected title pattern: 'account manager' in 'Account Manager'",null]}
+{"id":"pf-reject-allowlist-pass","input":{"company":"Synthco Robotics GmbH","location":"Dublin","op":"pre_filter_job","remote":false,"title":"Technical Account Manager"},"output":[false,"",null]}
+{"id":"pf-reject-regex","input":{"company":"Synthco Robotics GmbH","location":"Dublin","op":"pre_filter_job","remote":false,"title":"AML Analyst"},"output":[true,"Rejected title regex: '\\baml\\b' in 'AML Analyst'",null]}
+{"id":"pf-junior-role","input":{"company":"Synthco Robotics GmbH","location":"Dublin","op":"pre_filter_job","remote":false,"title":"Junior Analyst"},"output":[true,"Junior role: Junior Analyst",null]}
+{"id":"pf-junior-with-lead","input":{"company":"Synthco Robotics GmbH","location":"Dublin","op":"pre_filter_job","remote":false,"title":"Junior Lead Analyst"},"output":[false,"",null]}
+{"id":"pf-intern-token","input":{"company":"Synthco Robotics GmbH","location":"Dublin","op":"pre_filter_job","remote":false,"title":"Intern Data Analyst"},"output":[true,"Junior role: Intern Data Analyst",null]}
+{"id":"pf-us-only-capped","input":{"company":"Synthco Robotics GmbH","location":"Austin, Texas","op":"pre_filter_job","remote":false,"title":"Product Manager"},"output":[false,"US-only location: Austin, Texas",3]}
+{"id":"pf-us-only-remote-not-capped","input":{"company":"Synthco Robotics GmbH","location":"Austin, Texas","op":"pre_filter_job","remote":true,"title":"Product Manager"},"output":[false,"",null]}
+{"id":"pf-us-and-eu-not-capped","input":{"company":"Synthco Robotics GmbH","location":"Austin, Texas / Dublin","op":"pre_filter_job","remote":false,"title":"Product Manager"},"output":[false,"",null]}
+{"id":"pf-clean-role","input":{"company":"Synthco Robotics GmbH","location":"Remote, Europe","op":"pre_filter_job","remote":true,"title":"Product Manager"},"output":[false,"",null]}
+{"id":"pf-none-location","input":{"company":"Synthco Robotics GmbH","location":null,"op":"pre_filter_job","remote":false,"title":"Product Manager"},"output":[false,"",null]}
+{"id":"block-acme-spyware","input":{"company":"Acme Spyware Inc","op":"is_blocked"},"output":"acme spyware"}
+{"id":"block-shadowtrack","input":{"company":"ShadowTrack","op":"is_blocked"},"output":"shadowtrack"}
+{"id":"block-panopticorp","input":{"company":"PanoptiCorp","op":"is_blocked"},"output":"panopticorp"}
+{"id":"block-villain-industries","input":{"company":"Villain Industries","op":"is_blocked"},"output":"villain industries"}
+{"id":"block-evilcorp","input":{"company":"EvilCorp GmbH","op":"is_blocked"},"output":"evilcorp"}
+{"id":"block-orbix","input":{"company":"Orbix","op":"is_blocked"},"output":"orbix"}
+{"id":"block-lowball-labs","input":{"company":"Lowball Labs","op":"is_blocked"},"output":"lowball labs"}
+{"id":"block-word-boundary-no-match","input":{"company":"Orbixual Systems","op":"is_blocked"},"output":null}
+{"id":"block-clean-company","input":{"company":"Synthco Robotics GmbH","op":"is_blocked"},"output":null}
+{"id":"block-none","input":{"company":null,"op":"is_blocked"},"output":null}
+{"id":"block-empty","input":{"company":"","op":"is_blocked"},"output":null}
+{"id":"soft-flagco","input":{"company":"FlagCo","op":"soft_flag_reason"},"output":"example soft-flag -- recruiter-only intro; route warm, never cold-batch"}
+{"id":"soft-cooldownco","input":{"company":"CooldownCo Ltd","op":"soft_flag_reason"},"output":"example soft-flag -- recently in pipeline; hold before re-applying"}
+{"id":"soft-clean-company","input":{"company":"Synthco Robotics GmbH","op":"soft_flag_reason"},"output":null}
+{"id":"soft-none","input":{"company":null,"op":"soft_flag_reason"},"output":null}

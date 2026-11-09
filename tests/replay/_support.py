@@ -45,8 +45,15 @@ for _entry in (REPO_ROOT, REPO_ROOT / "tools"):
         sys.path.insert(0, str(_entry))
 
 import batch_probe  # noqa: E402
+import blocklist  # noqa: E402
+import daily_pipeline  # noqa: E402
+import germany_jobs  # noqa: E402
+import httpx  # noqa: E402
+import job_scorer  # noqa: E402
+import local_scorer  # noqa: E402
 import normalize  # noqa: E402
 import scrape_resilient  # noqa: E402
+import tier0_ats_poller  # noqa: E402
 
 from tests.eval.geo.replay import scrub_patterns  # noqa: E402
 
@@ -79,7 +86,9 @@ _NON_GOLDEN_FILES = frozenset({"MANIFEST.json", "README.md"})
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     """Read a JSONL file: UTF-8, one JSON object per non-empty line."""
     rows: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    # split on "\n" only: str.splitlines() would also split inside a string that
+    # holds U+2028, which json.dumps(ensure_ascii=False) leaves unescaped.
+    for line in path.read_text(encoding="utf-8").split("\n"):
         if line.strip():
             rows.append(json.loads(line))
     return rows
@@ -188,28 +197,91 @@ PINNED_GEO_CONFIG = batch_probe.GeoConfig(
 )
 
 
+# Fictional replacements for company lists that hold real target names in the
+# producer files. A synthetic input must not name a real company (D-03), and a
+# case can only reach the block, dream and strong branches by naming a list
+# member, so the lists are pinned to fictional members for the replay. The list
+# values in the producer files are covered by the producer blob in MANIFEST.
+PINNED_JOB_SCORER_BLOCKED = ("blockedco", "nogo industries")
+PINNED_DREAM_COMPANIES = frozenset({"zephyrx", "aspirational labs"})
+PINNED_STRONG_COMPANIES = frozenset({"synthstrong", "plausible works"})
+
+
 def _is_pinned_env_key(key: str) -> bool:
     return key == "GITHUB_STEP_SUMMARY" or key.startswith("PIPELINE_")
+
+
+@contextlib.contextmanager
+def _patched(target: Any, **attrs: Any) -> Iterator[None]:
+    """Set module attributes and put the originals back, whatever happens."""
+    saved = {name: getattr(target, name) for name in attrs}
+    for name, value in attrs.items():
+        setattr(target, name, value)
+    try:
+        yield
+    finally:
+        for name, value in saved.items():
+            setattr(target, name, value)
+
+
+def _frozen_clock() -> str:
+    return FROZEN_NOW
 
 
 @contextlib.contextmanager
 def pinned() -> Iterator[None]:
     """Fix every machine-dependent input, then restore it exactly.
 
-    Pins: ``batch_probe._CONFIG`` (``normalize_title`` classifies parenthesised
-    locations through it) and the environment (``GITHUB_STEP_SUMMARY`` and every
-    ``PIPELINE_*`` variable are removed on entry; anything set inside is cleared
-    and the saved values are put back on exit).
+    Pins (each recorded per class in the MANIFEST ``pins`` list):
+
+    * ``batch_probe._CONFIG``: the geo config; ``normalize_title`` and the geo
+      gate read it, and it is loaded from the maintainer's gitignored
+      ``config/geo.yaml`` at import;
+    * ``job_scorer._GEO_PROFILE``: reset to ``None`` so the default profile is
+      rebuilt from the pinned config;
+    * the blocklist floor: ``blocklist.BLOCKED_COMPANIES``,
+      ``SOFT_FLAG_COMPANIES``, ``_BLOCKED_RE`` and ``_SOFT_FLAG_RE`` rebuilt from
+      ``FLOOR_BLOCKED`` and ``FLOOR_SOFT_FLAG`` (the embedded fictional floor,
+      which is what CI loads because ``config/blocklist.yaml`` is absent there);
+    * ``job_scorer.BLOCKED_COMPANIES`` and ``local_scorer.DREAM_COMPANIES`` /
+      ``STRONG_COMPANIES``: fictional members (see ``PINNED_*`` above);
+    * ``tier0_ats_poller._utcnow_iso``: the clock, fixed at ``FROZEN_NOW``;
+    * the environment: ``GITHUB_STEP_SUMMARY`` and every ``PIPELINE_*`` variable
+      are removed on entry; anything set inside is cleared and the saved values
+      are put back on exit.
     """
     saved_env = {k: v for k, v in os.environ.items() if _is_pinned_env_key(k)}
     for key in saved_env:
         del os.environ[key]
-    saved_config = batch_probe._CONFIG
-    batch_probe._CONFIG = PINNED_GEO_CONFIG
     try:
-        yield
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(_patched(batch_probe, _CONFIG=PINNED_GEO_CONFIG))
+            stack.enter_context(
+                _patched(
+                    job_scorer,
+                    _GEO_PROFILE=None,
+                    BLOCKED_COMPANIES=list(PINNED_JOB_SCORER_BLOCKED),
+                )
+            )
+            stack.enter_context(
+                _patched(
+                    blocklist,
+                    BLOCKED_COMPANIES=list(blocklist.FLOOR_BLOCKED),
+                    SOFT_FLAG_COMPANIES=dict(blocklist.FLOOR_SOFT_FLAG),
+                    _BLOCKED_RE=blocklist._compile(blocklist.FLOOR_BLOCKED),
+                    _SOFT_FLAG_RE=blocklist._compile(list(blocklist.FLOOR_SOFT_FLAG)),
+                )
+            )
+            stack.enter_context(
+                _patched(
+                    local_scorer,
+                    DREAM_COMPANIES=set(PINNED_DREAM_COMPANIES),
+                    STRONG_COMPANIES=set(PINNED_STRONG_COMPANIES),
+                )
+            )
+            stack.enter_context(_patched(tier0_ats_poller, _utcnow_iso=_frozen_clock))
+            yield
     finally:
-        batch_probe._CONFIG = saved_config
         for key in [k for k in os.environ if _is_pinned_env_key(k)]:
             del os.environ[key]
         os.environ.update(saved_env)
@@ -269,6 +341,175 @@ def _dedup_verdicts(case: dict[str, Any]) -> Any:
         jobs = [scrape_resilient.ScrapedJob(**job) for job in case["jobs"]]
         return [dataclasses.asdict(job) for job in scrape_resilient.deduplicate(jobs)]
     raise ValueError(f"dedup_verdicts: unknown op {op!r}")
+
+
+_PIN_PROFILE = "job_scorer._GEO_PROFILE reset to None (rebuilt from the pinned config)"
+_PIN_BLOCKLIST = (
+    "blocklist floor: BLOCKED_COMPANIES, SOFT_FLAG_COMPANIES, _BLOCKED_RE, _SOFT_FLAG_RE"
+)
+_PIN_BLOCKED = "job_scorer.BLOCKED_COMPANIES replaced with fictional members"
+_PIN_LOCAL = "local_scorer.DREAM_COMPANIES and STRONG_COMPANIES replaced with fictional members"
+_PIN_CLOCK = "tier0_ats_poller._utcnow_iso fixed at FROZEN_NOW"
+
+
+@_register(
+    "eligibility_verdicts",
+    ("tools/batch_probe.py", "tools/job_scorer.py", "tools/blocklist.py"),
+    (_PIN_CONFIG, _PIN_PROFILE, _PIN_BLOCKLIST, _PIN_BLOCKED, _PIN_ENV),
+)
+def _eligibility_verdicts(case: dict[str, Any]) -> Any:
+    """Geo, pre-filter and blocklist verdicts, dispatched on ``case['op']``."""
+    op = case["op"]
+    if op == "geo_classify":
+        return batch_probe.geo_classify(case["location_text"], case["offices"], case["is_remote"])
+    if op == "geo_eligibility":
+        return job_scorer.geo_eligibility(
+            case["location"],
+            case["offices"],
+            case["remote"],
+            case["title"],
+            case["description"],
+        )
+    if op == "pre_filter_job":
+        return list(
+            job_scorer.pre_filter_job(
+                case["title"], case["company"], case["location"], case["remote"]
+            )
+        )
+    if op == "is_blocked":
+        return blocklist.is_blocked(case["company"])
+    if op == "soft_flag_reason":
+        return blocklist.soft_flag_reason(case["company"])
+    raise ValueError(f"eligibility_verdicts: unknown op {op!r}")
+
+
+@contextlib.contextmanager
+def _scratch_scored_path() -> Iterator[None]:
+    """Point ``PipelineConfig().scored_path`` at a temp dir for the duration.
+
+    ``daily_pipeline._fallback_score`` writes its result to
+    ``tracking/scraped_scored_<date>.json``; a replay must never write into the
+    repository's tracking folder, so the config class is swapped for a subclass
+    whose scored path lives in a temporary directory.
+    """
+    import tempfile
+
+    original = daily_pipeline.PipelineConfig
+    with tempfile.TemporaryDirectory() as tmp:
+
+        class _ScratchConfig(original):  # type: ignore[valid-type, misc]
+            def __init__(self) -> None:
+                super().__init__()
+                self.scored_path = Path(tmp) / "scraped_scored.json"
+
+        daily_pipeline.PipelineConfig = _ScratchConfig
+        try:
+            yield
+        finally:
+            daily_pipeline.PipelineConfig = original
+
+
+@contextlib.contextmanager
+def _case_env(env: dict[str, Any]) -> Iterator[None]:
+    """Set the PIPELINE_* variables a case names (``None`` means unset); clear after."""
+    for key, value in env.items():
+        if not _is_pinned_env_key(key):
+            raise ValueError(f"scoring: env key {key!r} is not a pinned PIPELINE_* variable")
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = str(value)
+    try:
+        yield
+    finally:
+        for key in env:
+            os.environ.pop(key, None)
+
+
+@_register(
+    "scoring",
+    ("tools/daily_pipeline.py", "tools/job_scorer.py", "tools/local_scorer.py"),
+    (_PIN_ENV, _PIN_BLOCKED, _PIN_LOCAL, _PIN_CONFIG),
+)
+def _scoring(case: dict[str, Any]) -> Any:
+    """Deterministic scoring helpers only; no op reaches an AI provider call."""
+    import copy
+
+    op = case["op"]
+    if op == "fallback_score":
+        with _scratch_scored_path():
+            return daily_pipeline._fallback_score(copy.deepcopy(case["jobs"]))
+    if op == "effective_scoring_cap":
+        with _case_env(case["env"]):
+            return daily_pipeline.effective_scoring_cap()
+    if op == "source_priority":
+        return daily_pipeline._source_priority(case["job"])
+    if op == "apply_floors":
+        return job_scorer.apply_floors(copy.deepcopy(case["jobs"]))
+    if op == "classify_tier":
+        return job_scorer.classify_tier(case["job"])
+    if op == "is_dream_tier":
+        return job_scorer.is_dream_tier(case["company"])
+    if op == "is_api_submittable":
+        return job_scorer.is_api_submittable(case["job"])
+    if op == "score_job_local":
+        return local_scorer.score_job_local(copy.deepcopy(case["job"]))
+    raise ValueError(f"scoring: unknown op {op!r}")
+
+
+_SCAN_URLS = {
+    "fetch_greenhouse": "https://boards-api.greenhouse.io/v1/boards/{slug}/jobs",
+    "fetch_lever": "https://api.lever.co/v0/postings/{slug}?mode=json",
+    "fetch_ashby": "https://api.ashbyhq.com/posting-api/job-board/{slug}",
+}
+
+
+def _scan_client(registered_url: str, payload: Any, slug: str) -> httpx.Client:
+    """An ``httpx.Client`` that serves *payload* at one URL and refuses every other.
+
+    No request can leave the process: the transport is a ``MockTransport``.
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) != registered_url:
+            raise AssertionError(
+                f"scan_arrivals: unexpected request to {request.url} for case slug {slug!r}; "
+                f"only {registered_url} is registered"
+            )
+        # content= (not json=): json=None would send no body at all, and a null
+        # payload is a case worth freezing.
+        return httpx.Response(
+            200, content=json.dumps(payload), headers={"content-type": "application/json"}
+        )
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+@_register(
+    "scan_arrivals",
+    ("tools/tier0_ats_poller.py", "tools/germany_jobs.py"),
+    (_PIN_CLOCK, "transport: httpx.MockTransport refuses every unregistered URL", _PIN_ENV),
+)
+def _scan_arrivals(case: dict[str, Any]) -> Any:
+    """Scan-arrival normalisation over synthetic payloads; no request leaves the process."""
+    import dataclasses
+
+    op = case["op"]
+    if op in _SCAN_URLS:
+        slug = case["slug"]
+        registered = case.get("payload_url") or _SCAN_URLS[op].format(slug=slug)
+        fetcher = getattr(tier0_ats_poller, op)
+        with _scan_client(registered, case["payload"], slug) as client:
+            jobs = fetcher(slug, company_key=case["company_key"], client=client)
+        return [dataclasses.asdict(job) for job in jobs]
+    if op == "parse_arbeitsagentur_rows":
+        return germany_jobs._parse_arbeitsagentur_rows(case["rows"])
+    if op == "parse_arbeitsagentur_page":
+        # The row handling of fetch_arbeitsagentur on one served page: raw rows,
+        # then the rows that are objects, then the parse.
+        rows = germany_jobs._dict_rows(germany_jobs._raw_rows(case["data"]))
+        return germany_jobs._parse_arbeitsagentur_rows(rows)
+    raise ValueError(f"scan_arrivals: unknown op {op!r}")
 
 
 # ---------------------------------------------------------------------------

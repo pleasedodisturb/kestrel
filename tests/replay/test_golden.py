@@ -10,17 +10,26 @@ from __future__ import annotations
 
 import copy
 import json
+import os
+import re
 import shutil
 from pathlib import Path
 from typing import Any
 
+import batch_probe
+import blocklist
+import job_scorer
 import pytest
+import tier0_ats_poller
 
 from tests.eval.geo.replay import scrub_patterns
 from tests.replay import generate_golden
 from tests.replay._support import (
+    FROZEN_NOW,
     GOLDEN,
     HARNESS,
+    PINNED_GEO_CONFIG,
+    REPO_ROOT,
     REQUIRED_PATTERN_LABELS,
     dump_jsonl,
     gate_verdict_problems,
@@ -179,6 +188,108 @@ def test_dedup_adjacency_pairs_merge_and_stay_apart():
     assert len(one_char["output"]) == 2
     assert rows["dedup-empty-list"]["output"] == []
     assert rows["norm-company-none"]["output"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Pins and transport (T-11-02, T-11-04)
+# ---------------------------------------------------------------------------
+
+
+def test_scan_transport_refuses_unknown_urls():
+    case = {
+        "op": "fetch_greenhouse",
+        "slug": "synth-board-z",
+        "company_key": "synth-greenhouse-co",
+        "payload": {"jobs": []},
+        "payload_url": "https://example.invalid/registered-for-another-url",
+    }
+    with pytest.raises(AssertionError) as excinfo, pinned():
+        HARNESS["scan_arrivals"](case)
+    message = str(excinfo.value)
+    assert "https://boards-api.greenhouse.io/v1/boards/synth-board-z/jobs" in message
+    assert "synth-board-z" in message
+
+
+def test_pins_are_restored_after_use(monkeypatch):
+    sentinel_config = batch_probe.GeoConfig(home_tokens=("sentinel-only",))
+    sentinel_regex = re.compile("sentinel-only-blocked")
+    sentinel_profile = object()
+
+    def sentinel_clock() -> str:
+        return "sentinel-clock"
+
+    monkeypatch.setattr(batch_probe, "_CONFIG", sentinel_config)
+    monkeypatch.setattr(blocklist, "_BLOCKED_RE", sentinel_regex)
+    monkeypatch.setattr(job_scorer, "_GEO_PROFILE", sentinel_profile)
+    monkeypatch.setattr(tier0_ats_poller, "_utcnow_iso", sentinel_clock)
+    monkeypatch.setenv("PIPELINE_MODE", "sentinel-mode")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", "sentinel-summary")
+
+    with pinned():
+        assert batch_probe._CONFIG is PINNED_GEO_CONFIG
+        assert blocklist._BLOCKED_RE.pattern == blocklist._compile(blocklist.FLOOR_BLOCKED).pattern
+        assert job_scorer._GEO_PROFILE is None
+        assert tier0_ats_poller._utcnow_iso() == FROZEN_NOW
+        assert "PIPELINE_MODE" not in os.environ
+        assert "GITHUB_STEP_SUMMARY" not in os.environ
+
+    assert batch_probe._CONFIG is sentinel_config
+    assert blocklist._BLOCKED_RE is sentinel_regex
+    assert job_scorer._GEO_PROFILE is sentinel_profile
+    assert tier0_ats_poller._utcnow_iso is sentinel_clock
+    assert os.environ["PIPELINE_MODE"] == "sentinel-mode"
+    assert os.environ["GITHUB_STEP_SUMMARY"] == "sentinel-summary"
+
+
+def test_pins_are_restored_when_a_producer_raises():
+    original_config = batch_probe._CONFIG
+    original_clock = tier0_ats_poller._utcnow_iso
+    with pytest.raises(RuntimeError, match="boom"), pinned():
+        raise RuntimeError("boom")
+    assert batch_probe._CONFIG is original_config
+    assert tier0_ats_poller._utcnow_iso is original_clock
+
+
+def test_case_env_values_do_not_leak_out_of_a_replay(monkeypatch):
+    monkeypatch.delenv("PIPELINE_MAX_SCORE", raising=False)
+    case = {"op": "effective_scoring_cap", "env": {"PIPELINE_MAX_SCORE": "77"}}
+    with pinned():
+        assert HARNESS["scoring"](case) == 77
+        assert "PIPELINE_MAX_SCORE" not in os.environ
+    assert "PIPELINE_MAX_SCORE" not in os.environ
+
+
+def test_scoring_replay_never_writes_into_the_tracking_folder():
+    tracking = REPO_ROOT / "tracking"
+    before = sorted((p.name, p.stat().st_mtime_ns) for p in tracking.iterdir())
+    case = {
+        "op": "fallback_score",
+        "jobs": [
+            {
+                "title": "Product Manager",
+                "company": "Synthco Robotics GmbH",
+                "location": "Remote, Europe",
+                "remote": True,
+                "description": "",
+            }
+        ],
+    }
+    with pinned():
+        scored = HARNESS["scoring"](case)
+    after = sorted((p.name, p.stat().st_mtime_ns) for p in tracking.iterdir())
+    assert scored[0]["fit_score"] >= 1
+    assert after == before
+
+
+def test_manifest_records_the_pins_each_class_needs():
+    classes = load_manifest()["classes"]
+    joined = {cls: " ".join(classes[cls]["pins"]) for cls in HARNESS}
+    assert "batch_probe._CONFIG" in joined["eligibility_verdicts"]
+    assert "job_scorer._GEO_PROFILE" in joined["eligibility_verdicts"]
+    assert "blocklist floor" in joined["eligibility_verdicts"]
+    assert "tier0_ats_poller._utcnow_iso" in joined["scan_arrivals"]
+    assert "MockTransport" in joined["scan_arrivals"]
+    assert "PIPELINE_*" in joined["scoring"]
 
 
 # ---------------------------------------------------------------------------

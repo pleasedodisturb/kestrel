@@ -16,6 +16,65 @@
       "python": "3.11.15",
       "sha256": "ac7360d57e205b195e3df321ddf665fc4c20d4aa3c5f061c501ea505509f08af",
       "status": "frozen"
+    },
+    "eligibility_verdicts": {
+      "generated": "2026-11",
+      "golden": "eligibility_verdicts.jsonl",
+      "inputs": "synthetic",
+      "pins": [
+        "batch_probe._CONFIG pinned to PINNED_GEO_CONFIG",
+        "job_scorer._GEO_PROFILE reset to None (rebuilt from the pinned config)",
+        "blocklist floor: BLOCKED_COMPANIES, SOFT_FLAG_COMPANIES, _BLOCKED_RE, _SOFT_FLAG_RE",
+        "job_scorer.BLOCKED_COMPANIES replaced with fictional members",
+        "env: GITHUB_STEP_SUMMARY and PIPELINE_* unset"
+      ],
+      "producer_commit": "0a8e180135cf9e7f3bdaa33a54591d689070ec18",
+      "producers": {
+        "tools/batch_probe.py": "abf760c099c174922f3e67af58cdaafde6a6d65c",
+        "tools/blocklist.py": "e54047e9a4bc77726f7a077138c09e5526e92aae",
+        "tools/job_scorer.py": "2db48aef685dfecd2d05a529ceaddd79a58a7b0e"
+      },
+      "python": "3.11.15",
+      "sha256": "0053637243c71e3b1265365f67a0b757ebec79346ebf1a7134ca252b8777a8f9",
+      "status": "frozen"
+    },
+    "scan_arrivals": {
+      "generated": "2026-11",
+      "golden": "scan_arrivals.jsonl",
+      "inputs": "synthetic",
+      "pins": [
+        "tier0_ats_poller._utcnow_iso fixed at FROZEN_NOW",
+        "transport: httpx.MockTransport refuses every unregistered URL",
+        "env: GITHUB_STEP_SUMMARY and PIPELINE_* unset"
+      ],
+      "producer_commit": "0a8e180135cf9e7f3bdaa33a54591d689070ec18",
+      "producers": {
+        "tools/germany_jobs.py": "e2ab1710790e26fd5ce4f986b0642847248ca9b5",
+        "tools/tier0_ats_poller.py": "d23f1f49e722b1ea3a91801ba25877c148834112"
+      },
+      "python": "3.11.15",
+      "sha256": "a249ef7ffaf7f3f0b98020b403e3faa2b9b4d27c1e66e0a5bc9f6e7e99637ca9",
+      "status": "frozen"
+    },
+    "scoring": {
+      "generated": "2026-11",
+      "golden": "scoring.jsonl",
+      "inputs": "synthetic",
+      "pins": [
+        "env: GITHUB_STEP_SUMMARY and PIPELINE_* unset",
+        "job_scorer.BLOCKED_COMPANIES replaced with fictional members",
+        "local_scorer.DREAM_COMPANIES and STRONG_COMPANIES replaced with fictional members",
+        "batch_probe._CONFIG pinned to PINNED_GEO_CONFIG"
+      ],
+      "producer_commit": "0a8e180135cf9e7f3bdaa33a54591d689070ec18",
+      "producers": {
+        "tools/daily_pipeline.py": "c92dcdcf2e14325b692fa86fc28b2dc535f3ec95",
+        "tools/job_scorer.py": "2db48aef685dfecd2d05a529ceaddd79a58a7b0e",
+        "tools/local_scorer.py": "2764b656a24fe80a78818a60a6fe50042bbc8432"
+      },
+      "python": "3.11.15",
+      "sha256": "3f82661a89f4eaaa3a12c79ccd5545ef4f633e2cf4a49ac09159d2e972a6abf2",
+      "status": "frozen"
     }
   },
   "schema": 1
