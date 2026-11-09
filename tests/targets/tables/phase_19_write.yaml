@@ -1,0 +1,140 @@
+# Phase 19 Write: provisional mapping table (Phase 11 Map, MAP-03).
+#
+# PROVISIONAL until the Phase 19 Write review closes; rows encode research, not
+# decisions. The review may rewrite any row, and that is a one-file change. The
+# phase number is provisional too (ROADMAP add order after Cut A).
+#
+# Profile scope (D-13): every input is synthetic. Candidates, employers, titles
+# and draft text are fictional; the dossier is a made-up fact sheet. No row
+# reads or references a real dossier, a real draft or any gate rule lexicon.
+#
+# Provisional shapes a review may rename: the dossier layout, reason codes
+# (empty_dossier, unsupported_number, unsupported_employer, unsupported_title,
+# tenure_mismatch) and the advisory code not_enough_samples. The fact gate
+# fails closed. Every target is called with keyword arguments only.
+
+phase: 19
+name: write
+title: Write
+status: "PROVISIONAL until the Phase 19 Write review closes; rows encode research, not decisions"
+pending: true
+sources:
+  - ".planning/research/SUMMARY.md, Phase 8 Write (fact_gate and voice_gate behind one gate_draft())"
+  - ".planning/research/FEATURES.md, section 4c (fact gate claim classes, fail closed on empty dossier)"
+  - ".planning/research/FEATURES.md, section 4b (voice gate lexical layer, advisory with a sample floor)"
+  - ".planning/research/PITFALLS.md, GATE-1 (no vacuous pass, enumerate every draft producer)"
+
+tables:
+  fact_gate:
+    target: career_os.services.gates:fact_gate
+    rows:
+      - id: empty-dossier-fails-closed
+        input:
+          draft: I led a team of 12 engineers at Meridian Works.
+          dossier: {verified_facts: []}
+        expect:
+          verdict: block
+          reason_code: empty_dossier
+          claims_checked: 0
+
+      - id: number-absent-from-the-dossier-is-blocked
+        input:
+          draft: I cut release time by 45 percent.
+          dossier:
+            verified_facts:
+              - {id: f1, kind: number, value: "30 percent"}
+        expect:
+          verdict: block
+          reason_code: unsupported_number
+          claims_checked: 1
+
+      - id: employer-absent-from-the-dossier-is-blocked
+        input:
+          draft: I worked at Orbital Foundry for three years.
+          dossier:
+            verified_facts:
+              - {id: f1, kind: employer, value: Meridian Works, start: "2018-03", end: "2022-06"}
+        expect:
+          verdict: block
+          reason_code: unsupported_employer
+          claims_checked: 2
+
+      - id: title-absent-from-the-dossier-is-blocked
+        input:
+          draft: As Principal Architect at Meridian Works I owned the platform roadmap.
+          dossier:
+            verified_facts:
+              - {id: f1, kind: employer, value: Meridian Works, start: "2018-03", end: "2022-06"}
+              - {id: f2, kind: title, employer: Meridian Works, value: Delivery Lead}
+        expect:
+          verdict: block
+          reason_code: unsupported_title
+          claims_checked: 2
+
+      - id: tenure-that-does-not-recompute-is-blocked
+        input:
+          draft: With eight years at Meridian Works I know the domain well.
+          dossier:
+            verified_facts:
+              - {id: f1, kind: employer, value: Meridian Works, start: "2018-03", end: "2022-06"}
+        expect:
+          verdict: block
+          reason_code: tenure_mismatch
+          claims_checked: 2
+
+      - id: clean-draft-passes-and-reports-claims-checked
+        input:
+          draft: At Meridian Works as Delivery Lead I cut release time by 30 percent.
+          dossier:
+            verified_facts:
+              - {id: f1, kind: employer, value: Meridian Works, start: "2018-03", end: "2022-06"}
+              - {id: f2, kind: title, employer: Meridian Works, value: Delivery Lead}
+              - {id: f3, kind: number, value: "30 percent"}
+        expect:
+          verdict: pass
+          reason_code: null
+          claims_checked: 3
+
+  voice_gate:
+    target: career_os.services.gates:voice_gate
+    rows:
+      - id: banned-phrase-is-flagged
+        input:
+          draft: I am passionate about delivery and bring a proven track record.
+          banned_phrases: [passionate about, proven track record]
+          sample_count: 5
+          min_samples: 3
+        expect:
+          flags: [passionate about, proven track record]
+          advisory: null
+
+      - id: clean-draft-passes
+        input:
+          draft: I ran releases for a logistics platform and shortened the cycle from ten days to six.
+          banned_phrases: [passionate about, proven track record]
+          sample_count: 5
+          min_samples: 3
+        expect:
+          flags: []
+          advisory: null
+
+      - id: too-few-samples-gives-an-advisory-not-a-score
+        input:
+          draft: I ran releases for a logistics platform and shortened the cycle from ten days to six.
+          banned_phrases: [passionate about, proven track record]
+          sample_count: 1
+          min_samples: 3
+        expect:
+          advisory: not_enough_samples
+          score: null
+
+  draft_producers:
+    target: career_os.services.drafting:draft_producers
+    rows:
+      # GATE-1: a test enumerates every producer of candidate-facing text and
+      # fails if one runs without gate_draft(). Enumerate, never name.
+      - id: every-producer-is-routed-through-gate-draft
+        input: {}
+        expect:
+          ungated: []
+          all_routed_through_gate_draft: true

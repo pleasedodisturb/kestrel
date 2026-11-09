@@ -1,0 +1,96 @@
+# Phase 21 Apply: provisional mapping table (Phase 11 Map, MAP-03).
+#
+# PROVISIONAL until the Phase 21 Apply review closes; rows encode research, not
+# decisions. The review may rewrite any row, and that is a one-file change. The
+# phase number is provisional too (ROADMAP add order after Cut A).
+#
+# Profile scope (D-13): every input is synthetic. The candidate, dossier values
+# and URLs are fictional; no row reads a real dossier.
+#
+# Prefill is not submit: plan_prefill never submits, so submit is false in every
+# row. Auto-submit stays out of scope here (REQUIREMENTS Future APPLY-02: the
+# scripts are kept, never default). Every target is called with keyword
+# arguments only.
+
+phase: 21
+name: apply
+title: Apply
+status: "PROVISIONAL until the Phase 21 Apply review closes; rows encode research, not decisions"
+pending: true
+sources:
+  - ".planning/research/SUMMARY.md, Phase 10 Apply (prefill from verified facts, never submits)"
+  - ".planning/research/FEATURES.md, section 4e (filled and skipped list, knock-out pre-scan, prepared state)"
+  - ".planning/research/PITFALLS.md, GATE-1 (every producer gated) and SEC-2 (answers never from JD text)"
+  - ".planning/REQUIREMENTS.md, Future Requirements APPLY-02 (auto-submit is never the default)"
+
+tables:
+  prefill_plan:
+    target: career_os.services.prefill:plan_prefill
+    rows:
+      - id: fills-only-from-verified-dossier-facts
+        input:
+          form_fields:
+            - {name: first_name, kind: text}
+            - {name: portfolio_url, kind: text}
+          dossier:
+            verified: {first_name: Jordan, portfolio_url: "https://portfolio.example.com/jordan"}
+            unverified: {}
+        expect:
+          filled: [first_name, portfolio_url]
+          submit: false
+
+      - id: unverified-fact-is-not-filled
+        input:
+          form_fields:
+            - {name: phone, kind: text}
+          dossier:
+            verified: {}
+            unverified: {phone: "+000 000 0000"}
+        expect:
+          filled: []
+          skipped: [phone]
+          submit: false
+
+      - id: unknown-field-is-listed-under-skipped
+        input:
+          form_fields:
+            - {name: favourite_colour, kind: text}
+          dossier:
+            verified: {first_name: Jordan}
+            unverified: {}
+        expect:
+          skipped: [favourite_colour]
+          submit: false
+
+      - id: free-text-answer-is-routed-through-gate-draft
+        input:
+          form_fields:
+            - {name: why_us, kind: free_text}
+          dossier:
+            verified: {first_name: Jordan}
+            unverified: {}
+        expect:
+          gate_draft_fields: [why_us]
+          submit: false
+
+      - id: plan-sets-submission-state-prepared
+        input:
+          form_fields:
+            - {name: first_name, kind: text}
+          dossier:
+            verified: {first_name: Jordan}
+            unverified: {}
+        expect:
+          submission_state: prepared
+          submit: false
+
+      - id: knock-out-question-is-flagged-for-the-user
+        input:
+          form_fields:
+            - {name: work_authorization, kind: select, knock_out: true}
+          dossier:
+            verified: {}
+            unverified: {}
+        expect:
+          knock_out_flagged: [work_authorization]
+          submit: false

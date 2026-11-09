@@ -37,6 +37,9 @@ EXPECTED_ROWS = {
     "phase_16_scan": 8,
     "phase_17_score": 9,
     "phase_18_track": 10,
+    "phase_19_write": 10,
+    "phase_20_connect": 6,
+    "phase_21_apply": 6,
 }
 
 
@@ -99,6 +102,14 @@ def test_param_ids_follow_file_order():
     assert first == expected
     assert second == first
     assert len(set(first)) == len(first)
+
+
+def test_all_eight_phases_present():
+    """Phases 14 to 21 each have exactly one table file (12 and 13 write their own tests, OQ-5)."""
+    tables = load_tables(validate=False)
+    phases = [table.phase for table in tables]
+    assert set(phases) == {14, 15, 16, 17, 18, 19, 20, 21}
+    assert len(phases) == len(set(phases)) == 8
 
 
 def test_scan_encodes_only_the_agreed_exit_codes():
