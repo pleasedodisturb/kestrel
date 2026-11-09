@@ -20,8 +20,29 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # Release hold (FOUND-11, G-2040). While `.release-hold` exists at the
+      # repo root this job does nothing: no token, no release PR, no release.
+      # Every step below runs only when the guard wrote held=false, so a
+      # guard that fails or writes nothing also means "no release".
+      # tests/test_release_hold.py asserts this shape.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .release-hold
+          sparse-checkout-cone-mode: false
+
+      - name: Check release hold
+        id: hold
+        run: |
+          if [ -e .release-hold ]; then
+            echo "held=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "held=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate token
         id: app-token
+        if: steps.hold.outputs.held == 'false'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.RELEASE_APP_ID }}
@@ -35,6 +56,7 @@ jobs:
           permission-pull-requests: write
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        if: steps.hold.outputs.held == 'false'
         with:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
