@@ -61,14 +61,14 @@ Phase numbering continues from v1.1 (ended at Phase 10). This roadmap is hybrid:
   4. Per-source arrival counts over the retrospective window (arrived, survived prefilter, scored, shortlisted, applied, by month) are committed as aggregates with no job-level rows
   5. The full June-to-October 2026 flow retrospective exists as a session doc in the private pipeline's repository and nowhere in Kestrel; Kestrel's `.planning/` holds the anonymised verdict list (per flow and per feature: keep / scope-and-plan / park / remove, a profile-specific-or-generic tag, a "works for a non-technical profile" column, counts and reasons; no company names, no person names, no dates finer than a month, no transcript quotes), the CI PII scan passes on it, and the Cut A and Retire cut lists cite one of its verdicts for every item
 
-**Plans**: 3/6 plans executed in 3 waves (wave 1 runs Track A and Track B in parallel)
+**Plans**: 4/6 plans executed in 3 waves (wave 1 runs Track A and Track B in parallel)
 
 Plans:
 **Wave 1**
 - [x] 11-01-PLAN.md — Track A goldens: dedup, eligibility, scoring, scan-arrival and digest classes replayed from tools/ at pinned blobs, MANIFEST provenance, synthetic gate inputs (MAP-02)
 - [x] 11-02-PLAN.md — Track A mapping tables: `v2_pending` marker, data-driven strict-xfail engine, eight provisional tables for Phases 14-21, inventory pins (MAP-03)
 - [x] 11-03-PLAN.md — Track A MAP-05 `ai_providers` golden, `PORT_LEDGER.yaml` with its honesty test, boundary validators and the MAP-09 citation checker (MAP-01, MAP-05, MAP-08, MAP-09)
-- [ ] 11-04-PLAN.md — Track B, private repository only: flow retrospective, verdict, counts and private-ledger drafts (MAP-01, MAP-04, MAP-06, MAP-07)
+- [x] 11-04-PLAN.md — Track B, private repository only: flow retrospective, verdict, counts and private-ledger drafts (MAP-01, MAP-04, MAP-06, MAP-07)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 11-05-PLAN.md — Private gate verdicts, blocking-human approval of the exact bytes, crossing into Kestrel (MAP-01, MAP-02, MAP-04, MAP-07, MAP-08)
@@ -131,6 +131,6 @@ Plans:
 | 8. Over-admission rule | v1.1 | 0/0 | Folded into v2.0 | - |
 | 9. Single authority | v1.1 | 0/0 | Folded into v2.0 | - |
 | 10. Provider preflight | v1.1 | 0/0 | Folded into v2.0 | - |
-| 11. Map | v2.0 | 3/6 | In Progress | - |
+| 11. Map | v2.0 | 4/6 | In Progress | - |
 | 12. Foundation | v2.0 | 0/TBD | Not started | - |
 | 13. Cut A | v2.0 | 0/TBD | Not started | - |

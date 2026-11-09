@@ -5,16 +5,16 @@ milestone_name: (Lean Kestrel)
 current_phase: 11
 current_phase_name: Map
 status: executing
-stopped_at: context exhaustion at 75% (2026-11-09)
-last_updated: "2026-11-09T17:46:16.454Z"
+stopped_at: Completed 11-04-PLAN.md
+last_updated: "2026-11-09T18:17:28.922Z"
 last_activity: 2026-11-09
 last_activity_desc: Phase 11 execution resumed (wave continue)
-state_head: 00d04fb70d0a27ae596b8e022e6563a8999533b3
+state_head: 490a706e0300aebacba89514d96942997d204073
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-04-21)
 ## Current Position
 
 Phase: 11 (Map) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 11
+Plan: 4 of 6 complete (11-01 to 11-04); next 11-05
+Status: Ready to execute
 Last activity: 2026-11-09 — Phase 11 execution resumed (wave continue)
 
 ## Performance Metrics
@@ -56,6 +56,11 @@ Last activity: 2026-11-09 — Phase 11 execution resumed (wave continue)
 - Trend: Stable, documentation-only phases. Phase 4 averaged 8 min/plan across 20 deep dives
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 11 P04 | 55min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -84,6 +89,7 @@ Recent decisions affecting current work:
 - Phase 8 (Over-admission rule, RULE-01..04) requires /gsd-discuss-phase before planning; the rule is a design decision to be re-measured against the 277-item blind set
 - Phase 6: ruff pin resolved from CI at execution time (0.16.9); force-exclude kept as belt and braces; dead suite deleted with a 19-case ledger; AST guard has no allowlist and was extended post-review (flag-variable skipif, unittest.SkipTest)
 - Phase 6 executor worktrees fork from HEAD via `worktree.baseRef: head` in .claude/settings.local.json (set with `gsd-tools worktree set-baseref head`); cleanup-wave merge commits are linearized onto the executor tip because review-push and the Review-trailers CI job refuse merge commits
+- [Phase 11]: Plan 11-04: Family B is wholly omitted (the whole-run withhold rule leaves no eligible run; no producing revision spans two months for the other classes); arrival counts cover only months with recorded scan artefacts
 
 ### Pending Todos
 
@@ -132,8 +138,8 @@ Items acknowledged and deferred at roadmap-m1 milestone close on 2026-05-07:
 
 ## Session Continuity
 
-Last session: 2026-11-09T17:25:14.558Z
-Stopped at: context exhaustion at 75% (2026-11-09)
+Last session: 2026-11-09T18:17:28.904Z
+Stopped at: Completed 11-04-PLAN.md
 Resume file: None
 
 ### v2.0 review position (2026-10-25)
