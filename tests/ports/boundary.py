@@ -61,9 +61,26 @@ Cut list contract (MAP-09)
 --------------------------
 A cut list is ``.planning/phases/NN-slug/NN-CUT-LIST.md``. Every item is one line,
 ``- {item} | verdict: {ID}`` or ``- {item} | verdicts: {ID}, {ID}``. ``cut_list_items``
-returns ``(line_no, item, ids)`` in file order; ``uncited_items`` returns the items that
-carry no verdict clause or an id that is not a known verdict id, in file order, and one
-``(0, "cut list has no items", [])`` entry for a list with no items at all.
+returns ``(line_no, item, ids)`` in file order; ``uncited_items`` returns one
+``(line_no, what, ids)`` entry, in file order, for each item that carries no verdict
+clause or an id that is not a known verdict id, and one ``(0, "cut list has no items",
+[])`` entry for a list with no items at all. ``what`` is a fixed description, never the
+item's text.
+
+Diagnostics never repeat the content they reject
+------------------------------------------------
+These validators run over private files before they cross, and what they return is
+printed by the CLI and by a failing test, so it reaches terminals, agent transcripts,
+summaries and CI logs. No string returned by ``verdict_problems``, ``counts_problems``,
+``private_rows_problems`` or ``uncited_items``, and nothing the CLI prints about a file's
+content, contains a value read from the file being validated: not a cell, not a header
+cell, not a YAML key. A problem names the position (row number, and a column or key name
+from this module's own constants) and the rule, and quotes only this module's constants
+(the expected header, the allowed vocabularies). A row id is shown only after it has
+matched the synthetic shape its contract gives it (``F-NN``, ``X-NN``, ``P-NN``);
+anything else is named by position, counted, or replaced by ``MALFORMED_ID``. The
+parsers (``parse_verdict_list``, ``cut_list_items``) and ``forbidden_hits`` return content
+by design and are never printed.
 """
 
 from __future__ import annotations
@@ -186,6 +203,9 @@ _PRIVATE_REQUIRED_KEYS = frozenset(
     {"id", "private", "description", "run_status", "inputs", "outputs", "disposition"}
 )
 _PRIVATE_ALLOWED_KEYS = _PRIVATE_REQUIRED_KEYS | {"reason"}
+# Keys the contract forbids by name. A problem may name these; any other unexpected key
+# is content of the file and is only counted.
+_PRIVATE_NAMED_KEYS = ("path", "glob")
 _PRIVATE_TEXT_KEYS = ("description", "inputs", "outputs", "reason")
 
 # ---------------------------------------------------------------------------
@@ -289,6 +309,8 @@ _REF = re.compile(
     r"^(?:-|(?:cut-a|retire|find|filter|scan|score|track|write|connect|apply|install|private)"
     r":[a-z0-9-]+)$"
 )
+# What a problem shows in place of a cited id that does not have the id shape.
+MALFORMED_ID = "<malformed id>"
 _UNDER_USE = re.compile(r"^(?:unused|rarely used|low use|under-?used|not used)\.?$", re.IGNORECASE)
 _COMMIT = re.compile(r"\b[0-9a-f]{40}\b")
 
@@ -347,6 +369,43 @@ def _id_sort_key(kind: str, row_id: str) -> tuple[int, int] | None:
     return (0 if kind == "flow" else 1, int(row_id[2:]))
 
 
+def _safe_id(value: object, *patterns: re.Pattern[str]) -> str | None:
+    """Return *value* when it is an id of one of the contract shapes, else None.
+
+    An id is content of the file being validated. It may be shown in a problem only
+    after it has matched (in full) the synthetic shape its contract gives it.
+    """
+    if isinstance(value, str) and any(pattern.fullmatch(value) for pattern in patterns):
+        return value
+    return None
+
+
+def _row_label(index: int, row_id: object, *patterns: re.Pattern[str]) -> str:
+    """Name a row by its number, plus its id when the id has its contract shape."""
+    shown = _safe_id(row_id, *patterns)
+    return f"row {index} ({shown})" if shown else f"row {index}"
+
+
+def _duplicate_problems(
+    what: str, values: Iterable[tuple[int, object]], *patterns: re.Pattern[str]
+) -> list[str]:
+    """Report every value that occurs in more than one row, by row number.
+
+    The value is shown only when it is an id of one of *patterns*; otherwise the row
+    numbers alone identify it. Problems come in the order of each value's first row.
+    """
+    positions: dict[object, list[int]] = {}
+    for index, value in values:
+        positions.setdefault(value, []).append(index)
+    problems: list[str] = []
+    for value, rows in positions.items():
+        if len(rows) > 1:
+            shown = _safe_id(value, *patterns)
+            where = ", ".join(str(index) for index in rows)
+            problems.append(f"duplicate {what}{f' {shown}' if shown else ''} in rows {where}")
+    return problems
+
+
 def _verdict_header_problems(text: str) -> list[str]:
     """Check the Vocabulary and Source lines."""
     problems: list[str] = []
@@ -376,34 +435,29 @@ def _verdict_header_problems(text: str) -> list[str]:
 
 
 def _verdict_row_problems(label: str, row: dict[str, str]) -> list[str]:
-    """Validate one verdict row's own cells."""
+    """Validate one verdict row's own cells; a problem names the column, never the cell."""
     problems: list[str] = []
     kind, row_id = row["kind"], row["id"]
     if kind not in ("flow", "feature"):
-        problems.append(f"{label}: kind must be flow or feature, got {kind!r}")
+        problems.append(f"{label}: kind must be flow or feature")
     elif _id_sort_key(kind, row_id) is None:
-        problems.append(f"{label}: id {row_id!r} does not match kind {kind}")
+        # kind is one of the two constants here, so it is safe to show.
+        problems.append(f"{label}: id does not match kind {kind}")
     if not row["name"]:
         problems.append(f"{label}: name is empty")
     if not _REF.match(row["ref"]):
-        problems.append(f"{label}: ref {row['ref']!r} is not '-' or a phase:slug pair")
+        problems.append(f"{label}: ref is not '-' or a phase:slug pair")
     verdict = row["verdict"]
     if verdict in D02_ALIASES:
-        problems.append(
-            f"{label}: verdict {verdict!r} is a D-02 alias; use {D02_ALIASES[verdict]!r}"
-        )
+        problems.append(f"{label}: verdict is a D-02 alias; use {D02_ALIASES[verdict]!r}")
     elif verdict not in VERDICTS:
-        problems.append(f"{label}: verdict {verdict!r} is not one of {VERDICTS}")
+        problems.append(f"{label}: verdict is not one of {VERDICTS}")
     if row["profile_scope"] not in PROFILE_SCOPES:
-        problems.append(
-            f"{label}: profile_scope {row['profile_scope']!r} is not specific or generic"
-        )
+        problems.append(f"{label}: profile_scope is not specific or generic")
     if row["non_technical"] not in NON_TECHNICAL:
-        problems.append(
-            f"{label}: non_technical {row['non_technical']!r} is not yes, no or partial"
-        )
+        problems.append(f"{label}: non_technical is not yes, no or partial")
     if not re.fullmatch(r"\d+", row["count"]):
-        problems.append(f"{label}: count {row['count']!r} is not a non-negative integer")
+        problems.append(f"{label}: count is not a non-negative integer")
     reason = row["reason"]
     if not reason:
         problems.append(f"{label}: reason is empty")
@@ -425,29 +479,32 @@ def verdict_problems(text: str) -> list[str]:
         problems.append("more than one table found")
     header = tuple(_split_row(blocks[0][0]))
     if header != VERDICT_COLUMNS:
-        return [*problems, f"table header must be exactly {VERDICT_COLUMNS}, got {header}"]
+        return [
+            *problems,
+            f"table header must be exactly {VERDICT_COLUMNS}, got {len(header)} column(s)",
+        ]
     raw_rows = _table_rows(blocks[0])
     if not raw_rows:
         return [*problems, "verdict list has no rows"]
-    rows: list[dict[str, str]] = []
+    rows: list[tuple[int, dict[str, str]]] = []
     for index, cells in enumerate(raw_rows, start=1):
         if len(cells) != len(header):
             problems.append(f"row {index}: expected {len(header)} cells, got {len(cells)}")
             continue
         row = dict(zip(header, cells, strict=True))
-        rows.append(row)
-        problems.extend(_verdict_row_problems(f"row {index} ({row['id']})", row))
-    ids = [row["id"] for row in rows]
-    problems.extend(f"duplicate id {i}" for i in sorted({i for i in ids if ids.count(i) > 1}))
-    pairs = [(row["kind"], row["name"]) for row in rows]
+        rows.append((index, row))
+        label = _row_label(index, row["id"], _FLOW_ID, _FEATURE_ID)
+        problems.extend(_verdict_row_problems(label, row))
     problems.extend(
-        f"duplicate (kind, name) {pair}"
-        for pair in sorted({p for p in pairs if pairs.count(p) > 1})
+        _duplicate_problems("id", [(i, r["id"]) for i, r in rows], _FLOW_ID, _FEATURE_ID)
     )
-    keys = [k for k in (_id_sort_key(r["kind"], r["id"]) for r in rows) if k is not None]
+    problems.extend(
+        _duplicate_problems("(kind, name)", [(i, (r["kind"], r["name"])) for i, r in rows])
+    )
+    keys = [k for k in (_id_sort_key(r["kind"], r["id"]) for _, r in rows) if k is not None]
     if any(left > right for left, right in zip(keys, keys[1:], strict=False)):
         problems.append("ids are not sorted (flows before features, numerically)")
-    present = {row["ref"] for row in rows}
+    present = {row["ref"] for _, row in rows}
     problems.extend(f"missing required ref {ref}" for ref in REQUIRED_REFS if ref not in present)
     return problems
 
@@ -464,26 +521,29 @@ def counts_problems(text: str) -> list[str]:
     if not rows:
         return [*problems, "counts file has no header"]
     if tuple(rows[0]) != COUNTS_HEADER:
-        return [*problems, f"header must be exactly {COUNTS_HEADER}, got {tuple(rows[0])}"]
+        return [
+            *problems,
+            f"header must be exactly {COUNTS_HEADER}, got {len(rows[0])} column(s)",
+        ]
     body = rows[1:]
     if not body:
         return [*problems, "counts file has no rows"]
-    seen: set[tuple[str, str]] = set()
+    seen: dict[tuple[str, str], int] = {}
     for index, cells in enumerate(body, start=1):
         if len(cells) != len(COUNTS_HEADER):
             problems.append(f"row {index}: expected {len(COUNTS_HEADER)} cells, got {len(cells)}")
             continue
         source, month, *numbers = cells
         if source not in ALLOWED_SOURCES:
-            problems.append(f"row {index}: source {source!r} is not an allowed source family")
+            problems.append(f"row {index}: source is not an allowed source family")
         if month not in WINDOW_MONTHS:
-            problems.append(f"row {index}: month {month!r} is not one of {WINDOW_MONTHS}")
+            problems.append(f"row {index}: month is not one of {WINDOW_MONTHS}")
         for name, value in zip(COUNTS_HEADER[2:], numbers, strict=True):
             if not re.fullmatch(r"\d+", value):
-                problems.append(f"row {index}: {name} {value!r} is not a non-negative integer")
-        if (source, month) in seen:
-            problems.append(f"row {index}: duplicate (source, month) ({source}, {month})")
-        seen.add((source, month))
+                problems.append(f"row {index}: {name} is not a non-negative integer")
+        first = seen.setdefault((source, month), index)
+        if first != index:
+            problems.append(f"row {index}: duplicate (source, month) of row {first}")
     return problems
 
 
@@ -497,18 +557,30 @@ _PRIVATE_ID = re.compile(r"^P-\d{2}$")
 
 
 def _private_row_problems(label: str, row: dict) -> list[str]:
-    """Validate one anonymised private ledger row."""
+    """Validate one anonymised private ledger row.
+
+    A key of the row is content of the file: an unexpected key is named only when it is
+    one of ``_PRIVATE_NAMED_KEYS`` and is counted otherwise. A missing key is one of this
+    module's own names. No cell is ever shown.
+    """
     problems: list[str] = []
-    for key in sorted(set(row) - _PRIVATE_ALLOWED_KEYS):
-        problems.append(f"{label}: unexpected key {key!r} (rows never carry paths or globs)")
+    unexpected = set(row) - _PRIVATE_ALLOWED_KEYS
+    for key in _PRIVATE_NAMED_KEYS:
+        if key in unexpected:
+            problems.append(f"{label}: unexpected key {key!r} (rows never carry paths or globs)")
+    unnamed = len(unexpected - set(_PRIVATE_NAMED_KEYS))
+    if unnamed:
+        problems.append(f"{label}: {unnamed} unexpected key(s) (rows never carry paths or globs)")
     for key in sorted(_PRIVATE_REQUIRED_KEYS - set(row)):
         problems.append(f"{label}: missing key {key!r}")
     if row.get("private") is not True:
         problems.append(f"{label}: private must be true")
     if row.get("run_status") not in PRIVATE_RUN_STATUSES:
-        problems.append(f"{label}: invalid run_status {row.get('run_status')!r}")
+        allowed = ", ".join(PRIVATE_RUN_STATUSES)
+        problems.append(f"{label}: invalid run_status (must be one of {allowed})")
     if row.get("disposition") not in PRIVATE_DISPOSITIONS:
-        problems.append(f"{label}: invalid disposition {row.get('disposition')!r}")
+        allowed = ", ".join(PRIVATE_DISPOSITIONS)
+        problems.append(f"{label}: invalid disposition (must be one of {allowed})")
     needs_reason = row.get("run_status") == "dead" or row.get("disposition") == "delete"
     if needs_reason and not str(row.get("reason", "")).strip():
         problems.append(f"{label}: dead or delete row needs a reason")
@@ -549,20 +621,19 @@ def private_rows_problems(data: object, raw: str | None = None) -> list[str]:
     rows = data.get("rows")
     if not isinstance(rows, list) or not rows:
         return [*problems, "private rows list is empty or missing"]
-    ids: list[str] = []
+    placed: list[tuple[int, str]] = []
     for index, row in enumerate(rows):
-        label = f"row {index}"
         if not isinstance(row, dict):
-            problems.append(f"{label}: not a mapping")
+            problems.append(f"row {index}: not a mapping")
             continue
-        row_id = row.get("id")
-        if not isinstance(row_id, str) or not _PRIVATE_ID.match(row_id):
-            problems.append(f"{label}: id {row_id!r} does not match P-NN")
+        row_id = _safe_id(row.get("id"), _PRIVATE_ID)
+        if row_id is None:
+            problems.append(f"row {index}: id does not match P-NN")
         else:
-            label = f"row {index} ({row_id})"
-            ids.append(row_id)
-        problems.extend(_private_row_problems(label, row))
-    problems.extend(f"duplicate id {i}" for i in sorted({i for i in ids if ids.count(i) > 1}))
+            placed.append((index, row_id))
+        problems.extend(_private_row_problems(_row_label(index, row_id, _PRIVATE_ID), row))
+    problems.extend(_duplicate_problems("id", placed, _PRIVATE_ID))
+    ids = [row_id for _, row_id in placed]
     if ids != sorted(ids):
         problems.append("rows are not sorted by id")
     return problems
@@ -593,16 +664,27 @@ def cut_list_items(text: str) -> list[tuple[int, str, list[str]]]:
 
 
 def uncited_items(text: str, known_ids: Iterable[str]) -> list[tuple[int, str, list[str]]]:
-    """Return items citing no verdict id or an unknown one, in file order.
+    """Return ``(line_no, what, ids)`` for items citing no verdict id or an unknown one.
 
-    A cut list with no items at all yields the single entry ``(0, "cut list has no
-    items", [])`` so an empty list can never pass as fully cited.
+    Entries come in file order. ``what`` is one of two fixed descriptions and never the
+    item's own text, and ``ids`` keeps each cited id that has the ``F-NN`` or ``X-NN``
+    shape and holds ``MALFORMED_ID`` in place of any other token, so a failing assertion
+    on the result cannot print the cut list's content. A cut list with no items at all
+    yields the single entry ``(0, "cut list has no items", [])`` so an empty list can
+    never pass as fully cited.
     """
     known = set(known_ids)
     items = cut_list_items(text)
     if not items:
         return [(0, "cut list has no items", [])]
-    return [item for item in items if not item[2] or any(i not in known for i in item[2])]
+    found: list[tuple[int, str, list[str]]] = []
+    for line_no, _item, ids in items:
+        if not ids:
+            found.append((line_no, "item cites no verdict id", []))
+        elif any(cited not in known for cited in ids):
+            shown = [_safe_id(cited, _FLOW_ID, _FEATURE_ID) or MALFORMED_ID for cited in ids]
+            found.append((line_no, "item cites an unknown verdict id", shown))
+    return found
 
 
 # ---------------------------------------------------------------------------

@@ -260,8 +260,9 @@ def _counts_with(index: int, column: int, value: str) -> str:
 
 
 _COUNTS_CASES = [
-    ("day-level-month", lambda: _counts_with(0, 1, "2026-10-05"), "month '2026-10-05'"),
-    ("month-outside-window", lambda: _counts_with(0, 1, "2026-05"), "month '2026-05'"),
+    # The month rule is named by row and column; the rejected cell is never repeated.
+    ("day-level-month", lambda: _counts_with(0, 1, "2026-10-05"), "row 1: month is not one of"),
+    ("month-outside-window", lambda: _counts_with(0, 1, "2026-05"), "row 1: month is not one of"),
     (
         "company-slug-source",
         lambda: _counts_with(0, 0, "acme-corp"),
@@ -577,12 +578,16 @@ def test_one_item_citing_several_ids_and_several_items_citing_one_id_pass():
 
 
 def test_uncited_and_unknown_items_are_reported_in_file_order():
-    """Items with no clause or an unknown id come back in file order (probe MAP-09 ordering)."""
+    """Items with no clause or an unknown id come back in file order (probe MAP-09 ordering).
+
+    Each entry describes the item (its line, which rule it breaks, the well-formed ids it
+    cites) and never quotes the item's own text.
+    """
     text = "- ok | verdict: X-01\n- bare\n- ghost | verdict: X-99\n- mixed | verdicts: X-01, X-99\n"
     assert uncited_items(text, _KNOWN) == [
-        (2, "bare", []),
-        (3, "ghost", ["X-99"]),
-        (4, "mixed", ["X-01", "X-99"]),
+        (2, "item cites no verdict id", []),
+        (3, "item cites an unknown verdict id", ["X-99"]),
+        (4, "item cites an unknown verdict id", ["X-01", "X-99"]),
     ]
     assert [item[0] for item in uncited_items(text, _KNOWN)] == [2, 3, 4]
 
