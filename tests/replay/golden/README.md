@@ -116,7 +116,12 @@ is held to when replayed against the unscrubbed private copy.
   unknown key is a validator error, so no dossier or profile field can slip in.
 - The home region. Every location the private geo config counts as home appears
   only as a `Home-NN` token, and the validator requires that shape on every
-  record whose `geo_class` is `home`.
+  record of a home-family class: any `geo_class` that contains `home` in any
+  letter case, so the producer's `home_local` and `home_relocate` as well as a
+  plain `home`, read from the eligibility output or the scoring input. On such
+  a record `location` and every `offices` element must be a `Home-NN` token. A
+  `geo_class` that is not a string is held to the same rule; a record that
+  carries no `geo_class` states no verdict and is outside it.
 - Employer list membership. A record decided by the private dream-tier, block or
   soft-flag lists stays private; the validator rejects any exported `dream_tier`,
   `blocked`, `soft_flag` or `floored` that is true and any reason code naming
@@ -157,6 +162,10 @@ committed Family B file.
 - **Coverage.** At least two months in every class; both `duplicate` values in
   `private_dedup_verdicts`; two `geo_class` values in `private_eligibility_verdicts`;
   two `tier` values (null counts) in `private_scoring`.
+- **Problems.** The validators run over a file before it has crossed, and what
+  they print reaches terminals, transcripts and CI logs. A problem therefore
+  names a line number and a rule and never repeats a value read from the file:
+  not a cell, not a key and not the row id. An unknown key is counted, not named.
 
 ### Provenance of Family B
 

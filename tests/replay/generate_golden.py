@@ -18,6 +18,12 @@ Modes::
 Family B classes (the five private_* classes) have no harness: they are never
 recomputed, only validated by ``private_golden_problems`` and their sha256.
 
+``--register-private`` (with or without ``--dry-run``) and ``--check`` read files
+that came from the private pipeline. What they print about such a file names a
+line number and a rule and never repeats a value read from it: the findings are
+those of ``private_golden_problems`` and ``gate_verdict_problems``, and a ledger
+that cannot be parsed is reported by its error class only.
+
 Contract (modelled on ``tests/eval/geo/fixtures/generate_reference.py``): on any
 PII hit, schema error or duplicate the script writes NOTHING and exits non-zero.
 Regeneration keeps each case's ``id`` and ``input`` and recomputes only the
@@ -238,7 +244,14 @@ def register_private(
         assert producer_row is not None
         ledger_path = ledger if ledger is not None else S.PRIVATE_LEDGER_PATH
         if ledger_path.is_file():
-            if producer_row not in S.ledger_row_ids(ledger_path):
+            try:
+                known_rows = S.ledger_row_ids(ledger_path)
+            except S.LedgerUnreadable as exc:
+                # Class name only: the ledger is private until it has crossed, and
+                # a YAML parser error quotes the offending line.
+                print(f"FAIL {cls}: cannot read {ledger_path.name}: {exc}", file=sys.stderr)
+                return 1
+            if producer_row not in known_rows:
                 print(
                     f"FAIL {cls}: producer_row {producer_row} is not in {ledger_path.name}",
                     file=sys.stderr,

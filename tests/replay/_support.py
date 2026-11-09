@@ -780,6 +780,12 @@ _OUTPUT_FIELD_CHECKS: dict[str, tuple[Callable[[Any], bool], str]] = {
     "scorer": (_matches(_RE_SCORER), "scorer does not match its shape"),
 }
 _DIGEST_ROW_KEYS = ("company", "title", "location", "fit_score", "tier", "effort_flag", "source")
+_DIGEST_CONFIG_KEYS = ("mode", "min_score", "hours_old")
+_DIGEST_COUNT_KEYS = ("arrived", "scored", "shortlisted")
+# Keys that hold a date, by name or by ending. A key that only matches an ending
+# is file content, so a problem names the ending and never the key.
+_DATE_KEYS = ("month", "posted", "date")
+_DATE_KEY_ENDINGS = ("_at", "_date")
 
 # Per class: (input required, input optional, output required, output optional).
 FAMILY_B_SHAPES: dict[str, dict[str, Any]] = {
@@ -824,10 +830,17 @@ FAMILY_B_SHAPES: dict[str, dict[str, Any]] = {
 def _key_problems(
     obj: Any, required: set[str] | frozenset[str], optional: set[str] | frozenset[str], where: str
 ) -> list[str]:
-    """Unknown or missing keys of one object (an unknown key is how free text would slip in)."""
+    """Unknown or missing keys of one object (an unknown key is how free text would slip in).
+
+    An unknown key is content of the file, so it is counted and never named; a
+    missing key is one of this module's own names and is shown.
+    """
     if not isinstance(obj, dict):
         return [f"{where}: not an object"]
-    problems = [f"{where}: unknown key {key!r}" for key in sorted(set(obj) - required - optional)]
+    problems: list[str] = []
+    unknown = len(set(obj) - required - optional)
+    if unknown:
+        problems.append(f"{where}: {unknown} unknown key(s)")
     problems += [f"{where}: missing key {key!r}" for key in sorted(required - set(obj))]
     return problems
 
@@ -870,8 +883,20 @@ def _output_field_problems(obj: dict[str, Any], where: str) -> list[str]:
             and isinstance(value, str)
             and any(word in value for word in _CONFIG_REASON_WORDS)
         ):
-            problems.append(f"{where}: config-derived reason code {value!r}")
+            problems.append(f"{where}: config-derived reason code")
     return problems
+
+
+def _is_home_class(geo_class: Any) -> bool:
+    """True when *geo_class* names a home-family verdict, in any letter case.
+
+    The producer (``tools/job_scorer.py::geo_eligibility``) returns ``home_local``
+    and ``home_relocate``, never the bare word, so the test is the substring and
+    there is no list of values to keep in step with it. Anything that is not a
+    string counts as home: a verdict that cannot be read must never switch the
+    home rule off.
+    """
+    return not isinstance(geo_class, str) or "home" in geo_class.casefold()
 
 
 def _location_tokenised(posting: Any) -> bool:
@@ -880,6 +905,36 @@ def _location_tokenised(posting: Any) -> bool:
         and isinstance(posting.get("location"), str)
         and _RE_HOME.fullmatch(posting["location"]) is not None
     )
+
+
+def _offices_tokenised(posting: Any) -> bool:
+    """True when *posting* lists no offices, or every office is a ``Home-NN`` token."""
+    if not isinstance(posting, dict) or "offices" not in posting:
+        return True
+    offices = posting["offices"]
+    return isinstance(offices, list) and all(_matches(_RE_HOME)(office) for office in offices)
+
+
+def _home_problems(holder: Any, posting: Any, where: str) -> list[str]:
+    """The home-region rule of one record; *holder* is the object that carries ``geo_class``.
+
+    A record of a home-family class may name its home region only as ``Home-NN``
+    tokens: in ``location`` and in every element of ``offices``, the two
+    location fields a posting may carry. A record that carries no ``geo_class``
+    key states no verdict and is outside the rule.
+    """
+    if not isinstance(holder, dict) or "geo_class" not in holder:
+        return []
+    geo_class = holder["geo_class"]
+    if not _is_home_class(geo_class):
+        return []
+    why = "is a home-family class" if isinstance(geo_class, str) else "is not a string"
+    problems: list[str] = []
+    if not _location_tokenised(posting):
+        problems.append(f"{where}: home location not tokenised (geo_class {why})")
+    if not _offices_tokenised(posting):
+        problems.append(f"{where}: home offices not tokenised (geo_class {why})")
+    return problems
 
 
 def _record_problems(cls: str, record: dict[str, Any], where: str) -> list[str]:
@@ -911,19 +966,13 @@ def _record_problems(cls: str, record: dict[str, Any], where: str) -> list[str]:
         problems += _key_problems(rec_out, *shape["output"], f"{where} output")
         if isinstance(rec_out, dict):
             problems += _output_field_problems(rec_out, f"{where} output")
-            if rec_out.get("geo_class") == "home" and not _location_tokenised(rec_in):
-                problems.append(f"{where}: home location not tokenised (geo_class is home)")
+        problems += _home_problems(rec_out, rec_in, where)
     elif cls == "private_scoring":
         problems += _posting_problems(rec_in, f"{where} input", extra=frozenset({"geo_class"}))
         problems += _key_problems(rec_out, *shape["output"], f"{where} output")
         if isinstance(rec_out, dict):
             problems += _output_field_problems(rec_out, f"{where} output")
-        if (
-            isinstance(rec_in, dict)
-            and rec_in.get("geo_class") == "home"
-            and not _location_tokenised(rec_in)
-        ):
-            problems.append(f"{where}: home location not tokenised (geo_class is home)")
+        problems += _home_problems(rec_in, rec_in, where)
     else:  # private_digest
         problems += _key_problems(rec_in, *shape["input"], f"{where} input")
         if isinstance(rec_in, dict):
@@ -937,10 +986,8 @@ def _record_problems(cls: str, record: dict[str, Any], where: str) -> list[str]:
 def _digest_input_problems(rec_in: dict[str, Any], where: str) -> list[str]:
     problems: list[str] = []
     config, counts = rec_in.get("config"), rec_in.get("counts")
-    problems += _key_problems(config, set(), {"mode", "min_score", "hours_old"}, f"{where} config")
-    problems += _key_problems(
-        counts, set(), {"arrived", "scored", "shortlisted"}, f"{where} counts"
-    )
+    problems += _key_problems(config, set(), set(_DIGEST_CONFIG_KEYS), f"{where} config")
+    problems += _key_problems(counts, set(), set(_DIGEST_COUNT_KEYS), f"{where} counts")
     if isinstance(config, dict):
         if "mode" in config and not isinstance(config["mode"], str):
             problems.append(f"{where} config: mode is not a string")
@@ -949,8 +996,10 @@ def _digest_input_problems(rec_in: dict[str, Any], where: str) -> list[str]:
         if "hours_old" in config and not _is_int(config["hours_old"]):
             problems.append(f"{where} config: hours_old is not an integer")
     if isinstance(counts, dict):
-        for name, value in sorted(counts.items()):
-            if not (_is_int(value) and value >= 0):
+        # Only the contract's own names: any other key is file content and is
+        # already reported, by count, as an unknown key.
+        for name in _DIGEST_COUNT_KEYS:
+            if name in counts and not (_is_int(counts[name]) and counts[name] >= 0):
                 problems.append(f"{where} counts: {name} is not a non-negative integer")
     return problems
 
@@ -1000,12 +1049,13 @@ def _invariant_problems(record: Any, where: str) -> list[str]:
     problems: list[str] = []
     for key, value in _walk(record):
         if key is not None and isinstance(value, str | int | float | type(None)):
-            dated = key in ("month", "posted", "date") or key.endswith(("_at", "_date"))
+            dated = key in _DATE_KEYS or key.endswith(_DATE_KEY_ENDINGS)
             if dated and not (
                 isinstance(value, str)
                 and (re.fullmatch(r"\d{4}-\d{2}", value) or (key == "posted" and value == ""))
             ):
-                problems.append(f"{where}: date field {key} is not month-level")
+                shown = key if key in _DATE_KEYS else "(a key ending _at or _date)"
+                problems.append(f"{where}: date field {shown} is not month-level")
         if isinstance(value, str):
             for match in _RE_URL_ANY.finditer(value):
                 if not _RE_URL.fullmatch(match.group(0)):
@@ -1016,9 +1066,16 @@ def _invariant_problems(record: Any, where: str) -> list[str]:
 def private_golden_problems(path: Path, cls: str) -> list[str]:
     """Validate a Family B golden against the record contract; never raises.
 
-    Returns human-readable problems, each naming the line id or number and the
-    rule. An unknown class, a missing file, invalid UTF-8 or a line that is not a
-    JSON object is a problem string. Empty means the file may be registered.
+    Returns human-readable problems, each naming the line number and the rule.
+    An unknown class, a missing file, invalid UTF-8 or a line that is not a JSON
+    object is a problem string. Empty means the file may be registered.
+
+    The file is private until it has crossed and a problem is printed to
+    terminals, transcripts and CI logs, so no problem repeats a value read from
+    the file: not a cell, not a key, and not the row id, whose shape
+    (``^[a-z0-9-]{3,40}$``) is loose enough to hold a slug or a key. A row is
+    named by its line number, an unknown key is counted, and a rule quotes only
+    this module's own names.
     """
     if cls not in FAMILY_B_CLASSES:
         return [f"unknown Family B class {cls!r}"]
@@ -1066,10 +1123,10 @@ def private_golden_problems(path: Path, cls: str) -> list[str]:
         )
 
     ids: list[str] = []
-    seen_pairs: dict[str, str] = {}
+    seen_pairs: dict[str, int] = {}
     months: set[Any] = set()
     for number, record in records:
-        where = f"line {number} (id {record.get('id')!r})"
+        where = f"line {number}"
         problems += _key_problems(
             record, {"id", "month", "scrubbed", "profile_scope", "input", "output"}, set(), where
         )
@@ -1093,10 +1150,10 @@ def private_golden_problems(path: Path, cls: str) -> list[str]:
         )
         if pair in seen_pairs:
             problems.append(
-                f"{where}: duplicate input and output (same as id {seen_pairs[pair]!r})"
+                f"{where}: duplicate input and output (same as line {seen_pairs[pair]})"
             )
         else:
-            seen_pairs[pair] = str(rec_id)
+            seen_pairs[pair] = number
 
     if len(set(ids)) != len(ids):
         problems.append("duplicate ids")
@@ -1112,7 +1169,9 @@ def _coverage_problems(cls: str, records: list[dict[str, Any]]) -> list[str]:
     """Per-class coverage invariants: the sample must exercise both sides of its verdict."""
     outputs = [r["output"] for r in records if isinstance(r.get("output"), dict)]
     if cls == "private_dedup_verdicts":
-        values = {o.get("duplicate") for o in outputs}
+        # Booleans only: any other value is already a problem, and one that
+        # cannot be hashed must not turn this validator into a traceback.
+        values = {o.get("duplicate") for o in outputs if isinstance(o.get("duplicate"), bool)}
         if not (True in values and False in values):
             return ["coverage: duplicate true and false must both appear"]
     if (
@@ -1128,12 +1187,28 @@ def _coverage_problems(cls: str, records: list[dict[str, Any]]) -> list[str]:
     return []
 
 
+class LedgerUnreadable(Exception):
+    """The private ledger could not be read; the text is the error's class name only."""
+
+
 def ledger_row_ids(ledger_path: Path) -> set[str]:
-    """Row ids of the private ledger (``rows: [{id: P-01, ...}]``)."""
+    """Row ids of the private ledger (``rows: [{id: P-01, ...}]``).
+
+    Raises :class:`LedgerUnreadable` when the file cannot be read or parsed. The
+    ledger is a private file until it has crossed and a YAML parser error quotes
+    the offending line, so the original error is dropped on purpose (``from
+    None``) and only its class name is kept. A ledger that parses but holds no
+    list of rows has no row ids.
+    """
     import yaml
 
-    data = yaml.safe_load(ledger_path.read_text(encoding="utf-8")) or {}
-    rows = data.get("rows", []) if isinstance(data, dict) else []
+    try:
+        data = yaml.safe_load(ledger_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+        raise LedgerUnreadable(type(exc).__name__) from None
+    rows = data.get("rows") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        return set()
     return {str(row["id"]) for row in rows if isinstance(row, dict) and "id" in row}
 
 
@@ -1291,8 +1366,16 @@ def _family_b_problems(
         row = entry.get("producer_row")
         if not (isinstance(row, str) and _RE_PRODUCER_ROW.fullmatch(row)):
             problems.append(f"{name}: producer_row must match ^P-\\d{{2,3}}$")
-        elif private_ledger.is_file() and row not in ledger_row_ids(private_ledger):
-            problems.append(f"{name}: producer_row {row} is not a row id of {private_ledger.name}")
+        elif private_ledger.is_file():
+            try:
+                known_rows = ledger_row_ids(private_ledger)
+            except LedgerUnreadable as exc:
+                problems.append(f"{name}: cannot read {private_ledger.name}: {exc}")
+            else:
+                if row not in known_rows:
+                    problems.append(
+                        f"{name}: producer_row {row} is not a row id of {private_ledger.name}"
+                    )
         golden = entry.get("golden")
         if isinstance(golden, str) and (golden_dir / golden).is_file():
             problems += [f"{name}: {p}" for p in private_golden_problems(golden_dir / golden, name)]
