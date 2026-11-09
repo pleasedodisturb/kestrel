@@ -370,6 +370,11 @@ _REF = re.compile(
 # What a problem shows in place of a cited id that does not have the id shape.
 MALFORMED_ID = "<malformed id>"
 _UNDER_USE = re.compile(r"^(?:unused|rarely used|low use|under-?used|not used)\.?$", re.IGNORECASE)
+# No exported cell carries a path or a script name (export contract, D-05). Applied to the
+# free-text cells of the verdict list and of the private ledger rows.
+_PATH_LIKE = re.compile(r"[\w.-]+/[\w./-]+")
+_SCRIPT_NAME = re.compile(r"[\w-]+\.(?:py|sh|ipynb|js|ts|ya?ml|json|csv|md)\b")
+_VERDICT_TEXT_COLUMNS = ("name", "reason")
 _COMMIT = re.compile(r"\b[0-9a-f]{40}\b")
 
 
@@ -554,6 +559,13 @@ def _verdict_row_problems(label: str, row: dict[str, str]) -> list[str]:
         problems.append(f"{label}: reason is longer than {MAX_REASON_CHARS} characters")
     if verdict == "remove" and _UNDER_USE.match(reason):
         problems.append(f"{label}: a remove verdict cannot rest on under-use alone (MAP-07)")
+    # Export contract: no cell carries a path or a script name. The other cells are held to
+    # a vocabulary or a shape; these two are free text, so they get the private ledger's rule.
+    for column in _VERDICT_TEXT_COLUMNS:
+        if _PATH_LIKE.search(row[column]):
+            problems.append(f"{label}: {column} holds a path-like token")
+        if _SCRIPT_NAME.search(row[column]):
+            problems.append(f"{label}: {column} holds a script filename")
     return problems
 
 
@@ -648,8 +660,6 @@ def counts_problems(text: str) -> list[str]:
 # Private ledger rows (MAP-01, D-05)
 # ---------------------------------------------------------------------------
 
-_PATH_LIKE = re.compile(r"[\w.-]+/[\w./-]+")
-_SCRIPT_NAME = re.compile(r"[\w-]+\.(?:py|sh|ipynb|js|ts|ya?ml|json|csv|md)\b")
 _PRIVATE_ID = re.compile(r"^P-\d{2}$")
 
 
@@ -679,12 +689,15 @@ def _private_row_problems(label: str, row: dict) -> list[str]:
         allowed = ", ".join(PRIVATE_DISPOSITIONS)
         problems.append(f"{label}: invalid disposition (must be one of {allowed})")
     needs_reason = row.get("run_status") == "dead" or row.get("disposition") == "delete"
-    if needs_reason and not str(row.get("reason", "")).strip():
+    reason = row.get("reason")
+    # Only text counts as a reason: str(None) is the word "None", which is not one.
+    if needs_reason and not (isinstance(reason, str) and reason.strip()):
         problems.append(f"{label}: dead or delete row needs a reason")
     for key in _PRIVATE_TEXT_KEYS:
-        value = row.get(key)
-        if value is None:
+        if key not in row:
+            # An absent required key is reported above; reason may be absent on a live row.
             continue
+        value = row[key]
         if not isinstance(value, str) or not value.strip():
             problems.append(f"{label}: {key} must be a non-empty string")
             continue
