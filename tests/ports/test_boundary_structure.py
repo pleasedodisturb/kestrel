@@ -396,13 +396,18 @@ def test_malformed_input_problems_name_the_position_and_the_rule():
     oversized = _counts_text() + _OVERSIZED + ",2026-08,1,1,1,1,1\n"
     carriage = _counts_text() + "man\rual,2026-08,1,1,1,1,1\n"
 
-    assert counts_problems(oversized) == ["not readable as CSV near line 5 (csv.Error)"]
+    # An over-long line is rejected by position before the CSV reader is reached.
+    assert counts_problems(oversized) == [
+        f"1 line(s) longer than {boundary.MAX_LINE_CHARS} characters (first at line 5); "
+        "the file was not scanned for forbidden content"
+    ]
     assert counts_problems(carriage) == ["not readable as CSV near line 5 (csv.Error)"]
     assert private_rows_problems(_ledger() + "when: 2001-99-99\n") == [
         "forbidden content [iso-day-date]: 1 distinct match(es)",
         "not valid YAML: ValueError",
     ]
-    assert private_rows_problems(_ledger() + f"deep: {'[' * 5000}\n") == [
+    # One bracket per line: deep enough to exhaust the parser, with every line short.
+    assert private_rows_problems(_ledger() + "deep: " + "[\n" * 5000) == [
         "not valid YAML: RecursionError"
     ]
 
@@ -447,7 +452,10 @@ def test_the_real_cli_exits_one_without_a_traceback_on_an_oversized_field(tmp_pa
     sentinel = _SENTINELS["key"]
     export = tmp_path / "counts.csv"
     header = ",".join(COUNTS_HEADER)
-    export.write_text(f"{header}\n{sentinel}{_OVERSIZED},2026-06,1,1,1,1,1\n", encoding="utf-8")
+    # A quoted field over the CSV limit, spread over short lines so the line cap is not what
+    # rejects it: this is the input that still reaches the CSV reader and raises there.
+    filler = ("\n" + ";" * 1000) * (_CSV_FIELD_LIMIT // 1000 + 2)
+    export.write_text(f'{header}\n"{sentinel}{filler}",2026-06,1,1,1,1,1\n', encoding="utf-8")
 
     proc = subprocess.run(
         [sys.executable, "-m", "tests.ports.boundary", "--counts", str(export)],
@@ -459,5 +467,9 @@ def test_the_real_cli_exits_one_without_a_traceback_on_an_oversized_field(tmp_pa
 
     assert proc.returncode == 1
     assert "Traceback" not in proc.stdout + proc.stderr
-    assert f"{export}: not readable as CSV near line 2 (csv.Error)" in proc.stdout.splitlines()
+    assert any(
+        line.startswith(f"{export}: not readable as CSV near line ")
+        and line.endswith(" (csv.Error)")
+        for line in proc.stdout.splitlines()
+    ), proc.stdout
     assert sentinel not in proc.stdout + proc.stderr

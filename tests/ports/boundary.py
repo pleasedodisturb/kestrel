@@ -173,6 +173,9 @@ REQUIRED_REFS = (
     "retire:pushover",
 )
 MAX_REASON_CHARS = 300
+# No line of a crossing artefact comes near this. A longer line is rejected unscanned: the
+# forbidden-content patterns include one that is quadratic on a long uninterrupted word.
+MAX_LINE_CHARS = 2000
 
 COUNTS_HEADER = (
     "source",
@@ -348,8 +351,26 @@ def forbidden_hits(data: str | bytes) -> dict[str, list[str]]:
     return {label: hits[label] for label in sorted(hits)}
 
 
+def _over_cap(text: str) -> bool:
+    """True when any line of *text* is longer than MAX_LINE_CHARS."""
+    return any(len(line) > MAX_LINE_CHARS for line in text.splitlines())
+
+
 def _hit_problems(text: str) -> list[str]:
-    """Format forbidden_hits as problems that never echo the matched text."""
+    """Format forbidden_hits as problems that never echo the matched text.
+
+    A file with a line over MAX_LINE_CHARS is rejected here, by position, and not scanned.
+    """
+    long_lines = [
+        number
+        for number, line in enumerate(text.splitlines(), start=1)
+        if len(line) > MAX_LINE_CHARS
+    ]
+    if long_lines:
+        return [
+            f"{len(long_lines)} line(s) longer than {MAX_LINE_CHARS} characters "
+            f"(first at line {long_lines[0]}); the file was not scanned for forbidden content"
+        ]
     return [
         f"forbidden content [{label}]: {len(found)} distinct match(es)"
         for label, found in forbidden_hits(text).items()
@@ -586,6 +607,8 @@ def _verdict_row_problems(label: str, row: dict[str, str]) -> list[str]:
 def verdict_problems(text: str) -> list[str]:
     """Return every problem in a verdict list (empty means it may cross)."""
     problems = _hit_problems(text)
+    if _over_cap(text):
+        return problems  # rejected by position; no pattern is run over an over-long line
     problems.extend(_verdict_header_problems(text))
     problems.extend(_outside_line_problems(text))
     blocks = _table_blocks(text)
@@ -634,6 +657,8 @@ def verdict_problems(text: str) -> list[str]:
 def counts_problems(text: str) -> list[str]:
     """Return every problem in the arrival-counts CSV (empty means it may cross)."""
     problems = _hit_problems(text)
+    if _over_cap(text):
+        return problems  # rejected by position; no pattern is run over an over-long line
     reader = csv.reader(io.StringIO(text))
     try:
         rows = list(reader)
@@ -768,6 +793,8 @@ def private_rows_problems(data: object, raw: str | None = None) -> list[str]:
     if raw is None:
         raw = yaml.safe_dump(data, sort_keys=True, allow_unicode=True)
     problems = _hit_problems(raw)
+    if _over_cap(raw):
+        return problems  # rejected by position; no pattern is run over an over-long line
     if not isinstance(data, dict):
         return [*problems, "private rows must be a mapping with schema and rows"]
     unexpected = len(set(data) - set(PRIVATE_TOP_KEYS))
