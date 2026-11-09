@@ -82,8 +82,49 @@ def test_a_live_row_may_still_omit_the_reason():
 # Verdict list: no path and no script name in a free-text cell
 # ---------------------------------------------------------------------------
 
-_SCRIPTS = ["nightly_job.py", "run-scan.sh", "digest.ipynb", "config.yaml", "export.csv"]
-_PATHS = ["tools/nightly", "src/pipeline/score", "docs/sessions/notes"]
+_SCRIPTS = [
+    "nightly_job.py",
+    "run-scan.sh",
+    "digest.ipynb",
+    "config.yaml",
+    "export.csv",
+    # Review round 3 widened the list: any common file kind, not only the first nine.
+    "load.sql",
+    "settings.toml",
+    "notes.txt",
+    "jobs.db",
+    "agent.plist",
+    "samples.jsonl",
+]
+_PATHS = [
+    "tools/nightly",
+    "src/pipeline/score",
+    "docs/sessions/notes",
+    # Review round 3: the rule knew only word/word. A path is any slash or backslash.
+    r"C:\work\pipeline",
+    r"\\server\share\notes",
+    r"notes\archive",
+    "/tmp",
+    "~/notes",
+]
+
+
+@pytest.mark.parametrize("key", _TEXT_KEYS)
+@pytest.mark.parametrize("path", _PATHS)
+def test_a_ledger_cell_holding_a_path_is_rejected(key, path):
+    problems = _ledger_problems(_private_with(1, key, f"kept under {path} now"))
+
+    assert any(f"{key} holds a path-like token" in p for p in problems), problems
+    assert not any(path in p for p in problems), problems
+
+
+@pytest.mark.parametrize("key", _TEXT_KEYS)
+@pytest.mark.parametrize("script", _SCRIPTS)
+def test_a_ledger_cell_naming_a_script_is_rejected(key, script):
+    problems = _ledger_problems(_private_with(1, key, f"replaced {script} last quarter"))
+
+    assert any(f"{key} holds a script filename" in p for p in problems), problems
+    assert not any(script in p for p in problems), problems
 
 
 @pytest.mark.parametrize("column", ["name", "reason"])
