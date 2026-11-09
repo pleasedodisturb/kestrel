@@ -1,0 +1,471 @@
+# Script ledger (v2.0 Phase 11 Map, MAP-01, decision D-06).
+#
+# One row per file under tools/ and per scheduler-glue file (every file under
+# automation/ and every workflow other than ci.yml that runs something from
+# tools/). tests/ports/test_script_ledger.py derives the swept file set from the
+# filesystem and fails when a file has no row, matches two rows, or a row matches
+# no file. Rows are sorted by their path (or glob) key.
+#
+# Map seeds run_status and disposition only. Retire adds its lifecycle fields
+# (port_status, proof, golden, verified_at) to these rows. Rows for the private
+# pipeline live in tests/ports/PORT_LEDGER_PRIVATE.yaml under anonymous ids
+# (crossed by plan 11-05); none of them may be named here.
+#
+# Row keys
+#   path        exact repo-relative file, or a directory ending in "/" that covers
+#               every file under it (exactly one of path or glob per row)
+#   glob        fnmatch pattern over repo-relative POSIX paths
+#   run_status  scheduled | by_hand | dead
+#   trigger     required when scheduled
+#   inputs, outputs   short plain descriptions
+#   disposition port | keep_until_retire | delete
+#   target      required for port: "TBD:Phase NN" (provisional phase that ports it)
+#   reason      required for dead and delete; also records which source wins when
+#               REQUIREMENTS.md overrides ARCHITECTURE.md section 10
+#   tests       test files that exist and mention the script stem
+#   relocate    optional: where the file moves instead of dying with tools/
+#
+# Disposition values marked "candidate" are proposals for the maintainer, not
+# decisions (RESEARCH A6: confirm no hidden user before deleting).
+schema: 1
+rows:
+  - path: .github/workflows/daily-scan.yml
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "repository variables and provider secrets, cron or manual dispatch"
+    outputs: "daily scan digest, sheet update, validation"
+    disposition: keep_until_retire
+    reason: "dies with tools/ in Retire"
+
+  - path: automation/README.md
+    run_status: by_hand
+    inputs: "none (documentation)"
+    outputs: "none"
+    disposition: keep_until_retire
+    reason: "dies with tools/ in Retire"
+
+  - path: automation/com.kestrel.daily-scan.plist
+    run_status: by_hand
+    inputs: "launchd schedule template"
+    outputs: "invokes the daily pipeline"
+    disposition: keep_until_retire
+    reason: "dies with tools/ in Retire"
+
+  - path: automation/cron_runner.sh
+    run_status: by_hand
+    inputs: "cron environment template"
+    outputs: "invokes the daily pipeline"
+    disposition: keep_until_retire
+    reason: "dies with tools/ in Retire"
+
+  - path: automation/n8n_workflow.json
+    run_status: by_hand
+    inputs: "n8n webhook schedule template"
+    outputs: "invokes the daily pipeline"
+    disposition: keep_until_retire
+    reason: "dies with tools/ in Retire"
+
+  - path: tools/README.md
+    run_status: by_hand
+    inputs: "none (documentation)"
+    outputs: "none"
+    disposition: keep_until_retire
+    reason: "documentation; dies with tools/ in Retire"
+
+  - path: tools/_filter_jobs.py
+    run_status: dead
+    inputs: "hard-coded city"
+    outputs: "shells out to germany_jobs.py"
+    disposition: delete
+    reason: "throwaway wrapper with no importer, no test and no doc"
+
+  - path: tools/annotate.py
+    run_status: by_hand
+    inputs: "label set built by build_label_set.py"
+    outputs: "two-axis blind annotations"
+    disposition: port
+    target: "TBD:Phase 17"
+    reason: "label tooling feeds the Score audit sample (provisional; audit before porting)"
+    tests:
+      - tools/tests/test_annotate.py
+      - tools/tests/test_calibrate.py
+      - tools/tests/test_label_pipeline_integration.py
+
+  - path: tools/auto_apply.py
+    run_status: by_hand
+    inputs: "YAML config with application list, resume files"
+    outputs: "API or browser form submission (browser pauses for confirmation)"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Future APPLY-02: auto-submit scripts kept, never deleted, never default) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+    tests:
+      - tests/test_auto_apply.py
+      - tools/tests/test_t3_lane.py
+
+  - path: tools/batch_apply_browser.py
+    run_status: by_hand
+    inputs: "batch application YAML, ATS platform"
+    outputs: "browser-filled application forms"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Future APPLY-02: auto-submit scripts kept, never deleted, never default) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+    tests:
+      - tests/test_batch_apply_browser.py
+      - tests/test_batch_apply_browser_js_textarea.py
+      - tests/test_batch_apply_overlay.py
+
+  - path: tools/batch_probe.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "location text, ATS office metadata, config/geo.yaml"
+    outputs: "geo eligibility class and reasons"
+    disposition: port
+    target: "TBD:Phase 15"
+    tests:
+      - tools/tests/test_geo_gate.py
+      - tools/tests/test_job_scorer_geo.py
+
+  - path: tools/blocklist.py
+    run_status: by_hand
+    inputs: "config/blocklist.yaml, company names"
+    outputs: "blocked and soft-flag verdicts"
+    disposition: port
+    target: "TBD:Phase 15"
+    tests:
+      - tools/tests/test_blocklist.py
+      - tools/tests/test_t3_lane.py
+
+  - path: tools/build_label_set.py
+    run_status: by_hand
+    inputs: "own discovered jobs"
+    outputs: "stratified blind label set"
+    disposition: port
+    target: "TBD:Phase 17"
+    reason: "label tooling feeds the Score audit sample (provisional; audit before porting)"
+    tests:
+      - tools/tests/test_build_label_set.py
+      - tools/tests/test_label_pipeline_integration.py
+
+  - path: tools/calibrate.py
+    run_status: by_hand
+    inputs: "own labels and filter results"
+    outputs: "precision and recall report"
+    disposition: port
+    target: "TBD:Phase 17"
+    reason: "label tooling feeds the Score audit sample (provisional; audit before porting)"
+    tests:
+      - tools/tests/test_calibrate.py
+      - tools/tests/test_label_pipeline_integration.py
+
+  - path: tools/captcha_solver.py
+    run_status: by_hand
+    inputs: "page with a captcha challenge, paid solver API"
+    outputs: "challenge token"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Future APPLY-02: auto-submit scripts kept, never deleted, never default) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+
+  - path: tools/check_review_trailers.py
+    run_status: scheduled
+    trigger: ci
+    inputs: "PR commit range"
+    outputs: "pass or fail on Reviewed-by trailer binding"
+    disposition: keep_until_retire
+    relocate: "Phase 12 FOUND-01"
+    reason: "CI job Review trailers runs it; FOUND-01 moves it out of tools/ and updates this row and the honesty test"
+    tests:
+      - tests/test_check_review_trailers.py
+
+  - path: tools/daily_pipeline.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "provider keys, search settings, tracking directory"
+    outputs: "raw and scored job files, digest markdown"
+    disposition: port
+    target: "TBD:Phase 16"
+    reason: "ported into Scan, then retired with tools/"
+    tests:
+      - tests/test_daily_pipeline.py
+      - tools/tests/test_daily_pipeline_port.py
+
+  - path: tools/generate_batch_covers.py
+    run_status: by_hand
+    inputs: "batch templates and hooks"
+    outputs: "cover letter markdown files"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+
+  - path: tools/generate_batch_submit_yaml.py
+    run_status: by_hand
+    inputs: "hooks.yaml and database URLs"
+    outputs: "batch-apply.yaml"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+
+  - path: tools/germany_jobs.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "keywords, location, Arbeitsagentur and Arbeitnow APIs"
+    outputs: "normalised job dicts"
+    disposition: port
+    target: "TBD:Phase 14"
+    reason: "REQUIREMENTS.md (Decisions carried: sources all ported, judged on MAP-04 counts) wins over ARCHITECTURE.md section 10 (DROP unless productive)"
+    tests:
+      - tests/test_arbeitsagentur_live.py
+      - tests/test_germany_jobs.py
+
+  - path: tools/job_scorer.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "scraped job dicts, profile criteria"
+    outputs: "fit score, floors, tiers, ATS-host helpers"
+    disposition: port
+    target: "TBD:Phase 17"
+    reason: "deterministic parts port to Score; the model-scoring part is superseded by services/scoring.py"
+    tests:
+      - tests/test_job_scorer.py
+      - tools/tests/test_job_scorer_geo.py
+      - tools/tests/test_job_scorer_tiers.py
+
+  - path: tools/kestrel-mcp/
+    run_status: by_hand
+    inputs: "REST API over HTTP"
+    outputs: "MCP tools wrapping the API"
+    disposition: port
+    target: "TBD:Phase 20"
+    tests:
+      - tools/tests/test_kestrel_mcp.py
+
+  - path: tools/kit_builder.py
+    run_status: by_hand
+    inputs: "scored and tiered job dicts"
+    outputs: "application-kit folders and index"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+    tests:
+      - tools/tests/test_kit_builder.py
+
+  - path: tools/local_scorer.py
+    run_status: by_hand
+    inputs: "scraped raw job file"
+    outputs: "keyword-rubric scores"
+    disposition: keep_until_retire
+    reason: "scoring golden producer (plan 11-01); delete candidate once Score or Retire retargets the golden (RESEARCH A6)"
+
+  - path: tools/md_to_pdf_cover_letter.py
+    run_status: by_hand
+    inputs: "cover letter markdown"
+    outputs: "PDF"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+    tests:
+      - tests/test_md_to_pdf.py
+
+  - path: tools/normalize.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "company and title strings"
+    outputs: "normalised keys, job_key tuple, fuzzy ratio"
+    disposition: port
+    target: "TBD:Phase 14"
+    reason: "dedup authority; golden produced from it in plan 11-01"
+    tests:
+      - tools/tests/test_normalize.py
+
+  - path: tools/open_question_probe.py
+    run_status: by_hand
+    inputs: "ATS apply form"
+    outputs: "free-text question detection"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+    tests:
+      - tools/tests/test_open_question_probe.py
+
+  - path: tools/render_cover_letter_html.py
+    run_status: by_hand
+    inputs: "cover letter markdown"
+    outputs: "A4 PDF via HTML and Playwright"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+
+  - path: tools/render_tailored_cvs.py
+    run_status: by_hand
+    inputs: "cv.yaml and persona summaries"
+    outputs: "tailored CV PDFs"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+    tests:
+      - tests/test_render_tailored_cvs.py
+
+  - path: tools/research_jobs.py
+    run_status: by_hand
+    inputs: "platform pages"
+    outputs: "research helper output"
+    disposition: delete
+    reason: "candidate; confirm no hidden user (RESEARCH A6)"
+    tests:
+      - tests/test_html_stripping.py
+
+  - path: tools/research_remotely.py
+    run_status: by_hand
+    inputs: "platform pages"
+    outputs: "research helper output"
+    disposition: delete
+    reason: "candidate; confirm no hidden user (RESEARCH A6)"
+
+  - path: tools/scrape_form_questions.py
+    run_status: by_hand
+    inputs: "application URLs"
+    outputs: "structured report of custom form questions"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+
+  - path: tools/scrape_new_sources.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "board and ATS public APIs"
+    outputs: "normalised job dicts"
+    disposition: port
+    target: "TBD:Phase 14"
+    reason: "REQUIREMENTS.md (Decisions carried: sources all ported, judged on MAP-04 counts) wins over ARCHITECTURE.md section 10 (DROP unless productive)"
+    tests:
+      - tests/test_new_sources.py
+      - tools/tests/test_ats_scrapers.py
+      - tools/tests/test_scrape_workable.py
+
+  - path: tools/scrape_remotely.py
+    run_status: by_hand
+    inputs: "saved browser session cookies"
+    outputs: "scraped job matches"
+    disposition: delete
+    reason: "candidate; confirm no hidden user (RESEARCH A6). It drives a logged-in browser session on a professional network, which contradicts tools/README.md (no tool here reads that network from an authenticated session)"
+
+  - path: tools/scrape_resilient.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "search settings, source registry"
+    outputs: "deduplicated job dicts"
+    disposition: port
+    target: "TBD:Phase 14"
+    reason: "REQUIREMENTS.md (Decisions carried: sources all ported, judged on MAP-04 counts) wins over ARCHITECTURE.md section 10 (DROP unless productive)"
+    tests:
+      - tests/test_scrape_resilient.py
+      - tools/tests/test_source_registry.py
+
+  - path: tools/scraper.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "keywords, location, python-jobspy"
+    outputs: "job rows"
+    disposition: port
+    target: "TBD:Phase 14"
+    reason: "REQUIREMENTS.md (Decisions carried: sources all ported, judged on MAP-04 counts) wins over ARCHITECTURE.md section 10 (DROP unless productive)"
+    tests:
+      - tests/test_scraper.py
+
+  - path: tools/snapshot_db.py
+    run_status: by_hand
+    inputs: "SQLite database file"
+    outputs: "atomic rotating snapshots"
+    disposition: keep_until_retire
+    reason: "whether the private pipeline's scheduler calls it is unverified"
+    tests:
+      - tests/test_snapshot_db.py
+
+  - path: tools/sonarcloud-mcp/
+    run_status: by_hand
+    inputs: "SonarCloud API"
+    outputs: "MCP tools for dev sessions"
+    disposition: delete
+    reason: "candidate; confirm no hidden user (RESEARCH A6)"
+
+  - path: tools/source_registry.py
+    run_status: scheduled
+    trigger: "daily-scan.yml via daily_pipeline (job gated off, no successful run in the listed history)"
+    inputs: "per-source results of a run"
+    outputs: "source health report, floors"
+    disposition: port
+    target: "TBD:Phase 14"
+    reason: "REQUIREMENTS.md (Decisions carried: sources all ported, judged on MAP-04 counts) wins over ARCHITECTURE.md section 10 (DROP unless productive)"
+    tests:
+      - tests/test_source_registry.py
+      - tools/tests/test_source_registry.py
+
+  - path: tools/specific_hunt.py
+    run_status: by_hand
+    inputs: "hand-picked keyword and location searches"
+    outputs: "JSON array to stdout"
+    disposition: delete
+    reason: "candidate; confirm no hidden user (RESEARCH A6)"
+    tests:
+      - tests/test_specific_hunt.py
+
+  - path: tools/spike_batch_quality.py
+    run_status: dead
+    inputs: "mock provider"
+    outputs: "batch versus individual scoring comparison"
+    disposition: delete
+    reason: "spike; delete after its results move to docs/research/"
+
+  - path: tools/spike_batch_quality_results.md
+    run_status: dead
+    inputs: "none (results record)"
+    outputs: "none"
+    disposition: delete
+    reason: "spike results; move to docs/research/ before deleting"
+
+  - path: tools/spike_prefilter.py
+    run_status: dead
+    inputs: "10,000 synthetic jobs"
+    outputs: "prefilter precision and recall"
+    disposition: delete
+    reason: "spike; delete after its results move to docs/research/"
+    tests:
+      - tools/tests/test_spike_prefilter.py
+
+  - path: tools/spike_prefilter_results.md
+    run_status: dead
+    inputs: "none (results record)"
+    outputs: "none"
+    disposition: delete
+    reason: "spike results; move to docs/research/ before deleting"
+
+  - path: tools/t3_lane.py
+    run_status: by_hand
+    inputs: "scored and tiered jobs that clear every guardrail"
+    outputs: "apply forms filled up to, never past, the submit button"
+    disposition: keep_until_retire
+    reason: "REQUIREMENTS.md (Out of Scope: cutting writing and prefill tools was a maintainer correction, core not sprawl) wins over ARCHITECTURE.md section 10 (FOLD or DROP)"
+    tests:
+      - tools/tests/test_t3_lane.py
+
+  - path: tools/tests/
+    run_status: scheduled
+    trigger: ci
+    inputs: "tools modules"
+    outputs: "pass or fail"
+    disposition: keep_until_retire
+    reason: "CI step Run tool-script tests; dies with tools/ in Retire"
+
+  - path: tools/tier0_ats_poller.py
+    run_status: by_hand
+    inputs: "dream-company ATS slugs, public ATS JSON"
+    outputs: "normalised job dicts"
+    disposition: port
+    target: "TBD:Phase 14"
+    reason: "REQUIREMENTS.md (Decisions carried: sources all ported, judged on MAP-04 counts) wins over ARCHITECTURE.md section 10 (DROP unless productive)"
+    tests:
+      - tests/test_tier0_ats_poller.py
+
+  - path: tools/update_sheet.py
+    run_status: scheduled
+    trigger: "daily-scan.yml steps (needs Google secrets; job gated off, no successful run in the listed history)"
+    inputs: "scored job file, Google service account"
+    outputs: "Google Sheet rows"
+    disposition: delete
+    reason: "candidate; confirm no hidden user (RESEARCH A6)"
+
+  - path: tools/validate_sheet.py
+    run_status: scheduled
+    trigger: "daily-scan.yml steps (needs Google secrets; job gated off, no successful run in the listed history)"
+    inputs: "Google Sheet, database"
+    outputs: "exit code 0 on pass, 1 on failure"
+    disposition: delete
+    reason: "candidate; confirm no hidden user (RESEARCH A6)"
