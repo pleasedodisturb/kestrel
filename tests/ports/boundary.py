@@ -372,8 +372,21 @@ MALFORMED_ID = "<malformed id>"
 _UNDER_USE = re.compile(r"^(?:unused|rarely used|low use|under-?used|not used)\.?$", re.IGNORECASE)
 # No exported cell carries a path or a script name (export contract, D-05). Applied to the
 # free-text cells of the verdict list and of the private ledger rows.
-_PATH_LIKE = re.compile(r"[\w.-]+/[\w./-]+")
-_SCRIPT_NAME = re.compile(r"[\w-]+\.(?:py|sh|ipynb|js|ts|ya?ml|json|csv|md)\b")
+#
+# A path is any slash or backslash: that covers POSIX, home-relative, Windows drive and UNC
+# forms, and a single absolute segment, where the earlier word/word pattern knew only the
+# first. Prose in these cells has no use for either character.
+_PATH_LIKE = re.compile(r"[/\\]")
+# A filename is a word, a dot and a known file kind. The kinds are listed, not guessed from
+# shape, so that prose such as "e.g." or "v2.0" is not mistaken for one.
+_SCRIPT_NAME = re.compile(
+    r"[\w-]+\.(?:"
+    r"py|pyc|ipynb|sh|bash|zsh|rb|pl|go|rs|js|cjs|mjs|jsx|ts|tsx|html?|css|sql|"
+    r"ya?ml|json|jsonl|toml|ini|cfg|conf|env|lock|plist|xml|"
+    r"csv|tsv|txt|log|md|rst|pdf|docx?|xlsx?|db|sqlite3?"
+    r")\b",
+    re.IGNORECASE,
+)
 _VERDICT_TEXT_COLUMNS = ("name", "reason")
 _COMMIT = re.compile(r"\b[0-9a-f]{40}\b")
 
