@@ -354,6 +354,22 @@ def main(argv: list[str] | None = None) -> int:
             "--check, --register-awaiting, --register-private and regeneration "
             "(--class, --all) are separate operations; run one at a time"
         )
+    # Same rule for options: the ones below belong to --register-private, and are refused
+    # here, before any operation runs. Checked after the dispatch, a --dry-run given to
+    # --register-awaiting was ignored and the MANIFEST was written anyway.
+    private_only = (
+        args.gates
+        or args.dry_run
+        or args.file
+        or args.private_commit
+        or args.producer_row
+        or args.ledger
+    )
+    if private_only and args.register_private is None:
+        parser.error(
+            "--gates, --dry-run, --file, --private-commit, --producer-row and --ledger "
+            "belong to --register-private"
+        )
 
     if args.register_awaiting:
         return register_awaiting(args.golden_dir)
@@ -369,17 +385,6 @@ def main(argv: list[str] | None = None) -> int:
             producer_row=args.producer_row,
             ledger=args.ledger,
             dry_run=args.dry_run,
-        )
-    if (
-        args.gates
-        or args.dry_run
-        or args.file
-        or args.private_commit
-        or args.producer_row
-        or args.ledger
-    ):
-        parser.error(
-            "--gates, --dry-run, --file, --private-commit, --producer-row and --ledger belong to --register-private"
         )
     unknown = [c for c in args.classes if c not in S.HARNESS]
     if unknown:
