@@ -357,13 +357,10 @@ def main(argv: list[str] | None = None) -> int:
     # Same rule for options: the ones below belong to --register-private, and are refused
     # here, before any operation runs. Checked after the dispatch, a --dry-run given to
     # --register-awaiting was ignored and the MANIFEST was written anyway.
-    private_only = (
-        args.gates
-        or args.dry_run
-        or args.file
-        or args.private_commit
-        or args.producer_row
-        or args.ledger
+    # "Given" means present on the command line, not truthy: --gates '' is still an option.
+    private_only = args.dry_run or any(
+        value is not None
+        for value in (args.gates, args.file, args.private_commit, args.producer_row, args.ledger)
     )
     if private_only and args.register_private is None:
         parser.error(
