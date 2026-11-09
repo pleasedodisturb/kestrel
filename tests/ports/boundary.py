@@ -18,15 +18,19 @@ returns the single ``.planning/phases/{dir_glob}/*CUT-LIST.md`` file or raises
 
 Verdict list contract (MAP-07, MAP-08, decisions D-12 and D-13)
 ---------------------------------------------------------------
-One Markdown file with:
+One Markdown file with exactly, and nothing else but blank lines:
 
-* a line starting ``Vocabulary:`` that contains ``keep / scope-and-plan / park / remove``
-  and states that D-02's ``kept / trimmed / parked / cut`` map to them in that order
-  (open question OQ-8; the rows themselves use only the canonical four);
-* a line starting ``Source:`` that names ``the private pipeline's repository``, a
-  40-hex commit and the window ``2026-06 to 2026-10``;
+* the line ``VOCABULARY_LINE``: it starts ``Vocabulary:``, contains ``keep /
+  scope-and-plan / park / remove`` and states that D-02's ``kept / trimmed / parked /
+  cut`` map to them in that order (open question OQ-8; the rows themselves use only the
+  canonical four);
+* one line of the shape ``SOURCE_LINE_SHAPE``: it starts ``Source:`` and names ``the
+  private pipeline's repository``, a 40-hex commit and the window ``2026-06 to 2026-10``;
 * one pipe table with exactly the columns ``id, kind, name, ref, verdict,
   profile_scope, non_technical, count, reason``.
+
+A heading, a prose line, a comment or words added to either header line are content
+outside the structure these rules read, so they are problems (counted, never quoted).
 
 Rules: a ``flow`` id matches ``F-NN`` or ``F-NNN`` and a ``feature`` id ``X-NN`` or
 ``X-NNN``; ids are unique and sorted (all flows before all features, numerically);
@@ -52,10 +56,14 @@ came from that source (assumption A5).
 
 Private ledger rows contract (MAP-01, decision D-05)
 ----------------------------------------------------
-YAML with ``schema: 1`` and ``rows`` sorted by id. Ids match ``P-NN`` and are unique.
+YAML with ``schema: 1`` and ``rows`` sorted by id, and no other top-level key
+(``PRIVATE_TOP_KEYS``). Ids match ``P-NN`` and are unique.
 Keys: ``id``, ``private`` (true), ``description``, ``run_status``, ``inputs``,
 ``outputs``, ``disposition`` and, for dead or delete rows, ``reason``. No path key, and
-no text cell may hold a path-like token or a script filename.
+no text cell may hold a path-like token or a script filename. The file's text must be
+exactly ``dump_private_rows(data)``: a comment, an anchor, a second key of the same name
+(whose first value the loader drops) or a restyled scalar is text the row rules never
+see, so anything but the canonical encoding is a problem.
 
 Cut list contract (MAP-09)
 --------------------------
@@ -81,17 +89,27 @@ matched the synthetic shape its contract gives it (``F-NN``, ``X-NN``, ``P-NN``)
 anything else is named by position, counted, or replaced by ``MALFORMED_ID``. The
 parsers (``parse_verdict_list``, ``cut_list_items``) and ``forbidden_hits`` return content
 by design and are never printed.
+
+A malformed file is a problem, never an exception
+-------------------------------------------------
+A traceback, and an exception's own text, can quote the line that caused it. The three
+validators and the CLI therefore never raise on a file's content: an unreadable CSV or
+YAML comes back as one problem naming the position (where the parser gives one) and the
+error's class, and ``_fail_closed`` turns any exception nobody foresaw into one problem
+with the class name only. The result is never empty in either case, so a file that
+could not be read to the end can never pass.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import functools
 import io
 import re
 import sys
 import unicodedata
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 
 import yaml
@@ -197,6 +215,21 @@ ALLOWED_SOURCES = frozenset(
     }
 )
 
+# The header lines of a verdict list. Anything else on them is free text.
+VOCABULARY_LINE = (
+    "Vocabulary: keep / scope-and-plan / park / remove "
+    "(D-02's kept / trimmed / parked / cut map to these in that order)"
+)
+SOURCE_LINE_SHAPE = (
+    "Source: the private pipeline's repository, commit <40 lowercase hex>, "
+    "window 2026-06 to 2026-10"
+)
+_SOURCE_LINE = re.compile(
+    r"Source: the private pipeline's repository, commit [0-9a-f]{40}, window 2026-06 to 2026-10"
+)
+
+# The only keys the private ledger may carry at its top level.
+PRIVATE_TOP_KEYS = ("schema", "rows")
 PRIVATE_RUN_STATUSES = ("scheduled", "by_hand", "dead")
 PRIVATE_DISPOSITIONS = ("port", "keep_until_retire", "delete")
 _PRIVATE_REQUIRED_KEYS = frozenset(
@@ -234,6 +267,31 @@ def find_cut_list(dir_glob: str) -> Path:
     if len(found) > 1:
         raise ValueError(f"more than one cut list matches {dir_glob}: {[str(p) for p in found]}")
     return found[0]
+
+
+# ---------------------------------------------------------------------------
+# Fail closed: a file's content never becomes a traceback
+# ---------------------------------------------------------------------------
+
+_UNFORESEEN = "could not be validated ({error}); the file is rejected"
+
+
+def _fail_closed(validator: Callable[..., list[str]]) -> Callable[..., list[str]]:
+    """Turn any exception a file provokes in *validator* into one problem string.
+
+    Only the exception's class name is kept: its text, and the traceback it would print,
+    can quote the file. The result is never empty, so a file the validator could not
+    finish reading is rejected.
+    """
+
+    @functools.wraps(validator)
+    def guarded(*args: object, **kwargs: object) -> list[str]:
+        try:
+            return validator(*args, **kwargs)
+        except Exception as exc:  # any class: see the docstring
+            return [_UNFORESEEN.format(error=type(exc).__name__)]
+
+    return guarded
 
 
 # ---------------------------------------------------------------------------
@@ -414,24 +472,55 @@ def _verdict_header_problems(text: str) -> list[str]:
     if len(vocab) != 1:
         problems.append("needs exactly one line starting 'Vocabulary:'")
     else:
-        for needle in (
-            "keep / scope-and-plan / park / remove",
-            "D-02",
-            "kept / trimmed / parked / cut",
-        ):
-            if needle not in vocab[0]:
-                problems.append(f"Vocabulary line must contain {needle!r}")
+        missing = [
+            needle
+            for needle in (
+                "keep / scope-and-plan / park / remove",
+                "D-02",
+                "kept / trimmed / parked / cut",
+            )
+            if needle not in vocab[0]
+        ]
+        problems.extend(f"Vocabulary line must contain {needle!r}" for needle in missing)
+        # Every part is there: then nothing else may be, or the line carries free text.
+        if not missing and vocab[0].rstrip() != VOCABULARY_LINE:
+            problems.append(f"Vocabulary line must be exactly {VOCABULARY_LINE!r}")
     source = [line for line in lines if line.startswith("Source:")]
     if len(source) != 1:
         problems.append("needs exactly one line starting 'Source:'")
     else:
+        parts: list[str] = []
         if "the private pipeline's repository" not in source[0]:
-            problems.append("Source line must name the private pipeline's repository")
+            parts.append("Source line must name the private pipeline's repository")
         if not _COMMIT.search(source[0]):
-            problems.append("Source line must carry a 40-hex commit")
+            parts.append("Source line must carry a 40-hex commit")
         if "2026-06 to 2026-10" not in source[0]:
-            problems.append("Source line must state the window 2026-06 to 2026-10")
+            parts.append("Source line must state the window 2026-06 to 2026-10")
+        problems.extend(parts)
+        if not parts and not _SOURCE_LINE.fullmatch(source[0].rstrip()):
+            problems.append(f"Source line must be exactly: {SOURCE_LINE_SHAPE}")
     return problems
+
+
+def _outside_line_problems(text: str) -> list[str]:
+    """Count the lines that belong to neither header line nor a table.
+
+    Such a line (a heading, prose, a comment) is content no rule here reads, so it may
+    not cross. It is counted and located, never quoted.
+    """
+    outside = [
+        number
+        for number, line in enumerate(text.splitlines(), start=1)
+        if line.strip()
+        and not line.startswith(("Vocabulary:", "Source:"))
+        and not line.lstrip().startswith("|")
+    ]
+    if not outside:
+        return []
+    return [
+        f"{len(outside)} line(s) outside the Vocabulary line, the Source line and the table "
+        f"(first at line {outside[0]})"
+    ]
 
 
 def _verdict_row_problems(label: str, row: dict[str, str]) -> list[str]:
@@ -468,10 +557,12 @@ def _verdict_row_problems(label: str, row: dict[str, str]) -> list[str]:
     return problems
 
 
+@_fail_closed
 def verdict_problems(text: str) -> list[str]:
     """Return every problem in a verdict list (empty means it may cross)."""
     problems = _hit_problems(text)
     problems.extend(_verdict_header_problems(text))
+    problems.extend(_outside_line_problems(text))
     blocks = _table_blocks(text)
     if not blocks:
         return [*problems, "no table found"]
@@ -514,10 +605,16 @@ def verdict_problems(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+@_fail_closed
 def counts_problems(text: str) -> list[str]:
     """Return every problem in the arrival-counts CSV (empty means it may cross)."""
     problems = _hit_problems(text)
-    rows = list(csv.reader(io.StringIO(text)))
+    reader = csv.reader(io.StringIO(text))
+    try:
+        rows = list(reader)
+    except csv.Error:
+        # An oversized field or a bare carriage return. The error's text is not shown.
+        return [*problems, f"not readable as CSV near line {reader.line_num} (csv.Error)"]
     if not rows:
         return [*problems, "counts file has no header"]
     if tuple(rows[0]) != COUNTS_HEADER:
@@ -598,24 +695,61 @@ def _private_row_problems(label: str, row: dict) -> list[str]:
     return problems
 
 
+def dump_private_rows(data: object) -> str:
+    """Return the one encoding a private ledger file may have.
+
+    Block-style YAML with keys in the order given, written by ``yaml.safe_dump``. The
+    exporter writes the file with this function and ``private_rows_problems`` rejects
+    any other text, so nothing can ride along outside the keys and values.
+    """
+    return yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
+
+
+def _canonical_problems(data: object, raw: str) -> list[str]:
+    """Report text that is not ``dump_private_rows(data)``, by its first differing line."""
+    canonical = dump_private_rows(data)
+    if raw == canonical:
+        return []
+    theirs, ours = raw.split("\n"), canonical.split("\n")
+    line = next(
+        (n for n, (a, b) in enumerate(zip(theirs, ours, strict=False), start=1) if a != b),
+        min(len(theirs), len(ours)) + 1,
+    )
+    return [
+        f"line {line}: not the canonical YAML encoding (write it with dump_private_rows; "
+        "comments, anchors, duplicate keys and restyled text never cross)"
+    ]
+
+
+@_fail_closed
 def private_rows_problems(data: object, raw: str | None = None) -> list[str]:
     """Return every problem in the anonymised private ledger rows.
 
     ``data`` is the parsed YAML, or the YAML text itself (then it is parsed here and used
     as the raw text). ``raw`` is the original text when ``data`` was parsed by the caller;
-    without it the parsed data is re-serialised for the forbidden-content scan.
+    without it the parsed data is re-serialised for the forbidden-content scan. When the
+    text is known it must be the canonical encoding of the data.
     """
     if isinstance(data, str):
         raw = data
         try:
             data = yaml.safe_load(data)
-        except yaml.YAMLError as exc:
+        except Exception as exc:
+            # Not only YAMLError: a scalar shaped like a date or an integer raises
+            # ValueError, a wrong explicit tag AttributeError, deep nesting RecursionError.
             return [*_hit_problems(raw), f"not valid YAML: {type(exc).__name__}"]
+    from_text = raw is not None
     if raw is None:
         raw = yaml.safe_dump(data, sort_keys=True, allow_unicode=True)
     problems = _hit_problems(raw)
     if not isinstance(data, dict):
         return [*problems, "private rows must be a mapping with schema and rows"]
+    unexpected = len(set(data) - set(PRIVATE_TOP_KEYS))
+    if unexpected:
+        allowed = " and ".join(PRIVATE_TOP_KEYS)
+        problems.append(f"{unexpected} unexpected top-level key(s) (only {allowed} may appear)")
+    if from_text:
+        problems.extend(_canonical_problems(data, raw))
     if data.get("schema") != 1:
         problems.append("schema must be 1")
     rows = data.get("rows")
@@ -692,6 +826,7 @@ def uncited_items(text: str, known_ids: Iterable[str]) -> list[tuple[int, str, l
 # ---------------------------------------------------------------------------
 
 
+@_fail_closed
 def _check_file(path: Path, kind: str) -> list[str]:
     """Run the validator for ``kind`` over one file and return its problems."""
     try:
