@@ -92,6 +92,7 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
+- ⚠️ [Phase 11] Branch step done (2026-11-09): `G-2039/map` exists, cut from main, and carries the v2.0 `.planning/` (Git delivery step 2 of the Phase 11 plans). Do not repeat that step. From here `.planning/` lives on `G-2039/map`, then on main once the Map PR merges; `G-2013/v2-lean-milestone` is a frozen copy. Never run `git restore --source=G-2013/v2-lean-milestone -- .planning/` again: restore makes the folder match its source exactly, so it would delete every Phase 11 summary, state update and crossed artefact written since. Do planning edits on `G-2039/map` or main, and plan later phases from main.
 - ⚠️ [Phase 6] `tests/test_dep_security.py` npm-audit cases fail on GHSA-6j4f-fj2g-mc7p / GHSA-qhr7-859c-m2p7 (brace-expansion) in all three lockfiles — G-1856, blocks the frontend CI audit gate until bumped
 - ⚠️ [Phase 6] Branch `G-1382/test-honesty` is local-only until `review-push run` → `sign` → push → PR
 
