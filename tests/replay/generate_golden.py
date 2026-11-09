@@ -9,8 +9,14 @@ Modes::
     python tests/replay/generate_golden.py --class dedup_verdicts   # regenerate
     python tests/replay/generate_golden.py --all                    # every class with a harness
     python tests/replay/generate_golden.py --check --all            # recompute, write nothing
-    python tests/replay/generate_golden.py --register-private CLASS --file PATH \
+    python tests/replay/generate_golden.py --register-awaiting      # add the six awaiting entries
+    python tests/replay/generate_golden.py --register-private gate_verdicts --file PATH \
         --private-commit SHA [--gates fact,voice] [--dry-run]
+    python tests/replay/generate_golden.py --register-private private_scoring --file PATH \
+        --private-commit SHA --producer-row P-NN [--ledger PATH] [--dry-run]
+
+Family B classes (the five private_* classes) have no harness: they are never
+recomputed, only validated by ``private_golden_problems`` and their sha256.
 
 Contract (modelled on ``tests/eval/geo/fixtures/generate_reference.py``): on any
 PII hit, schema error or duplicate the script writes NOTHING and exits non-zero.
@@ -35,6 +41,7 @@ if str(REPO_ROOT) not in sys.path:
 from tests.replay import _support as S  # noqa: E402
 
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
+_PRODUCER_ROW = re.compile(r"^P-\d{2,3}$")
 GATE_CLASS = "gate_verdicts"
 GATE_DRAFTS = "gate_drafts.jsonl"
 
@@ -186,14 +193,38 @@ def register_private(
     *,
     golden_dir: Path = S.GOLDEN,
     gates: str | None = None,
+    producer_row: str | None = None,
+    ledger: Path | None = None,
     dry_run: bool = False,
 ) -> int:
-    """Validate a private-pipeline file and, unless *dry_run*, freeze its class."""
+    """Validate a private-pipeline file and, unless *dry_run*, freeze its class.
+
+    ``gate_verdicts`` takes ``gates`` and never ``producer_row`` or ``ledger``;
+    the five Family B classes take ``producer_row`` (required) and ``ledger`` and
+    never ``gates``. Exit codes: 2 for a usage error, 1 for a failed validation.
+    """
     manifest_path = golden_dir / "MANIFEST.json"
     manifest = S.load_manifest(manifest_path)
     entry = manifest["classes"].get(cls)
-    if cls != GATE_CLASS or entry is None:
+    family_b = cls in S.FAMILY_B_CLASSES
+    if (cls != GATE_CLASS and not family_b) or entry is None:
         print(f"FAIL {cls}: no private registration path for this class", file=sys.stderr)
+        return 2
+    if family_b:
+        if gates is not None:
+            print(f"FAIL {cls}: --gates applies to {GATE_CLASS} only", file=sys.stderr)
+            return 2
+        if not (producer_row and _PRODUCER_ROW.fullmatch(producer_row)):
+            print(f"FAIL {cls}: --producer-row P-NN is required", file=sys.stderr)
+            return 2
+    elif producer_row is not None or ledger is not None:
+        print(
+            f"FAIL {cls}: --producer-row and --ledger apply to Family B classes only",
+            file=sys.stderr,
+        )
+        return 2
+    if not _SHA40.fullmatch(private_commit):
+        print("FAIL --private-commit must be 40 lowercase hex", file=sys.stderr)
         return 2
     if entry.get("status") != S.STATUS_AWAITING:
         print(
@@ -201,11 +232,23 @@ def register_private(
             file=sys.stderr,
         )
         return 1
-    if not _SHA40.fullmatch(private_commit):
-        print("FAIL --private-commit must be 40 lowercase hex", file=sys.stderr)
-        return 2
+
     gate_set = gates or "fact,voice"
-    problems = S.gate_verdict_problems(file, golden_dir / GATE_DRAFTS, gates=gate_set)
+    if family_b:
+        assert producer_row is not None
+        ledger_path = ledger if ledger is not None else S.PRIVATE_LEDGER_PATH
+        if ledger_path.is_file():
+            if producer_row not in S.ledger_row_ids(ledger_path):
+                print(
+                    f"FAIL {cls}: producer_row {producer_row} is not in {ledger_path.name}",
+                    file=sys.stderr,
+                )
+                return 1
+        else:
+            print(f"PENDING producer_row {producer_row}: ledger not present")
+        problems = S.private_golden_problems(file, cls)
+    else:
+        problems = S.gate_verdict_problems(file, golden_dir / GATE_DRAFTS, gates=gate_set)
     if problems:
         for problem in problems:
             print(f"FAIL {cls}: {problem}", file=sys.stderr)
@@ -214,25 +257,49 @@ def register_private(
         print(f"OK {cls}: validated {file.name} (dry run, nothing written)")
         return 0
     target = golden_dir / f"{cls}.jsonl"
-    if file.resolve() != target.resolve():
+    if not file.exists() or file.resolve() != target.resolve():
         print(
             f"FAIL {cls}: the file must already sit at {target} (use --dry-run elsewhere)",
             file=sys.stderr,
         )
         return 2
-    entry.update(
-        {
-            "golden": target.name,
-            "sha256": S.sha256_file(target),
-            "status": S.STATUS_FROZEN,
-            "producers": {S.PRIVATE_KEY: private_commit},
-            "producer_commit": private_commit,
-            "generated": S.current_month(),
-            "gates": gate_set,
+    update: dict[str, Any] = {
+        "golden": target.name,
+        "sha256": S.sha256_file(target),
+        "status": S.STATUS_FROZEN,
+        "producers": {S.PRIVATE_KEY: private_commit},
+        "producer_commit": private_commit,
+        "generated": S.current_month(),
+    }
+    if family_b:
+        update |= {
+            "producer_row": producer_row,
+            "inputs": "scrubbed",
+            "profile_scope": "maintainer",
         }
-    )
+    else:
+        update["gates"] = gate_set
+    entry.update(update)
     manifest_path.write_text(S.dump_manifest(manifest), encoding="utf-8", newline="")
-    print(f"froze {cls} (gates={gate_set})")
+    print(f"froze {cls}" + ("" if family_b else f" (gates={gate_set})"))
+    return 0
+
+
+def register_awaiting(golden_dir: Path = S.GOLDEN) -> int:
+    """Add the awaiting entries (gate_verdicts and the Family B classes) that are missing.
+
+    Existing entries are left alone, so a frozen class is never reset. The gate
+    entry records the sha256 of its two Kestrel-authored input files.
+    """
+    manifest_path = golden_dir / "MANIFEST.json"
+    manifest = S.load_manifest(manifest_path)
+    added = []
+    for cls in (GATE_CLASS, *S.FAMILY_B_CLASSES):
+        if cls not in manifest["classes"]:
+            manifest["classes"][cls] = S.awaiting_entry(cls, golden_dir)
+            added.append(cls)
+    manifest_path.write_text(S.dump_manifest(manifest), encoding="utf-8", newline="")
+    print(f"registered awaiting: {added or 'nothing to add'}")
     return 0
 
 
@@ -244,14 +311,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--class", dest="classes", action="append", default=[], metavar="NAME")
     parser.add_argument("--all", action="store_true", help="every class that has a harness")
     parser.add_argument("--check", action="store_true", help="recompute and compare; write nothing")
+    parser.add_argument("--register-awaiting", action="store_true")
     parser.add_argument("--register-private", metavar="CLASS")
     parser.add_argument("--file", type=Path)
     parser.add_argument("--private-commit")
     parser.add_argument("--gates", help="gate_verdicts only: fact,voice | fact | voice")
+    parser.add_argument("--producer-row", help="Family B only: the P-NN row of the private ledger")
+    parser.add_argument("--ledger", type=Path, help="Family B only: ledger the row must appear in")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--golden-dir", type=Path, default=S.GOLDEN, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
+    if args.register_awaiting:
+        return register_awaiting(args.golden_dir)
     if args.register_private:
         if not args.file or not args.private_commit:
             parser.error("--register-private needs --file and --private-commit")
@@ -261,10 +333,21 @@ def main(argv: list[str] | None = None) -> int:
             args.private_commit,
             golden_dir=args.golden_dir,
             gates=args.gates,
+            producer_row=args.producer_row,
+            ledger=args.ledger,
             dry_run=args.dry_run,
         )
-    if args.gates or args.dry_run or args.file or args.private_commit:
-        parser.error("--gates, --dry-run, --file and --private-commit belong to --register-private")
+    if (
+        args.gates
+        or args.dry_run
+        or args.file
+        or args.private_commit
+        or args.producer_row
+        or args.ledger
+    ):
+        parser.error(
+            "--gates, --dry-run, --file, --private-commit, --producer-row and --ledger belong to --register-private"
+        )
     unknown = [c for c in args.classes if c not in S.HARNESS]
     if unknown:
         parser.error(f"no harness for class(es) {unknown}; known: {sorted(S.HARNESS)}")

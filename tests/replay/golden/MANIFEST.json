@@ -17,6 +17,22 @@
       "sha256": "ac7360d57e205b195e3df321ddf665fc4c20d4aa3c5f061c501ea505509f08af",
       "status": "frozen"
     },
+    "digest": {
+      "generated": "2026-11",
+      "golden": "digest.jsonl",
+      "inputs": "synthetic",
+      "pins": [
+        "env: GITHUB_STEP_SUMMARY and PIPELINE_* unset",
+        "PipelineConfig date, timestamp, tracking_dir and digest_path fixed; digest written to a temp dir"
+      ],
+      "producer_commit": "ae52182df2272fb926d3875070d30d6f99e7a12f",
+      "producers": {
+        "tools/daily_pipeline.py": "c92dcdcf2e14325b692fa86fc28b2dc535f3ec95"
+      },
+      "python": "3.11.15",
+      "sha256": "9984394442e7627fc1cc07acace911b1a81093bc21be9792accb014553b2eeef",
+      "status": "frozen"
+    },
     "eligibility_verdicts": {
       "generated": "2026-11",
       "golden": "eligibility_verdicts.jsonl",
@@ -37,6 +53,97 @@
       "python": "3.11.15",
       "sha256": "0053637243c71e3b1265365f67a0b757ebec79346ebf1a7134ca252b8777a8f9",
       "status": "frozen"
+    },
+    "gate_verdicts": {
+      "generated": null,
+      "golden": null,
+      "input_files": {
+        "gate_drafts.jsonl": "2c1ae177034cd930fc91e7c7c20bce2b07df77cf284d26d95dc79985f330e60f",
+        "gate_fact_sheet.json": "78c68106a79966915f4ffc1856b240d108f128dc2ac30ec72cfb89c01111e64d"
+      },
+      "inputs": "synthetic",
+      "pins": [],
+      "producer_commit": null,
+      "producers": {
+        "the private pipeline": null
+      },
+      "sha256": null,
+      "status": "awaiting_private_run"
+    },
+    "private_dedup_verdicts": {
+      "generated": null,
+      "golden": null,
+      "inputs": "scrubbed",
+      "pins": [],
+      "producer_commit": null,
+      "producer_row": null,
+      "producers": {
+        "the private pipeline": null
+      },
+      "profile_scope": "maintainer",
+      "replay": "exact",
+      "sha256": null,
+      "status": "awaiting_private_run"
+    },
+    "private_digest": {
+      "generated": null,
+      "golden": null,
+      "inputs": "scrubbed",
+      "pins": [],
+      "producer_commit": null,
+      "producer_row": null,
+      "producers": {
+        "the private pipeline": null
+      },
+      "profile_scope": "maintainer",
+      "replay": "reference",
+      "sha256": null,
+      "status": "awaiting_private_run"
+    },
+    "private_eligibility_verdicts": {
+      "generated": null,
+      "golden": null,
+      "inputs": "scrubbed",
+      "pins": [],
+      "producer_commit": null,
+      "producer_row": null,
+      "producers": {
+        "the private pipeline": null
+      },
+      "profile_scope": "maintainer",
+      "replay": "exact",
+      "sha256": null,
+      "status": "awaiting_private_run"
+    },
+    "private_scan_arrivals": {
+      "generated": null,
+      "golden": null,
+      "inputs": "scrubbed",
+      "pins": [],
+      "producer_commit": null,
+      "producer_row": null,
+      "producers": {
+        "the private pipeline": null
+      },
+      "profile_scope": "maintainer",
+      "replay": "shape",
+      "sha256": null,
+      "status": "awaiting_private_run"
+    },
+    "private_scoring": {
+      "generated": null,
+      "golden": null,
+      "inputs": "scrubbed",
+      "pins": [],
+      "producer_commit": null,
+      "producer_row": null,
+      "producers": {
+        "the private pipeline": null
+      },
+      "profile_scope": "maintainer",
+      "replay": "reference",
+      "sha256": null,
+      "status": "awaiting_private_run"
     },
     "scan_arrivals": {
       "generated": "2026-11",

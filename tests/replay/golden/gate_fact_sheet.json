@@ -1,0 +1,36 @@
+{
+  "candidate": "Candidate A",
+  "employers": [
+    {
+      "end_year": 2003,
+      "name": "Meridian Quillworks",
+      "numbers": [
+        "shortened report turnaround from 5 days to 2 days"
+      ],
+      "ownership": "contributor",
+      "start_year": 2000,
+      "tenure_years": 3,
+      "title": "Product Analyst",
+      "tools": [
+        "SQL",
+        "Spreadsheets"
+      ]
+    },
+    {
+      "end_year": 2008,
+      "name": "Harborline Systems",
+      "numbers": [
+        "coordinated a team of 6 people"
+      ],
+      "ownership": "owner of the weekly planning process",
+      "start_year": 2003,
+      "tenure_years": 5,
+      "title": "Operations Lead",
+      "tools": [
+        "Kanban boards",
+        "SQL"
+      ]
+    }
+  ],
+  "note": "Fictional fact sheet authored by Kestrel for the gate fixtures. Not a real person."
+}

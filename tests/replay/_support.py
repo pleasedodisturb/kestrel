@@ -512,6 +512,43 @@ def _scan_arrivals(case: dict[str, Any]) -> Any:
     raise ValueError(f"scan_arrivals: unknown op {op!r}")
 
 
+DIGEST_DATE = "2000-01-03"
+DIGEST_TIMESTAMP = "2000-01-03T07:00:00"
+
+
+@_register(
+    "digest",
+    ("tools/daily_pipeline.py",),
+    (
+        _PIN_ENV,
+        "PipelineConfig date, timestamp, tracking_dir and digest_path fixed; digest written to a temp dir",
+    ),
+)
+def _digest(case: dict[str, Any]) -> Any:
+    """``step_generate_digest`` over synthetic jobs; the Markdown is stored as a JSON string."""
+    import copy
+    import tempfile
+
+    settings = case["config"]
+    with tempfile.TemporaryDirectory() as tmp:
+        config = daily_pipeline.PipelineConfig()
+        config.date = DIGEST_DATE
+        config.timestamp = DIGEST_TIMESTAMP
+        config.mode = settings["mode"]
+        config.min_score = settings["min_score"]
+        config.hours_old = settings["hours_old"]
+        config.tracking_dir = Path(tmp)
+        config.digest_path = Path(tmp) / f"daily-scan-{DIGEST_DATE}.md"
+        markdown = daily_pipeline.step_generate_digest(
+            config,
+            copy.deepcopy(case["all_scraped"]),
+            copy.deepcopy(case["scored"]),
+            copy.deepcopy(case["filtered"]),
+        )
+        written = config.digest_path.read_text()
+    return {"file_matches_return": written == markdown, "markdown": markdown}
+
+
 # ---------------------------------------------------------------------------
 # Gate verdict records (A2: produced by the private gates, validated here)
 # ---------------------------------------------------------------------------
@@ -546,7 +583,7 @@ def gate_verdict_problems(path: Path, drafts_path: Path, gates: str = "fact,voic
         return [*problems, f"cannot read drafts {drafts_path.name}: {exc.__class__.__name__}"]
 
     records: list[tuple[int, dict[str, Any]]] = []
-    for number, line in enumerate(text.splitlines(), start=1):
+    for number, line in enumerate(text.split("\n"), start=1):
         if not line.strip():
             continue
         try:
@@ -569,9 +606,9 @@ def gate_verdict_problems(path: Path, drafts_path: Path, gates: str = "fact,voic
             )
             continue
         draft_id, gate = record["draft_id"], record["gate"]
-        if draft_id not in draft_ids:
+        if not isinstance(draft_id, str) or draft_id not in draft_ids:
             problems.append(f"line {number}: unknown draft_id")
-        if gate not in GATES:
+        if not isinstance(gate, str) or gate not in GATES:
             problems.append(f"line {number}: gate must be fact or voice")
         elif expected and gate not in expected:
             problems.append(f"line {number}: gate {gate} was not run (gates={','.join(expected)})")
@@ -603,6 +640,533 @@ def gate_verdict_problems(path: Path, drafts_path: Path, gates: str = "fact,voic
 
 
 # ---------------------------------------------------------------------------
+# Family B: scrubbed, output-only samples of the private pipeline's recorded runs
+# ---------------------------------------------------------------------------
+#
+# Kestrel never recomputes these (no HARNESS entry). It checks them by schema,
+# invariants, sha256 and PII only; any replay of a port against them runs only
+# inside the private pipeline's repository, under the class's replay mode. The
+# record contract is the "Family B record contract" section of plan 11-01 and is
+# restated in golden/README.md.
+
+FAMILY_B_CLASSES = (
+    "private_dedup_verdicts",
+    "private_digest",
+    "private_eligibility_verdicts",
+    "private_scan_arrivals",
+    "private_scoring",
+)
+GATE_CLASS = "gate_verdicts"
+PRIVATE_LEDGER_PATH = REPO_ROOT / "tests/ports/PORT_LEDGER_PRIVATE.yaml"
+
+# What a later port is held to when replayed against the unscrubbed private copy.
+# A model call made fit_score (and tier, digest membership and order follow from
+# it), so scoring and digest are reference only, never an equality target.
+FAMILY_B_REPLAY = {
+    "private_dedup_verdicts": "exact",
+    "private_digest": "reference",
+    "private_eligibility_verdicts": "exact",
+    "private_scan_arrivals": "shape",
+    "private_scoring": "reference",
+}
+FAMILY_B_MIN_ROWS = {cls: 20 for cls in FAMILY_B_CLASSES} | {"private_digest": 3}
+FAMILY_B_MAX_ROWS = 200
+
+_RE_ID = re.compile(r"^[a-z0-9-]{3,40}$")
+_RE_COMPANY = re.compile(r"^Company-\d{2,3}$")
+_RE_HOME = re.compile(r"^Home-\d{2,3}$")
+_RE_URL = re.compile(r"^https://example\.invalid/[a-z0-9-]+$")
+_RE_URL_ANY = re.compile(r"https?://[^\s)\]\"'<>]+")
+_RE_SOURCE = re.compile(r"^(tier0:)?[a-z][a-z0-9._-]*(:company-\d{2,3})?$")
+_RE_REQ = re.compile(r"^Req-\d{2,4}$")
+_RE_PERSON = re.compile(r"^Person-\d{2,3}$")
+_RE_EMAIL_TOKEN = re.compile(r"^Email-\d{2,3}$")
+_RE_ATS_FAMILY = re.compile(r"^[a-z][a-z0-9.]*$")
+_RE_SCORER = re.compile(r"^[a-z0-9._-]{2,40}$")
+_RE_DAY_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}")
+_RE_PRODUCER_ROW = re.compile(r"^P-\d{2,3}$")
+_TIERS = ("T1", "T2", "T3", None)
+_CONFIG_REASON_WORDS = ("blocked", "dream", "soft_flag")
+_FLAG_FIELDS = ("dream_tier", "blocked", "soft_flag", "floored")
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _is_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_str_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(v, str) for v in value)
+
+
+def _matches(pattern: re.Pattern[str]) -> Callable[[Any], bool]:
+    return lambda value: isinstance(value, str) and pattern.fullmatch(value) is not None
+
+
+# Field name -> (check, rule text used in the problem). Fields that are decision
+# data (title, location, remote policy, salary band, scores, verdicts) are kept
+# verbatim and only type-checked.
+_POSTING_FIELD_CHECKS: dict[str, tuple[Callable[[Any], bool], str]] = {
+    "title": (lambda v: isinstance(v, str) and v != "", "title is not a non-empty string"),
+    "company": (_matches(_RE_COMPANY), "company is not a synthetic token"),
+    "location": (lambda v: isinstance(v, str), "location is not a string"),
+    "url": (_matches(_RE_URL), "url query or non-synthetic url"),
+    "source": (_matches(_RE_SOURCE), "source does not match the synthetic source shape"),
+    "remote": (lambda v: isinstance(v, bool), "remote is not a bool"),
+    "salary": (lambda v: isinstance(v, str), "salary is not a string"),
+    "posted": (
+        lambda v: isinstance(v, str) and (v == "" or re.fullmatch(r"\d{4}-\d{2}", v) is not None),
+        "posted is not month-level",
+    ),
+    "age_days": (lambda v: _is_int(v) and v >= 0, "age_days is not a non-negative integer"),
+    "offices": (_is_str_list, "offices is not a list of strings"),
+    "remote_policy": (lambda v: isinstance(v, str), "remote_policy is not a string"),
+    "tags": (_is_str_list, "tags is not a list of strings"),
+    "search_keyword": (lambda v: isinstance(v, str), "search_keyword is not a string"),
+    "job_id": (_matches(_RE_REQ), "job_id is not a synthetic Req token"),
+    "recruiter": (_matches(_RE_PERSON), "recruiter is not a synthetic Person token"),
+    "contact": (_matches(_RE_PERSON), "contact is not a synthetic Person token"),
+    "email": (_matches(_RE_EMAIL_TOKEN), "email is not a synthetic Email token"),
+    "description": (lambda v: v == "", "description is not empty"),
+    "api_submittable": (lambda v: isinstance(v, bool), "api_submittable is not a bool"),
+    "ats_family": (_matches(_RE_ATS_FAMILY), "ats_family does not match its shape"),
+    "geo_class": (lambda v: isinstance(v, str) and v != "", "geo_class is not a non-empty string"),
+}
+_POSTING_REQUIRED = frozenset({"title", "company", "location", "url", "source", "remote"})
+_POSTING_OPTIONAL = frozenset(
+    {
+        "salary",
+        "posted",
+        "age_days",
+        "offices",
+        "remote_policy",
+        "tags",
+        "search_keyword",
+        "job_id",
+        "recruiter",
+        "contact",
+        "email",
+        "description",
+        "dream_tier",
+        "blocked",
+        "soft_flag",
+        "api_submittable",
+        "ats_family",
+    }
+)
+
+_REASON_FIELD = (_matches(_REASON_CODE), "reason_code does not match the generic code shape")
+# Output fields of the per-record classes: name -> (check, rule).
+_OUTPUT_FIELD_CHECKS: dict[str, tuple[Callable[[Any], bool], str]] = {
+    "duplicate": (lambda v: isinstance(v, bool), "duplicate is not a bool"),
+    "kept": (lambda v: v in ("a", "b"), "kept is not a or b"),
+    "fuzzy_ratio": (_is_number, "fuzzy_ratio is not a number"),
+    "reason_code": _REASON_FIELD,
+    "geo_class": _POSTING_FIELD_CHECKS["geo_class"],
+    "prefilter_skip": (lambda v: isinstance(v, bool), "prefilter_skip is not a bool"),
+    "score_cap": (lambda v: v is None or _is_int(v), "score_cap is not an integer or null"),
+    "blocked": (lambda v: isinstance(v, bool), "blocked is not a bool"),
+    "soft_flag": (lambda v: isinstance(v, bool), "soft_flag is not a bool"),
+    "fit_score": (_is_number, "fit_score is not a number"),
+    "tier": (lambda v: v in _TIERS, "tier is not T1, T2, T3 or null"),
+    "review_flag": (lambda v: isinstance(v, bool), "review_flag is not a bool"),
+    "floored": (lambda v: isinstance(v, bool), "floored is not a bool"),
+    "estimated_salary": (lambda v: isinstance(v, str), "estimated_salary is not a string"),
+    "effort_flag": (lambda v: isinstance(v, str), "effort_flag is not a string"),
+    "prep_level": (_is_int, "prep_level is not an integer"),
+    "scorer": (_matches(_RE_SCORER), "scorer does not match its shape"),
+}
+_DIGEST_ROW_KEYS = ("company", "title", "location", "fit_score", "tier", "effort_flag", "source")
+
+# Per class: (input required, input optional, output required, output optional).
+FAMILY_B_SHAPES: dict[str, dict[str, Any]] = {
+    "private_scan_arrivals": {
+        "input": ({"source"}, {"search_keyword"}),
+        "output": "posting",
+    },
+    "private_dedup_verdicts": {
+        "input": ({"a", "b"}, set()),
+        "output": ({"duplicate"}, {"kept", "fuzzy_ratio", "reason_code"}),
+    },
+    "private_eligibility_verdicts": {
+        "input": "posting",
+        "output": (
+            {"geo_class"},
+            {"prefilter_skip", "score_cap", "blocked", "soft_flag", "reason_code"},
+        ),
+    },
+    "private_scoring": {
+        "input": "posting+geo_class",
+        "output": (
+            {"fit_score"},
+            {
+                "tier",
+                "review_flag",
+                "floored",
+                "estimated_salary",
+                "effort_flag",
+                "prep_level",
+                "scorer",
+                "reason_code",
+            },
+        ),
+    },
+    "private_digest": {
+        "input": ({"config", "counts"}, set()),
+        "output": ({"rows", "footer"}, set()),
+    },
+}
+
+
+def _key_problems(
+    obj: Any, required: set[str] | frozenset[str], optional: set[str] | frozenset[str], where: str
+) -> list[str]:
+    """Unknown or missing keys of one object (an unknown key is how free text would slip in)."""
+    if not isinstance(obj, dict):
+        return [f"{where}: not an object"]
+    problems = [f"{where}: unknown key {key!r}" for key in sorted(set(obj) - required - optional)]
+    problems += [f"{where}: missing key {key!r}" for key in sorted(required - set(obj))]
+    return problems
+
+
+def _posting_problems(obj: Any, where: str, *, extra: frozenset[str] = frozenset()) -> list[str]:
+    """Check one posting object against the shared Kestrel ScrapedJob / Tier0Job field set."""
+    problems = _key_problems(obj, _POSTING_REQUIRED, _POSTING_OPTIONAL | extra, where)
+    if not isinstance(obj, dict):
+        return problems
+    for name, value in sorted(obj.items()):
+        if name in _FLAG_FIELDS and name in _POSTING_OPTIONAL:
+            if value is True:
+                problems.append(f"{where}: config-derived flag {name} is true")
+            elif value is not False:
+                problems.append(f"{where}: {name} is not a bool")
+        elif name in _POSTING_FIELD_CHECKS:
+            check, rule = _POSTING_FIELD_CHECKS[name]
+            if not check(value):
+                problems.append(f"{where}: {rule}")
+    offices = obj.get("offices")
+    if isinstance(offices, list) and any(isinstance(o, str) and "@" in o for o in offices):
+        problems.append(f"{where}: @ sign in offices")
+    return problems
+
+
+def _output_field_problems(obj: dict[str, Any], where: str) -> list[str]:
+    problems: list[str] = []
+    for name, value in sorted(obj.items()):
+        if name in _FLAG_FIELDS:
+            if value is True:
+                problems.append(f"{where}: config-derived flag {name} is true")
+            elif value is not False:
+                problems.append(f"{where}: {name} is not a bool")
+        elif name in _OUTPUT_FIELD_CHECKS:
+            check, rule = _OUTPUT_FIELD_CHECKS[name]
+            if not check(value):
+                problems.append(f"{where}: {rule}")
+        if (
+            name == "reason_code"
+            and isinstance(value, str)
+            and any(word in value for word in _CONFIG_REASON_WORDS)
+        ):
+            problems.append(f"{where}: config-derived reason code {value!r}")
+    return problems
+
+
+def _location_tokenised(posting: Any) -> bool:
+    return (
+        isinstance(posting, dict)
+        and isinstance(posting.get("location"), str)
+        and _RE_HOME.fullmatch(posting["location"]) is not None
+    )
+
+
+def _record_problems(cls: str, record: dict[str, Any], where: str) -> list[str]:
+    """Per-class input and output problems of one record."""
+    shape = FAMILY_B_SHAPES[cls]
+    problems: list[str] = []
+    rec_in, rec_out = record.get("input"), record.get("output")
+
+    if cls == "private_scan_arrivals":
+        problems += _key_problems(rec_in, *shape["input"], f"{where} input")
+        if isinstance(rec_in, dict):
+            for name in ("source", "search_keyword"):
+                if name in rec_in:
+                    check, rule = _POSTING_FIELD_CHECKS[name]
+                    if not check(rec_in[name]):
+                        problems.append(f"{where} input: {rule}")
+        problems += _posting_problems(rec_out, f"{where} output")
+    elif cls == "private_dedup_verdicts":
+        problems += _key_problems(rec_in, *shape["input"], f"{where} input")
+        if isinstance(rec_in, dict):
+            for side in ("a", "b"):
+                if side in rec_in:
+                    problems += _posting_problems(rec_in[side], f"{where} input {side}")
+        problems += _key_problems(rec_out, *shape["output"], f"{where} output")
+        if isinstance(rec_out, dict):
+            problems += _output_field_problems(rec_out, f"{where} output")
+    elif cls == "private_eligibility_verdicts":
+        problems += _posting_problems(rec_in, f"{where} input")
+        problems += _key_problems(rec_out, *shape["output"], f"{where} output")
+        if isinstance(rec_out, dict):
+            problems += _output_field_problems(rec_out, f"{where} output")
+            if rec_out.get("geo_class") == "home" and not _location_tokenised(rec_in):
+                problems.append(f"{where}: home location not tokenised (geo_class is home)")
+    elif cls == "private_scoring":
+        problems += _posting_problems(rec_in, f"{where} input", extra=frozenset({"geo_class"}))
+        problems += _key_problems(rec_out, *shape["output"], f"{where} output")
+        if isinstance(rec_out, dict):
+            problems += _output_field_problems(rec_out, f"{where} output")
+        if (
+            isinstance(rec_in, dict)
+            and rec_in.get("geo_class") == "home"
+            and not _location_tokenised(rec_in)
+        ):
+            problems.append(f"{where}: home location not tokenised (geo_class is home)")
+    else:  # private_digest
+        problems += _key_problems(rec_in, *shape["input"], f"{where} input")
+        if isinstance(rec_in, dict):
+            problems += _digest_input_problems(rec_in, where)
+        problems += _key_problems(rec_out, *shape["output"], f"{where} output")
+        if isinstance(rec_out, dict):
+            problems += _digest_output_problems(rec_out, where)
+    return problems
+
+
+def _digest_input_problems(rec_in: dict[str, Any], where: str) -> list[str]:
+    problems: list[str] = []
+    config, counts = rec_in.get("config"), rec_in.get("counts")
+    problems += _key_problems(config, set(), {"mode", "min_score", "hours_old"}, f"{where} config")
+    problems += _key_problems(
+        counts, set(), {"arrived", "scored", "shortlisted"}, f"{where} counts"
+    )
+    if isinstance(config, dict):
+        if "mode" in config and not isinstance(config["mode"], str):
+            problems.append(f"{where} config: mode is not a string")
+        if "min_score" in config and not _is_number(config["min_score"]):
+            problems.append(f"{where} config: min_score is not a number")
+        if "hours_old" in config and not _is_int(config["hours_old"]):
+            problems.append(f"{where} config: hours_old is not an integer")
+    if isinstance(counts, dict):
+        for name, value in sorted(counts.items()):
+            if not (_is_int(value) and value >= 0):
+                problems.append(f"{where} counts: {name} is not a non-negative integer")
+    return problems
+
+
+def _digest_output_problems(rec_out: dict[str, Any], where: str) -> list[str]:
+    problems: list[str] = []
+    if rec_out.get("footer") is not None:
+        problems.append(f"{where}: footer is not null")
+    rows = rec_out.get("rows")
+    if not isinstance(rows, list):
+        return [*problems, f"{where}: rows is not a list"]
+    for index, row in enumerate(rows):
+        spot = f"{where} row {index}"
+        problems += _key_problems(row, set(_DIGEST_ROW_KEYS), set(), spot)
+        if not isinstance(row, dict):
+            continue
+        if not _matches(_RE_COMPANY)(row.get("company")):
+            problems.append(f"{spot}: company is not a synthetic token")
+        if not isinstance(row.get("title"), str):
+            problems.append(f"{spot}: title is not a string")
+        if not isinstance(row.get("location"), str):
+            problems.append(f"{spot}: location is not a string")
+        if not _is_number(row.get("fit_score")):
+            problems.append(f"{spot}: fit_score is not a number")
+        if row.get("tier") not in _TIERS:
+            problems.append(f"{spot}: tier is not T1, T2, T3 or null")
+        if row.get("effort_flag") is not None and not isinstance(row.get("effort_flag"), str):
+            problems.append(f"{spot}: effort_flag is not a string or null")
+        if not _matches(_RE_SOURCE)(row.get("source")):
+            problems.append(f"{spot}: source does not match the synthetic source shape")
+    return problems
+
+
+def _walk(value: Any, key: str | None = None) -> Iterator[tuple[str | None, Any]]:
+    """Every (key, value) pair of a parsed record, depth first."""
+    yield key, value
+    if isinstance(value, dict):
+        for child_key, child in value.items():
+            yield from _walk(child, child_key)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _walk(child, key)
+
+
+def _invariant_problems(record: Any, where: str) -> list[str]:
+    """Whole-record invariants: month-level dates, URL shape, no @."""
+    problems: list[str] = []
+    for key, value in _walk(record):
+        if key is not None and isinstance(value, str | int | float | type(None)):
+            dated = key in ("month", "posted", "date") or key.endswith(("_at", "_date"))
+            if dated and not (
+                isinstance(value, str)
+                and (re.fullmatch(r"\d{4}-\d{2}", value) or (key == "posted" and value == ""))
+            ):
+                problems.append(f"{where}: date field {key} is not month-level")
+        if isinstance(value, str):
+            for match in _RE_URL_ANY.finditer(value):
+                if not _RE_URL.fullmatch(match.group(0)):
+                    problems.append(f"{where}: url query or non-synthetic url")
+    return problems
+
+
+def private_golden_problems(path: Path, cls: str) -> list[str]:
+    """Validate a Family B golden against the record contract; never raises.
+
+    Returns human-readable problems, each naming the line id or number and the
+    rule. An unknown class, a missing file, invalid UTF-8 or a line that is not a
+    JSON object is a problem string. Empty means the file may be registered.
+    """
+    if cls not in FAMILY_B_CLASSES:
+        return [f"unknown Family B class {cls!r}"]
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        return [f"cannot read {path.name}: {exc.__class__.__name__}"]
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return [f"{path.name} is not valid UTF-8"]
+    if not text.strip():
+        return [f"{path.name} is empty"]
+
+    problems: list[str] = []
+    if "@" in text:
+        problems.append("@ sign in the file")
+    if _RE_DAY_DATE.search(text):
+        problems.append("day-level date or timestamp in the file")
+    labels = sorted(pii_hits(text))
+    if labels:
+        problems.append(f"PII scan hit: {labels}")
+
+    records: list[tuple[int, dict[str, Any]]] = []
+    for number, line in enumerate(text.split("\n"), start=1):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except ValueError:
+            problems.append(f"line {number}: not valid JSON")
+            continue
+        if not isinstance(record, dict):
+            problems.append(f"line {number}: not a JSON object")
+            continue
+        if line + "\n" != dump_jsonl([record]):
+            problems.append(f"line {number}: not the canonical encoding")
+        records.append((number, record))
+
+    if len(records) > FAMILY_B_MAX_ROWS:
+        problems.append(f"more than {FAMILY_B_MAX_ROWS} rows ({len(records)})")
+    if len(records) < FAMILY_B_MIN_ROWS[cls]:
+        problems.append(
+            f"fewer rows than the class minimum ({len(records)} < {FAMILY_B_MIN_ROWS[cls]})"
+        )
+
+    ids: list[str] = []
+    seen_pairs: dict[str, str] = {}
+    months: set[Any] = set()
+    for number, record in records:
+        where = f"line {number} (id {record.get('id')!r})"
+        problems += _key_problems(
+            record, {"id", "month", "scrubbed", "profile_scope", "input", "output"}, set(), where
+        )
+        rec_id = record.get("id")
+        if not (isinstance(rec_id, str) and _RE_ID.fullmatch(rec_id)):
+            problems.append(f"{where}: id does not match ^[a-z0-9-]{{3,40}}$")
+        else:
+            ids.append(rec_id)
+        month = record.get("month")
+        months.add(month if isinstance(month, str) else None)
+        if not (isinstance(month, str) and re.fullmatch(r"\d{4}-\d{2}", month)):
+            problems.append(f"{where}: month is not YYYY-MM")
+        if record.get("scrubbed") is not True:
+            problems.append(f"{where}: scrubbed is not true")
+        if record.get("profile_scope") != "maintainer":
+            problems.append(f"{where}: profile_scope is not maintainer")
+        problems += _record_problems(cls, record, where)
+        problems += _invariant_problems(record, where)
+        pair = json.dumps(
+            [record.get("input"), record.get("output")], sort_keys=True, ensure_ascii=False
+        )
+        if pair in seen_pairs:
+            problems.append(
+                f"{where}: duplicate input and output (same as id {seen_pairs[pair]!r})"
+            )
+        else:
+            seen_pairs[pair] = str(rec_id)
+
+    if len(set(ids)) != len(ids):
+        problems.append("duplicate ids")
+    if ids != sorted(ids):
+        problems.append("rows are not sorted by id")
+    if records and len({m for m in months if m is not None}) < 2:
+        problems.append("fewer than two months")
+    problems += _coverage_problems(cls, [r for _, r in records])
+    return problems
+
+
+def _coverage_problems(cls: str, records: list[dict[str, Any]]) -> list[str]:
+    """Per-class coverage invariants: the sample must exercise both sides of its verdict."""
+    outputs = [r["output"] for r in records if isinstance(r.get("output"), dict)]
+    if cls == "private_dedup_verdicts":
+        values = {o.get("duplicate") for o in outputs}
+        if not (True in values and False in values):
+            return ["coverage: duplicate true and false must both appear"]
+    if (
+        cls == "private_eligibility_verdicts"
+        and len({str(o.get("geo_class")) for o in outputs}) < 2
+    ):
+        return ["coverage: geo_class needs at least two distinct values"]
+    if (
+        cls == "private_scoring"
+        and len({o.get("tier") for o in outputs if o.get("tier") in _TIERS}) < 2
+    ):
+        return ["coverage: tier needs at least two distinct values (null counts as one)"]
+    return []
+
+
+def ledger_row_ids(ledger_path: Path) -> set[str]:
+    """Row ids of the private ledger (``rows: [{id: P-01, ...}]``)."""
+    import yaml
+
+    data = yaml.safe_load(ledger_path.read_text(encoding="utf-8")) or {}
+    rows = data.get("rows", []) if isinstance(data, dict) else []
+    return {str(row["id"]) for row in rows if isinstance(row, dict) and "id" in row}
+
+
+def awaiting_entry(cls: str, golden_dir: Path = GOLDEN) -> dict[str, Any]:
+    """The MANIFEST entry of a class that waits for the private run (plan 11-05)."""
+    base: dict[str, Any] = {
+        "golden": None,
+        "sha256": None,
+        "status": STATUS_AWAITING,
+        "producers": {PRIVATE_KEY: None},
+        "producer_commit": None,
+        "generated": None,
+        "pins": [],
+    }
+    if cls == GATE_CLASS:
+        return base | {
+            "inputs": "synthetic",
+            "input_files": {
+                name: sha256_file(golden_dir / name)
+                for name in ("gate_drafts.jsonl", "gate_fact_sheet.json")
+            },
+        }
+    if cls in FAMILY_B_CLASSES:
+        return base | {
+            "inputs": "scrubbed",
+            "profile_scope": "maintainer",
+            "producer_row": None,
+            "replay": FAMILY_B_REPLAY[cls],
+        }
+    raise ValueError(f"{cls!r} has no private registration")
+
+
+# ---------------------------------------------------------------------------
 # Manifest checker
 # ---------------------------------------------------------------------------
 
@@ -621,7 +1185,9 @@ def _file_problems(
     return []
 
 
-def _class_problems(name: str, entry: Any, golden_dir: Path) -> list[str]:
+def _class_problems(
+    name: str, entry: Any, golden_dir: Path, private_ledger: Path = PRIVATE_LEDGER_PATH
+) -> list[str]:
     """Every manifest problem for one class entry."""
     if not isinstance(entry, dict):
         return [f"{name}: entry is not an object"]
@@ -687,15 +1253,85 @@ def _class_problems(name: str, entry: Any, golden_dir: Path) -> list[str]:
             problems.append(f"{name}: generated must be YYYY-MM")
         if private and producers.get(PRIVATE_KEY) != commit:
             problems.append(f"{name}: the private producer value must equal producer_commit")
+
+    if private and name != GATE_CLASS and name not in FAMILY_B_CLASSES:
+        problems.append(
+            f"{name}: only gate_verdicts and the Family B classes may name {PRIVATE_KEY!r}"
+        )
+    if name in FAMILY_B_CLASSES:
+        problems += _family_b_problems(name, entry, golden_dir, private, private_ledger)
     return problems
 
 
-def manifest_problems(golden_dir: Path = GOLDEN) -> list[str]:
+def _family_b_problems(
+    name: str, entry: dict[str, Any], golden_dir: Path, private: bool, private_ledger: Path
+) -> list[str]:
+    """Family B lifecycle rules for one manifest entry."""
+    problems: list[str] = []
+    if name in HARNESS:
+        problems.append(f"{name}: a Family B class must have no HARNESS entry")
+    if not private:
+        problems.append(f"{name}: producers must be {{{PRIVATE_KEY!r}: ...}}")
+    if entry.get("inputs") != "scrubbed":
+        problems.append(f"{name}: inputs must be scrubbed")
+    if entry.get("profile_scope") != "maintainer":
+        problems.append(f"{name}: profile_scope must be maintainer")
+    if entry.get("replay") != FAMILY_B_REPLAY[name]:
+        problems.append(
+            f"{name}: replay mode must be {FAMILY_B_REPLAY[name]!r}, got {entry.get('replay')!r}"
+        )
+    producers = entry.get("producers") if isinstance(entry.get("producers"), dict) else {}
+    if entry.get("status") == STATUS_AWAITING:
+        for key in ("golden", "sha256", "producer_commit", "producer_row", "generated"):
+            if entry.get(key) is not None:
+                problems.append(f"{name}: {key} must be null while awaiting_private_run")
+        if producers.get(PRIVATE_KEY) is not None:
+            problems.append(f"{name}: the private producer value must be null while awaiting")
+    elif entry.get("status") == STATUS_FROZEN:
+        row = entry.get("producer_row")
+        if not (isinstance(row, str) and _RE_PRODUCER_ROW.fullmatch(row)):
+            problems.append(f"{name}: producer_row must match ^P-\\d{{2,3}}$")
+        elif private_ledger.is_file() and row not in ledger_row_ids(private_ledger):
+            problems.append(f"{name}: producer_row {row} is not a row id of {private_ledger.name}")
+        golden = entry.get("golden")
+        if isinstance(golden, str) and (golden_dir / golden).is_file():
+            problems += [f"{name}: {p}" for p in private_golden_problems(golden_dir / golden, name)]
+    return problems
+
+
+def manifest_pending(
+    golden_dir: Path = GOLDEN, *, private_ledger: Path = PRIVATE_LEDGER_PATH
+) -> list[str]:
+    """Checks that cannot run yet: a frozen Family B producer_row while the ledger is absent.
+
+    Never adds to :func:`manifest_problems`, so the suite is green before plan
+    11-05 crosses ``PORT_LEDGER_PRIVATE.yaml``.
+    """
+    if private_ledger.is_file():
+        return []
+    manifest = load_manifest(golden_dir / "MANIFEST.json")
+    pending = []
+    for name in FAMILY_B_CLASSES:
+        entry = manifest["classes"].get(name)
+        if isinstance(entry, dict) and entry.get("status") == STATUS_FROZEN:
+            pending.append(
+                f"producer_row pending: {name} {entry.get('producer_row')}: "
+                f"{PRIVATE_LEDGER_PATH.name} not crossed yet"
+            )
+    return pending
+
+
+def manifest_problems(
+    golden_dir: Path = GOLDEN, *, private_ledger: Path = PRIVATE_LEDGER_PATH
+) -> list[str]:
     """Human-readable problems with the golden directory and its manifest.
 
     Empty means: every golden file is listed by exactly one class, exists and
     matches its sha256; every Kestrel producer file still hashes to the recorded
-    git blob; and the lifecycle rules (frozen vs awaiting) hold.
+    git blob; the lifecycle rules (frozen vs awaiting) hold; and every Family B
+    class is registered. A frozen Family B ``producer_row`` is checked against
+    *private_ledger* when that file exists and skipped (see
+    :func:`manifest_pending`) while it does not.
     """
     manifest_path = golden_dir / "MANIFEST.json"
     if not manifest_path.is_file():
@@ -711,14 +1347,17 @@ def manifest_problems(golden_dir: Path = GOLDEN) -> list[str]:
     if not isinstance(classes, dict) or not classes:
         return ["MANIFEST.json lists no classes"]
 
+    for name in FAMILY_B_CLASSES:
+        if name not in classes:
+            problems.append(f"{name}: Family B class is not listed in the manifest")
     references: Counter[str] = Counter()
     for name, entry in sorted(classes.items()):
-        problems += _class_problems(name, entry, golden_dir)
+        problems += _class_problems(name, entry, golden_dir, private_ledger)
         if isinstance(entry, dict):
             if isinstance(entry.get("golden"), str):
                 references[entry["golden"]] += 1
             if isinstance(entry.get("input_files"), dict):
-                references.update(entry["input_files"])
+                references.update(list(entry["input_files"]))
     for path in sorted(golden_dir.iterdir()):
         if path.name in _NON_GOLDEN_FILES:
             continue
