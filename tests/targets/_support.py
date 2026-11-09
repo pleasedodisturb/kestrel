@@ -188,6 +188,24 @@ def _canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, default=str)
 
 
+def _non_string_keys(value: Any) -> list[Any]:
+    """Mapping keys that are not strings, anywhere in a YAML value.
+
+    YAML 1.1 reads an unquoted ``on``, ``off``, ``yes`` or ``no`` key as a
+    boolean, which silently changes a row's meaning; such keys must be quoted.
+    """
+    found: list[Any] = []
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                found.append(key)
+            found.extend(_non_string_keys(item))
+    elif isinstance(value, list):
+        for item in value:
+            found.extend(_non_string_keys(item))
+    return found
+
+
 def table_problems(table: Table, *, filename_stem: str) -> list[str]:
     """Human-readable structural problems in one table; an empty list means well formed."""
     problems: list[str] = []
@@ -287,6 +305,12 @@ def _table_body_problems(where: str, body: Any) -> list[str]:
             seen_ids.add(row_id)
         else:
             problems.append(f"{label}: id {row_id!r} must match {ROW_ID_RE.pattern}")
+        bad_keys = _non_string_keys(row)
+        if bad_keys:
+            problems.append(
+                f"{label}: non-string mapping keys {bad_keys!r} (quote on, off, yes and no keys)"
+            )
+            continue
         row_input = row.get("input")
         if "input" in row and not isinstance(row_input, Mapping):
             problems.append(f"{label}: input must be a mapping")

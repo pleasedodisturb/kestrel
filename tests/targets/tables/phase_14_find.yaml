@@ -1,0 +1,330 @@
+# Phase 14 Find: provisional mapping table (Phase 11 Map, MAP-03).
+#
+# PROVISIONAL until the Phase 14 Find review closes; rows encode research, not
+# decisions. The review may rewrite any row, and that is a one-file change. The
+# phase number is provisional too (ROADMAP add order after Cut A).
+#
+# Profile scope (D-13): every input is synthetic. Companies and postings are
+# fictional; URLs sit on example.com. The same rows hold for any job seeker.
+#
+# Provisional choices a review may rename: the identity key format
+# "ats/slug/posting_id", the verdict words, and the drift rule (a source whose
+# count fell by 50 percent or more against its last good run is flagged).
+# Every target is called with keyword arguments only.
+
+phase: 14
+name: find
+title: Find
+status: "PROVISIONAL until the Phase 14 Find review closes; rows encode research, not decisions"
+pending: true
+sources:
+  - ".planning/research/SUMMARY.md, Phase 3 Find (ATS adapters, dedup L0 to L2, liveness, canaries)"
+  - ".planning/research/FEATURES.md, section 1c (dedup layers L0 to L2, opaque case-sensitive ids)"
+  - ".planning/research/FEATURES.md, section 1d (tri-state liveness, unknown never removes)"
+  - ".planning/research/FEATURES.md, section 1e (source canary verdicts, 50 percent drift)"
+  - ".planning/research/FEATURES.md, section 1a (Ashby isListed false is not an arrival)"
+  - ".planning/research/PITFALLS.md, DEDUP-1 and ATS-1"
+
+tables:
+  url_normalize:
+    target: career_os.services.dedup:normalize_url
+    rows:
+      - id: strips-utm-parameters
+        input:
+          url: "https://boards.example.com/acme-labs/jobs/4012345?utm_source=newsletter&utm_medium=email"
+        expect:
+          normalized: "https://boards.example.com/acme-labs/jobs/4012345"
+
+      - id: strips-gh-src
+        input:
+          url: "https://boards.example.com/acme-labs/jobs/4012346?gh_src=abc123"
+        expect:
+          normalized: "https://boards.example.com/acme-labs/jobs/4012346"
+
+      - id: drops-fragment
+        input:
+          url: "https://boards.example.com/acme-labs/jobs/4012347#apply"
+        expect:
+          normalized: "https://boards.example.com/acme-labs/jobs/4012347"
+
+      - id: normalises-trailing-slash
+        input:
+          url: "https://boards.example.com/acme-labs/jobs/4012348/"
+        expect:
+          normalized: "https://boards.example.com/acme-labs/jobs/4012348"
+
+      - id: keeps-non-tracking-parameter
+        input:
+          url: "https://boards.example.com/acme-labs/jobs?gh_jid=4012349&utm_campaign=spring"
+        expect:
+          normalized: "https://boards.example.com/acme-labs/jobs?gh_jid=4012349"
+
+      - id: idempotent-on-its-own-output
+        input:
+          url: "https://boards.example.com/acme-labs/jobs?gh_jid=4012349"
+        expect:
+          normalized: "https://boards.example.com/acme-labs/jobs?gh_jid=4012349"
+
+      - id: lowercases-scheme-and-host-only
+        input:
+          url: "HTTPS://Boards.Example.COM/Acme-Labs/jobs/4012350"
+        expect:
+          normalized: "https://boards.example.com/Acme-Labs/jobs/4012350"
+
+  identity_key:
+    target: career_os.services.dedup:identity_key
+    rows:
+      - id: full-identity-yields-key
+        input:
+          ats: greenhouse
+          slug: acme-labs
+          posting_id: "4012345"
+        expect:
+          key: "greenhouse/acme-labs/4012345"
+
+      - id: different-posting-id-is-a-different-key
+        input:
+          ats: greenhouse
+          slug: acme-labs
+          posting_id: "4012346"
+        expect:
+          key: "greenhouse/acme-labs/4012346"
+
+      - id: missing-id-yields-no-key
+        input:
+          ats: greenhouse
+          slug: acme-labs
+          posting_id: null
+        expect:
+          key: null
+
+      - id: slug-case-does-not-split-a-key
+        input:
+          ats: greenhouse
+          slug: Acme-Labs
+          posting_id: "4012345"
+        expect:
+          key: "greenhouse/acme-labs/4012345"
+
+      - id: ids-are-opaque-and-keep-leading-zeros
+        input:
+          ats: lever
+          slug: acme-labs
+          posting_id: "00123"
+        expect:
+          key: "lever/acme-labs/00123"
+
+  seen_classification:
+    target: career_os.services.dedup:classify_against_seen
+    rows:
+      - id: unseen-key-is-new
+        input:
+          key: "greenhouse/acme-labs/4012399"
+          history_keys: ["greenhouse/acme-labs/4012345"]
+          run_keys: ["lever/acme-labs/00123"]
+        expect:
+          classification: new
+
+      - id: key-in-history-is-seen
+        input:
+          key: "greenhouse/acme-labs/4012345"
+          history_keys: ["greenhouse/acme-labs/4012345"]
+          run_keys: []
+        expect:
+          classification: seen_in_history
+
+      - id: key-earlier-in-the-same-run-is-a-duplicate
+        input:
+          key: "lever/acme-labs/00123"
+          history_keys: []
+          run_keys: ["lever/acme-labs/00123"]
+        expect:
+          classification: duplicate_in_run
+
+      - id: empty-history-and-run-is-new
+        input:
+          key: "ashby/acme-labs/9f2c"
+          history_keys: []
+          run_keys: []
+        expect:
+          classification: new
+
+  liveness:
+    target: career_os.discovery.ats:liveness_state
+    rows:
+      # Conservative by design: expired only on a definitive signal. Nothing is
+      # ever deleted; an expired posting is marked and kept for the audit.
+      - id: http-404-is-expired
+        input:
+          http_status: 404
+          timed_out: false
+        expect:
+          state: expired
+          removes_job: false
+
+      - id: http-410-is-expired
+        input:
+          http_status: 410
+          timed_out: false
+        expect:
+          state: expired
+          removes_job: false
+
+      - id: http-429-is-unknown
+        input:
+          http_status: 429
+          timed_out: false
+        expect:
+          state: unknown
+          removes_job: false
+
+      - id: http-503-is-unknown
+        input:
+          http_status: 503
+          timed_out: false
+        expect:
+          state: unknown
+          removes_job: false
+
+      - id: timeout-is-unknown
+        input:
+          http_status: null
+          timed_out: true
+        expect:
+          state: unknown
+          removes_job: false
+
+      - id: redirect-is-unknown
+        input:
+          http_status: 302
+          timed_out: false
+        expect:
+          state: unknown
+          removes_job: false
+
+      - id: http-200-is-live
+        input:
+          http_status: 200
+          timed_out: false
+        expect:
+          state: live
+          removes_job: false
+
+  source_canary:
+    target: career_os.discovery.ats:canary_verdict
+    rows:
+      # Verdict words follow FEATURES 1e; "small" means fewer than 5 postings.
+      # drift is true when the count fell by 50 percent or more against the
+      # last good run. "Source canary" is the name; "drift_canary" already
+      # means something else in the scoring code.
+      - id: healthy-source-is-ok
+        input:
+          provider: greenhouse
+          enabled: true
+          count: 12
+          error: null
+          previous_counts: [12]
+        expect:
+          verdict: ok
+          drift: false
+
+      - id: few-postings-is-small
+        input:
+          provider: lever
+          enabled: true
+          count: 3
+          error: null
+          previous_counts: [3]
+        expect:
+          verdict: small
+          drift: false
+
+      - id: zero-postings-is-empty
+        input:
+          provider: ashby
+          enabled: true
+          count: 0
+          error: null
+          previous_counts: []
+        expect:
+          verdict: empty
+          drift: false
+
+      - id: fetch-failure-is-error
+        input:
+          provider: greenhouse
+          enabled: true
+          count: null
+          error: timeout
+          previous_counts: [12]
+        expect:
+          verdict: error
+          drift: false
+
+      - id: enabled-entry-nothing-claims-is-no-provider
+        input:
+          provider: null
+          enabled: true
+          count: null
+          error: null
+          previous_counts: []
+        expect:
+          verdict: no-provider
+          drift: false
+
+      - id: half-the-postings-gone-is-drift
+        input:
+          provider: greenhouse
+          enabled: true
+          count: 10
+          error: null
+          previous_counts: [20]
+        expect:
+          verdict: ok
+          drift: true
+
+      - id: under-half-gone-is-not-drift
+        input:
+          provider: greenhouse
+          enabled: true
+          count: 11
+          error: null
+          previous_counts: [20]
+        expect:
+          verdict: ok
+          drift: false
+
+      - id: near-total-collapse-is-drift
+        input:
+          provider: ashby
+          enabled: true
+          count: 2
+          error: null
+          previous_counts: [40]
+        expect:
+          verdict: small
+          drift: true
+
+  arrival_filter:
+    target: career_os.discovery.ats:is_arrival
+    rows:
+      - id: ashby-unlisted-posting-is-not-an-arrival
+        input:
+          ats: ashby
+          is_listed: false
+        expect:
+          arrival: false
+
+      - id: ashby-listed-posting-is-an-arrival
+        input:
+          ats: ashby
+          is_listed: true
+        expect:
+          arrival: true
+
+      - id: ats-without-a-listed-flag-is-an-arrival
+        input:
+          ats: greenhouse
+          is_listed: null
+        expect:
+          arrival: true

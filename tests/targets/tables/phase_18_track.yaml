@@ -1,0 +1,124 @@
+# Phase 18 Track: provisional mapping table (Phase 11 Map, MAP-03).
+#
+# PROVISIONAL until the Phase 18 Track review closes; rows encode research, not
+# decisions. The review may rewrite any row, and that is a one-file change. The
+# phase number is provisional too (ROADMAP add order after Cut A).
+#
+# Profile scope (D-13): every input is synthetic; the same rows hold for any
+# job seeker.
+#
+# The submission axis (none, prepared, submit_attempted, submission_confirmed)
+# is separate from ApplicationStatus. VALID_TRANSITIONS in
+# src/career_os/schemas/applications.py stays the only authority for status
+# changes; no row here changes a status. Every target is called with keyword
+# arguments only.
+
+phase: 18
+name: track
+title: Track
+status: "PROVISIONAL until the Phase 18 Track review closes; rows encode research, not decisions"
+pending: true
+sources:
+  - ".planning/research/SUMMARY.md, Phase 7 Track (submission_state axis, append-only outcomes ledger)"
+  - ".planning/research/FEATURES.md, section 3b (submission axis separate from lifecycle status)"
+  - ".planning/research/FEATURES.md, section 3b (idempotent ledger, did-it-go-through prompt)"
+  - ".planning/research/PITFALLS.md, OUT-1 (single outcome vocabulary, never inferred applied)"
+
+tables:
+  submission_state:
+    target: career_os.services.outcomes:next_submission_state
+    rows:
+      - id: none-to-prepared
+        input:
+          current: none
+          event: prepare
+          application_status: discovered
+        expect:
+          submission_state: prepared
+          refused: false
+
+      - id: prepared-to-submit-attempted
+        input:
+          current: prepared
+          event: submit_signal
+          application_status: discovered
+        expect:
+          submission_state: submit_attempted
+          refused: false
+
+      - id: submit-attempted-to-confirmed
+        input:
+          current: submit_attempted
+          event: confirmation_seen
+          application_status: discovered
+        expect:
+          submission_state: submission_confirmed
+          refused: false
+
+      - id: jump-from-none-to-confirmed-is-refused
+        input:
+          current: none
+          event: confirmation_seen
+          application_status: discovered
+        expect:
+          submission_state: none
+          refused: true
+
+      - id: submission-change-leaves-application-status-unchanged
+        input:
+          current: prepared
+          event: submit_signal
+          application_status: interested
+        expect:
+          submission_state: submit_attempted
+          application_status: interested
+
+  outcome_ledger:
+    target: career_os.services.outcomes:replay_outcome_ledger
+    rows:
+      - id: two-appended-events-give-a-count-of-two
+        input:
+          existing:
+            - {type: interview, occurred_on: "2027-01-14", note: first call}
+          append:
+            - {type: rejected, occurred_on: "2027-02-03", note: after second round}
+        expect:
+          count: 2
+          first_event_unchanged: true
+
+      - id: recording-the-same-outcome-twice-does-not-duplicate
+        input:
+          existing:
+            - {type: interview, occurred_on: "2027-01-14", note: first call}
+          append:
+            - {type: interview, occurred_on: "2027-01-14", note: first call}
+        expect:
+          count: 1
+          first_event_unchanged: true
+
+  confirmation_prompt:
+    target: career_os.services.outcomes:needs_confirmation_prompt
+    rows:
+      - id: attempt-older-than-the-threshold-prompts
+        input:
+          submission_state: submit_attempted
+          hours_since_attempt: 30
+          threshold_hours: 24
+        expect:
+          prompt: true
+
+      - id: attempt-younger-than-the-threshold-does-not-prompt
+        input:
+          submission_state: submit_attempted
+          hours_since_attempt: 6
+          threshold_hours: 24
+        expect:
+          prompt: false
+
+      - id: confirmed-submission-never-prompts
+        input:
+          submission_state: submission_confirmed
+          hours_since_attempt: 90
+          threshold_hours: 24
+        expect:
+          prompt: false

@@ -1,0 +1,109 @@
+# Phase 16 Scan: provisional mapping table (Phase 11 Map, MAP-03).
+#
+# PROVISIONAL until the Phase 16 Scan review closes; rows encode research, not
+# decisions. The review may rewrite any row, and that is a one-file change. The
+# phase number is provisional too (ROADMAP add order after Cut A).
+#
+# Profile scope (D-13): every input is synthetic; the same rows hold for any
+# job seeker.
+#
+# Exit codes (OQ-4): the two research sources disagree, so only the codes on
+# which both agree are encoded as tests: 0 (ok) and 3 (preflight failed). The
+# conflicting codes are recorded under pending_decision and are deliberately
+# NOT encoded; the Phase 16 Scan review picks and then adds rows.
+
+phase: 16
+name: scan
+title: Scan
+status: "PROVISIONAL until the Phase 16 Scan review closes; rows encode research, not decisions"
+pending: true
+sources:
+  - ".planning/research/SUMMARY.md, Phase 5 Scan (exit codes 0/1/2/3/75, refuses mock, dry-run json)"
+  - ".planning/research/ARCHITECTURE.md, section 5.1 (scan sequence; exit-code line 180 lists 0/2/3/4/1)"
+  - ".planning/research/FEATURES.md, section 1b (idempotent, no LLM spend by default, dry-run)"
+  - ".planning/research/PITFALLS.md, ADD-1 (zero arrivals is an error unless canaries say quiet)"
+pending_decision:
+  - "1: partial (SUMMARY Phase 5) vs fatal (ARCHITECTURE line 180)"
+  - "2: spend halted (SUMMARY) vs partial (ARCHITECTURE)"
+  - "4: spend halt (ARCHITECTURE only)"
+  - "75: lease held (SUMMARY only)"
+
+tables:
+  exit_code:
+    target: career_os.services.scan:exit_code_for
+    rows:
+      - id: healthy-run-exits-0
+        input:
+          preflight_ok: true
+          sources_read: 5
+          sources_failed: 0
+          new_arrivals: 7
+          canaries_healthy: true
+        expect:
+          exit_code: 0
+
+      - id: healthy-quiet-run-exits-0
+        input:
+          preflight_ok: true
+          sources_read: 5
+          sources_failed: 0
+          new_arrivals: 0
+          canaries_healthy: true
+        expect:
+          exit_code: 0
+
+      - id: failed-preflight-exits-3
+        input:
+          preflight_ok: false
+          sources_read: 0
+          sources_failed: 0
+          new_arrivals: 0
+          canaries_healthy: true
+        expect:
+          exit_code: 3
+
+  run_settings:
+    target: career_os.services.scan:check_run_settings
+    rows:
+      - id: mock-provider-refused-without-allow-mock
+        input:
+          provider: mock
+          allow_mock: false
+        expect:
+          accepted: false
+          reason_code: mock_provider_refused
+
+      - id: mock-provider-accepted-with-allow-mock
+        input:
+          provider: mock
+          allow_mock: true
+        expect:
+          accepted: true
+          reason_code: null
+
+      - id: real-provider-accepted
+        input:
+          provider: openrouter
+          allow_mock: false
+        expect:
+          accepted: true
+          reason_code: null
+
+  dry_run:
+    target: career_os.services.scan:dry_run_plan
+    rows:
+      - id: dry-run-with-json-persists-nothing-and-prints-json
+        input:
+          dry_run: true
+          json: true
+        expect:
+          persists: false
+          output_format: json
+
+      - id: dry-run-without-json-persists-nothing-and-prints-text
+        input:
+          dry_run: true
+          json: false
+        expect:
+          persists: false
+          output_format: text

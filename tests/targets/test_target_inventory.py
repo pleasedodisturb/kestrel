@@ -32,7 +32,11 @@ from tests.targets._support import (
 # Rows per table file. Deleting or adding a row without touching this pin fails
 # the build, so a rewrite of a table is always a visible, deliberate diff.
 EXPECTED_ROWS = {
+    "phase_14_find": 34,
     "phase_15_filter": 12,
+    "phase_16_scan": 8,
+    "phase_17_score": 9,
+    "phase_18_track": 10,
 }
 
 
@@ -95,6 +99,17 @@ def test_param_ids_follow_file_order():
     assert first == expected
     assert second == first
     assert len(set(first)) == len(first)
+
+
+def test_scan_encodes_only_the_agreed_exit_codes():
+    """OQ-4: codes 1, 2, 4 and 75 stay in pending_decision and no exit_code row expects them."""
+    scan = next(t for t in load_tables(validate=False) if t.stem == "phase_16_scan")
+    pending_codes = {int(entry.split(":", 1)[0]) for entry in scan.raw["pending_decision"]}
+    encoded = {row["expect"]["exit_code"] for row in scan.tables["exit_code"]["rows"]}
+    assert pending_codes == {1, 2, 4, 75}
+    assert len(scan.raw["pending_decision"]) == 4
+    assert encoded == {0, 3}
+    assert encoded.isdisjoint(pending_codes)
 
 
 def test_pending_false_drops_marks_for_that_phase_only():
@@ -196,6 +211,10 @@ def _keep(data):
     """Leave the table unchanged; the filename alone is the defect."""
 
 
+def _yaml_boolean_key(data):
+    _rows(data)[0]["input"] = {True: "a YAML 1.1 'on' key"}
+
+
 def _unknown_header_key(data):
     data["pendng"] = True
 
@@ -226,6 +245,7 @@ BAD_TABLES = [
         "pending_decision must be a list of strings",
     ),
     ("no-sources", "phase_15_filter", _no_sources, "sources must be a non-empty list"),
+    ("yaml-boolean-key", "phase_15_filter", _yaml_boolean_key, "non-string mapping keys"),
     ("unknown-header-key", "phase_15_filter", _unknown_header_key, "unexpected header keys"),
     ("bad-filename", "phase_filter", _keep, "filename must be phase_NN_name.yaml"),
 ]

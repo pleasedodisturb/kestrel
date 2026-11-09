@@ -1,0 +1,167 @@
+# Phase 17 Score: provisional mapping table (Phase 11 Map, MAP-03).
+#
+# PROVISIONAL until the Phase 17 Score review closes; rows encode research, not
+# decisions. The review may rewrite any row, and that is a one-file change. The
+# phase number is provisional too (ROADMAP add order after Cut A).
+#
+# Profile scope (D-13): every input is synthetic (fictional postings, sources
+# and profile fields); the same rows hold for any job seeker.
+#
+# Provisional shapes a review may rename: the funnel keys, the spend-line text,
+# the inclusion-probability bookkeeping and the fixture polarity words.
+# Every target is called with keyword arguments only.
+
+phase: 17
+name: score
+title: Score
+status: "PROVISIONAL until the Phase 17 Score review closes; rows encode research, not decisions"
+pending: true
+sources:
+  - ".planning/research/SUMMARY.md, Phase 6 Score (digest funnel, canary banner, spend line, audit sample)"
+  - ".planning/research/FEATURES.md, section 2d (audit sample design, overturn becomes a fixture)"
+  - ".planning/research/ARCHITECTURE.md, step 12 of the scan sequence (digest: shortlist, health, spend, audit)"
+  - ".planning/research/PITFALLS.md, DIGEST-1 (rater anchoring, fixture leaks no profile data)"
+
+tables:
+  digest_summary:
+    target: career_os.services.triage:build_digest_summary
+    rows:
+      - id: funnel-counts-are-carried-through
+        input:
+          arrived: 120
+          survived: 48
+          scored: 30
+          shortlisted: 6
+          source_canaries: [{source: demo-ats, verdict: ok}]
+          spend_usd: 0.0
+          spend_cap_usd: 2.0
+        expect:
+          funnel: {arrived: 120, survived: 48, scored: 30, shortlisted: 6}
+
+      - id: red-source-canary-adds-a-banner
+        input:
+          arrived: 80
+          survived: 30
+          scored: 20
+          shortlisted: 4
+          source_canaries:
+            - {source: demo-ats, verdict: empty}
+            - {source: sample-ats, verdict: ok}
+          spend_usd: 0.1
+          spend_cap_usd: 2.0
+        expect:
+          banner_sources: [demo-ats]
+
+      - id: spend-line-is-present
+        input:
+          arrived: 60
+          survived: 25
+          scored: 10
+          shortlisted: 2
+          source_canaries: [{source: demo-ats, verdict: ok}]
+          spend_usd: 0.42
+          spend_cap_usd: 2.0
+        expect:
+          spend_line: "spent $0.42 today, cap $2.00"
+
+  audit_sample:
+    target: career_os.services.audit:draw_sample
+    rows:
+      - id: stratified-by-reason-code
+        input:
+          eligible:
+            - {id: e1, reason_code: title}
+            - {id: e2, reason_code: title}
+            - {id: e3, reason_code: title}
+            - {id: e4, reason_code: title}
+            - {id: e5, reason_code: geo}
+            - {id: e6, reason_code: geo}
+            - {id: e7, reason_code: geo}
+            - {id: e8, reason_code: industry}
+          k: 3
+          seed: 11
+        expect:
+          size: 3
+          reason_codes_covered: [geo, industry, title]
+
+      - id: every-item-carries-its-inclusion-probability
+        input:
+          eligible:
+            - {id: p1, reason_code: title}
+            - {id: p2, reason_code: title}
+            - {id: p3, reason_code: title}
+            - {id: p4, reason_code: title}
+            - {id: p5, reason_code: title}
+            - {id: p6, reason_code: title}
+            - {id: p7, reason_code: title}
+            - {id: p8, reason_code: title}
+            - {id: p9, reason_code: title}
+            - {id: p10, reason_code: title}
+          k: 5
+          seed: 12
+        expect:
+          size: 5
+          inclusion_probabilities: [0.5, 0.5, 0.5, 0.5, 0.5]
+
+      - id: same-seed-returns-the-same-sample
+        input:
+          eligible:
+            - {id: s1, reason_code: geo}
+            - {id: s2, reason_code: geo}
+            - {id: s3, reason_code: geo}
+            - {id: s4, reason_code: geo}
+            - {id: s5, reason_code: title}
+            - {id: s6, reason_code: title}
+          k: 3
+          seed: 13
+          draws: 2
+        expect:
+          draws_identical: true
+
+  overturn_fixture:
+    target: career_os.services.audit:overturn_fixture
+    rows:
+      - id: overturn-exports-a-profile-free-fixture
+        input:
+          verdict: overturn
+          posting:
+            title: Product Manager
+            company: Sample Freight Systems
+            location: Rotterdam, Netherlands
+            source: demo-ats
+          decision_at_exclusion: exclude
+          rule_version: assess/1
+          profile:
+            display_name: Jordan Sample
+            resume_excerpt: Ten years running delivery for logistics software.
+        expect:
+          profile_fields_present: false
+          polarity: should_admit
+
+      - id: confirm-exports-the-opposite-polarity
+        input:
+          verdict: confirm
+          posting:
+            title: Warehouse Operative
+            company: Sample Freight Systems
+            location: Rotterdam, Netherlands
+            source: demo-ats
+          decision_at_exclusion: exclude
+          rule_version: assess/1
+          profile:
+            display_name: Jordan Sample
+            resume_excerpt: Ten years running delivery for logistics software.
+        expect:
+          profile_fields_present: false
+          polarity: must_stay_excluded
+
+  review_card:
+    target: career_os.services.audit:review_card_field_order
+    rows:
+      # DIGEST-1: the rater sees job facts before filter-derived fields, so the
+      # filter's verdict does not anchor the judgement.
+      - id: job-facts-come-before-filter-fields
+        input:
+          fields: [geo_class, reason_codes, title, company, location, source]
+        expect:
+          field_order: [title, company, location, source, geo_class, reason_codes]
