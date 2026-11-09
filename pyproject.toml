@@ -135,6 +135,7 @@ markers = [
     "property: property-based tests",
     "fuzz: fuzzing tests",
     "live: hits a real external API over the network (G-1717); skipped unless KESTREL_LIVE_TESTS=1, never runs in CI",
+    "v2_pending: mapping-table row for a v2.0 phase not built yet (strict xfail, Phase 11 Map, MAP-03)",
 ]
 
 [tool.coverage.run]

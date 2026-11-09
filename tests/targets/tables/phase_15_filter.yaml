@@ -1,0 +1,256 @@
+# Phase 15 Filter: provisional mapping table (Phase 11 Map, MAP-03).
+#
+# PROVISIONAL until the Phase 15 Filter review closes. These rows encode the
+# research (SUMMARY.md Phase 4 Filter, FEATURES.md section 2), not decisions;
+# the review may rewrite any row, and that is a one-file change. The phase
+# number is provisional too (ROADMAP add order after Cut A).
+#
+# Profile scope (D-13): every input is synthetic. Candidates and companies are
+# fictional, the geo config is the shipped example (config/geo.example.yaml),
+# the blocklist is the shipped fictional example. The same rows hold for any
+# job seeker; no row reads or references a maintainer-specific record.
+#
+# Call shape (provisional): assess(job=..., profile=..., context=...) -> result
+# with decision (admit / exclude / borderline), ordered reason_codes, geo_class
+# and rule_version. Gate order is fixed: seen, blocklist, title, geo, then
+# skill or industry. Every gate is evaluated for the diagnostics (reason_codes
+# lists every failing gate, in gate order); the decision is exclude when any
+# hard gate fails. No LLM and no I/O inside assess().
+
+phase: 15
+name: filter
+title: Filter
+status: "PROVISIONAL until the Phase 15 Filter review closes; rows encode research, not decisions"
+pending: true
+sources:
+  - ".planning/research/SUMMARY.md, Phase 4 Filter (single assess() entry point, gate order)"
+  - ".planning/research/FEATURES.md, section 2a (assess() result shape, gate order, no LLM in gates)"
+  - ".planning/research/FEATURES.md, section 2b (geo_class visible, multi-office over-admission rule)"
+  - ".planning/research/PITFALLS.md, GEO-1 (no example-file fallback when no geo config is set)"
+
+tables:
+  assess_decision:
+    target: career_os.services.assess:assess
+    rows:
+      - id: clean-job-admitted
+        input:
+          job:
+            url: https://jobs.example.com/brightwell/1001
+            title: Senior Product Manager
+            company: Brightwell Analytics
+            location: Dublin, Ireland
+            remote: false
+            offices: []
+            description: Own the roadmap for a B2B reporting product used by finance teams.
+          profile: &base_profile
+            geo: &geo_example
+              home_tokens: [ireland, dublin, cork, galway, limerick]
+              allow_pan_region_remote: true
+              extra_foreign_tokens: []
+            blocklist: [shadowtrack, villain industries]
+            title_rules:
+              include: [product manager, program manager]
+              exclude: [intern, junior]
+            exclude_terms: [defence contracting]
+          context: &empty_context
+            seen_urls: []
+        expect:
+          decision: admit
+          reason_codes: []
+          geo_class: home
+
+      - id: blocklisted-company-excluded
+        input:
+          job:
+            url: https://jobs.example.com/shadowtrack/2001
+            title: Senior Product Manager
+            company: Shadowtrack Systems
+            location: Dublin, Ireland
+            remote: false
+            offices: []
+            description: Own the roadmap for a location analytics product.
+          profile: *base_profile
+          context: *empty_context
+        expect:
+          decision: exclude
+          reason_codes: [blocklist]
+          geo_class: home
+
+      - id: already-seen-excluded
+        input:
+          job:
+            url: https://jobs.example.com/brightwell/1002
+            title: Product Manager
+            company: Brightwell Analytics
+            location: Cork, Ireland
+            remote: false
+            offices: []
+            description: Own onboarding and activation for a B2B reporting product.
+          profile: *base_profile
+          context:
+            seen_urls: [https://jobs.example.com/brightwell/1002]
+        expect:
+          decision: exclude
+          reason_codes: [seen]
+          geo_class: home
+
+      - id: seen-listed-before-blocklist
+        input:
+          job:
+            url: https://jobs.example.com/shadowtrack/2002
+            title: Product Manager
+            company: Shadowtrack Systems
+            location: Dublin, Ireland
+            remote: false
+            offices: []
+            description: Own the roadmap for a location analytics product.
+          profile: *base_profile
+          context:
+            seen_urls: [https://jobs.example.com/shadowtrack/2002]
+        expect:
+          decision: exclude
+          reason_codes: [seen, blocklist]
+          geo_class: home
+
+      - id: title-mismatch-excluded
+        input:
+          job:
+            url: https://jobs.example.com/northfield/3001
+            title: Warehouse Operative
+            company: Northfield Logistics
+            location: Galway, Ireland
+            remote: false
+            offices: []
+            description: Pick, pack and dispatch orders on a rotating shift.
+          profile: *base_profile
+          context: *empty_context
+        expect:
+          decision: exclude
+          reason_codes: [title]
+          geo_class: home
+
+      - id: foreign-location-excluded-with-geo-config
+        input:
+          job:
+            url: https://jobs.example.com/harbor/4001
+            title: Product Manager
+            company: Harbor Freight Software
+            location: Austin, Texas, United States
+            remote: false
+            offices: []
+            description: Own the dispatch planning product for a regional carrier.
+          profile: *base_profile
+          context: *empty_context
+        expect:
+          decision: exclude
+          reason_codes: [geo]
+          geo_class: foreign
+
+      # PITFALLS GEO-1: with no geo config the class is unknown and no geo gate
+      # runs. It never falls back to the example file.
+      - id: no-geo-config-class-unknown
+        input:
+          job:
+            url: https://jobs.example.com/harbor/4002
+            title: Product Manager
+            company: Harbor Freight Software
+            location: Austin, Texas, United States
+            remote: false
+            offices: []
+            description: Own the dispatch planning product for a regional carrier.
+          profile:
+            <<: *base_profile
+            geo: null
+          context: *empty_context
+        expect:
+          decision: admit
+          reason_codes: []
+          geo_class: unknown
+
+      - id: multi-office-one-eligible-admitted
+        input:
+          job:
+            url: https://jobs.example.com/lumen/5001
+            title: Program Manager
+            company: Lumen Grid Energy
+            location: Berlin, Germany
+            remote: false
+            offices: ["Berlin, Germany", "Dublin, Ireland"]
+            description: Coordinate delivery across metering and billing teams.
+          profile: *base_profile
+          context: *empty_context
+        expect:
+          decision: admit
+          reason_codes: [multi_office_partial]
+          geo_class: multi_office_partial
+
+      - id: unknown-location-never-excluded-on-geo
+        input:
+          job:
+            url: https://jobs.example.com/quillsworth/6001
+            title: Product Manager
+            company: Quillsworth Textiles
+            location: Quillsworth Flats
+            remote: false
+            offices: []
+            description: Own the supplier portal for a mid-sized textile maker.
+          profile: *base_profile
+          context: *empty_context
+        expect:
+          decision: admit
+          reason_codes: []
+          geo_class: unknown
+
+      # Skill or industry exclusions come last in the gate order.
+      - id: industry-exclusion-ordered-last
+        input:
+          job:
+            url: https://jobs.example.com/ironvale/7001
+            title: Product Manager
+            company: Ironvale Systems
+            location: Limerick, Ireland
+            remote: false
+            offices: []
+            description: Product management for a defence contracting platform.
+          profile: *base_profile
+          context: *empty_context
+        expect:
+          decision: exclude
+          reason_codes: [industry]
+          geo_class: home
+
+      - id: gate-order-title-geo-industry
+        input:
+          job:
+            url: https://jobs.example.com/ironvale/7002
+            title: Junior Warehouse Analyst
+            company: Ironvale Systems
+            location: Austin, Texas, United States
+            remote: false
+            offices: []
+            description: Analyst role supporting a defence contracting programme.
+          profile: *base_profile
+          context: *empty_context
+        expect:
+          decision: exclude
+          reason_codes: [title, geo, industry]
+          geo_class: foreign
+
+      # rule_version is a provisional literal; the Filter review may rename it.
+      - id: rule-version-stamped
+        input:
+          job:
+            url: https://jobs.example.com/pinewood/8001
+            title: Senior Program Manager
+            company: Pinewood Health Tools
+            location: Dublin, Ireland
+            remote: false
+            offices: []
+            description: Run the delivery programme for a clinic scheduling platform.
+          profile: *base_profile
+          context: *empty_context
+        expect:
+          decision: admit
+          reason_codes: []
+          geo_class: home
+          rule_version: assess/1
