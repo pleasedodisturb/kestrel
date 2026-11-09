@@ -6,467 +6,187 @@
 
 <p align="center">
   <strong>A job search system that runs on your computer.</strong><br>
-  Finds jobs. Scores them. Tracks your pipeline. Your data stays yours.
-</p>
-
-<p align="center">
-  <a href="https://github.com/pleasedodisturb/kestrel/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pleasedodisturb/kestrel/ci.yml?branch=main&style=flat-square&label=build" alt="CI"></a>
-  <a href="https://github.com/pleasedodisturb/kestrel/actions/workflows/smoke.yml"><img src="https://img.shields.io/github/actions/workflow/status/pleasedodisturb/kestrel/smoke.yml?branch=main&style=flat-square&label=smoke%20tests" alt="Smoke Tests"></a>
-  <a href="https://github.com/pleasedodisturb/kestrel/actions/workflows/nightly.yml"><img src="https://img.shields.io/github/actions/workflow/status/pleasedodisturb/kestrel/nightly.yml?branch=main&style=flat-square&label=nightly" alt="Nightly"></a>
-  <a href="https://github.com/pleasedodisturb/kestrel/releases/latest"><img src="https://img.shields.io/github/v/release/pleasedodisturb/kestrel?style=flat-square&label=release&color=22c55e" alt="Latest Release"></a>
-  <a href="https://pypi.org/project/kestrel-app/"><img src="https://img.shields.io/pypi/v/kestrel-app?style=flat-square&label=pypi&color=22c55e" alt="PyPI"></a>
-  <a href="https://github.com/pleasedodisturb/kestrel/issues?q=is%3Aissue+is%3Aopen+label%3Abug"><img src="https://img.shields.io/github/issues-raw/pleasedodisturb/kestrel/bug?style=flat-square&label=open%20bugs&color=e11d48" alt="Open Bugs"></a>
-  <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0 License">
-</p>
-
-<p align="center">
-  <a href="https://codespaces.new/pleasedodisturb/kestrel"><img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces" height="32"></a>
-  &nbsp;&nbsp;
-  <a href="https://railway.com/deploy/loMUk4?referralCode=SVkZXi&utm_medium=integration&utm_source=template&utm_campaign=generic"><img src="https://railway.com/button.svg" alt="Deploy on Railway" height="32"></a>
+  Finds jobs. Scores them against your profile. Tracks your pipeline. Your data stays yours.
 </p>
 
 ---
 
-**[At a glance](#at-a-glance)** · **[See it in action](#from-unemployed-to-multiple-offers)** · **[Install](#install)** · **[Features](#what-it-does)** · **[Privacy](#your-data-stays-yours)** · **[Roadmap](#whats-coming)** · **[Docs](#docs)** · **[AI providers](#add-real-ai-optional)**
+**Status, 2026-11-09.** The current release is [v0.28.2](CHANGELOG.md). Kestrel is being rebuilt as **v2.0 "Lean Kestrel"**: one loop you run from the terminal, instead of a platform that tries to do everything. This page says what works today, what is being built, what is being removed, and what is still only a plan. Nothing here is aspirational unless it sits under a heading that says so.
+
+**[Walkthrough](#walkthrough)** · **[Install](#install)** · **[Status](#status)** · **[AI and privacy](#ai-and-privacy)** · **[Docs](#docs)**
 
 ---
 
-## At a glance
+## What it is
 
-Kestrel scans job boards, scores every posting against your profile with an LLM, and tracks the whole search in a local-first web app (FastAPI backend, React frontend). Numbers first:
+- **Finds jobs** on Indeed, Arbeitnow and Arbeitsagentur (the German federal job board), and takes any posting you paste.
+- **Scores each one** against your profile with an LLM of your choice, or with the built-in mock provider at zero cost. The scorer is measured: a [golden-set eval harness](tests/eval/README.md) runs the production code path in nightly CI and fails the build on a regression.
+- **Tracks the search** in a local SQLite file: applications, statuses, notes, follow-ups, contacts.
 
-| | |
-|---|---|
-| **Tests** | 4,600+ automated tests run in CI: 4,243 backend (pytest), 376 frontend (vitest) |
-| **AI providers** | Ten behind one interface: Anthropic, OpenAI, Mistral, Gemini, Groq, Together, OpenRouter, Ollama, Hugging Face, xAI. Automatic fallback chains, prompt caching, and a guard that stops a dry free tier from silently billing premium models |
-| **Scoring evals** | A [golden-set eval harness](tests/eval/README.md) runs the real production scorer in nightly CI: weighted Cohen's kappa and NDCG@5, gated on deltas against a frozen baseline, zero paid LLM calls |
-| **Privacy** | Your data lives in a local SQLite file. A privacy boundary blocks personal-data features from any provider without a zero-data-retention guarantee; per-provider retention tiers are [documented](docs/reference/AI-PROVIDERS.md) |
-| **Ships as** | [PyPI](https://pypi.org/project/kestrel-app/), npm, Homebrew, Docker, a Railway template, and Codespaces. AGPL-3.0 |
+What it will not do: auto-apply across job boards, scrape a logged-in LinkedIn session, send telemetry, or share anything about you with anyone. Kestrel drafts and tracks. You decide and you send.
 
-### Looking for something more established?
+Looking for something bigger and more established? [career-ops](https://github.com/career-ops-hq/career-ops) solves the same problem as a skill layer for AI coding CLIs, with a large community. Kestrel is a different shape: a running system with its own state, evals and cost guards.
 
-**[career-ops](https://github.com/career-ops-hq/career-ops)** is a bigger, more mature, far more popular take on the same problem — 70k+ stars, 400+ contributors, a release every few days (as of 2026-09-28), and a polished agent-skill workflow that plugs into whichever AI coding CLI you already use. If you want the well-trodden path, start there. It is genuinely good, and it was built independently of this project — we arrived at a lot of the same ideas separately, which is usually a sign the ideas are right.
+## Walkthrough
 
-Kestrel is a different shape, not a competitor:
+Five frames, in the order you would use them. Every block is real output from the code on `main`, run with the mock provider on a fresh database (no API key, no cost). The companies are the built-in sample data plus three made-up entries. A terminal recording will replace these frames once the v2.0 terminal UI exists.
 
-- **A running system, not a skill layer.** FastAPI + React + SQLite, a real state machine, and a web UI you operate — rather than commands driven through an AI assistant.
-- **Measurement as a first-class feature.** A golden-set eval harness in nightly CI, a geo-eligibility engine with a committed 277-item reference set, and a source registry that reports every scan source on every run — so a dead source shows up as `ZERO` instead of vanishing from the report. It warns; it does not fail the run, and catching *degradation* (rather than a hard zero) needs floors you calibrate yourself.
-- **Provider economics taken seriously.** Ten providers behind one interface, fallback chains, and guards that stop an exhausted cheap tier from quietly billing a premium model.
-- **No auto-apply in the app or the extension, by design.** Indeed tried blind auto-apply in July 2026 and pulled it within four weeks; LinkedIn's own Apply Assistant makes you press submit. Kestrel drafts, you send. (Experimental maintainer scripts under `tools/` can submit through an ATS API from a hand-curated list; they are not part of the app, and the T3 lane stops at the submit button.) <!-- DECISION #95: public auto-apply stance --> LinkedIn's under-qualified warning is platform-side fit gating; Kestrel's role-fit gate is the same idea, run by you with your own rubric.
+**1. Start.** The first run creates the database, applies migrations, adds a default profile and ten sample jobs, and serves the local web app.
 
-Things Kestrel will never do: opt-out telemetry with a public dashboard, an hourly auto-updater, blind auto-apply across boards, logged-in-session LinkedIn scraping, or sharing candidate-attributable behavioural signals with anyone.
-
-Pick whichever fits how you work. If you use both, the pieces here that are generic are meant to be portable — issues and PRs in that direction are welcome in either repo.
-
-The scoring pipeline is treated as a measured system, not a prompt that felt right once: the eval harness scores the production code path (never a reimplementation), and a scoring regression fails the nightly build before it ships. How that works, and what is still interim about it, is written up in [tests/eval/README.md](tests/eval/README.md).
-
----
-
-## From unemployed to multiple offers
-
-A job search is chaos. Dozens of tabs. Spreadsheets that go stale. Applications you forget about. Kestrel replaces all of that with a single system that runs on your computer and gets smarter as you use it.
-
-Here's what that looks like in practice:
-
-### 1. Tell Kestrel about yourself (2 minutes)
-
-Answer six questions — name, location, target role, salary range, skills, experience level. That's your profile. Kestrel uses it to score every job it finds against what you actually want.
-
-<p align="center">
-  <img src="docs/images/screenshots/welcome.png" alt="Onboarding: Kestrel asks about your skills in a clean, step-by-step flow" width="720">
-</p>
-
-### 2. Discover jobs automatically
-
-In the app: Indeed, Arbeitnow and Arbeitsagentur (German federal job board, API v6 migration in progress). The maintainer batch pipeline additionally covers LinkedIn, RemoteOK, WeWorkRemotely, Himalayas and direct Greenhouse/Lever/Ashby boards. Every result gets an AI fit score — A+ means "apply today", C means "probably not worth your time". Stop scrolling job boards. Let the jobs come to you.
-
-<p align="center">
-  <img src="docs/images/screenshots/discovery.png" alt="Discovery: search for jobs across multiple boards, every result scored" width="820">
-</p>
-
-### 3. Track your entire pipeline
-
-Every application lives on a Kanban board. Drag cards between stages as you progress — from Discovered to Interested to Applied to Interviewing to Offer. At a glance, you know exactly where everything stands.
-
-<p align="center">
-  <img src="docs/images/screenshots/pipeline.png" alt="Pipeline: Kanban board with 17 applications across all stages from Discovered to Offer" width="820">
-</p>
-
-### 4. Go deep on any application
-
-Click into any application and you get everything: fit score breakdown, salary range, follow-up reminders, full activity log, interview prep materials, and a timeline of every interaction. No more "wait, where did I leave off with Stripe?"
-
-<p align="center">
-  <img src="docs/images/screenshots/application-detail.png" alt="Application detail: Stripe Senior Backend Engineer with offer status, 9.2 fit score, follow-ups, and activity log" width="820">
-</p>
-
-### 5. Never drop the ball
-
-Follow-ups with due dates, organized by urgency. "Respond to Stripe offer." "Call Datadog recruiter about competing offer." "Send thank-you after Vercel final round." Nothing slips through the cracks.
-
-<p align="center">
-  <img src="docs/images/screenshots/follow-ups.png" alt="Follow-ups: 5 upcoming tasks across email, phone, and LinkedIn with due dates" width="820">
-</p>
-
-### 6. See your progress in real numbers
-
-A 41.7% response rate. A conversion funnel showing where applications advance or stall. Time-in-stage metrics so you know if a company is ghosting you or just slow. Data replaces anxiety.
-
-<p align="center">
-  <img src="docs/images/screenshots/analytics.png" alt="Analytics: conversion funnel, 41.7% response rate, time-in-stage charts" width="820">
-</p>
-
-### 7. Know your strengths (and gaps)
-
-Your entire skill inventory, categorized and rated. Technical skills, tools, domain expertise, soft skills — each with a proficiency level from Beginner to Expert. When Kestrel scores a job, it matches against this.
-
-<p align="center">
-  <img src="docs/images/screenshots/skills.png" alt="Skills inventory: 18 skills across technical, tools, domain, and soft categories with proficiency badges" width="820">
-</p>
-
-### 8. Build your network, not a spreadsheet
-
-Every recruiter, referral, mentor, and hiring manager in one place. Warmth indicators (cold/warm/hot), relationship types, referral status, tags. Your network is an asset — treat it like one.
-
-<p align="center">
-  <img src="docs/images/screenshots/contacts.png" alt="Contacts: 6 networking contacts with warmth indicators, relationship types, and company info" width="820">
-</p>
-
-### 9. Prepare for every interview
-
-STAR story library — your best professional moments, tagged by skill. When you apply to a role that needs "system design leadership", Kestrel surfaces the story where you led the migration to microservices. Gap analysis tells you which required skills don't have a story yet, so you can prepare before the behavioral round starts.
-
-### 10. Brainstorm cover letters out loud
-
-Conversation mode (text chat today; speech input is future work) turns your messy thoughts into structured cover letter drafts. Pick an application, start typing about why you want the role, and Kestrel shapes your stream-of-consciousness into something you'd actually send. Three modes: cover letter brainstorming, career coaching Q&A, and job evaluation — all conversational.
-
-### 11. Track referrals from intro to offer
-
-Your contacts aren't just names — they're referral pipelines. Track each one from "contacted" through "CV sent" to "submitted" to "feedback received." Log every interaction. Know exactly who to follow up with and when. The warm intro is often worth more than the perfect resume.
-
-### 12. Connect your tools
-
-TickTick for task sync. Calendar for interview scheduling. Pushover for mobile alerts when new matches arrive or follow-ups are due. AI providers for scoring intelligence. Everything plugs in through Settings.
-
-<p align="center">
-  <img src="docs/images/screenshots/settings.png" alt="Settings: integrations for TickTick, Calendar, Pushover, Voice Mode, and AI Providers" width="820">
-</p>
-
-### The result
-
-You started with an empty pipeline and a vague sense of dread. Six weeks later, you're negotiating between two offers, your follow-ups are on autopilot, and you have data showing exactly which companies are worth your time. That's Kestrel.
-
----
-
-## Your data stays yours
-
-This isn't a slogan — it's the architecture. Kestrel runs on your computer. Your database is a SQLite file in your home directory. Your resume, cover letters, STAR stories, salary expectations, networking notes — none of it touches a server unless you explicitly connect an AI provider.
-
-### Snapshots and recovery
-
-Months of job-search history sit in one SQLite file. Lose it and you've lost the search. Kestrel ships with a rotating-snapshot script so an accidental wipe is recoverable in under a minute:
-
-```bash
-python tools/snapshot_db.py                # daily snapshot, last 7 days retained
-python tools/snapshot_db.py --keep 30      # 30-day window instead
-python tools/snapshot_db.py --dry-run      # preview without writing
+```console
+$ kestrel start --host 127.0.0.1
+$ kestrel doctor
+Kestrel Doctor -- Health Check
+  check Python 3.14.10
+  check Database connected
+  check Migrations applied
+  check Default profile: Kestrel User
+  check Demo data restored (10 jobs)
+  5/5 checks passed
 ```
 
-Snapshots land in `data/snapshots/career_os-YYYY-MM-DD.db`. The script uses SQLite's online backup API, not plain `cp`, so the file is consistent even if the live DB is mid-transaction under WAL.
+**2. Find.** Sweep the job boards for your keywords. This one needs the network, so no output is shown here.
 
-**Wire it into your daily cron** (Linux/macOS):
-
-```cron
-0 3 * * * cd /path/to/kestrel && /path/to/kestrel/.venv/bin/python tools/snapshot_db.py
+```console
+$ kestrel discover --keywords "program manager" --location Berlin
 ```
 
-Or as a macOS launchd plist / systemd timer if you prefer. Recovery is a copy:
+**3. Triage.** Everything found lands in one list, scored, newest first (output trimmed).
 
-```bash
-cp data/snapshots/career_os-2026-05-04.db data/career_os.db
-rm -f data/career_os.db-shm data/career_os.db-wal
-# restart the server
+```console
+$ kestrel pipeline list
+┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┓
+┃ ID ┃ Company                 ┃ Role                        ┃ Status     ┃ Score ┃ Date       ┃
+┡━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━┩
+│ 13 │ Harbor Analytics        │ Product Operations Lead     │ discovered │     — │ 2026-11-09 │
+│ 12 │ Lumen Health            │ Senior Product Manager      │ discovered │     — │ 2026-11-09 │
+│ 11 │ Northwind Robotics      │ Technical Program Manager   │ discovered │     — │ 2026-11-09 │
+│  8 │ Quantum Robotics Ltd    │ Senior Backend Engineer     │ discovered │  88.6 │ 2026-11-08 │
+│  1 │ Vantage Analytics GmbH  │ Senior Data Engineer        │ discovered │  91.2 │ 2026-11-07 │
+│  2 │ NovaPay Solutions       │ Growth Marketing Lead       │ discovered │  72.4 │ 2026-11-06 │
+└────┴─────────────────────────┴─────────────────────────────┴────────────┴───────┴────────────┘
 ```
 
+**4. Track.** Add a posting by hand, move it through the stages, read the numbers. Status changes follow a fixed state machine, so a job cannot jump from discovered to applied without passing through interested (statistics output trimmed).
 
-Even then, you control what goes where:
+```console
+$ kestrel pipeline add --company "Northwind Robotics" --role "Technical Program Manager"
+✓ Added application #11: Northwind Robotics — Technical Program Manager (status: discovered)
+$ kestrel pipeline update 11 --status interested --notes "Strong match on programme scope"
+✓ Updated application #11 (Northwind Robotics): status → interested, notes
+$ kestrel pipeline stats
+Pipeline Statistics
+  Total applications: 13
+  Average fit score:  58.0
+  Date range:         2026-11-02 to 2026-11-09
+```
 
-- **Ollama** — everything stays on your machine. Zero network calls. Free.
-- **Anthropic** — 7-day data retention, shortest in the industry. SOC 2 certified.
-- **Together AI** — one-click Zero Data Retention (ZDR). SOC 2 Type 2. Frankfurt data center for EU users.
-- **OpenRouter** — routes to any model. Privacy depends on the underlying provider.
+**5. Score one posting.** Paste a URL and get the fit score with its reasoning.
 
-Job descriptions are public data — safe to send anywhere. Your personal information (resume, stories, contacts) should only go to providers you trust. Kestrel keeps these separate by design.
+```console
+$ kestrel score https://example.com/jobs/technical-program-manager
+```
 
----
-
-## What it does
-
-| Core | What it does |
-|------|-------------|
-| **Job discovery** | In the app: Indeed, Arbeitnow and Arbeitsagentur (German federal job board, API v6 migration in progress); the maintainer batch pipeline adds LinkedIn, RemoteOK, WeWorkRemotely, Himalayas and direct Greenhouse/Lever/Ashby boards. AI-scores every result against your profile |
-| **Pipeline tracking** | Kanban board from Discovered to Offer — drag applications between stages |
-| **Deep application view** | Fit score, salary range, follow-ups, activity log, interview prep, timeline |
-| **Analytics** | Conversion funnel, response rate, time-in-stage, score distribution |
-| **Follow-up engine** | Due dates, urgency tracking, multiple channels (email, phone, LinkedIn) |
-| **Skills inventory** | Technical, tools, domain, soft skills — proficiency tracking and gap analysis |
-| **Networking CRM** | Contacts with warmth, referral tracking, interaction history, intro pipeline |
-| **Scheduled scans** | Weekly by default in the app; daily via the optional GitHub Actions workflow (`DAILY_SCAN_ENABLED`) so you wake up to scored results |
-
-<!-- DECISION #102: "Conversation mode" is interim naming for the shipped text-chat feature -->
-
-| Also built | What it does |
-|------------|-------------|
-| **STAR story library** | Tag stories by skill, get recommendations per application, gap analysis for missing skills |
-| **Conversation mode** | Cover letter brainstorming, coaching, job evaluation as text chat (speech input is future work) |
-| **Interview prep** | Company research, mock questions, behavioral round preparation |
-| **Learning paths** | Curated learning resources per skill gap |
-| **Calendar sync** | Export interviews and follow-ups to .ics |
-| **Mobile alerts** | Pushover notifications for new matches and due follow-ups |
-| **TickTick sync** | Bidirectional task management |
-| **AI Health Dashboard** | Monitor provider connectivity, quotas, and rate limits |
-| **Market intelligence** | Salary trends, skill trends, hiring patterns and an opportunity radar, computed locally from the jobs you discovered |
-| **Goals and reality map** | Career goals with progress, recalibration and alternatives when the map and the territory disagree |
-| **Company research** | Funding, news, Glassdoor signals and ATS platform detection per company |
-| **Red flags** | Ten rule-based detectors, including WARN Act layoff notices and multi-city blast postings |
-| **Geo-eligibility engine** | Seven classes (home, relocate, visa-free, visa-required, remote-eligible, foreign, unknown) checked against a committed 277-item reference set |
-| **Browser extension (v1, THE EYE)** | Capture a posting on LinkedIn jobs, Greenhouse, Lever or Ashby, see the fit score inline, one click to the pipeline. Chrome, no form filling |
-| **Scoring Engine v2** | Role-fit hard gate, confidence-routed cascade, drift canary, per-provider calibration, relative scoring, ESCO occupation signals, nightly eval gate |
-| **Auto-log with consent** | When you submit on Greenhouse, Lever or Ashby, the extension shows a banner and logs the application only after you confirm |
-
----
-
-## What's coming
-
-Kestrel is under active development. Here's what's next:
-
-| Feature | What it will do |
-|---------|----------------|
-| **Writing style flywheel** | Kestrel learns your voice from your past writing. Cover letters and messages start sounding like *you*, not a template. The more you write, the better it gets. |
-| **One-click tailored CV and cover letter rendering** | Brainstorm mode exists today; this adds one-click rendering of a tailored resume and cover letter for any application, matched to the job description and your STAR stories. Export as PDF. |
-| **Cover letter review** | Paste a draft, get structural and tone feedback. "This paragraph buries the lede." "Your closer is generic — reference the team's recent launch." |
-| **LinkedIn network scanner** | Connect via browser tool and surface mutual connections at target companies. "You have 3 second-degree connections at Stripe — here's who to ask for an intro." |
-| **Intro message drafts** | For each warm contact, Kestrel drafts the ask: referral request, informational interview, or reconnection — in your voice, not a template. |
-| **Extension v2: review-first autofill** | v1 capture + score shipped in 0.24. v2 pre-fills application forms and stops at the submit button; you review, you send. |
-| **Hosted version** | Don't want to run anything? A subscription-hosted Kestrel instance — same features, zero setup. Your data encrypted at rest, deletable on demand. |
-
-Everything above will follow the same principle: **your data, your machine, your choice.** The hosted version will be the only exception — and even there, you'll own your data with full export and delete.
-
-For the full picture — every shipped milestone with deep dives, every planned milestone with open questions, and "Want to help?" callouts pointing to concrete contribution areas — see [ROADMAP.md](ROADMAP.md).
-
----
+`kestrel --help` lists the rest: `coach`, `market`, `research`, `skills`, `goals`, `interview-prep`, `contacts`, `extension`.
 
 ## Install
 
-Six ways in, ranked from "I don't want to think" to "I'll run it myself."
+Requires Python 3.11 or newer. Two paths work today.
 
-| # | Method | Effort | Data persists? | Limitations |
-|---|--------|--------|----------------|-------------|
-| 1 | [Codespaces](#1-try-in-your-browser) | Zero — click a button | No (ephemeral) | 60 free hours/month, sleeps after 30 min idle |
-| 2 | [Railway](#2-deploy-to-railway) | Zero — click a button | Yes | Free tier: 500h/month, 512MB RAM |
-| 3 | [One-liner](#3-one-command-install) | One command | Yes | Needs Python 3.11+ on your machine |
-| 4 | [pip](#4-pip-install) | Two commands | Yes | Needs Python 3.11+ |
-| 5 | [Docker](#5-docker) | Two commands | Yes | Needs Docker installed |
-| 6 | [From source](#contributing) | Clone + setup | Yes | For contributors |
-
-### 1. Try in your browser
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pleasedodisturb/kestrel)
-
-Nothing installed. Nothing configured. Free with a GitHub account — your own instance in 2 minutes. Data resets when the codespace stops.
-
-### 2. Deploy to Railway
-
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/pleasedodisturb/kestrel)
-
-Your own Kestrel instance with a permanent URL. Free tier, no credit card. Data persists across restarts. See [deployment guide](DEPLOY.md#railway) for volume setup.
-
-### 3. One-command install
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/pleasedodisturb/kestrel/main/install.sh | bash
-```
-
-Detects your OS, checks for Python 3.11+, installs Kestrel, opens it in your browser. Also available as `npx kestrel-app` (Node.js) or `brew install pleasedodisturb/kestrel/kestrel` (macOS).
-
-### 4. pip install
-
-```bash
-pip install kestrel-app
-kestrel start
-```
-
-Opens your browser automatically. Data stored in `~/.kestrel/`. Requires Python 3.11+ — [install it here](https://www.python.org/downloads/) if you don't have it (2 minutes).
-
-### 5. Docker
+**From source** (recommended while v2.0 is in progress):
 
 ```bash
 git clone https://github.com/pleasedodisturb/kestrel.git && cd kestrel
-bash setup.sh
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .
+kestrel start --host 127.0.0.1
 ```
 
-Fully isolated — nothing touches your system Python. Requires [OrbStack](https://orbstack.dev) (Mac, recommended) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac/Windows).
+**From PyPI:**
 
-**Lost?** [Step-by-step guide](docs/guides/QUICKSTART.md) or [FAQ](docs/guides/FAQ.md).
+```bash
+pip install kestrel-app
+kestrel start --host 127.0.0.1
+```
 
----
+The PyPI package gives you the same CLI. Its bundled web interface is an older build than the one in this repository.
+
+Two things to know before the first run:
+
+- Run `kestrel start` once before any other command. It is the step that creates and migrates the database; the other commands do not do that yet.
+- Pass `--host 127.0.0.1`. Without it the server listens on every network interface, and authentication is off unless you set `AUTH_ENABLED=true` and `AUTH_API_KEY`.
+
+Step-by-step help: [Quickstart](docs/guides/QUICKSTART.md) and [FAQ](docs/guides/FAQ.md).
+
+## Status
+
+### Works today
+
+| Area | What you get |
+|------|--------------|
+| Discovery | Three sources in the app (Indeed, Arbeitnow, Arbeitsagentur), a pre-filter that drops clear mismatches before any paid call, weekly scheduled sweeps |
+| Scoring | Role-fit gate, batch scoring, calibration, ESCO occupation signals, a nightly eval gate on the production scorer ([how scoring works](docs/guides/how-scoring-works.md)) |
+| Geo eligibility | Seven classes (home, relocate, visa-free, visa-required, remote-eligible, foreign, unknown) checked against a committed reference set ([guide](docs/guides/geo-eligibility.md)) |
+| Pipeline | Applications with an enforced status state machine, notes, follow-ups, statistics, contacts and referrals |
+| CLI | Every command in the walkthrough, plus skills and gap analysis, goals, interview prep, company research, market summary |
+| AI providers | Ten behind one interface (Anthropic, OpenAI, Mistral, Gemini, Groq, Together, OpenRouter, Ollama, Hugging Face, xAI) plus the mock provider, with fallback chains, cost presets and response caching |
+| Browser extension | Chrome, version 1: capture a posting on LinkedIn jobs, Greenhouse, Lever or Ashby, see the fit score, send it to the pipeline. No form filling |
+| Web app | FastAPI and React, served by `kestrel start`. It works and it is frozen: v2.0 does not build on it |
+
+### In progress: v2.0 Lean Kestrel
+
+The goal is one loop a real person can run: find and triage jobs, write in your own voice, learn from every outcome. The maintainer moves his own daily search onto it, and a technical stranger should get from clone to a first useful job list in 15 minutes.
+
+| Phase | What it does | Progress |
+|-------|--------------|----------|
+| Map | Freeze today's behaviour as evidence before anything is ported or cut: script ledger, golden outputs, red tests for every later behaviour, a verdict for every flow and feature | 4 of 6 plans done |
+| Foundation | Safety nets first: CI that fails closed, one home folder, loopback bind by default, no identifying profile fields in cloud scoring prompts, a spend limit no caller can bypass | Planned |
+| Cut A | Remove what nothing depends on, one pull request per item | Planned |
+| Find, Filter, Scan, Score, Track, Write, Connect, Apply, Retire, Install | The loop itself, built in this order, each phase reviewed before it starts | Not yet planned in detail |
+
+**Being removed in Cut A:** the one-click cloud deploy template, the browser-IDE demo environment, TickTick sync, the side packages `worker/` and `dashboard/`, and release channels nobody uses. The web app stays in the repository but is no longer built, tested or shipped.
+
+### Want to do
+
+- A terminal UI for the whole loop: single-key status changes, open the posting, read the scoring report.
+- **Learns you.** A model of your voice and of you as a person, built from your own writing and from what you keep, rewrite or throw away. It then shapes scoring explanations, drafts and interview prep.
+- Writing help in your voice: CV, cover letters, outreach.
+- Extension version 2: fill application forms for review and stop at the submit button. A Firefox build.
+- `kestrel demo`: the whole loop on synthetic data with no keys, and a terminal recording of it on this page.
+- A path for people who do not use a terminal, and profiles other than the maintainer's (planned for v2.1).
+
+### Should do
+
+Known gaps in what ships today. Each one has a place in the v2.0 plan.
+
+- The CLI cannot set up a fresh install by itself. Only `kestrel start` applies migrations, and `kestrel init --skip` refuses to run without an interactive terminal.
+- `kestrel start` listens on all interfaces with authentication off by default.
+- The scoring prompt includes your profile name and email next to your skills and goals. Score with Ollama or Anthropic if that matters to you (see below).
+- The PyPI package ships an older web interface build than the repository.
+- Discovery through JobSpy is fixed to Indeed and Germany.
+
+The longer view, with every shipped milestone, is in [ROADMAP.md](ROADMAP.md). It predates the v2.0 decision.
+
+## AI and privacy
+
+Kestrel runs out of the box with the mock provider: free, offline, no account. For real scoring you bring your own key. Set `AI_PROVIDER` and the matching key in `.env`; a cost preset (Free, Budget, Quality, Private, Custom) picks the model, the pre-filter strictness and the batch size in one setting.
+
+- **Cost.** The Budget preset scores a month of discovery for under a dollar. If you chain providers with `AI_PROVIDER_FALLBACK`, order them cheap first: whatever sits last is what you pay when the cheaper ones run out of quota. Details and worked numbers: [cost guide](docs/guides/cost-optimization.md).
+- **Where your data lives.** In one SQLite file on your machine. Nothing leaves it unless you configure an AI provider or an integration.
+- **What is enforced.** The two features the code classes as personal, conversation mode and interview prep, refuse to run on any provider outside the allowlist in `src/career_os/ai/privacy.py` (Ollama and Anthropic, plus the mock providers). Everything else, scoring included, is classed as job-market data and runs on any provider. The check goes by provider name; it does not verify the retention settings of your own account.
+- **Choosing.** Ollama keeps everything local. OpenRouter gives one account for many models. Per-provider retention and pricing: [AI providers](docs/reference/AI-PROVIDERS.md) and the [plain-language guide](docs/guides/ai-providers-guide.md).
 
 ## Docs
 
-**Getting started:**
-
-| Guide | What you'll learn |
-|-------|-------------------|
-| [Quickstart](docs/guides/QUICKSTART.md) | First-time setup, step by step — zero assumptions |
-| [FAQ](docs/guides/FAQ.md) | "Can I...?" "What if...?" "Why does...?" — all answered |
-| [Help](docs/guides/HELP.md) | Something broke? Start here. We'll fix it together. |
-
-**Understanding AI in Kestrel:**
-
-| Guide | What you'll learn |
-|-------|-------------------|
-| [How Kestrel Uses AI](docs/guides/ai-providers-guide.md) | The electricity analogy — what AI providers are, what they cost, and which to pick |
-| [AI Costs and Privacy](docs/guides/cost-optimization.md) | What it costs, the tiers, the optimizations — and how to order your provider fallback so a dry-quota day doesn't bill premium |
-| [AI Provider Setup](docs/reference/AI-PROVIDERS.md) | Technical details — API keys, privacy policies, provider comparison tables |
-| [LLM Landscape Research](docs/research/llms-tokens-privacy.md) | Deep dive — 2026 pricing, privacy audits, GDPR, EU sovereignty (for the curious) |
-
-**How it works under the hood:**
-
-| Guide | What you'll learn |
-|-------|-------------------|
-| [How Scoring Works](docs/guides/how-scoring-works.md) | What "fit score" actually means, and how Kestrel decides which jobs match you |
-| [Scoring eval harness](tests/eval/README.md) | Why the eval scores the production path, what kappa and NDCG@5 gate, and where the human-label step stands |
-| [How Testing Works](docs/guides/how-testing-works.md) | How the 4,600-test suite is layered: the kitchen analogy for quality assurance |
-
-**Going deeper:**
-
-| Guide | What you'll learn |
-|-------|-------------------|
-| [Comparison](docs/guides/COMPARISON.md) | How Kestrel stacks up against Huntr, Teal, Simplify, and others |
-| [Features & API Reference](docs/reference/REFERENCE.md) | Full feature list, architecture, CLI, and API endpoints |
-| [Deployment](DEPLOY.md) | Host Kestrel on Railway, Fly.io, or your own VPS |
-| [Contributing](CONTRIBUTING.md) | Development setup and pull request guidelines |
-
----
-
-## Add real AI (optional)
-
-Kestrel works out of the box in Demo Mode — free, offline, no account needed. When you're ready for real AI-powered scoring, you have options. Think of AI providers like electricity companies: the light switch works the same no matter who supplies the power.
-
-| Option | Cost | Privacy | Speed | Best for |
-|--------|------|---------|-------|----------|
-| **Demo Mode** | Free | Perfect | Instant | Exploring before committing |
-| **OpenRouter (free tier)** | **$0/mo** | Good | Varies | Start here — Llama 3.3 70B scores jobs for free |
-| **OpenRouter (paid models)** | $1-30+/mo | Good | Varies | Premium models (Claude, GPT). Cost depends on model and volume — see note below |
-| **Anthropic (Claude)** | $1-10/mo | Excellent | ~200ms | Best quality + prompt caching savings. Can spike if scoring high volumes without caching |
-| **Together AI** | ~$1-5/mo | Good ([ZDR available](https://www.together.ai/blog/soc-2-compliance)) | ~213ms | Budget-friendly bulk scoring |
-| **Ollama** | Free | Perfect | Depends on hardware | No AI request ever leaves your machine |
-
-> **Cost depends on model and volume.** A typical daily scan scrapes 1,000-1,500 jobs from multiple boards. That's a lot of AI calls. Here's what it actually costs:
->
-> | Model | Cost per job | 1,500 jobs/day | Monthly (30 days) |
-> |---|---|---|---|
-> | Llama 3.3 70B (OpenRouter free) | $0 | $0 | **$0** |
-> | Llama 3.1 8B (Together AI) | $0.0002 | $0.30 | **$9** |
-> | GPT-4o-mini (OpenRouter) | $0.0006 | $0.90 | **$27** |
-> | Llama 3.3 70B (Together AI) | $0.002 | $3.00 | **$90** |
-> | Claude Sonnet (OpenRouter) | $0.02 | $30.00 | **$900** |
->
-> Kestrel defaults to free-tier models for bulk scanning. Premium models like Claude Sonnet are best reserved for deep analysis of shortlisted roles, not bulk filtering. The optimizations below help keep costs in check regardless of which model you use.
->
-> **Order your fallback chain cheap-first.** If you chain providers (`AI_PROVIDER_FALLBACK`), whatever sits at the *end* is what you pay when the cheaper ones run out of quota. Put free/cheap models first and premium last — otherwise a busy or exhausted-quota day can bill an entire scan at premium rates (that $900 row, not the $0 one), often 20-50× the norm. [The rule + a worked example →](docs/guides/cost-optimization.md#fallback-chain-ordering-avoids-surprise-bills)
-
-**Quickest path:** Go to Settings → click "Connect to OpenRouter" → log in → done. No API keys to copy. Free-tier models like Llama 3.3 70B handle job scoring at zero cost — add $10 of credits to unlock 1,000 requests/day.
-
-### How Kestrel keeps costs low
-
-AI APIs charge per token (roughly per word). Scoring 50 jobs a day could get expensive — unless you're smart about it. Kestrel stacks eight optimizations that compound:
-
-| What Kestrel does | How it helps | Savings |
-|-------------------|-------------|---------|
-| **Prompt caching** | Your profile is sent once, then "remembered" by the API. Scoring 50 jobs doesn't resend your CV 50 times. | [92% on repeat calls](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) |
-| **Compressed prompts** | Scoring instructions use telegraphic notation — same info, fewer words. The AI reads shorthand just fine. | 29% on system prompts |
-| **Compact serialization** | Your profile is sent without pretty-printing whitespace. `{"name":"Jane"}` instead of `{ "name": "Jane" }`. | 23% on profile data |
-| **Response caching** | Asked the same question twice? Kestrel serves it from local encrypted cache. Zero API calls. | 100% (free) |
-| **Token-efficient tool use** | When Kestrel calls AI tools, it uses a compact format that cuts output size. | [70% off output tokens](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/token-efficient-tool-use) |
-| **Cascade routing** | When enabled (`CASCADE_ROUTING_ENABLED`, shadow-first, off by default), confident rejects skip the LLM entirely. No per-task model switching yet. | Zero tokens on skipped jobs |
-| **Batch scoring** | Scoring a big backlog overnight? Batch APIs give a flat 50% discount for non-urgent work. | [50% off everything](https://docs.anthropic.com/en/api/creating-message-batches) |
-| **Provider fallback** | If one provider's quota runs out, Kestrel automatically tries the next one. No failed scores, no wasted retries. **Order matters:** cheap-first, premium-last (see note above). | Resilience — and cost, ordered right |
-
-**Benchmarked on a real profile + real job posting:** Naive approach = ≈$16/month. With all optimizations = **≈$1-5/month** for the same results. [How it works →](docs/guides/how-token-optimization-works.md)
-
-For scale: a prompt-framework run can cost $14 (career-ops discussion #3014, and its own README says one evaluation loads ~26K tokens of instructions); Kestrel's Budget preset scores a month of discovery for under a dollar.
-
-<details>
-<summary>Benchmark: 50-job scoring batch, same user</summary>
-
-```
-System prompt:  sent 50× full price  →  1× full + 49× cached (92% saved)
-Profile data:   sent 50× with indent →  1× compact + 49× cached (92% saved)
-Job description: 50× unique (no savings — this is the irreducible cost)
-
-Single call:  877 tokens (old) → 512 tokens (new, Anthropic cached) = 42% reduction
-50-job batch: 43,862 tokens (old) → 25,846 tokens (new) = 41% reduction
-Monthly (200 jobs/day): $15.79 → $9.45 input tokens only
-```
-
-The job description is ~60% of each call and can't be cached (it's different every time). The 92% savings apply to the other 40% — like speeding up the highway portion of your commute.
-
-</details>
-
-### Choosing a provider
-
-**Don't want to think about it?** Use OpenRouter. It's the universal adapter — one account gives you Claude, GPT, Gemini, and open-source models. You can always switch later.
-
-**Care about privacy?** Anthropic has [7-day data retention](https://docs.anthropic.com/en/docs/about-claude/pricing) (shortest in industry). Together AI has a [one-click ZDR toggle](https://www.together.ai/blog/soc-2-compliance) (SOC 2 Type 2 certified). Ollama keeps everything on your machine.
-
-**On a tight budget?** Together AI runs open-source models (Llama 3.3, Mixtral) on their own GPUs — no middleman markup. If you're in Europe, their **Frankfurt data center** means lower latency too. Great for bulk scoring where you don't need Claude-level intelligence.
-
-**Want the best of everything?** Kestrel can use multiple providers at once — route simple scoring to Together (cheap), complex analysis to Anthropic (quality), and never worry about which is which.
-
-**Want to understand more?** Read [How Kestrel Uses AI](docs/guides/ai-providers-guide.md) — it explains everything in plain English, no jargon. For the full technical comparison with pricing tables and privacy audits, see the [AI Provider Setup](docs/reference/AI-PROVIDERS.md) guide or the [LLM landscape research](docs/research/llms-tokens-privacy.md).
-
-### Privacy and free/cheap models
-
-Free and cheap AI models often train on your data or have weaker privacy guarantees. That's fine for some tasks and dangerous for others. Kestrel distinguishes between the two:
-
-**Safe to send without ZDR** (generic, non-identifying):
-- Job descriptions (public postings)
-- Career preferences (target roles, salary range, location)
-- Scoring criteria and rubrics
-
-**Personal** (identifying you; gated in the features named below):
-- Your name, email, phone number, or address
-- CV/resume content and work history
-- Cover letters and application materials
-- Interview preparation with personal STAR stories
-- Contact details and networking notes
-
-**What is enforced today:** the two AI features the code classifies as personal, conversation mode (cover letter, coaching, job evaluation) and interview prep, call `check_privacy_boundary` and refuse to run on a provider outside the allowlist in `src/career_os/ai/privacy.py` (Ollama, Anthropic, plus the mock and demo providers used for testing). Every other AI-backed feature (scoring, company research, goal recalibration, role intelligence, extension capture) is classed as job-market data in that file's `FEATURE_SENSITIVITY` map and is not gated, so it runs on any provider. One caveat as of 2026-09-28: the scoring prompt includes your profile name and email next to your skills and goals (`_gather_profile_data` in `src/career_os/services/scoring.py`), so if that matters to you, score with an allowlisted provider until scoring is either gated or masked. The check is by provider name: Anthropic is allowlisted on the strength of its published retention policy, not by verifying your account's ZDR arrangement, so confirm that on your own account if it matters to you. OpenRouter with ZDR routing is not yet whitelisted. This section is about AI providers only; the optional integrations (TickTick, calendar export, Pushover) send what you configure them to send. <!-- G-1449 (fail-closed PII CI gate, prod-default CORS/auth) hardens the same boundary; keep the two consistent -->
-
-**Rule of thumb:** If it's about the job market, cheap models are fine (mind the scoring caveat above). If it's about *you*, use Ollama (local) or Anthropic, the two real providers on the allowlist today. A provider with ZDR enabled elsewhere (Together's toggle, OpenRouter ZDR routing) is a good choice for scoring, but personal-data features will refuse it until it is added to the allowlist in `src/career_os/ai/privacy.py`.
-
----
-
-## How we build
-
-**Human-first, data-driven.** Every infrastructure decision — testing, CI/CD, scoring — is backed by deep research. We investigate thoroughly, then choose the sanest path: not the most sophisticated, but the most sustainable.
-
-Our proof is in the research artifacts. Before building anything, we run parallel research agents, synthesize findings, and publish the decision rationale so anyone can understand *why* things work the way they do.
-
-| Topic | For users | For developers | Raw research |
-|-------|-----------|---------------|--------------|
-| **Scoring** | [How Scoring Works](docs/guides/how-scoring-works.md) | [Scoring Strategy](docs/research/scoring-research.md) | [Raw Findings](docs/research/scoring-raw-research.md) |
-| **Testing** | [How Testing Works](docs/guides/how-testing-works.md) | [Testing Strategy](docs/research/testing-research.md) | [Raw Findings](docs/research/testing-raw-research.md) |
-| **CI/CD** | [How CI/CD Works](docs/guides/how-cicd-works.md) | [CI/CD Strategy](docs/research/cicd-research.md) | [Raw Findings](docs/research/cicd-raw-research.md) |
-| **Observability** | [How Observability Works](docs/guides/how-observability-works.md) | [Observability Strategy](docs/research/observability-research.md) | [Setup Guide](docs/reference/observability-setup.md) |
-| **Token Optimization** | [How Token Optimization Works](docs/guides/how-token-optimization-works.md) | [Strategy & Implementation](docs/research/token-optimization-research.md) | [Raw Findings](docs/research/token-optimization-raw-research.md) |
-| **[LLM Research Corpus](https://github.com/pleasedodisturb/awesome-llm-token-optimization)** | [Quick Wins](https://github.com/pleasedodisturb/awesome-llm-token-optimization#quick-wins) | [Tools & Strategies](https://github.com/pleasedodisturb/awesome-llm-token-optimization#contents) | [52 Papers + Sources](https://github.com/pleasedodisturb/awesome-llm-token-optimization/tree/main/research) |
+| Start here | Go deeper |
+|------------|-----------|
+| [Quickstart](docs/guides/QUICKSTART.md) | [Features and API reference](docs/reference/REFERENCE.md) |
+| [FAQ](docs/guides/FAQ.md) | [How scoring works](docs/guides/how-scoring-works.md) and the [eval harness](tests/eval/README.md) |
+| [Comparison with other tools](docs/guides/COMPARISON.md) | [Cost optimisation](docs/guides/cost-optimization.md) |
+| [Contributing](CONTRIBUTING.md) | [Security policy](SECURITY.md) and [changelog](CHANGELOG.md) |
 
 ## License
 
-[AGPL-3.0](LICENSE) — free and open source. If you modify Kestrel and offer it as a service, you must share your changes under the same license.
+[AGPL-3.0](LICENSE). Free and open source. If you modify Kestrel and offer it as a service, you must share your changes under the same license.
 
-### Data sources
-
-- **ESCO** (European Skills, Competences, Qualifications and Occupations) — the bundled skills and occupations taxonomies are © European Union, [esco.ec.europa.eu](https://esco.ec.europa.eu), reused under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) per Commission Decision 2011/833/EU. Kestrel ships processed, English-only subsets; changes are described in each fixture's metadata.
+**Data sources.** ESCO (European Skills, Competences, Qualifications and Occupations): the bundled skills and occupations taxonomies are © European Union, [esco.ec.europa.eu](https://esco.ec.europa.eu), reused under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) per Commission Decision 2011/833/EU. Kestrel ships processed, English-only subsets; changes are described in each fixture's metadata.
