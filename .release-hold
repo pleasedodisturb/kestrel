@@ -1,0 +1,12 @@
+Releases from main are on hold.
+
+While this file exists, the Release Please workflow skips: it opens no
+release pull request and cuts no release. Main is a development branch
+until v2.0 is ready; the next release is 2.0.0.
+
+The Install phase of the v2.0 milestone deletes this file in the same
+commit that sets Release-As 2.0.0, so the first 2.0.0 release run is the
+proof that the hold lifted.
+
+Guard: .github/workflows/release-please.yml (step id "hold").
+Test: tests/test_release_hold.py.
