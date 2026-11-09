@@ -77,6 +77,44 @@ def test_the_copy_really_shows_a_registration_that_runs(tmp_path):
     assert "private_scoring" in S.load_manifest(copy_dir / "MANIFEST.json")["classes"]
 
 
+_PRIVATE_ONLY = [
+    ("dry-run", ["--dry-run"]),
+    ("file", ["--file", "unused.jsonl"]),
+    ("private-commit", ["--private-commit", _SHA]),
+    ("gates", ["--gates", "fact"]),
+    ("producer-row", ["--producer-row", "P-01"]),
+    ("ledger", ["--ledger", "unused.yaml"]),
+]
+_OTHER_OPERATIONS = [
+    ("register-awaiting", ["--register-awaiting"]),
+    ("check", ["--check"]),
+    ("regenerate", ["--all"]),
+]
+
+
+@pytest.mark.parametrize(
+    "operation", [o[1] for o in _OTHER_OPERATIONS], ids=[o[0] for o in _OTHER_OPERATIONS]
+)
+@pytest.mark.parametrize("option", [o[1] for o in _PRIVATE_ONLY], ids=[o[0] for o in _PRIVATE_ONLY])
+def test_an_option_of_private_registration_is_refused_on_every_other_operation(
+    tmp_path, capsys, operation, option
+):
+    """Review round 3: ``--register-awaiting --dry-run`` wrote the MANIFEST.
+
+    The options that belong to ``--register-private`` were only checked after the other
+    registration had already run, so a requested dry run mutated the file.
+    """
+    copy_dir = _copy_missing_one_awaiting_entry(tmp_path)
+    before = _snapshot(copy_dir)
+
+    with pytest.raises(SystemExit) as refused:
+        generate_golden.main([*operation, *option, "--golden-dir", str(copy_dir)])
+
+    assert refused.value.code == 2
+    assert "belong to --register-private" in capsys.readouterr().err
+    assert _snapshot(copy_dir) == before
+
+
 def test_check_still_accepts_the_class_selectors(tmp_path):
     """``--check --all`` is the documented spelling; it stays one operation and writes nothing."""
     copy_dir = _copy_golden(tmp_path)
