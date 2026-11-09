@@ -4,12 +4,12 @@ milestone: v2.0
 milestone_name: (Lean Kestrel)
 current_phase: 11
 current_phase_name: Map
-status: ready to plan
+status: executing
 stopped_at: roadmap for Phases 11-13 written; next /gsd-plan-phase 11 (2026-10-26)
-last_updated: "2026-11-05T16:15:16.289Z"
-last_activity: 2026-10-26
-last_activity_desc: v2.0 roadmap written for Phases 11-13 (Map, Foundation, Cut A)
-state_head: dece6b1ac4e56089d50dad617d0c08a6f5a9e7da
+last_updated: "2026-11-09T15:15:05.813Z"
+last_activity: 2026-11-09
+last_activity_desc: Phase 11 execution started
+state_head: 8d5756472950391facd55907f012c847dc3d2025
 progress:
   total_phases: 3
   completed_phases: 0
@@ -25,14 +25,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-21)
 
 **Core value:** Make Kestrel's direction visible and structured so users can evaluate the product, contributors can pick meaningful work, and development stays coherent across sessions and milestones.
-**Current focus:** v2.0 Lean Kestrel, Phase 11 Map (ready to plan)
+**Current focus:** Phase 11 — Map
 
 ## Current Position
 
-Phase: 11 (Map) — READY TO EXECUTE
-Plan: —
-Status: Ready to plan (`/gsd-plan-phase 11`)
-Last activity: 2026-10-26 — v2.0 roadmap written for Phases 11-13 (Map, Foundation, Cut A)
+Phase: 11 (Map) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 11
+Last activity: 2026-11-09 — Phase 11 execution started
 
 ## Performance Metrics
 
