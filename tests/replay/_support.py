@@ -23,6 +23,7 @@ import contextlib
 import functools
 import hashlib
 import json
+import math
 import os
 import platform
 import re
@@ -587,7 +588,7 @@ def gate_verdict_problems(path: Path, drafts_path: Path, gates: str = "fact,voic
         if not line.strip():
             continue
         try:
-            record = json.loads(line)
+            record = _strict_json(line)
         except ValueError:
             problems.append(f"line {number}: not valid JSON")
             continue
@@ -691,7 +692,23 @@ _FLAG_FIELDS = ("dream_tier", "blocked", "soft_flag", "floored")
 
 
 def _is_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    """A JSON number: an int, or a float that is finite (NaN and the infinities are not JSON)."""
+    if isinstance(value, bool):
+        return False
+    return isinstance(value, int) or (isinstance(value, float) and math.isfinite(value))
+
+
+def _strict_json(line: str) -> Any:
+    """``json.loads`` without Python's extensions: NaN, Infinity and -Infinity are refused.
+
+    A golden holding one of them is not JSON and a strict reader cannot load it. The
+    refusal is a ValueError, which both callers already report as "not valid JSON".
+    """
+
+    def refuse(_token: str) -> Any:
+        raise ValueError("non-finite number constant")
+
+    return json.loads(line, parse_constant=refuse)
 
 
 def _is_int(value: Any) -> bool:
@@ -1104,7 +1121,7 @@ def private_golden_problems(path: Path, cls: str) -> list[str]:
         if not line.strip():
             continue
         try:
-            record = json.loads(line)
+            record = _strict_json(line)
         except ValueError:
             problems.append(f"line {number}: not valid JSON")
             continue
