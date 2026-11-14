@@ -48,11 +48,16 @@ CSV with the exact header ``COUNTS_HEADER``. ``month`` is one of ``WINDOW_MONTHS
 family); every count is a non-negative integer; ``(source, month)`` is unique. An absent
 row means not recorded and ``0`` means a recorded zero. The funnel need not be monotone
 (applications also arrive by hand), so no ordering between stages is asserted.
-Definitions: ``arrived`` is postings fetched that month before any filter;
-``survived_prefilter`` is arrivals that passed the deterministic prefilter; ``scored``
-is arrivals that received a fit score; ``shortlisted`` is scored arrivals at or above
-that day's digest threshold; ``applied`` is applications submitted that month whose job
-came from that source (assumption A5).
+Definitions: ``scan_days`` is the number of days in that month with a recorded scan, the
+same on every row of the month, from 1 to the month's calendar length; ``arrived`` is
+postings fetched on those days before any filter, a posting seen on several days counted
+once per day; ``survived_prefilter`` is arrivals that passed the deterministic prefilter;
+``scored`` is arrivals that received a fit score; ``shortlisted`` is scored arrivals with
+a fit score of 7 or more out of 10; ``applied`` is applications submitted that month
+whose job came from that source (assumption A5).
+Reading the counts: a row covers its ``scan_days`` only, never the whole month, and the
+prefilter rules changed inside the window, so rows of different months are not
+comparable. The counts say what was recorded; they rank nothing.
 
 Private ledger rows contract (MAP-01, decision D-05)
 ----------------------------------------------------
@@ -103,6 +108,7 @@ could not be read to the end can never pass.
 from __future__ import annotations
 
 import argparse
+import calendar
 import csv
 import functools
 import io
@@ -180,6 +186,7 @@ MAX_LINE_CHARS = 2000
 COUNTS_HEADER = (
     "source",
     "month",
+    "scan_days",
     "arrived",
     "survived_prefilter",
     "scored",
@@ -653,6 +660,28 @@ def verdict_problems(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def _scan_days_problems(
+    index: int, month: str, value: str, month_days: dict[str, tuple[int, str]]
+) -> list[str]:
+    """Check one row's ``scan_days`` against the calendar and the month's other rows.
+
+    Nothing is derived from a month outside the window or from a cell that is not a
+    number: those rows already carry their own problem. ``month_days`` remembers the
+    first row of each month and its value.
+    """
+    if month not in WINDOW_MONTHS or not re.fullmatch(r"\d+", value):
+        return []
+    year, number = (int(part) for part in month.split("-"))
+    longest = calendar.monthrange(year, number)[1]
+    problems = []
+    if not 1 <= int(value) <= longest:
+        problems.append(f"row {index}: scan_days must be between 1 and {longest}")
+    first, first_value = month_days.setdefault(month, (index, value))
+    if int(first_value) != int(value):
+        problems.append(f"row {index}: scan_days differs from row {first} for the same month")
+    return problems
+
+
 @_fail_closed
 def counts_problems(text: str) -> list[str]:
     """Return every problem in the arrival-counts CSV (empty means it may cross)."""
@@ -676,6 +705,7 @@ def counts_problems(text: str) -> list[str]:
     if not body:
         return [*problems, "counts file has no rows"]
     seen: dict[tuple[str, str], int] = {}
+    month_days: dict[str, tuple[int, str]] = {}
     for index, cells in enumerate(body, start=1):
         if len(cells) != len(COUNTS_HEADER):
             problems.append(f"row {index}: expected {len(COUNTS_HEADER)} cells, got {len(cells)}")
@@ -688,6 +718,7 @@ def counts_problems(text: str) -> list[str]:
         for name, value in zip(COUNTS_HEADER[2:], numbers, strict=True):
             if not re.fullmatch(r"\d+", value):
                 problems.append(f"row {index}: {name} is not a non-negative integer")
+        problems.extend(_scan_days_problems(index, month, numbers[0], month_days))
         first = seen.setdefault((source, month), index)
         if first != index:
             problems.append(f"row {index}: duplicate (source, month) of row {first}")

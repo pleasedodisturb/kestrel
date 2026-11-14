@@ -210,7 +210,11 @@ _MALFORMED: list[Case] = [
         "oversized-field",
         lambda s: _counts_text() + s + _OVERSIZED + ",2026-08,1,1,1,1,1,1\n",
     ),
-    ("counts", "bare-carriage-return", lambda s: _counts_text() + f"man\r{s},2026-08,1,1,1,1,1,1\n"),
+    (
+        "counts",
+        "bare-carriage-return",
+        lambda s: _counts_text() + f"man\r{s},2026-08,1,1,1,1,1,1\n",
+    ),
     ("private-rows", "impossible-date", lambda s: _ledger() + f"when: 2001-99-99\nnotes: {s}\n"),
     (
         "private-rows",
