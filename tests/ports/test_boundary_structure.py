@@ -178,13 +178,13 @@ _ALREADY_CLOSED: list[Case] = [
     ),
     ("verdicts", "second-table", lambda s: _verdict_doc() + "\n" + _table([[s] * 9]) + "\n"),
     ("counts", "comment-line", lambda s: _counts_text() + f"# {s}\n"),
-    ("counts", "comment-line-of-row-width", lambda s: _counts_text() + f"# {s},,,,,,\n"),
-    ("counts", "row-after-a-blank-line", lambda s: _counts_text() + f"\n{s},2026-08,1,1,1,1,1\n"),
+    ("counts", "comment-line-of-row-width", lambda s: _counts_text() + f"# {s},,,,,,,\n"),
+    ("counts", "row-after-a-blank-line", lambda s: _counts_text() + f"\n{s},2026-08,1,1,1,1,1,1\n"),
     ("counts", "rows-after-two-blank-lines", lambda s: _counts_text() + f"\n\n{s}\n"),
     (
         "counts",
         "quoted-cell-over-two-lines",
-        lambda s: _counts_text() + f'"manual\n{s}",2026-08,1,1,1,1,1\n',
+        lambda s: _counts_text() + f'"manual\n{s}",2026-08,1,1,1,1,1,1\n',
     ),
     ("counts", "text-before-the-header", lambda s: f"{s}\n" + _counts_text()),
     ("private-rows", "second-document", lambda s: _ledger() + f"---\nnotes: {s}\n"),
@@ -208,9 +208,9 @@ _MALFORMED: list[Case] = [
     (
         "counts",
         "oversized-field",
-        lambda s: _counts_text() + s + _OVERSIZED + ",2026-08,1,1,1,1,1\n",
+        lambda s: _counts_text() + s + _OVERSIZED + ",2026-08,1,1,1,1,1,1\n",
     ),
-    ("counts", "bare-carriage-return", lambda s: _counts_text() + f"man\r{s},2026-08,1,1,1,1,1\n"),
+    ("counts", "bare-carriage-return", lambda s: _counts_text() + f"man\r{s},2026-08,1,1,1,1,1,1\n"),
     ("private-rows", "impossible-date", lambda s: _ledger() + f"when: 2001-99-99\nnotes: {s}\n"),
     (
         "private-rows",
@@ -393,8 +393,8 @@ def test_lines_outside_the_verdict_structure_are_counted_by_position():
 
 
 def test_malformed_input_problems_name_the_position_and_the_rule():
-    oversized = _counts_text() + _OVERSIZED + ",2026-08,1,1,1,1,1\n"
-    carriage = _counts_text() + "man\rual,2026-08,1,1,1,1,1\n"
+    oversized = _counts_text() + _OVERSIZED + ",2026-08,1,1,1,1,1,1\n"
+    carriage = _counts_text() + "man\rual,2026-08,1,1,1,1,1,1\n"
 
     # An over-long line is rejected by position before the CSV reader is reached.
     assert counts_problems(oversized) == [
@@ -455,7 +455,7 @@ def test_the_real_cli_exits_one_without_a_traceback_on_an_oversized_field(tmp_pa
     # A quoted field over the CSV limit, spread over short lines so the line cap is not what
     # rejects it: this is the input that still reaches the CSV reader and raises there.
     filler = ("\n" + ";" * 1000) * (_CSV_FIELD_LIMIT // 1000 + 2)
-    export.write_text(f'{header}\n"{sentinel}{filler}",2026-06,1,1,1,1,1\n', encoding="utf-8")
+    export.write_text(f'{header}\n"{sentinel}{filler}",2026-06,1,1,1,1,1,1\n', encoding="utf-8")
 
     proc = subprocess.run(
         [sys.executable, "-m", "tests.ports.boundary", "--counts", str(export)],

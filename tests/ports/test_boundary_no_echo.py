@@ -414,7 +414,7 @@ def test_counts_problems_name_the_position_and_the_rule():
     rows.append(list(rows[0]))
     rows[1][0] = "acme-corp"
     rows[1][1] = "2026-05"
-    rows[2][3] = "1.5"
+    rows[2][4] = "1.5"
 
     problems = counts_problems(_counts_text(rows))
     header_problems = counts_problems(_counts_text(header=(*COUNTS_HEADER, "note")))
@@ -425,7 +425,7 @@ def test_counts_problems_name_the_position_and_the_rule():
         "row 3: survived_prefilter is not a non-negative integer",
         "row 4: duplicate (source, month) of row 1",
     ]
-    assert header_problems == [f"header must be exactly {COUNTS_HEADER}, got 8 column(s)"]
+    assert header_problems == [f"header must be exactly {COUNTS_HEADER}, got 9 column(s)"]
 
 
 def test_private_rows_problems_name_the_position_and_the_rule():

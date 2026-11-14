@@ -31,7 +31,7 @@ _WORD = "a" * 60_000  # about 8 seconds in the scan before the fix; minutes at t
 
 
 def _counts(word: str) -> str:
-    return ",".join(COUNTS_HEADER) + f"\n{word},2026-06,1,1,1,1,1\n"
+    return ",".join(COUNTS_HEADER) + f"\n{word},2026-06,1,1,1,1,1,1\n"
 
 
 def _verdicts(word: str) -> str:

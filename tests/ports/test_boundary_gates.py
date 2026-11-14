@@ -239,9 +239,9 @@ def test_verdict_vocabulary_constants_match_d02_mapping():
 
 def _counts_rows() -> list[list[str]]:
     return [
-        ["greenhouse", "2026-06", "10", "6", "5", "2", "1"],
-        ["indeed", "2026-06", "7", "4", "3", "1", "0"],
-        ["manual", "2026-07", "1", "1", "1", "1", "1"],
+        ["greenhouse", "2026-06", "2", "10", "6", "5", "2", "1"],
+        ["indeed", "2026-06", "2", "7", "4", "3", "1", "0"],
+        ["manual", "2026-07", "1", "1", "1", "1", "1", "1"],
     ]
 
 
@@ -268,15 +268,33 @@ _COUNTS_CASES = [
         lambda: _counts_with(0, 0, "acme-corp"),
         "not an allowed source family",
     ),
-    ("negative-value", lambda: _counts_with(0, 2, "-1"), "not a non-negative integer"),
-    ("decimal-value", lambda: _counts_with(0, 3, "1.5"), "not a non-negative integer"),
+    ("negative-value", lambda: _counts_with(0, 3, "-1"), "not a non-negative integer"),
+    ("decimal-value", lambda: _counts_with(0, 4, "1.5"), "not a non-negative integer"),
+    # Coverage travels with the data: a month's row says how many days were recorded.
+    ("scan-days-not-a-number", lambda: _counts_with(2, 2, "few"), "not a non-negative integer"),
+    ("scan-days-zero", lambda: _counts_with(2, 2, "0"), "row 3: scan_days must be between 1 and"),
+    (
+        "scan-days-over-the-month",
+        lambda: _counts_with(2, 2, "32"),
+        "row 3: scan_days must be between 1 and 31",
+    ),
+    (
+        "scan-days-over-a-short-month",
+        lambda: _counts_text([["greenhouse", "2026-06", "31", "1", "1", "1", "1", "1"]]),
+        "row 1: scan_days must be between 1 and 30",
+    ),
+    (
+        "scan-days-differ-within-a-month",
+        lambda: _counts_with(1, 2, "3"),
+        "row 2: scan_days differs from row 1 for the same month",
+    ),
     ("extra-column", lambda: _counts_text(header=(*COUNTS_HEADER, "note")), "header must be"),
     (
         "duplicate-source-month",
         lambda: _counts_text(_counts_rows() + _counts_rows()[:1]),
         "duplicate (source, month)",
     ),
-    ("short-row", lambda: _counts_text([["greenhouse", "2026-06", "1"]]), "expected 7 cells"),
+    ("short-row", lambda: _counts_text([["greenhouse", "2026-06", "1"]]), "expected 8 cells"),
     ("no-rows", lambda: _counts_text([]), "no rows"),
     ("empty-file", lambda: "", "no header"),
 ]
@@ -285,7 +303,33 @@ _COUNTS_CASES = [
 def test_valid_counts_pass():
     """The minimal valid counts file is clean, with zero as a legitimate recorded value."""
     assert counts_problems(_counts_text()) == []
-    assert counts_problems(_counts_with(1, 6, "0")) == []
+    assert counts_problems(_counts_with(1, 7, "0")) == []
+
+
+def test_counts_header_carries_the_scan_days():
+    """Every row states how many scan days its month rests on, right after the month."""
+    assert COUNTS_HEADER == (
+        "source",
+        "month",
+        "scan_days",
+        "arrived",
+        "survived_prefilter",
+        "scored",
+        "shortlisted",
+        "applied",
+    )
+
+
+def test_scan_days_at_the_month_length_pass():
+    """A fully recorded month is valid: the bound is the calendar length, inclusive."""
+    rows = [["greenhouse", "2026-06", "30", "1", "1", "1", "1", "1"]]
+    assert counts_problems(_counts_text(rows)) == []
+
+
+def test_scan_days_are_not_compared_for_a_month_outside_the_window():
+    """A rejected month is reported once; no calendar bound is derived from it."""
+    problems = counts_problems(_counts_with(1, 1, "2026-13"))
+    assert [p for p in problems if "scan_days" in p] == []
 
 
 @pytest.mark.parametrize(
