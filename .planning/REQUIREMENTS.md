@@ -19,7 +19,7 @@ Phase 0 of the build order. Read-only: no production code changes, no paid LLM c
 **Track A: freeze what exists (in Kestrel)**
 
 - [ ] **MAP-01**: A committed script ledger lists every script in `tools/` and every script of the private pipeline that v2.0 ports, each with status (runs on a schedule / run by hand / dead), inputs, outputs, and a disposition (port / keep until Retire / delete), so no port or deletion later happens without a ledger row
-- [ ] **MAP-02**: For every live output that v2.0 reproduces (scan arrivals, dedup verdicts, eligibility verdicts, scoring, digest, fact and voice gate verdicts), a golden fixture is frozen with the git hash of the script revision that produced it; fixtures are synthetic or scrubbed, and the PII scan passes on them
+- [ ] **MAP-02**: For every live output that v2.0 reproduces (scan arrivals, dedup verdicts, eligibility verdicts, scoring, digest), a golden fixture is frozen with the git hash of the script revision that produced it; fixtures are synthetic or scrubbed, and the PII scan passes on them
 - [ ] **MAP-03**: Every target behaviour of later phases has an input-to-output mapping table encoded as a strict-xfail test that CI collects today, so each phase turns red tests green instead of writing tests after the fact
 - [ ] **MAP-04**: Per-source arrival counts over the retrospective window (arrived, survived prefilter, scored, shortlisted, applied, by month) are committed as aggregates, so the Find phase decides source ports and cuts on evidence
 - [ ] **MAP-05**: A protective golden test seeds an `ai_providers` row in `integration_configs`, runs `alembic upgrade head`, and reads the key back through the provider factory path, so no cut migration can silently empty AI credentials

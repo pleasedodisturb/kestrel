@@ -71,7 +71,7 @@ Plans:
 - [x] 11-04-PLAN.md — Track B, private repository only: flow retrospective, verdict, counts and private-ledger drafts (MAP-01, MAP-04, MAP-06, MAP-07)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 11-05-PLAN.md — Private gate verdicts, blocking-human approval of the exact bytes, crossing into Kestrel (MAP-01, MAP-02, MAP-04, MAP-07, MAP-08)
+- [ ] 11-05-PLAN.md — Blocking-human approval of the exact bytes, crossing into Kestrel: verdict list, arrival counts, private ledger rows (MAP-01, MAP-02, MAP-04, MAP-07, MAP-08); gate verdicts dropped by maintainer decision 2026-11-15
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 11-06-PLAN.md — Phase gate (ledger-manifest link, mutation probe per gate, read-only and placement proof) and the Map PR (MAP-02, MAP-03, MAP-05, MAP-08, MAP-09)
